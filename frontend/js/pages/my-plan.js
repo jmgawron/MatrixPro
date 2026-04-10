@@ -85,7 +85,11 @@ function buildPageShell(container, params) {
 
   const header = el('div', { className: 'mp-header' });
   const title = el('h1', { className: 'mp-title' });
-  title.textContent = 'My Development Plan';
+  title.appendChild(document.createTextNode('My Development'));
+  title.appendChild(document.createElement('br'));
+  const gradientSpan = el('span', { className: 'mp-title-gradient' });
+  gradientSpan.textContent = 'Plan';
+  title.appendChild(gradientSpan);
   const subtitle = el('p', { className: 'mp-subtitle' });
   subtitle.textContent = 'Track and manage your skill development journey';
   header.appendChild(title);
@@ -150,20 +154,20 @@ function buildPageShell(container, params) {
 }
 
 function buildSection(status, title, icon) {
-  const section = el('div', { className: 'mp-section' });
-  section.dataset.status = status;
+  const wrapper = el('div', { className: 'mp-section-wrapper' });
 
   const header = el('div', { className: 'mp-section-header' });
-  const iconEl = el('span', { className: 'mp-section-icon' });
-  iconEl.textContent = icon;
+  header.dataset.status = status;
   const titleEl = el('span', { className: 'mp-section-title' });
   titleEl.textContent = title;
   const countEl = el('span', { className: 'mp-section-count', id: `mp-count-${status}` });
   countEl.textContent = '0';
-  header.appendChild(iconEl);
   header.appendChild(titleEl);
   header.appendChild(countEl);
-  section.appendChild(header);
+  wrapper.appendChild(header);
+
+  const section = el('div', { className: 'mp-section' });
+  section.dataset.status = status;
 
   const grid = el('div', { className: 'mp-section-grid', id: `mp-grid-${status}` });
   _sectionGridEls[status] = grid;
@@ -189,7 +193,8 @@ function buildSection(status, title, icon) {
   });
 
   section.appendChild(grid);
-  return section;
+  wrapper.appendChild(section);
+  return wrapper;
 }
 
 function renderSections() {

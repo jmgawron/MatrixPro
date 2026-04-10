@@ -2213,10 +2213,18 @@ textarea.is-error:focus {
 }
 
 .mp-title {
-  font-size: 26px;
+  font-size: clamp(36px, 5vw, 56px);
   font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: -.01em;
+  letter-spacing: -.02em;
+  line-height: 1.1;
+}
+
+.mp-title-gradient {
+  background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .mp-subtitle {
@@ -2334,12 +2342,17 @@ textarea.is-error:focus {
 }
 
 /* Section header */
+.mp-section-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .mp-section-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-soft);
+  padding: 0 4px;
 }
 
 .mp-section-icon {
@@ -2348,9 +2361,39 @@ textarea.is-error:focus {
 }
 
 .mp-section-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-size: clamp(18px, 2vw, 24px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-image: linear-gradient(90deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+}
+
+/* In Development — Cisco blue/cyan gradient (like "for TAC Engineers") */
+.mp-section-header[data-status="in_development"] .mp-section-title {
+  background-image: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%);
+}
+
+/* In Pipeline — silver/slate gradient (readable on dark bg) */
+.mp-section-header[data-status="in_pipeline"] .mp-section-title {
+  background-image: linear-gradient(90deg, #cbd5e1 0%, #94a3b8 100%);
+}
+
+/* Proficiency — clean white-to-silver gradient (readable on dark bg) */
+.mp-section-header[data-status="proficiency"] .mp-section-title {
+  background-image: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 100%);
+}
+
+/* Light theme: In Pipeline — darker gray for readability on light bg */
+[data-theme="light"] .mp-section-header[data-status="in_pipeline"] .mp-section-title {
+  background-image: linear-gradient(90deg, #64748b 0%, #475569 100%);
+}
+
+/* Light theme: Proficiency — deep black gradient for light bg */
+[data-theme="light"] .mp-section-header[data-status="proficiency"] .mp-section-title {
+  background-image: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
 }
 
 .mp-section-count {

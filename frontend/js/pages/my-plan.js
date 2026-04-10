@@ -18,6 +18,12 @@ const SECTIONS = [
   { status: 'proficiency', title: 'Proficiency', icon: '✅', iconClass: 'mp-card-icon--prof' },
 ];
 
+const STATUS_LABELS = {
+  in_pipeline: 'In Pipeline',
+  in_development: 'In Development',
+  proficiency: 'Proficiency',
+};
+
 export function mountMyPlan(container, params) {
   _container = container;
   container.innerHTML = '';
@@ -330,17 +336,12 @@ function showCardActionsMenu(e, planSkill, currentStatus) {
 
   const statusFlow = ['in_pipeline', 'in_development', 'proficiency'];
   const nextStatuses = statusFlow.filter(s => s !== currentStatus);
-  const statusLabels = {
-    in_pipeline: 'In Pipeline',
-    in_development: 'In Development',
-    proficiency: 'Proficiency',
-  };
 
   nextStatuses.forEach(targetStatus => {
     const item = el('button', {
       style: 'display:block;width:100%;text-align:left;background:none;border:none;padding:8px 14px;font-size:13px;color:var(--text-secondary);cursor:pointer;',
     });
-    item.textContent = `Move to ${statusLabels[targetStatus]}`;
+    item.textContent = `Move to ${STATUS_LABELS[targetStatus]}`;
     item.addEventListener('mouseenter', () => { item.style.background = 'var(--bg-hover)'; });
     item.addEventListener('mouseleave', () => { item.style.background = 'none'; });
     item.addEventListener('click', (ev) => {
@@ -706,10 +707,24 @@ function buildTrainingLogEntry(log) {
 }
 
 async function handleMoveCard(planSkillId, newStatus) {
+  const skill = (_planData?.skills || []).find(s => s.id === planSkillId);
+  const oldStatus = skill?.status;
+  const skillName = skill?.skill_name || 'Skill';
+
   try {
     await api.put(`/api/plans/${_engineerId}/skills/${planSkillId}`, { status: newStatus });
+
+    try {
+      await api.post(`/api/plans/${_engineerId}/skills/${planSkillId}/log`, {
+        title: `Moved from ${STATUS_LABELS[oldStatus] || oldStatus} to ${STATUS_LABELS[newStatus] || newStatus}`,
+        type: 'action',
+        completed_at: new Date().toISOString(),
+        notes: null,
+      });
+    } catch (_) { /* log failure is non-critical */ }
+
     await reloadPlan();
-    showToast('Skill moved', 'success');
+    showToast(`"${skillName}" moved to ${STATUS_LABELS[newStatus] || newStatus}`, 'success');
   } catch (err) {
     showToast(err.message || 'Failed to move skill', 'error');
   }
@@ -818,7 +833,18 @@ async function openAddSkillModal() {
         addBtn.disabled = true;
         addBtn.textContent = '...';
         try {
-          await api.post(`/api/plans/${_engineerId}/skills`, { skill_id: skill.id });
+          const plan = await api.post(`/api/plans/${_engineerId}/skills`, { skill_id: skill.id });
+          const newPlanSkill = (plan.skills || []).find(s => s.skill_id === skill.id);
+          if (newPlanSkill) {
+            try {
+              await api.post(`/api/plans/${_engineerId}/skills/${newPlanSkill.id}/log`, {
+                title: `Added to plan (${STATUS_LABELS[newPlanSkill.status] || newPlanSkill.status})`,
+                type: 'action',
+                completed_at: new Date().toISOString(),
+                notes: null,
+              });
+            } catch (_) { /* log failure is non-critical */ }
+          }
           showToast(`"${skill.name}" added to plan`, 'success');
           const idx = _allCatalogSkills.findIndex(s => s.id === skill.id);
           if (idx !== -1) _allCatalogSkills.splice(idx, 1);

@@ -38,6 +38,7 @@ class TeamResponse(BaseModel):
     id: int
     name: str
     domain_id: int
+    domain_name: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.dependencies import get_current_user, require_role
@@ -10,11 +10,22 @@ from app.schemas.org import TeamCreate, TeamResponse
 router = APIRouter(prefix="/api/teams", tags=["teams"])
 
 
+def _team_to_response(team: Team) -> TeamResponse:
+    return TeamResponse(
+        id=team.id,
+        name=team.name,
+        domain_id=team.domain_id,
+        domain_name=team.domain.name if team.domain else None,
+        created_at=team.created_at,
+    )
+
+
 @router.get("/", response_model=list[TeamResponse])
 def list_teams(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    return db.query(Team).all()
+    teams = db.query(Team).options(joinedload(Team.domain)).all()
+    return [_team_to_response(t) for t in teams]
 
 
 @router.post("/", response_model=TeamResponse)

@@ -51,6 +51,13 @@ class SkillUpdate(BaseModel):
     tag_names: list[str] | None = None
 
 
+class TeamInfo(BaseModel):
+    id: int
+    name: str
+
+    model_config = {"from_attributes": True}
+
+
 class SkillResponse(BaseModel):
     id: int
     name: str
@@ -61,5 +68,7 @@ class SkillResponse(BaseModel):
     catalog_version: int
     created_at: datetime
     updated_at: datetime | None = None
+    tags: list[TagResponse] = []
+    teams: list[TeamInfo] = []
 
     model_config = {"from_attributes": True}

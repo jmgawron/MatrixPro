@@ -1730,6 +1730,7 @@ textarea.is-error:focus {
   align-items: center;
   gap: 8px;
   border-left: 2px solid transparent;
+  flex-wrap: wrap;
 }
 
 .tree-item:hover {
@@ -1762,8 +1763,9 @@ textarea.is-error:focus {
 }
 
 .tree-item-children {
-  padding-left: 16px;
+  padding-left: 0;
   display: none;
+  width: 100%;
 }
 
 .tree-item.expanded > .tree-item-children {

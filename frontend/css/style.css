@@ -2329,6 +2329,19 @@ textarea.is-error:focus {
   font-size: 11px;
 }
 
+.mp-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.mp-icon svg {
+  width: 1em;
+  height: 1em;
+}
+
 .mp-infobar-right {
   display: flex;
   align-items: center;
@@ -2395,8 +2408,29 @@ textarea.is-error:focus {
 }
 
 .mp-section-icon {
-  font-size: 18px;
+  font-size: 20px;
   flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.mp-section-header[data-status="in_development"] .mp-section-icon {
+  color: #0072FF;
+}
+
+.mp-section-header[data-status="in_pipeline"] .mp-section-icon {
+  color: #94a3b8;
+}
+
+.mp-section-header[data-status="proficiency"] .mp-section-icon {
+  color: #e2e8f0;
+}
+
+[data-theme="light"] .mp-section-header[data-status="in_pipeline"] .mp-section-icon {
+  color: #475569;
+}
+
+[data-theme="light"] .mp-section-header[data-status="proficiency"] .mp-section-icon {
+  color: #1e293b;
 }
 
 .mp-section-title {

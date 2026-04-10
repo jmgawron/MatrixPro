@@ -12,10 +12,31 @@ let _sectionGridEls = {};
 let _allCatalogSkills = [];
 let _searchQuery = '';
 
+const SVG_ICONS = {
+  wrench: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+  layers: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+  shield: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
+  search: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  fileText: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  table: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>',
+  bookOpen: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+  checkCircle: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  pencil: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>',
+  calendar: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+};
+
+function svgIcon(name, size) {
+  const span = document.createElement('span');
+  span.className = 'mp-icon';
+  span.style.fontSize = size || '16px';
+  span.innerHTML = SVG_ICONS[name] || '';
+  return span;
+}
+
 const SECTIONS = [
-  { status: 'in_development', title: 'In Development', icon: '🔨', iconClass: 'mp-card-icon--dev' },
-  { status: 'in_pipeline', title: 'In Pipeline', icon: '📋', iconClass: 'mp-card-icon--pipe' },
-  { status: 'proficiency', title: 'Proficiency', icon: '✅', iconClass: 'mp-card-icon--prof' },
+  { status: 'in_development', title: 'In Development', svgIcon: 'wrench', iconClass: 'mp-card-icon--dev' },
+  { status: 'in_pipeline', title: 'In Pipeline', svgIcon: 'layers', iconClass: 'mp-card-icon--pipe' },
+  { status: 'proficiency', title: 'Proficiency', svgIcon: 'shield', iconClass: 'mp-card-icon--prof' },
 ];
 
 const STATUS_LABELS = {
@@ -98,7 +119,7 @@ function buildPageShell(container, params) {
   const searchWrap = el('div', { className: 'mp-search' });
   const searchBox = el('div', { className: 'mp-search-box' });
   const searchIcon = el('span', { className: 'mp-search-icon' });
-  searchIcon.textContent = '🔍';
+  searchIcon.appendChild(svgIcon('search', '16px'));
   const searchInput = el('input', {
     className: 'mp-search-input',
     type: 'text',
@@ -122,11 +143,13 @@ function buildPageShell(container, params) {
   const infoRight = el('div', { className: 'mp-infobar-right' });
 
   const pdfBtn = el('button', { className: 'mp-export-btn' });
-  pdfBtn.textContent = '📄 Export PDF';
+  pdfBtn.appendChild(svgIcon('fileText', '14px'));
+  pdfBtn.appendChild(document.createTextNode(' Export PDF'));
   pdfBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/pdf`, `plan_${_engineerId}.pdf`));
 
   const csvBtn = el('button', { className: 'mp-export-btn' });
-  csvBtn.textContent = '📊 Export CSV';
+  csvBtn.appendChild(svgIcon('table', '14px'));
+  csvBtn.appendChild(document.createTextNode(' Export CSV'));
   csvBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/csv`, `plan_${_engineerId}.csv`));
 
   const addBtn = el('button', { className: 'btn btn-primary btn-sm' });
@@ -142,8 +165,8 @@ function buildPageShell(container, params) {
 
   const sections = el('div', { className: 'mp-sections' });
 
-  SECTIONS.forEach(({ status, title: sTitle, icon }) => {
-    const section = buildSection(status, sTitle, icon);
+  SECTIONS.forEach(({ status, title: sTitle, svgIcon: sIcon }) => {
+    const section = buildSection(status, sTitle, sIcon);
     sections.appendChild(section);
   });
 
@@ -151,15 +174,18 @@ function buildPageShell(container, params) {
   container.appendChild(wrapper);
 }
 
-function buildSection(status, title, icon) {
+function buildSection(status, title, iconName) {
   const wrapper = el('div', { className: 'mp-section-wrapper' });
 
   const header = el('div', { className: 'mp-section-header' });
   header.dataset.status = status;
+  const iconEl = svgIcon(iconName, '20px');
+  iconEl.classList.add('mp-section-icon');
   const titleEl = el('span', { className: 'mp-section-title' });
   titleEl.textContent = title;
   const countEl = el('span', { className: 'mp-section-count', id: `mp-count-${status}` });
   countEl.textContent = '0';
+  header.appendChild(iconEl);
   header.appendChild(titleEl);
   header.appendChild(countEl);
   wrapper.appendChild(header);
@@ -268,17 +294,17 @@ function updateStatsRow(allSkills, groups) {
   });
 
   const stats = [
-    { value: allSkills.length, label: 'Total Skills', icon: '📚' },
-    { value: groups.in_development.length, label: 'In Development', icon: '🔨' },
-    { value: groups.proficiency.length, label: 'Proficient', icon: '✅' },
-    { value: logsThisQ, label: 'Logs This Quarter', icon: '📝' },
-    { value: logsThisYear, label: 'Logs This Year', icon: '📅' },
+    { value: allSkills.length, label: 'Total Skills', icon: 'bookOpen' },
+    { value: groups.in_development.length, label: 'In Development', icon: 'wrench' },
+    { value: groups.proficiency.length, label: 'Proficient', icon: 'checkCircle' },
+    { value: logsThisQ, label: 'Logs This Quarter', icon: 'pencil' },
+    { value: logsThisYear, label: 'Logs This Year', icon: 'calendar' },
   ];
 
   stats.forEach(({ value, label, icon }) => {
     const chip = el('div', { className: 'mp-stat-chip' });
-    const iconEl = el('span', { className: 'mp-stat-icon' });
-    iconEl.textContent = icon;
+    const iconEl = svgIcon(icon, '14px');
+    iconEl.classList.add('mp-stat-icon');
     const valEl = el('span', { className: 'mp-stat-value' });
     valEl.textContent = value;
     const labelEl = el('span', { className: 'mp-stat-label' });
@@ -330,12 +356,14 @@ function buildCard(planSkill, status, iconClass) {
   const dateStr = formatDate(planSkill.updated_at || planSkill.added_at);
   if (dateStr) {
     const dateItem = el('span', { className: 'mp-card-footer-item' });
-    dateItem.textContent = `📅 ${dateStr}`;
+    dateItem.appendChild(svgIcon('calendar', '12px'));
+    dateItem.appendChild(document.createTextNode(` ${dateStr}`));
     footer.appendChild(dateItem);
   }
   const logCount = Array.isArray(planSkill.training_logs) ? planSkill.training_logs.length : 0;
   const logItem = el('span', { className: 'mp-card-footer-item' });
-  logItem.textContent = `📝 ${logCount} log${logCount !== 1 ? 's' : ''}`;
+  logItem.appendChild(svgIcon('pencil', '12px'));
+  logItem.appendChild(document.createTextNode(` ${logCount} log${logCount !== 1 ? 's' : ''}`));
   footer.appendChild(logItem);
   card.appendChild(footer);
 

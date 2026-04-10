@@ -1,4 +1,4 @@
-import { api } from '../api.js';
+import { api, API_BASE } from '../api.js';
 import { Store } from '../state.js';
 import { showSkeleton } from '../components/skeleton.js';
 import { showToast } from '../components/toast.js';
@@ -704,7 +704,7 @@ async function openAddSkillModal() {
       ? available.filter(s =>
           (s.name || '').toLowerCase().includes(query.toLowerCase()) ||
           (s.description || '').toLowerCase().includes(query.toLowerCase()) ||
-          (Array.isArray(s.tags) && s.tags.some(t => t.toLowerCase().includes(query.toLowerCase())))
+          (Array.isArray(s.tags) && s.tags.some(t => (t.name || t).toLowerCase().includes(query.toLowerCase())))
         )
       : available;
 
@@ -737,7 +737,7 @@ async function openAddSkillModal() {
       if (Array.isArray(skill.tags)) {
         skill.tags.slice(0, 3).forEach(tag => {
           const tagChip = createElement('span', { className: 'triage-chip triage-feedback', style: 'font-size:11px;padding:2px 7px;' });
-          tagChip.textContent = tag;
+          tagChip.textContent = tag.name || tag;
           meta.appendChild(tagChip);
         });
       }
@@ -829,7 +829,7 @@ function createElement(tag, props) {
 async function downloadExport(url, filename) {
   try {
     const token = localStorage.getItem('matrixpro_token');
-    const res = await fetch(url, {
+    const res = await fetch(`${API_BASE}${url}`, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
     if (!res.ok) {

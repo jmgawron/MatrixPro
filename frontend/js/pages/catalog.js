@@ -321,9 +321,10 @@ function getFilteredSkills() {
   if (_selectedNode.type === 'domain' && _selectedNode.id) {
     skills = skills.filter(s => String(s.domain_id) === String(_selectedNode.id));
   } else if (_selectedNode.type === 'team' && _selectedNode.id) {
-    skills = skills.filter(s =>
-      Array.isArray(s.team_ids) && s.team_ids.map(String).includes(String(_selectedNode.id))
-    );
+    skills = skills.filter(s => {
+      const ids = Array.isArray(s.team_ids) ? s.team_ids : (Array.isArray(s.teams) ? s.teams.map(t => t.id) : []);
+      return ids.map(String).includes(String(_selectedNode.id));
+    });
   }
 
   if (_filterDomainId) {
@@ -331,9 +332,10 @@ function getFilteredSkills() {
   }
 
   if (_filterTeamId) {
-    skills = skills.filter(s =>
-      Array.isArray(s.team_ids) && s.team_ids.map(String).includes(String(_filterTeamId))
-    );
+    skills = skills.filter(s => {
+      const ids = Array.isArray(s.team_ids) ? s.team_ids : (Array.isArray(s.teams) ? s.teams.map(t => t.id) : []);
+      return ids.map(String).includes(String(_filterTeamId));
+    });
   }
 
   if (!_showFuture) {
@@ -349,7 +351,7 @@ function getFilteredSkills() {
     skills = skills.filter(s => {
       const nameMatch = (s.name || '').toLowerCase().includes(q);
       const descMatch = (s.description || '').toLowerCase().includes(q);
-      const tagMatch = Array.isArray(s.tags) && s.tags.some(t => t.toLowerCase().includes(q));
+      const tagMatch = Array.isArray(s.tags) && s.tags.some(t => (t.name || t).toLowerCase().includes(q));
       return nameMatch || descMatch || tagMatch;
     });
   }
@@ -510,7 +512,7 @@ function buildSkillCard(skill) {
     const tagsRow = createElement('div', { style: 'display:flex;flex-wrap:wrap;gap:4px;margin-top:10px;' });
     tags.slice(0, 4).forEach(tag => {
       const chip = createElement('span', { className: 'triage-chip triage-feedback', style: 'font-size:11px;padding:2px 8px;' });
-      chip.textContent = tag;
+      chip.textContent = tag.name || tag;
       tagsRow.appendChild(chip);
     });
     if (tags.length > 4) {
@@ -590,7 +592,7 @@ function expandSkillDetail(skill) {
     const tagsRow = createElement('div', { style: 'display:flex;flex-wrap:wrap;gap:6px;' });
     tags.forEach(tag => {
       const chip = createElement('span', { className: 'triage-chip triage-feedback' });
-      chip.textContent = tag;
+      chip.textContent = tag.name || tag;
       tagsRow.appendChild(chip);
     });
     tagsSection.appendChild(tagsLabel);
@@ -598,7 +600,7 @@ function expandSkillDetail(skill) {
     panel.appendChild(tagsSection);
   }
 
-  const teamIds = Array.isArray(skill.team_ids) ? skill.team_ids : [];
+  const teamIds = Array.isArray(skill.team_ids) ? skill.team_ids : (Array.isArray(skill.teams) ? skill.teams.map(t => t.id) : []);
   const teamNames = teamIds.map(id => _teamMap[id]?.name).filter(Boolean);
   if (teamNames.length) {
     const teamsSection = createElement('div', { style: 'margin-bottom:20px;' });
@@ -806,7 +808,7 @@ function buildSkillForm(skill) {
   const teamsLabel = createElement('div', { className: 'form-label' });
   teamsLabel.textContent = 'Associated Teams';
   const teamsGrid = createElement('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:6px;' });
-  const skillTeamIds = Array.isArray(skill?.team_ids) ? skill.team_ids.map(String) : [];
+  const skillTeamIds = Array.isArray(skill?.team_ids) ? skill.team_ids.map(String) : (Array.isArray(skill?.teams) ? skill.teams.map(t => String(t.id)) : []);
   _allTeams.forEach(t => {
     const checkLabel = createElement('label', { style: 'display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);cursor:pointer;' });
     const check = createElement('input', { type: 'checkbox', value: t.id });
@@ -823,7 +825,7 @@ function buildSkillForm(skill) {
   form.appendChild(buildFormGroup('Tags', 'skill-tags', 'input', {
     type: 'text',
     placeholder: 'e.g. routing, bgp, advanced (comma-separated)',
-    value: Array.isArray(skill?.tags) ? skill.tags.join(', ') : '',
+    value: Array.isArray(skill?.tags) ? skill.tags.map(t => t.name || t).join(', ') : '',
   }));
   const tagHint = createElement('div', { className: 'form-hint', style: 'margin-top:-10px;margin-bottom:16px;' });
   tagHint.textContent = 'Separate multiple tags with commas';

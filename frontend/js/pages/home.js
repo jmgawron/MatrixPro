@@ -1,4 +1,5 @@
 import { Store } from '../state.js';
+import { API_BASE } from '../api.js';
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 
@@ -106,10 +107,10 @@ function createElement(tag, props) {
 function buildStatCard(label, valueEl) {
   const card = createElement('div', {
     style: [
-      'background:rgba(22,29,41,0.7);',
+      'background:var(--bg-elevated);',
       'backdrop-filter:blur(12px);',
       '-webkit-backdrop-filter:blur(12px);',
-      'border:1px solid rgba(59,130,246,0.15);',
+      'border:1px solid var(--border-soft);',
       'border-radius:16px;',
       'padding:24px 32px;',
       'text-align:center;',
@@ -151,7 +152,7 @@ function buildStatSection() {
   });
 
   // Fetch stats async (no auth required)
-  fetch('/api/stats')
+  fetch(`${API_BASE}/api/stats`)
     .then(r => r.ok ? r.json() : Promise.reject(r.status))
     .then(data => {
       statDefs.forEach(({ key }) => {

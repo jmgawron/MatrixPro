@@ -110,11 +110,7 @@ function buildPageShell(container) {
   });
   titleEl.textContent = 'Skill Explorer';
 
-  const badge = createElement('span', { className: 'triage-chip triage-signal' });
-  badge.textContent = 'Phase 5';
-
   titleRow.appendChild(titleEl);
-  titleRow.appendChild(badge);
   topBar.appendChild(titleRow);
   wrapper.appendChild(topBar);
 

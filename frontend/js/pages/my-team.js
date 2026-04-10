@@ -1,4 +1,5 @@
-import { api } from '../api.js';
+import { api, API_BASE } from '../api.js';
+import { Store } from '../state.js';
 import { showSkeleton } from '../components/skeleton.js';
 import { showToast } from '../components/toast.js';
 
@@ -22,7 +23,13 @@ export function mountMyTeam(container, params) {
 
   buildTooltip();
   buildPageShell(container);
-  loadMatrix();
+
+  const user = Store.get('user');
+  if (user?.role === 'admin') {
+    loadAdminTeamSelector();
+  } else {
+    loadMatrix();
+  }
 
   return () => {
     if (_tooltipEl && _tooltipEl.parentNode) {
@@ -34,11 +41,12 @@ export function mountMyTeam(container, params) {
 
 // ─── Data loading ─────────────────────────────────────────────────────────────
 
-async function loadMatrix() {
+async function loadMatrix(teamId) {
   if (_matrixBodyEl) showSkeleton(_matrixBodyEl, 'table');
 
   try {
-    _matrixData = await api.get('/api/teams/matrix');
+    const url = teamId ? `/api/teams/matrix?team_id=${teamId}` : '/api/teams/matrix';
+    _matrixData = await api.get(url);
     _visibleSkillIds = null;
     renderMatrix();
     populateSkillFilter();
@@ -49,6 +57,49 @@ async function loadMatrix() {
       _matrixBodyEl.innerHTML = '';
       renderErrorState(_matrixBodyEl, msg);
     }
+  }
+}
+
+async function loadAdminTeamSelector() {
+  try {
+    const teams = await api.get('/api/teams/');
+    if (!_matrixBodyEl) return;
+    _matrixBodyEl.innerHTML = '';
+
+    const prompt = createElement('div', {
+      style: 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:48px 24px;',
+    });
+
+    const label = createElement('p', {
+      style: 'font-size:15px;color:var(--text-secondary);',
+    });
+    label.textContent = 'Select a team to view its skills matrix:';
+
+    const select = createElement('select', {
+      className: 'form-select',
+      style: 'width:auto;min-width:240px;font-size:14px;',
+    });
+
+    const placeholder = createElement('option', { value: '' });
+    placeholder.textContent = '— Choose a team —';
+    select.appendChild(placeholder);
+
+    teams.forEach(t => {
+      const opt = createElement('option', { value: t.id });
+      opt.textContent = t.name;
+      select.appendChild(opt);
+    });
+
+    select.addEventListener('change', () => {
+      const tid = select.value;
+      if (tid) loadMatrix(Number(tid));
+    });
+
+    prompt.appendChild(label);
+    prompt.appendChild(select);
+    _matrixBodyEl.appendChild(prompt);
+  } catch (err) {
+    showToast(err.message || 'Failed to load teams', 'error');
   }
 }
 
@@ -707,7 +758,7 @@ function renderErrorState(container, msg) {
 async function downloadExport(url, filename) {
   try {
     const token = localStorage.getItem('matrixpro_token');
-    const res = await fetch(url, {
+    const res = await fetch(`${API_BASE}${url}`, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
     if (!res.ok) {

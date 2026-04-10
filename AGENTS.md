@@ -1,7 +1,7 @@
 # MatrixPro — Cross-Session Knowledge Base
 
 > **Purpose**: Reference document for OpenCode agents working on MatrixPro across sessions.
-> **Last updated**: Phase 4 completion.
+> **Last updated**: Phase 6 completion (ALL PHASES COMPLETE).
 
 ---
 
@@ -59,16 +59,16 @@ MatrixPro/
 │       │   ├── auth.py            # LoginRequest, TokenResponse, UserProfile
 │       │   ├── user.py            # UserCreate, UserUpdate, UserOut
 │       │   ├── org.py             # OrgOut, DomainOut, TeamOut, TeamCreate, MatrixSkillInfo, MatrixCellInfo, MatrixEngineerRow, TeamMatrixResponse
-│       │   ├── skill.py           # SkillCreate, SkillUpdate, SkillOut, SkillLevelContentCreate, etc.
+│       │   ├── skill.py           # SkillCreate, SkillUpdate, SkillOut, SkillLevelContentCreate, ExplorerResponse, CompareResponse
 │       │   └── plan.py            # PlanSkillCreate/Update, PlanSkillResponse (skill_name, training_logs), PlanResponse (engineer_name), TrainingLogCreate/Response
 │       ├── routers/
 │       │   ├── __init__.py
 │       │   ├── auth.py            # POST /api/auth/login, GET /api/auth/me
 │       │   ├── users.py           # CRUD /api/users/
 │       │   ├── teams.py           # CRUD /api/teams/
-│       │   ├── skills.py          # CRUD /api/skills/, content endpoints (Phase 2)
+│       │   ├── skills.py          # CRUD /api/skills/, content, explorer, compare (Phase 2+5)
 │       │   ├── plans.py           # /api/plans/, skill management, training log (Phase 3)
-│       │   └── export.py          # PDF/CSV export endpoints
+│       │   └── export.py          # PDF/CSV export endpoints (Phase 6)
 │       └── tests/                 # (empty, for future use)
 ├── frontend/
 │   ├── index.html                 # SPA shell: nav, #app, modal/toast portals
@@ -87,11 +87,11 @@ MatrixPro/
 │       │   └── toast.js           # Toast notifications with stacking
 │       └── pages/
 │           ├── login.js           # FUNCTIONAL login form
-│           ├── home.js            # Placeholder (Phase 6)
-│           ├── my-plan.js         # My Plan kanban (Phase 3)
-│           ├── my-team.js         # My Team matrix (Phase 4)
+│           ├── home.js            # Start Page with stats + nav cards (Phase 6)
+│           ├── my-plan.js         # My Plan kanban (Phase 3) + export buttons (Phase 6)
+│           ├── my-team.js         # My Team matrix (Phase 4) + export button (Phase 6)
 │           ├── catalog.js         # Catalog Explorer (Phase 2)
-│           └── skill-explorer.js  # Placeholder (Phase 5)
+│           └── skill-explorer.js  # Skill Explorer (Phase 5)
 └── data/
     └── matrixpro.db               # SQLite DB (gitignored, auto-created by seed)
 ```
@@ -133,7 +133,7 @@ AuditLog → changed_by → User
 
 ---
 
-## 5. API Routes (33 total)
+## 5. API Routes (37 total)
 
 ### Auth
 ```
@@ -154,6 +154,7 @@ DELETE /api/users/{user_id}      # Delete user
 ```
 GET    /api/teams/               # List teams
 POST   /api/teams/               # Create team (admin)
+GET    /api/teams/matrix         # Team skills matrix (manager/admin) (Phase 4)
 GET    /api/teams/{team_id}      # Get team + members
 PUT    /api/teams/{team_id}      # Update team (admin)
 DELETE /api/teams/{team_id}      # Delete team (admin)
@@ -163,6 +164,8 @@ DELETE /api/teams/{team_id}      # Delete team (admin)
 ```
 GET    /api/skills/              # List/search skills
 POST   /api/skills/              # Create skill (admin)
+GET    /api/skills/explorer      # Search engineers by skill (Phase 5)
+GET    /api/skills/compare       # Cross-team skill comparison (Phase 5)
 GET    /api/skills/{skill_id}    # Get skill detail
 PUT    /api/skills/{skill_id}    # Update skill (admin)
 DELETE /api/skills/{skill_id}    # Archive skill (admin, soft-delete)
@@ -185,14 +188,16 @@ POST   /api/plans/{engineer_id}/skills/{plan_skill_id}/log  # Add training log
 GET    /api/export/plans/{engineer_id}/pdf   # PDF export (Phase 6)
 GET    /api/export/plans/{engineer_id}/csv   # CSV export (Phase 6)
 GET    /api/export/skills/csv                # Skill catalog CSV (Phase 6)
+GET    /api/export/teams/{team_id}/matrix/csv # Team matrix CSV (Phase 6)
 ```
 
-### Health
+### Stats / Health
 ```
 GET    /api/health               # {"status":"ok","service":"MatrixPro API"}
+GET    /api/stats                # {"total_engineers":N,"total_teams":N,"total_skills":N} (no auth, Phase 6)
 ```
 
-**Note**: Auth, users, and teams routes are fully implemented (Phase 1). Skills routes fully implemented (Phase 2). Plans routes fully implemented (Phase 3). Export routes are **stubs returning 501** (Phase 6).
+**Note**: ALL routes fully implemented. All phases complete.
 
 ---
 
@@ -304,8 +309,8 @@ docker compose up --build
 | 2 | Skill catalog CRUD, Catalog Explorer UI (tree, cards, search) | **COMPLETE** |
 | 3 | My Plan kanban (drag-drop, cards, training log, audit) | **COMPLETE** |
 | 4 | My Team matrix (2D grid, sticky headers, drill-down) | **COMPLETE** |
-| 5 | Skill Explorer (search, cross-team comparison, overlap %, import) | Pending |
-| 6 | Start Page (stats, animations), PDF/CSV export, polish | Pending |
+| 5 | Skill Explorer (search, cross-team comparison, overlap %, import) | **COMPLETE** |
+| 6 | Start Page (stats, animations), PDF/CSV export, polish | **COMPLETE** |
 
 ---
 
@@ -344,3 +349,18 @@ docker compose up --build
 - Carol manages both Dave (WLAN Controllers team) and Eve (Firewall team) — Eve appears in Carol's matrix but all her skills are Firewall-domain, so they show as not_in_plan for WLAN team skills
 - `GET /api/teams/matrix` route must be defined BEFORE `/{team_id}` in teams.py to avoid path parameter conflict
 - Dead code after `return` is a recurring agent bug — always check for unreachable code blocks after return statements
+
+### Phase 5 Discoveries
+- Explorer endpoint joins PlanSkill→Skill→DevelopmentPlan→User→Team for cross-entity search
+- Compare endpoint calculates overlap % between two teams' skill sets
+- Team 1 vs Team 2 overlap is 3 skills (42.9%), Team 1 vs Team 3 is 2 skills (22.2%)
+- `GET /api/skills/explorer` and `GET /api/skills/compare` must be defined BEFORE `/{skill_id}` to avoid path conflict
+
+### Phase 6 Discoveries
+- `require_role()` in dependencies.py already returns `Depends(dependency)` — do NOT wrap in `Depends()` again
+- Agent-produced code had `Depends(require_role(...))` (double-wrapped) — fixed to `require_role(...)` directly
+- Agent-produced code had undefined `rect` variable in my-plan.js card actions menu — fixed with `e.currentTarget.getBoundingClientRect()`
+- WeasyPrint PDF export returns 500 on macOS due to missing pango/cairo system libraries — works in Docker
+- `GET /api/stats` is public (no auth), uses short-lived `SessionLocal()` session
+- Export router uses inline `_check_plan_access()` for RBAC (same pattern as plans.py)
+- Team matrix CSV export filters to engineers only (`UserRole.engineer`), not managers

@@ -2,6 +2,18 @@ import { Store } from './state.js';
 
 const TOKEN_KEY = 'matrixpro_token';
 
+/* When served via nginx (Docker), API is same-origin.
+   For local dev (python -m http.server on :3000 + uvicorn on :8000),
+   set API_BASE so fetch targets the backend directly. */
+const API_BASE = (() => {
+  const loc = window.location;
+  // If served on a port other than 8000 and backend is on 8000, proxy there
+  if (loc.hostname === 'localhost' && loc.port !== '8000' && loc.port !== '80' && loc.port !== '') {
+    return 'http://localhost:8000';
+  }
+  return '';
+})();
+
 async function request(method, path, body) {
   const headers = { 'Content-Type': 'application/json' };
   const token = localStorage.getItem(TOKEN_KEY);
@@ -10,7 +22,7 @@ async function request(method, path, body) {
   const options = { method, headers };
   if (body !== undefined) options.body = JSON.stringify(body);
 
-  const res = await fetch(path, options);
+  const res = await fetch(`${API_BASE}${path}`, options);
 
   if (res.status === 401) {
     localStorage.removeItem(TOKEN_KEY);
@@ -34,6 +46,8 @@ async function request(method, path, body) {
 
   return data;
 }
+
+export { API_BASE };
 
 export const api = {
   request,

@@ -41,12 +41,14 @@ class PlanSkillResponse(BaseModel):
     id: int
     plan_id: int
     skill_id: int
+    skill_name: str
     status: PlanSkillStatus
     proficiency_level: int | None = None
     notes: str | None = None
     skill_version_at_add: int
     added_at: datetime
     updated_at: datetime | None = None
+    training_logs: list[TrainingLogResponse] = []
 
     model_config = {"from_attributes": True}
 
@@ -54,6 +56,7 @@ class PlanSkillResponse(BaseModel):
 class PlanResponse(BaseModel):
     id: int
     engineer_id: int
+    engineer_name: str
     created_at: datetime
     skills: list[PlanSkillResponse] = []
 

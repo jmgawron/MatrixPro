@@ -1,7 +1,7 @@
 # MatrixPro — Cross-Session Knowledge Base
 
 > **Purpose**: Reference document for OpenCode agents working on MatrixPro across sessions.
-> **Last updated**: Phase 1 completion.
+> **Last updated**: Phase 3 completion.
 
 ---
 
@@ -60,14 +60,14 @@ MatrixPro/
 │       │   ├── user.py            # UserCreate, UserUpdate, UserOut
 │       │   ├── org.py             # OrgOut, DomainOut, TeamOut, TeamCreate
 │       │   ├── skill.py           # SkillCreate, SkillUpdate, SkillOut, SkillLevelContentCreate, etc.
-│       │   └── plan.py            # PlanSkillCreate, PlanSkillUpdate, PlanSkillOut, TrainingLogCreate, etc.
+│       │   └── plan.py            # PlanSkillCreate/Update, PlanSkillResponse (skill_name, training_logs), PlanResponse (engineer_name), TrainingLogCreate/Response
 │       ├── routers/
 │       │   ├── __init__.py
 │       │   ├── auth.py            # POST /api/auth/login, GET /api/auth/me
 │       │   ├── users.py           # CRUD /api/users/
 │       │   ├── teams.py           # CRUD /api/teams/
-│       │   ├── skills.py          # CRUD /api/skills/, content endpoints
-│       │   ├── plans.py           # /api/plans/, skill management, training log
+│       │   ├── skills.py          # CRUD /api/skills/, content endpoints (Phase 2)
+│       │   ├── plans.py           # /api/plans/, skill management, training log (Phase 3)
 │       │   └── export.py          # PDF/CSV export endpoints
 │       └── tests/                 # (empty, for future use)
 ├── frontend/
@@ -88,9 +88,9 @@ MatrixPro/
 │       └── pages/
 │           ├── login.js           # FUNCTIONAL login form
 │           ├── home.js            # Placeholder (Phase 6)
-│           ├── my-plan.js         # Placeholder (Phase 3)
+│           ├── my-plan.js         # My Plan kanban (Phase 3)
 │           ├── my-team.js         # Placeholder (Phase 4)
-│           ├── catalog.js         # Placeholder (Phase 2)
+│           ├── catalog.js         # Catalog Explorer (Phase 2)
 │           └── skill-explorer.js  # Placeholder (Phase 5)
 └── data/
     └── matrixpro.db               # SQLite DB (gitignored, auto-created by seed)
@@ -192,7 +192,7 @@ GET    /api/export/skills/csv                # Skill catalog CSV (Phase 6)
 GET    /api/health               # {"status":"ok","service":"MatrixPro API"}
 ```
 
-**Note**: Auth, users, and teams routes are fully implemented (Phase 1). Skills, plans, and export routes are **stubs returning 501** (Phases 2-6).
+**Note**: Auth, users, and teams routes are fully implemented (Phase 1). Skills routes fully implemented (Phase 2). Plans routes fully implemented (Phase 3). Export routes are **stubs returning 501** (Phase 6).
 
 ---
 
@@ -301,8 +301,8 @@ docker compose up --build
 |-------|-------|--------|
 | 0 | Project scaffold, DB schema, design CSS, SPA shell, seed data | **COMPLETE** |
 | 1 | Auth (JWT login, /me), user CRUD with RBAC, teams CRUD | **COMPLETE** |
-| 2 | Skill catalog CRUD, Catalog Explorer UI (tree, cards, search) | Pending |
-| 3 | My Plan kanban (drag-drop, cards, training log, audit) | Pending |
+| 2 | Skill catalog CRUD, Catalog Explorer UI (tree, cards, search) | **COMPLETE** |
+| 3 | My Plan kanban (drag-drop, cards, training log, audit) | **COMPLETE** |
 | 4 | My Team matrix (2D grid, sticky headers, drill-down) | Pending |
 | 5 | Skill Explorer (search, cross-team comparison, overlap %, import) | Pending |
 | 6 | Start Page (stats, animations), PDF/CSV export, polish | Pending |
@@ -328,3 +328,13 @@ docker compose up --build
 - Docker CLI uses `docker compose` (v2 plugin), not `docker-compose`
 - System has Python 3.14 but backend targets 3.11+ (Dockerfile uses python:3.11-slim)
 - WeasyPrint requires system-level dependencies (pango, cairo) — installed via pip but may need OS packages for PDF rendering
+- basedpyright LSP reports false positives on SQLAlchemy Column types (pre-existing, not real bugs)
+- Hard delete of skills requires manual cascade deletion of SkillTag, SkillTeam, SkillLevelContent before deleting Skill
+- `require_manager_of()` dependency already exists for manager-scoped engineer access
+
+### Phase 3 Discoveries
+- Plans router uses inline RBAC helper `_check_plan_access()` instead of `require_manager_of()` from dependencies.py
+- Auto-creates DevelopmentPlan on first access if none exists (via `_get_or_create_plan()`)
+- PlanSkill deletion cascades training logs manually (not via DB cascade)
+- Seed data: Bob(4) has skills 1,2,4; Dave(5) has 3,5,9; Eve(6) has 6,7,8
+- Background agents can get stuck in curl test loops — cancel and test manually when this happens

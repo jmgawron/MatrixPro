@@ -7,7 +7,6 @@ import { showModal, showConfirm } from '../components/modal.js';
 let _container = null;
 let _engineerId = null;
 let _planData = null;
-let _expandedCardId = null;
 let _draggingPlanSkillId = null;
 let _sectionGridEls = {};
 let _allCatalogSkills = [];
@@ -24,7 +23,6 @@ export function mountMyPlan(container, params) {
   container.innerHTML = '';
 
   _planData = null;
-  _expandedCardId = null;
   _draggingPlanSkillId = null;
   _sectionGridEls = {};
   _allCatalogSkills = [];
@@ -234,10 +232,6 @@ function renderSections() {
     statusSkills.forEach(planSkill => {
       const card = buildCard(planSkill, status, sectionDef?.iconClass || 'mp-card-icon--dev');
       grid.appendChild(card);
-
-      if (_expandedCardId === planSkill.id) {
-        renderExpandedSection(card, planSkill);
-      }
     });
   });
 }
@@ -306,13 +300,7 @@ function buildCard(planSkill, status, iconClass) {
 
   card.addEventListener('click', (e) => {
     if (e.target.closest('button')) return;
-    if (_expandedCardId === planSkill.id) {
-      collapseCard(card);
-    } else {
-      collapseAllCards();
-      _expandedCardId = planSkill.id;
-      renderExpandedSection(card, planSkill);
-    }
+    openEditSkillModal(planSkill);
   });
 
   return card;
@@ -394,36 +382,33 @@ function showCardActionsMenu(e, planSkill, currentStatus) {
   setTimeout(() => document.addEventListener('click', dismiss), 0);
 }
 
-function collapseCard(card) {
-  _expandedCardId = null;
-  const expanded = card.querySelector('.mp-card-expanded');
-  if (expanded) expanded.remove();
-  card.classList.remove('card-active');
-}
+function openEditSkillModal(planSkill) {
+  const root = document.getElementById('modalRoot');
 
-function collapseAllCards() {
-  _container.querySelectorAll('.mp-card').forEach(c => {
-    const exp = c.querySelector('.mp-card-expanded');
-    if (exp) exp.remove();
-    c.classList.remove('card-active');
-  });
-  _expandedCardId = null;
-}
+  const overlay = el('div', { className: 'modal-overlay' });
+  const modal = el('div', { className: 'modal modal-wide' });
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', `Edit ${planSkill.skill_name || 'Skill'}`);
 
-function renderExpandedSection(card, planSkill) {
-  const existing = card.querySelector('.mp-card-expanded');
-  if (existing) existing.remove();
+  /* ── Header ── */
+  const header = el('div', { className: 'modal-header' });
+  const titleEl = el('h3', { className: 'modal-title' });
+  titleEl.textContent = planSkill.skill_name || 'Edit Skill';
+  header.appendChild(titleEl);
+  modal.appendChild(header);
 
-  card.classList.add('card-active');
+  /* ── Body ── */
+  const body = el('div', { className: 'modal-body' });
+  const bodyInner = el('div', { className: 'mp-edit-layout' });
 
-  const expanded = el('div', { className: 'mp-card-expanded' });
+  /* -- Left: form fields -- */
+  const formCol = el('div', { className: 'mp-edit-form' });
 
-  const formSection = el('div', { style: 'display:flex;flex-direction:column;gap:10px;' });
-
-  const statusGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const statusLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
+  const statusGroup = el('div', { className: 'form-group' });
+  const statusLabel = el('label', { className: 'form-label' });
   statusLabel.textContent = 'Status';
-  const statusSelect = el('select', { className: 'form-select', id: `edit-status-${planSkill.id}`, style: 'font-size:13px;padding:6px 10px;' });
+  const statusSelect = el('select', { className: 'form-select' });
   [
     { value: 'in_pipeline', label: 'In Pipeline' },
     { value: 'in_development', label: 'In Development' },
@@ -436,12 +421,12 @@ function renderExpandedSection(card, planSkill) {
   });
   statusGroup.appendChild(statusLabel);
   statusGroup.appendChild(statusSelect);
-  formSection.appendChild(statusGroup);
+  formCol.appendChild(statusGroup);
 
-  const levelGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const levelLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
+  const levelGroup = el('div', { className: 'form-group' });
+  const levelLabel = el('label', { className: 'form-label' });
   levelLabel.textContent = 'Proficiency Level';
-  const levelSelect = el('select', { className: 'form-select', id: `edit-level-${planSkill.id}`, style: 'font-size:13px;padding:6px 10px;' });
+  const levelSelect = el('select', { className: 'form-select' });
   [
     { value: '', label: '— Not set —' },
     { value: '1', label: '1 · Education' },
@@ -455,91 +440,68 @@ function renderExpandedSection(card, planSkill) {
   });
   levelGroup.appendChild(levelLabel);
   levelGroup.appendChild(levelSelect);
-  formSection.appendChild(levelGroup);
+  formCol.appendChild(levelGroup);
 
-  const notesGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const notesLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
+  const notesGroup = el('div', { className: 'form-group' });
+  const notesLabel = el('label', { className: 'form-label' });
   notesLabel.textContent = 'Notes';
   const notesTextarea = el('textarea', {
-    id: `edit-notes-${planSkill.id}`,
     placeholder: 'Add notes, resources, or progress comments...',
-    rows: '3',
-    style: 'font-size:13px;resize:vertical;min-height:60px;',
+    rows: '4',
   });
-  notesTextarea.textContent = planSkill.notes || '';
+  notesTextarea.value = planSkill.notes || '';
   notesGroup.appendChild(notesLabel);
   notesGroup.appendChild(notesTextarea);
-  formSection.appendChild(notesGroup);
+  formCol.appendChild(notesGroup);
 
-  const saveBtn = el('button', { className: 'btn btn-primary btn-sm', style: 'align-self:flex-start;' });
-  saveBtn.textContent = 'Save Changes';
-  saveBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    const newStatus = statusSelect.value;
-    const newLevel = levelSelect.value ? Number(levelSelect.value) : null;
-    const newNotes = notesTextarea.value.trim();
+  bodyInner.appendChild(formCol);
 
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving...';
+  /* -- Right: training log -- */
+  const logCol = el('div', { className: 'mp-edit-log' });
 
-    try {
-      await api.put(`/api/plans/${_engineerId}/skills/${planSkill.id}`, {
-        status: newStatus,
-        proficiency_level: newLevel,
-        notes: newNotes || null,
-      });
-      showToast('Plan skill updated', 'success');
-      await reloadPlan();
-    } catch (err) {
-      showToast(err.message || 'Failed to save changes', 'error');
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save Changes';
-    }
-  });
-  formSection.appendChild(saveBtn);
-
-  expanded.appendChild(formSection);
-
-  const logSection = el('div', { style: 'border-top:1px solid var(--border-soft);padding-top:12px;' });
-  const logHeader = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;' });
-  const logTitle = el('div', { style: 'font-size:13px;font-weight:700;color:var(--text-primary);' });
+  const logHeader = el('div', { className: 'mp-edit-log-header' });
+  const logTitle = el('span', {});
   logTitle.textContent = 'Training Log';
   const addLogBtn = el('button', { className: 'btn btn-secondary btn-sm' });
   addLogBtn.textContent = '+ Add Entry';
   logHeader.appendChild(logTitle);
   logHeader.appendChild(addLogBtn);
-  logSection.appendChild(logHeader);
+  logCol.appendChild(logHeader);
 
-  const logListEl = el('div', { style: 'display:flex;flex-direction:column;gap:8px;' });
+  const logListEl = el('div', { className: 'mp-edit-log-list' });
   const logs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
 
-  if (logs.length === 0) {
-    const emptyLog = el('div', { style: 'font-size:12px;color:var(--text-muted);padding:8px 0;' });
-    emptyLog.textContent = 'No training log entries yet.';
-    logListEl.appendChild(emptyLog);
-  } else {
-    logs.forEach(log => {
-      logListEl.appendChild(buildTrainingLogEntry(log));
-    });
+  function renderLogList() {
+    logListEl.innerHTML = '';
+    const currentLogs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
+    if (currentLogs.length === 0) {
+      const emptyLog = el('div', { style: 'font-size:12px;color:var(--text-muted);padding:12px 0;text-align:center;' });
+      emptyLog.textContent = 'No training log entries yet.';
+      logListEl.appendChild(emptyLog);
+    } else {
+      currentLogs.forEach(log => {
+        logListEl.appendChild(buildTrainingLogEntry(log));
+      });
+    }
   }
-  logSection.appendChild(logListEl);
+  renderLogList();
+  logCol.appendChild(logListEl);
 
-  const logFormEl = el('div', {
-    style: 'display:none;flex-direction:column;gap:8px;margin-top:10px;padding:10px;background:var(--bg-elevated);border-radius:var(--radius-md);border:1px solid var(--border-soft);',
-  });
+  const logFormEl = el('div', { className: 'mp-edit-log-form' });
+  logFormEl.style.display = 'none';
 
-  const logTitleGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const logTitleLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
+  const logTitleGroup = el('div', { className: 'form-group' });
+  const logTitleLabel = el('label', { className: 'form-label' });
   logTitleLabel.textContent = 'Title';
-  const logTitleInput = el('input', { type: 'text', placeholder: 'e.g. Completed CCNP course', style: 'font-size:13px;padding:6px 10px;' });
+  const logTitleInput = el('input', { type: 'text', placeholder: 'e.g. Completed CCNP course' });
   logTitleGroup.appendChild(logTitleLabel);
   logTitleGroup.appendChild(logTitleInput);
   logFormEl.appendChild(logTitleGroup);
 
-  const logTypeGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const logTypeLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
+  const logTypeGroup = el('div', { className: 'form-group' });
+  const logTypeLabel = el('label', { className: 'form-label' });
   logTypeLabel.textContent = 'Type';
-  const logTypeSelect = el('select', { className: 'form-select', style: 'font-size:13px;padding:6px 10px;' });
+  const logTypeSelect = el('select', { className: 'form-select' });
   ['course', 'certification', 'reading', 'link', 'action'].forEach(t => {
     const opt = el('option', { value: t });
     opt.textContent = t.charAt(0).toUpperCase() + t.slice(1);
@@ -549,18 +511,18 @@ function renderExpandedSection(card, planSkill) {
   logTypeGroup.appendChild(logTypeSelect);
   logFormEl.appendChild(logTypeGroup);
 
-  const logDateGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const logDateLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
+  const logDateGroup = el('div', { className: 'form-group' });
+  const logDateLabel = el('label', { className: 'form-label' });
   logDateLabel.textContent = 'Completed At';
-  const logDateInput = el('input', { type: 'date', style: 'font-size:13px;padding:6px 10px;' });
+  const logDateInput = el('input', { type: 'date' });
   logDateGroup.appendChild(logDateLabel);
   logDateGroup.appendChild(logDateInput);
   logFormEl.appendChild(logDateGroup);
 
-  const logNotesGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const logNotesLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
+  const logNotesGroup = el('div', { className: 'form-group' });
+  const logNotesLabel = el('label', { className: 'form-label' });
   logNotesLabel.textContent = 'Notes';
-  const logNotesInput = el('textarea', { placeholder: 'Optional notes...', rows: '2', style: 'font-size:13px;resize:vertical;min-height:40px;' });
+  const logNotesInput = el('textarea', { placeholder: 'Optional notes...', rows: '2' });
   logNotesGroup.appendChild(logNotesLabel);
   logNotesGroup.appendChild(logNotesInput);
   logFormEl.appendChild(logNotesGroup);
@@ -571,8 +533,7 @@ function renderExpandedSection(card, planSkill) {
   const logCancelBtn = el('button', { className: 'btn btn-secondary btn-sm' });
   logCancelBtn.textContent = 'Cancel';
 
-  logSubmitBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
+  logSubmitBtn.addEventListener('click', async () => {
     const title = logTitleInput.value.trim();
     if (!title) { showToast('Title is required', 'warning'); return; }
 
@@ -587,16 +548,28 @@ function renderExpandedSection(card, planSkill) {
         notes: logNotesInput.value.trim() || null,
       });
       showToast('Training entry added', 'success');
-      await reloadPlan();
+
+      const freshPlan = await api.get(`/api/plans/${_engineerId}`);
+      _planData = freshPlan;
+      const freshSkill = (freshPlan.skills || []).find(s => s.id === planSkill.id);
+      if (freshSkill) planSkill.training_logs = freshSkill.training_logs;
+      renderLogList();
+
+      logFormEl.style.display = 'none';
+      addLogBtn.style.display = '';
+      logTitleInput.value = '';
+      logTypeSelect.selectedIndex = 0;
+      logDateInput.value = '';
+      logNotesInput.value = '';
     } catch (err) {
       showToast(err.message || 'Failed to add log entry', 'error');
+    } finally {
       logSubmitBtn.disabled = false;
       logSubmitBtn.textContent = 'Add Entry';
     }
   });
 
-  logCancelBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
+  logCancelBtn.addEventListener('click', () => {
     logFormEl.style.display = 'none';
     addLogBtn.style.display = '';
   });
@@ -604,10 +577,9 @@ function renderExpandedSection(card, planSkill) {
   logFormActions.appendChild(logSubmitBtn);
   logFormActions.appendChild(logCancelBtn);
   logFormEl.appendChild(logFormActions);
-  logSection.appendChild(logFormEl);
+  logCol.appendChild(logFormEl);
 
-  addLogBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
+  addLogBtn.addEventListener('click', () => {
     logFormEl.style.display = 'flex';
     addLogBtn.style.display = 'none';
     logTitleInput.value = '';
@@ -616,8 +588,88 @@ function renderExpandedSection(card, planSkill) {
     logNotesInput.value = '';
   });
 
-  expanded.appendChild(logSection);
-  card.appendChild(expanded);
+  bodyInner.appendChild(logCol);
+  body.appendChild(bodyInner);
+  modal.appendChild(body);
+
+  /* ── Footer ── */
+  const footer = el('div', { className: 'modal-footer' });
+
+  const closeBtn = el('button', { className: 'btn btn-secondary' });
+  closeBtn.textContent = 'Close';
+
+  const saveBtn = el('button', { className: 'btn btn-primary' });
+  saveBtn.textContent = 'Save Changes';
+
+  footer.appendChild(closeBtn);
+  footer.appendChild(saveBtn);
+  modal.appendChild(footer);
+
+  overlay.appendChild(modal);
+  root.appendChild(overlay);
+
+  /* Animate in */
+  requestAnimationFrame(() => overlay.classList.add('open'));
+
+  /* ── Dirty-state tracking ── */
+  const initialStatus = planSkill.status;
+  const initialLevel = String(planSkill.proficiency_level ?? '');
+  const initialNotes = planSkill.notes || '';
+
+  function isDirty() {
+    return (
+      statusSelect.value !== initialStatus ||
+      levelSelect.value !== initialLevel ||
+      notesTextarea.value !== initialNotes
+    );
+  }
+
+  /* ── Close helper ── */
+  function closeModal() {
+    overlay.classList.remove('open');
+    setTimeout(() => overlay.remove(), 200);
+    renderSections();
+  }
+
+  /* ── Save ── */
+  async function doSave() {
+    const newStatus = statusSelect.value;
+    const newLevel = levelSelect.value ? Number(levelSelect.value) : null;
+    const newNotes = notesTextarea.value.trim();
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      await api.put(`/api/plans/${_engineerId}/skills/${planSkill.id}`, {
+        status: newStatus,
+        proficiency_level: newLevel,
+        notes: newNotes || null,
+      });
+      showToast('Skill updated', 'success');
+      await reloadPlan();
+      closeModal();
+    } catch (err) {
+      showToast(err.message || 'Failed to save changes', 'error');
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Changes';
+    }
+  }
+
+  saveBtn.addEventListener('click', doSave);
+
+  closeBtn.addEventListener('click', async () => {
+    if (isDirty()) {
+      const save = await showConfirm('You have unsaved changes. Save before closing?');
+      if (save) {
+        await doSave();
+        return;
+      }
+    }
+    closeModal();
+  });
+
+  /* NO overlay click dismiss. NO Escape key dismiss. Closable ONLY via Save/Close. */
 }
 
 function buildTrainingLogEntry(log) {
@@ -656,7 +708,6 @@ function buildTrainingLogEntry(log) {
 async function handleMoveCard(planSkillId, newStatus) {
   try {
     await api.put(`/api/plans/${_engineerId}/skills/${planSkillId}`, { status: newStatus });
-    if (_expandedCardId === planSkillId) _expandedCardId = null;
     await reloadPlan();
     showToast('Skill moved', 'success');
   } catch (err) {
@@ -673,7 +724,6 @@ async function handleRemoveSkill(planSkill) {
 
   try {
     await api.del(`/api/plans/${_engineerId}/skills/${planSkill.id}`);
-    if (_expandedCardId === planSkill.id) _expandedCardId = null;
     showToast(`"${planSkill.skill_name}" removed from plan`, 'success');
     await reloadPlan();
   } catch (err) {

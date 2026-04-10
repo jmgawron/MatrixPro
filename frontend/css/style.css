@@ -1236,6 +1236,11 @@ tbody tr:hover td {
   pointer-events: auto;
 }
 
+/* Stacked modals: confirm dialog above edit modal */
+.modal-overlay + .modal-overlay {
+  z-index: 210;
+}
+
 .modal {
   background: var(--bg-panel);
   border: 1px solid var(--border-strong);
@@ -2504,14 +2509,65 @@ textarea.is-error:focus {
   gap: 4px;
 }
 
-/* Expanded section inside card */
-.mp-card-expanded {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-soft);
+/* Edit skill modal layout */
+.mp-edit-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.mp-edit-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+}
+
+.mp-edit-log {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-left: 1px solid var(--border-soft);
+  padding-left: 24px;
+}
+
+.mp-edit-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mp-edit-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.mp-edit-log-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+}
+
+@media (max-width: 768px) {
+  .mp-edit-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .mp-edit-log {
+    border-left: none;
+    border-top: 1px solid var(--border-soft);
+    padding-left: 0;
+    padding-top: 16px;
+  }
 }
 
 /* Empty state for section */

@@ -3,8 +3,8 @@ let _activeModal = null;
 function removeModal() {
   if (!_activeModal) return;
   const { overlay } = _activeModal;
-  overlay.classList.add('modal-exit');
-  overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
+  overlay.classList.remove('open');
+  setTimeout(() => overlay.remove(), 200);
   _activeModal = null;
 }
 
@@ -65,7 +65,7 @@ export function showModal({ title, body, confirmText = 'Confirm', cancelText = '
   document.getElementById('modalRoot').appendChild(overlay);
   _activeModal = { overlay };
 
-  requestAnimationFrame(() => overlay.classList.add('modal-enter'));
+  requestAnimationFrame(() => overlay.classList.add('open'));
 
   const confirm = () => { removeModal(); onConfirm?.(); };
   const cancel = () => { removeModal(); onCancel?.(); };

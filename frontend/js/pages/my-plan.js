@@ -4,17 +4,20 @@ import { showSkeleton } from '../components/skeleton.js';
 import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
 
-// ─── Module-level page state ─────────────────────────────────────────────────
-
 let _container = null;
 let _engineerId = null;
-let _planData = null;           // full PlanResponse
-let _expandedCardId = null;     // plan_skill_id of the expanded card
+let _planData = null;
+let _expandedCardId = null;
 let _draggingPlanSkillId = null;
-let _kanbanBodyEls = {};        // status -> column body element
-let _allCatalogSkills = [];     // for Add Skill modal
+let _sectionGridEls = {};
+let _allCatalogSkills = [];
+let _searchQuery = '';
 
-// ─── Entry point ─────────────────────────────────────────────────────────────
+const SECTIONS = [
+  { status: 'in_development', title: 'In Development', icon: '🔨', iconClass: 'mp-card-icon--dev' },
+  { status: 'in_pipeline', title: 'In Pipeline', icon: '📋', iconClass: 'mp-card-icon--pipe' },
+  { status: 'proficiency', title: 'Proficiency', icon: '✅', iconClass: 'mp-card-icon--prof' },
+];
 
 export function mountMyPlan(container, params) {
   _container = container;
@@ -23,8 +26,9 @@ export function mountMyPlan(container, params) {
   _planData = null;
   _expandedCardId = null;
   _draggingPlanSkillId = null;
-  _kanbanBodyEls = {};
+  _sectionGridEls = {};
   _allCatalogSkills = [];
+  _searchQuery = '';
 
   const user = Store.get('user');
   _engineerId = params?.id ? Number(params.id) : user?.id;
@@ -35,17 +39,12 @@ export function mountMyPlan(container, params) {
   return () => {};
 }
 
-// ─── Data loading ─────────────────────────────────────────────────────────────
-
 async function loadPlan() {
-  const kanbanEl = _container.querySelector('.kanban');
-  if (kanbanEl) {
-    Object.values(_kanbanBodyEls).forEach(body => showSkeleton(body, 'cards'));
-  }
+  Object.values(_sectionGridEls).forEach(grid => showSkeleton(grid, 'cards'));
 
   try {
     _planData = await api.get(`/api/plans/${_engineerId}`);
-    renderKanban();
+    renderSections();
   } catch (err) {
     const msg = err.message || 'Failed to load plan';
     if (msg.includes('403') || msg.toLowerCase().includes('forbidden') || msg.toLowerCase().includes('permission')) {
@@ -60,133 +59,136 @@ async function loadPlan() {
 async function reloadPlan() {
   try {
     _planData = await api.get(`/api/plans/${_engineerId}`);
-    renderKanban();
+    renderSections();
   } catch (err) {
     showToast(err.message || 'Failed to reload plan', 'error');
   }
 }
 
-// ─── Page shell construction ─────────────────────────────────────────────────
-
 function buildPageShell(container, params) {
-  const wrapper = createElement('div', { style: 'display:flex;flex-direction:column;gap:0;height:100%;min-height:calc(100vh - 60px);' });
+  const wrapper = el('div', { className: 'mp-wrapper' });
 
   if (params?.id) {
-    const banner = createElement('div', {
-      id: 'manager-banner',
-      style: 'background:var(--bg-panel);border-left:3px solid var(--accent);padding:10px 24px;font-size:14px;color:var(--text-secondary);display:flex;align-items:center;gap:8px;',
-    });
-    const chip = createElement('span', { className: 'triage-chip triage-signal' });
+    const banner = el('div', { className: 'mp-banner', id: 'manager-banner' });
+    const chip = el('span', { className: 'triage-chip triage-signal' });
     chip.textContent = 'Manager View';
-    const label = createElement('span', { id: 'manager-banner-label' });
-    label.textContent = `Viewing engineer's plan`;
+    const label = el('span', { id: 'manager-banner-label' });
+    label.textContent = "Viewing engineer's plan";
     banner.appendChild(chip);
     banner.appendChild(label);
     wrapper.appendChild(banner);
   }
 
-  const topBar = createElement('div', {
-    style: 'background:var(--bg-panel);border-bottom:1px solid var(--border-soft);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;',
+  const header = el('div', { className: 'mp-header' });
+  const title = el('h1', { className: 'mp-title' });
+  title.textContent = 'My Development Plan';
+  const subtitle = el('p', { className: 'mp-subtitle' });
+  subtitle.textContent = 'Track and manage your skill development journey';
+  header.appendChild(title);
+  header.appendChild(subtitle);
+  wrapper.appendChild(header);
+
+  const searchWrap = el('div', { className: 'mp-search' });
+  const searchBox = el('div', { className: 'mp-search-box' });
+  const searchIcon = el('span', { className: 'mp-search-icon' });
+  searchIcon.textContent = '🔍';
+  const searchInput = el('input', {
+    className: 'mp-search-input',
+    type: 'text',
+    placeholder: 'Search skills by name...',
   });
-
-  const titleEl = createElement('h1', { style: 'font-size:22px;font-weight:700;color:var(--text-primary);' });
-  titleEl.textContent = 'My Plan';
-  topBar.appendChild(titleEl);
-
-  const exportRow = createElement('div', { style: 'display:flex;align-items:center;gap:8px;' });
-
-  const pdfBtn = createElement('button', {
-    style: 'display:flex;align-items:center;gap:6px;background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s,color 0.15s;',
+  let debounce = null;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      _searchQuery = searchInput.value.trim().toLowerCase();
+      renderSections();
+    }, 200);
   });
+  searchBox.appendChild(searchIcon);
+  searchBox.appendChild(searchInput);
+  searchWrap.appendChild(searchBox);
+  wrapper.appendChild(searchWrap);
+
+  const infobar = el('div', { className: 'mp-infobar' });
+  const infoLeft = el('span', { className: 'mp-infobar-left', id: 'mp-skill-count' });
+  infoLeft.textContent = '0 Skills';
+  const infoRight = el('div', { className: 'mp-infobar-right' });
+
+  const pdfBtn = el('button', { className: 'mp-export-btn' });
   pdfBtn.textContent = '📄 Export PDF';
-  pdfBtn.addEventListener('click', () => {
-    downloadExport(`/api/export/plans/${_engineerId}/pdf`, `plan_${_engineerId}.pdf`);
-  });
+  pdfBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/pdf`, `plan_${_engineerId}.pdf`));
 
-  const csvBtn = createElement('button', {
-    style: 'display:flex;align-items:center;gap:6px;background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s,color 0.15s;',
-  });
+  const csvBtn = el('button', { className: 'mp-export-btn' });
   csvBtn.textContent = '📊 Export CSV';
-  csvBtn.addEventListener('click', () => {
-    downloadExport(`/api/export/plans/${_engineerId}/csv`, `plan_${_engineerId}.csv`);
-  });
+  csvBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/csv`, `plan_${_engineerId}.csv`));
 
-  const addBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
+  const addBtn = el('button', { className: 'btn btn-primary btn-sm' });
   addBtn.textContent = '+ Add Skill';
   addBtn.addEventListener('click', openAddSkillModal);
 
-  exportRow.appendChild(pdfBtn);
-  exportRow.appendChild(csvBtn);
-  exportRow.appendChild(addBtn);
-  topBar.appendChild(exportRow);
+  infoRight.appendChild(pdfBtn);
+  infoRight.appendChild(csvBtn);
+  infoRight.appendChild(addBtn);
+  infobar.appendChild(infoLeft);
+  infobar.appendChild(infoRight);
+  wrapper.appendChild(infobar);
 
-  wrapper.appendChild(topBar);
+  const sections = el('div', { className: 'mp-sections' });
 
-  const main = createElement('div', { style: 'flex:1;overflow-y:auto;padding:24px;' });
-
-  const kanbanEl = createElement('div', { className: 'kanban' });
-
-  const columns = [
-    { status: 'in_development', title: 'In Development' },
-    { status: 'in_pipeline', title: 'In Pipeline' },
-    { status: 'proficiency', title: 'Proficiency' },
-  ];
-
-  columns.forEach(({ status, title }) => {
-    const col = buildKanbanColumn(status, title);
-    kanbanEl.appendChild(col);
+  SECTIONS.forEach(({ status, title: sTitle, icon }) => {
+    const section = buildSection(status, sTitle, icon);
+    sections.appendChild(section);
   });
 
-  main.appendChild(kanbanEl);
-  wrapper.appendChild(main);
+  wrapper.appendChild(sections);
   container.appendChild(wrapper);
 }
 
-function buildKanbanColumn(status, title) {
-  const col = createElement('div', { className: 'kanban-column' });
-  col.dataset.status = status;
+function buildSection(status, title, icon) {
+  const section = el('div', { className: 'mp-section' });
+  section.dataset.status = status;
 
-  const header = createElement('div', { className: 'kanban-column-header' });
-  const titleEl = createElement('span', { className: 'kanban-column-title' });
+  const header = el('div', { className: 'mp-section-header' });
+  const iconEl = el('span', { className: 'mp-section-icon' });
+  iconEl.textContent = icon;
+  const titleEl = el('span', { className: 'mp-section-title' });
   titleEl.textContent = title;
-  const countEl = createElement('span', { className: 'kanban-count', id: `kanban-count-${status}` });
+  const countEl = el('span', { className: 'mp-section-count', id: `mp-count-${status}` });
   countEl.textContent = '0';
+  header.appendChild(iconEl);
   header.appendChild(titleEl);
   header.appendChild(countEl);
-  col.appendChild(header);
+  section.appendChild(header);
 
-  const body = createElement('div', { className: 'kanban-column-body' });
-  body.id = `kanban-body-${status}`;
-  _kanbanBodyEls[status] = body;
+  const grid = el('div', { className: 'mp-section-grid', id: `mp-grid-${status}` });
+  _sectionGridEls[status] = grid;
 
-  body.addEventListener('dragover', (e) => {
+  section.addEventListener('dragover', (e) => {
     e.preventDefault();
-    col.classList.add('drag-over');
+    section.classList.add('drag-over');
   });
 
-  body.addEventListener('dragleave', (e) => {
-    // Only remove if leaving the column entirely
-    if (!col.contains(e.relatedTarget)) {
-      col.classList.remove('drag-over');
+  section.addEventListener('dragleave', (e) => {
+    if (!section.contains(e.relatedTarget)) {
+      section.classList.remove('drag-over');
     }
   });
 
-  body.addEventListener('drop', (e) => {
+  section.addEventListener('drop', (e) => {
     e.preventDefault();
-    col.classList.remove('drag-over');
+    section.classList.remove('drag-over');
     const planSkillId = Number(e.dataTransfer.getData('planSkillId'));
     const fromStatus = e.dataTransfer.getData('fromStatus');
     if (!planSkillId || fromStatus === status) return;
     handleMoveCard(planSkillId, status);
   });
 
-  col.appendChild(body);
-  return col;
+  section.appendChild(grid);
+  return section;
 }
 
-// ─── Kanban rendering ─────────────────────────────────────────────────────────
-
-function renderKanban() {
+function renderSections() {
   if (!_planData) return;
 
   const bannerLabel = document.getElementById('manager-banner-label');
@@ -196,28 +198,42 @@ function renderKanban() {
 
   const skills = Array.isArray(_planData.skills) ? _planData.skills : [];
 
+  const filtered = _searchQuery
+    ? skills.filter(s => (s.skill_name || '').toLowerCase().includes(_searchQuery))
+    : skills;
+
   const groups = {
-    in_development: skills.filter(s => s.status === 'in_development'),
-    in_pipeline: skills.filter(s => s.status === 'in_pipeline'),
-    proficiency: skills.filter(s => s.status === 'proficiency'),
+    in_development: filtered.filter(s => s.status === 'in_development'),
+    in_pipeline: filtered.filter(s => s.status === 'in_pipeline'),
+    proficiency: filtered.filter(s => s.status === 'proficiency'),
   };
 
-  Object.entries(groups).forEach(([status, statusSkills]) => {
-    const body = _kanbanBodyEls[status];
-    const countEl = document.getElementById(`kanban-count-${status}`);
-    if (!body) return;
+  const totalCount = filtered.length;
+  const countLabel = document.getElementById('mp-skill-count');
+  if (countLabel) countLabel.textContent = `${totalCount} Skill${totalCount !== 1 ? 's' : ''}`;
 
-    body.innerHTML = '';
+  Object.entries(groups).forEach(([status, statusSkills]) => {
+    const grid = _sectionGridEls[status];
+    const countEl = document.getElementById(`mp-count-${status}`);
+    if (!grid) return;
+
+    grid.innerHTML = '';
     if (countEl) countEl.textContent = String(statusSkills.length);
 
     if (statusSkills.length === 0) {
-      renderColumnEmptyState(body);
+      const empty = el('div', { className: 'mp-empty' });
+      empty.textContent = _searchQuery
+        ? 'No matching skills in this section.'
+        : 'No skills yet — browse the catalog to get started!';
+      grid.appendChild(empty);
       return;
     }
 
+    const sectionDef = SECTIONS.find(s => s.status === status);
+
     statusSkills.forEach(planSkill => {
-      const card = buildKanbanCard(planSkill, status);
-      body.appendChild(card);
+      const card = buildCard(planSkill, status, sectionDef?.iconClass || 'mp-card-icon--dev');
+      grid.appendChild(card);
 
       if (_expandedCardId === planSkill.id) {
         renderExpandedSection(card, planSkill);
@@ -226,48 +242,54 @@ function renderKanban() {
   });
 }
 
-function renderColumnEmptyState(body) {
-  const empty = createElement('div', {
-    style: 'text-align:center;padding:24px 12px;color:var(--text-muted);font-size:13px;line-height:1.6;',
-  });
-  empty.textContent = 'No skills yet — browse the catalog to get started!';
-  body.appendChild(empty);
-}
-
-// ─── Kanban card ──────────────────────────────────────────────────────────────
-
-function buildKanbanCard(planSkill, status) {
-  const card = createElement('div', { className: 'kanban-card' });
+function buildCard(planSkill, status, iconClass) {
+  const card = el('div', { className: 'mp-card' });
   card.dataset.planSkillId = planSkill.id;
   card.dataset.status = status;
   card.setAttribute('draggable', 'true');
 
-  const headerRow = createElement('div', { style: 'display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;' });
+  const top = el('div', { className: 'mp-card-top' });
 
-  const nameEl = createElement('div', { style: 'font-size:14px;font-weight:700;color:var(--text-primary);flex:1;' });
-  nameEl.textContent = planSkill.skill_name || 'Unknown Skill';
-  headerRow.appendChild(nameEl);
+  const icon = el('div', { className: `mp-card-icon ${iconClass}` });
+  const skillName = planSkill.skill_name || 'Unknown Skill';
+  icon.textContent = skillName.charAt(0);
+  top.appendChild(icon);
 
-  const actionsBtn = createElement('button', {
-    style: 'background:none;border:none;cursor:pointer;color:var(--text-muted);padding:2px 4px;font-size:16px;line-height:1;flex-shrink:0;border-radius:4px;',
-    title: 'Actions',
-  });
+  const info = el('div', { className: 'mp-card-info' });
+  const nameEl = el('div', { className: 'mp-card-name' });
+  nameEl.textContent = skillName;
+  info.appendChild(nameEl);
+
+  const badgeWrap = el('div', { className: 'mp-card-badge' });
+  badgeWrap.appendChild(buildProficiencyBadge(planSkill.proficiency_level));
+  info.appendChild(badgeWrap);
+  top.appendChild(info);
+
+  const actionsBtn = el('button', { className: 'mp-card-actions', title: 'Actions' });
   actionsBtn.textContent = '⋯';
   actionsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     showCardActionsMenu(e, planSkill, status);
   });
-  headerRow.appendChild(actionsBtn);
+  top.appendChild(actionsBtn);
+  card.appendChild(top);
 
-  card.appendChild(headerRow);
+  const body = el('div', { className: 'mp-card-body' });
+  body.textContent = planSkill.notes || 'No notes added';
+  card.appendChild(body);
 
-  const badge = buildProficiencyBadge(planSkill.proficiency_level);
-  card.appendChild(badge);
-
-  const dateRow = createElement('div', { style: 'font-size:12px;color:var(--text-muted);margin-top:8px;' });
+  const footer = el('div', { className: 'mp-card-footer' });
   const dateStr = formatDate(planSkill.updated_at || planSkill.added_at);
-  dateRow.textContent = dateStr ? `Updated ${dateStr}` : '';
-  card.appendChild(dateRow);
+  if (dateStr) {
+    const dateItem = el('span', { className: 'mp-card-footer-item' });
+    dateItem.textContent = `📅 ${dateStr}`;
+    footer.appendChild(dateItem);
+  }
+  const logCount = Array.isArray(planSkill.training_logs) ? planSkill.training_logs.length : 0;
+  const logItem = el('span', { className: 'mp-card-footer-item' });
+  logItem.textContent = `📝 ${logCount} log${logCount !== 1 ? 's' : ''}`;
+  footer.appendChild(logItem);
+  card.appendChild(footer);
 
   card.addEventListener('dragstart', (e) => {
     _draggingPlanSkillId = planSkill.id;
@@ -303,15 +325,17 @@ function buildProficiencyBadge(level) {
     3: { cls: 'chip-experience', label: 'L3 · Experience' },
   };
   const c = config[level];
-  const badge = createElement('span', { className: c ? `triage-chip ${c.cls}` : 'triage-chip chip-pipeline' });
+  const badge = el('span', { className: c ? `triage-chip ${c.cls}` : 'triage-chip chip-pipeline' });
   badge.textContent = c ? c.label : '—';
+  badge.style.fontSize = '11px';
+  badge.style.padding = '2px 8px';
   return badge;
 }
 
 function showCardActionsMenu(e, planSkill, currentStatus) {
   document.querySelectorAll('.card-actions-menu').forEach(m => m.remove());
 
-  const menu = createElement('div', {
+  const menu = el('div', {
     className: 'card-actions-menu',
     style: 'position:fixed;background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:var(--radius-md);box-shadow:var(--shadow-md);z-index:999;min-width:160px;padding:4px 0;',
   });
@@ -325,7 +349,7 @@ function showCardActionsMenu(e, planSkill, currentStatus) {
   };
 
   nextStatuses.forEach(targetStatus => {
-    const item = createElement('button', {
+    const item = el('button', {
       style: 'display:block;width:100%;text-align:left;background:none;border:none;padding:8px 14px;font-size:13px;color:var(--text-secondary);cursor:pointer;',
     });
     item.textContent = `Move to ${statusLabels[targetStatus]}`;
@@ -339,10 +363,10 @@ function showCardActionsMenu(e, planSkill, currentStatus) {
     menu.appendChild(item);
   });
 
-  const sep = createElement('div', { style: 'border-top:1px solid var(--border-soft);margin:4px 0;' });
+  const sep = el('div', { style: 'border-top:1px solid var(--border-soft);margin:4px 0;' });
   menu.appendChild(sep);
 
-  const removeItem = createElement('button', {
+  const removeItem = el('button', {
     style: 'display:block;width:100%;text-align:left;background:none;border:none;padding:8px 14px;font-size:13px;color:var(--error, #ef4444);cursor:pointer;',
   });
   removeItem.textContent = 'Remove from plan';
@@ -370,18 +394,16 @@ function showCardActionsMenu(e, planSkill, currentStatus) {
   setTimeout(() => document.addEventListener('click', dismiss), 0);
 }
 
-// ─── Card expansion ────────────────────────────────────────────────────────────
-
 function collapseCard(card) {
   _expandedCardId = null;
-  const expanded = card.querySelector('.card-expanded');
+  const expanded = card.querySelector('.mp-card-expanded');
   if (expanded) expanded.remove();
   card.classList.remove('card-active');
 }
 
 function collapseAllCards() {
-  _container.querySelectorAll('.kanban-card').forEach(c => {
-    const exp = c.querySelector('.card-expanded');
+  _container.querySelectorAll('.mp-card').forEach(c => {
+    const exp = c.querySelector('.mp-card-expanded');
     if (exp) exp.remove();
     c.classList.remove('card-active');
   });
@@ -389,28 +411,25 @@ function collapseAllCards() {
 }
 
 function renderExpandedSection(card, planSkill) {
-  const existing = card.querySelector('.card-expanded');
+  const existing = card.querySelector('.mp-card-expanded');
   if (existing) existing.remove();
 
   card.classList.add('card-active');
 
-  const expanded = createElement('div', {
-    className: 'card-expanded',
-    style: 'margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft);display:flex;flex-direction:column;gap:12px;',
-  });
+  const expanded = el('div', { className: 'mp-card-expanded' });
 
-  const formSection = createElement('div', { style: 'display:flex;flex-direction:column;gap:10px;' });
+  const formSection = el('div', { style: 'display:flex;flex-direction:column;gap:10px;' });
 
-  const statusGroup = createElement('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const statusLabel = createElement('label', { className: 'form-label', style: 'font-size:12px;' });
+  const statusGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
+  const statusLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
   statusLabel.textContent = 'Status';
-  const statusSelect = createElement('select', { className: 'form-select', id: `edit-status-${planSkill.id}`, style: 'font-size:13px;padding:6px 10px;' });
+  const statusSelect = el('select', { className: 'form-select', id: `edit-status-${planSkill.id}`, style: 'font-size:13px;padding:6px 10px;' });
   [
     { value: 'in_pipeline', label: 'In Pipeline' },
     { value: 'in_development', label: 'In Development' },
     { value: 'proficiency', label: 'Proficiency' },
   ].forEach(({ value, label }) => {
-    const opt = createElement('option', { value });
+    const opt = el('option', { value });
     opt.textContent = label;
     if (planSkill.status === value) opt.selected = true;
     statusSelect.appendChild(opt);
@@ -419,17 +438,17 @@ function renderExpandedSection(card, planSkill) {
   statusGroup.appendChild(statusSelect);
   formSection.appendChild(statusGroup);
 
-  const levelGroup = createElement('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const levelLabel = createElement('label', { className: 'form-label', style: 'font-size:12px;' });
+  const levelGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
+  const levelLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
   levelLabel.textContent = 'Proficiency Level';
-  const levelSelect = createElement('select', { className: 'form-select', id: `edit-level-${planSkill.id}`, style: 'font-size:13px;padding:6px 10px;' });
+  const levelSelect = el('select', { className: 'form-select', id: `edit-level-${planSkill.id}`, style: 'font-size:13px;padding:6px 10px;' });
   [
     { value: '', label: '— Not set —' },
     { value: '1', label: '1 · Education' },
     { value: '2', label: '2 · Exposure' },
     { value: '3', label: '3 · Experience' },
   ].forEach(({ value, label }) => {
-    const opt = createElement('option', { value });
+    const opt = el('option', { value });
     opt.textContent = label;
     if (String(planSkill.proficiency_level ?? '') === value) opt.selected = true;
     levelSelect.appendChild(opt);
@@ -438,21 +457,21 @@ function renderExpandedSection(card, planSkill) {
   levelGroup.appendChild(levelSelect);
   formSection.appendChild(levelGroup);
 
-  const notesGroup = createElement('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const notesLabel = createElement('label', { className: 'form-label', style: 'font-size:12px;' });
+  const notesGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
+  const notesLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
   notesLabel.textContent = 'Notes';
-  const notesTextarea = createElement('textarea', {
+  const notesTextarea = el('textarea', {
     id: `edit-notes-${planSkill.id}`,
     placeholder: 'Add notes, resources, or progress comments...',
     rows: '3',
-    style: 'font-size:13px;resize:vertical;',
+    style: 'font-size:13px;resize:vertical;min-height:60px;',
   });
   notesTextarea.textContent = planSkill.notes || '';
   notesGroup.appendChild(notesLabel);
   notesGroup.appendChild(notesTextarea);
   formSection.appendChild(notesGroup);
 
-  const saveBtn = createElement('button', { className: 'btn btn-primary btn-sm', style: 'align-self:flex-start;' });
+  const saveBtn = el('button', { className: 'btn btn-primary btn-sm', style: 'align-self:flex-start;' });
   saveBtn.textContent = 'Save Changes';
   saveBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
@@ -481,21 +500,21 @@ function renderExpandedSection(card, planSkill) {
 
   expanded.appendChild(formSection);
 
-  const logSection = createElement('div', { style: 'border-top:1px solid var(--border-soft);padding-top:12px;' });
-  const logHeader = createElement('div', { style: 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;' });
-  const logTitle = createElement('div', { style: 'font-size:13px;font-weight:700;color:var(--text-primary);' });
+  const logSection = el('div', { style: 'border-top:1px solid var(--border-soft);padding-top:12px;' });
+  const logHeader = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;' });
+  const logTitle = el('div', { style: 'font-size:13px;font-weight:700;color:var(--text-primary);' });
   logTitle.textContent = 'Training Log';
-  const addLogBtn = createElement('button', { className: 'btn btn-secondary btn-sm' });
+  const addLogBtn = el('button', { className: 'btn btn-secondary btn-sm' });
   addLogBtn.textContent = '+ Add Entry';
   logHeader.appendChild(logTitle);
   logHeader.appendChild(addLogBtn);
   logSection.appendChild(logHeader);
 
-  const logListEl = createElement('div', { style: 'display:flex;flex-direction:column;gap:8px;' });
+  const logListEl = el('div', { style: 'display:flex;flex-direction:column;gap:8px;' });
   const logs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
 
   if (logs.length === 0) {
-    const emptyLog = createElement('div', { style: 'font-size:12px;color:var(--text-muted);padding:8px 0;' });
+    const emptyLog = el('div', { style: 'font-size:12px;color:var(--text-muted);padding:8px 0;' });
     emptyLog.textContent = 'No training log entries yet.';
     logListEl.appendChild(emptyLog);
   } else {
@@ -505,24 +524,24 @@ function renderExpandedSection(card, planSkill) {
   }
   logSection.appendChild(logListEl);
 
-  const logFormEl = createElement('div', {
+  const logFormEl = el('div', {
     style: 'display:none;flex-direction:column;gap:8px;margin-top:10px;padding:10px;background:var(--bg-elevated);border-radius:var(--radius-md);border:1px solid var(--border-soft);',
   });
 
-  const logTitleGroup = createElement('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const logTitleLabel = createElement('label', { className: 'form-label', style: 'font-size:12px;' });
+  const logTitleGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
+  const logTitleLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
   logTitleLabel.textContent = 'Title';
-  const logTitleInput = createElement('input', { type: 'text', placeholder: 'e.g. Completed CCNP course', style: 'font-size:13px;padding:6px 10px;' });
+  const logTitleInput = el('input', { type: 'text', placeholder: 'e.g. Completed CCNP course', style: 'font-size:13px;padding:6px 10px;' });
   logTitleGroup.appendChild(logTitleLabel);
   logTitleGroup.appendChild(logTitleInput);
   logFormEl.appendChild(logTitleGroup);
 
-  const logTypeGroup = createElement('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const logTypeLabel = createElement('label', { className: 'form-label', style: 'font-size:12px;' });
+  const logTypeGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
+  const logTypeLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
   logTypeLabel.textContent = 'Type';
-  const logTypeSelect = createElement('select', { className: 'form-select', style: 'font-size:13px;padding:6px 10px;' });
+  const logTypeSelect = el('select', { className: 'form-select', style: 'font-size:13px;padding:6px 10px;' });
   ['course', 'certification', 'reading', 'link', 'action'].forEach(t => {
-    const opt = createElement('option', { value: t });
+    const opt = el('option', { value: t });
     opt.textContent = t.charAt(0).toUpperCase() + t.slice(1);
     logTypeSelect.appendChild(opt);
   });
@@ -530,26 +549,26 @@ function renderExpandedSection(card, planSkill) {
   logTypeGroup.appendChild(logTypeSelect);
   logFormEl.appendChild(logTypeGroup);
 
-  const logDateGroup = createElement('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const logDateLabel = createElement('label', { className: 'form-label', style: 'font-size:12px;' });
+  const logDateGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
+  const logDateLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
   logDateLabel.textContent = 'Completed At';
-  const logDateInput = createElement('input', { type: 'date', style: 'font-size:13px;padding:6px 10px;' });
+  const logDateInput = el('input', { type: 'date', style: 'font-size:13px;padding:6px 10px;' });
   logDateGroup.appendChild(logDateLabel);
   logDateGroup.appendChild(logDateInput);
   logFormEl.appendChild(logDateGroup);
 
-  const logNotesGroup = createElement('div', { className: 'form-group', style: 'margin-bottom:0;' });
-  const logNotesLabel = createElement('label', { className: 'form-label', style: 'font-size:12px;' });
+  const logNotesGroup = el('div', { className: 'form-group', style: 'margin-bottom:0;' });
+  const logNotesLabel = el('label', { className: 'form-label', style: 'font-size:12px;' });
   logNotesLabel.textContent = 'Notes';
-  const logNotesInput = createElement('textarea', { placeholder: 'Optional notes...', rows: '2', style: 'font-size:13px;resize:vertical;' });
+  const logNotesInput = el('textarea', { placeholder: 'Optional notes...', rows: '2', style: 'font-size:13px;resize:vertical;min-height:40px;' });
   logNotesGroup.appendChild(logNotesLabel);
   logNotesGroup.appendChild(logNotesInput);
   logFormEl.appendChild(logNotesGroup);
 
-  const logFormActions = createElement('div', { style: 'display:flex;gap:8px;' });
-  const logSubmitBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
+  const logFormActions = el('div', { style: 'display:flex;gap:8px;' });
+  const logSubmitBtn = el('button', { className: 'btn btn-primary btn-sm' });
   logSubmitBtn.textContent = 'Add Entry';
-  const logCancelBtn = createElement('button', { className: 'btn btn-secondary btn-sm' });
+  const logCancelBtn = el('button', { className: 'btn btn-secondary btn-sm' });
   logCancelBtn.textContent = 'Cancel';
 
   logSubmitBtn.addEventListener('click', async (e) => {
@@ -602,23 +621,23 @@ function renderExpandedSection(card, planSkill) {
 }
 
 function buildTrainingLogEntry(log) {
-  const entry = createElement('div', {
+  const entry = el('div', {
     style: 'padding:8px 10px;background:var(--bg-elevated);border-radius:var(--radius-sm);border:1px solid var(--border-soft);',
   });
 
-  const topRow = createElement('div', { style: 'display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;' });
+  const topRow = el('div', { style: 'display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;' });
 
-  const typeChip = createElement('span', { className: 'triage-chip triage-signal', style: 'font-size:11px;padding:2px 7px;' });
+  const typeChip = el('span', { className: 'triage-chip triage-signal', style: 'font-size:11px;padding:2px 7px;' });
   typeChip.textContent = log.type || 'entry';
 
-  const titleEl = createElement('span', { style: 'font-size:13px;font-weight:600;color:var(--text-primary);flex:1;' });
+  const titleEl = el('span', { style: 'font-size:13px;font-weight:600;color:var(--text-primary);flex:1;' });
   titleEl.textContent = log.title || 'Untitled';
 
   topRow.appendChild(typeChip);
   topRow.appendChild(titleEl);
 
   if (log.completed_at) {
-    const dateEl = createElement('span', { style: 'font-size:11px;color:var(--text-muted);white-space:nowrap;' });
+    const dateEl = el('span', { style: 'font-size:11px;color:var(--text-muted);white-space:nowrap;' });
     dateEl.textContent = formatDate(log.completed_at);
     topRow.appendChild(dateEl);
   }
@@ -626,15 +645,13 @@ function buildTrainingLogEntry(log) {
   entry.appendChild(topRow);
 
   if (log.notes) {
-    const notesEl = createElement('div', { style: 'font-size:12px;color:var(--text-secondary);line-height:1.5;margin-top:4px;' });
+    const notesEl = el('div', { style: 'font-size:12px;color:var(--text-secondary);line-height:1.5;margin-top:4px;' });
     notesEl.textContent = log.notes;
     entry.appendChild(notesEl);
   }
 
   return entry;
 }
-
-// ─── CRUD operations ──────────────────────────────────────────────────────────
 
 async function handleMoveCard(planSkillId, newStatus) {
   try {
@@ -664,8 +681,6 @@ async function handleRemoveSkill(planSkill) {
   }
 }
 
-// ─── Add Skill Modal ──────────────────────────────────────────────────────────
-
 async function openAddSkillModal() {
   if (!_allCatalogSkills.length) {
     try {
@@ -685,16 +700,16 @@ async function openAddSkillModal() {
 
   let searchQuery = '';
 
-  const bodyEl = createElement('div', { style: 'display:flex;flex-direction:column;gap:12px;' });
+  const bodyEl = el('div', { style: 'display:flex;flex-direction:column;gap:12px;' });
 
-  const searchInput = createElement('input', {
+  const searchInput = el('input', {
     type: 'text',
     placeholder: 'Search skills...',
     style: 'width:100%;padding:8px 12px;font-size:14px;',
   });
   bodyEl.appendChild(searchInput);
 
-  const listEl = createElement('div', {
+  const listEl = el('div', {
     style: 'display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;',
   });
 
@@ -709,34 +724,34 @@ async function openAddSkillModal() {
       : available;
 
     if (filtered.length === 0) {
-      const empty = createElement('div', { style: 'text-align:center;padding:24px;color:var(--text-muted);font-size:13px;' });
+      const empty = el('div', { style: 'text-align:center;padding:24px;color:var(--text-muted);font-size:13px;' });
       empty.textContent = query ? 'No skills match your search.' : 'All available skills are already in your plan.';
       listEl.appendChild(empty);
       return;
     }
 
     filtered.forEach(skill => {
-      const row = createElement('div', {
+      const row = el('div', {
         style: 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:var(--radius-md);cursor:pointer;transition:border-color 0.15s;',
       });
       row.dataset.skillId = skill.id;
 
-      const info = createElement('div', { style: 'flex:1;min-width:0;' });
-      const nameEl = createElement('div', { style: 'font-size:14px;font-weight:600;color:var(--text-primary);' });
+      const info = el('div', { style: 'flex:1;min-width:0;' });
+      const nameEl = el('div', { style: 'font-size:14px;font-weight:600;color:var(--text-primary);' });
       nameEl.textContent = skill.name;
       info.appendChild(nameEl);
 
-      const meta = createElement('div', { style: 'display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;' });
+      const meta = el('div', { style: 'display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;' });
 
       if (skill.domain_name) {
-        const domBadge = createElement('span', { className: 'triage-chip triage-signal', style: 'font-size:11px;padding:2px 7px;' });
+        const domBadge = el('span', { className: 'triage-chip triage-signal', style: 'font-size:11px;padding:2px 7px;' });
         domBadge.textContent = skill.domain_name;
         meta.appendChild(domBadge);
       }
 
       if (Array.isArray(skill.tags)) {
         skill.tags.slice(0, 3).forEach(tag => {
-          const tagChip = createElement('span', { className: 'triage-chip triage-feedback', style: 'font-size:11px;padding:2px 7px;' });
+          const tagChip = el('span', { className: 'triage-chip triage-feedback', style: 'font-size:11px;padding:2px 7px;' });
           tagChip.textContent = tag.name || tag;
           meta.appendChild(tagChip);
         });
@@ -745,7 +760,7 @@ async function openAddSkillModal() {
       info.appendChild(meta);
       row.appendChild(info);
 
-      const addBtn = createElement('button', { className: 'btn btn-primary btn-sm', style: 'flex-shrink:0;' });
+      const addBtn = el('button', { className: 'btn btn-primary btn-sm', style: 'flex-shrink:0;' });
       addBtn.textContent = 'Add';
 
       addBtn.addEventListener('click', async (e) => {
@@ -794,36 +809,32 @@ async function openAddSkillModal() {
   });
 }
 
-// ─── Permission error ─────────────────────────────────────────────────────────
-
 function showPermissionError(msg) {
-  const main = _container.querySelector('.kanban');
-  if (!main) return;
-  main.innerHTML = '';
-  const err = createElement('div', {
+  const sections = _container.querySelector('.mp-sections');
+  if (!sections) return;
+  sections.innerHTML = '';
+  const errDiv = el('div', {
     style: 'text-align:center;padding:60px 24px;color:var(--text-muted);',
   });
-  const title = createElement('div', { style: 'font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:8px;' });
+  const title = el('div', { style: 'font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:8px;' });
   title.textContent = "You don't have permission to view this plan";
-  const desc = createElement('div', { style: 'font-size:14px;' });
+  const desc = el('div', { style: 'font-size:14px;' });
   desc.textContent = msg || 'Contact your manager or administrator for access.';
-  err.appendChild(title);
-  err.appendChild(desc);
-  main.appendChild(err);
+  errDiv.appendChild(title);
+  errDiv.appendChild(desc);
+  sections.appendChild(errDiv);
 }
 
-// ─── Utility helpers ──────────────────────────────────────────────────────────
-
-function createElement(tag, props) {
-  const el = document.createElement(tag);
-  if (!props) return el;
+function el(tag, props) {
+  const node = document.createElement(tag);
+  if (!props) return node;
   Object.entries(props).forEach(([k, v]) => {
-    if (k === 'className') el.className = v;
-    else if (k === 'textContent') el.textContent = v;
-    else if (k === 'htmlFor') el.htmlFor = v;
-    else el.setAttribute(k, v);
+    if (k === 'className') node.className = v;
+    else if (k === 'textContent') node.textContent = v;
+    else if (k === 'htmlFor') node.htmlFor = v;
+    else node.setAttribute(k, v);
   });
-  return el;
+  return node;
 }
 
 async function downloadExport(url, filename) {

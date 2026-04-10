@@ -2175,3 +2175,372 @@ textarea.is-error:focus {
   width: 100%;
   margin-top: 4px;
 }
+
+
+/* ──────────────────────────────────────────────────────────
+   §MP  MARKETPLACE-STYLE "MY PLAN" PAGE
+   ────────────────────────────────────────────────────────── */
+
+.mp-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: 100%;
+  min-height: calc(100vh - var(--nav-h));
+}
+
+/* Manager banner (kept from original) */
+.mp-banner {
+  background: var(--bg-panel);
+  border-left: 3px solid var(--accent);
+  padding: 10px 24px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Header section */
+.mp-header {
+  padding: 32px 32px 0;
+}
+
+.mp-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -.01em;
+}
+
+.mp-subtitle {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* Search bar */
+.mp-search {
+  padding: 20px 32px 0;
+}
+
+.mp-search-box {
+  position: relative;
+  max-width: 100%;
+}
+
+.mp-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.mp-search-input {
+  width: 100%;
+  padding: 12px 16px 12px 40px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+  color: var(--text-primary);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.mp-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.mp-search-input:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Info bar */
+.mp-infobar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mp-infobar-left {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mp-infobar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mp-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.mp-export-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Sections container */
+.mp-sections {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 32px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Individual section */
+.mp-section {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+
+.mp-section.drag-over {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, .04);
+}
+
+/* Section header */
+.mp-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.mp-section-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.mp-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mp-section-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding-inline: 8px;
+  margin-left: auto;
+}
+
+/* Card grid inside section */
+.mp-section-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding: 16px 20px;
+  min-height: 60px;
+}
+
+/* Section with drag-over visual on grid */
+.mp-section.drag-over .mp-section-grid {
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+  border-radius: var(--radius-md);
+}
+
+/* Marketplace-style card */
+.mp-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  cursor: grab;
+  user-select: none;
+  transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mp-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(59, 130, 246, .45);
+  box-shadow: var(--shadow-sm);
+}
+
+.mp-card:active {
+  cursor: grabbing;
+  transform: rotate(1deg) scale(1.02);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+
+.mp-card.dragging {
+  opacity: .4;
+}
+
+.mp-card.card-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow-md);
+}
+
+/* Card top row: icon + name + actions */
+.mp-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.mp-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.mp-card-icon--dev  { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.mp-card-icon--pipe { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.mp-card-icon--prof { background: linear-gradient(135deg, #22c55e, #16a34a); }
+
+.mp-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mp-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.mp-card-badge {
+  margin-top: 4px;
+}
+
+.mp-card-actions {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px 4px;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  border-radius: 4px;
+  transition: color var(--transition), background var(--transition);
+}
+
+.mp-card-actions:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+/* Card body: notes */
+.mp-card-body {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Card footer: date + log count */
+.mp-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding-top: 6px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.mp-card-footer-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Expanded section inside card */
+.mp-card-expanded {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Empty state for section */
+.mp-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Responsive grid */
+@media (max-width: 1024px) {
+  .mp-section-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .mp-section-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mp-header,
+  .mp-search,
+  .mp-infobar,
+  .mp-sections {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

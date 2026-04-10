@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user, require_role
+from app.models.org import Domain, Team
 from app.models.user import User, UserRole
 from app.schemas.org import TeamCreate, TeamResponse
 
@@ -13,7 +14,7 @@ router = APIRouter(prefix="/api/teams", tags=["teams"])
 def list_teams(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    raise HTTPException(status_code=501, detail="Not implemented yet — Phase 1")
+    return db.query(Team).all()
 
 
 @router.post("/", response_model=TeamResponse)
@@ -22,7 +23,14 @@ def create_team(
     db: Session = Depends(get_db),
     current_user: User = require_role(UserRole.admin),
 ):
-    raise HTTPException(status_code=501, detail="Not implemented yet — Phase 1")
+    domain = db.query(Domain).filter(Domain.id == data.domain_id).first()
+    if domain is None:
+        raise HTTPException(status_code=404, detail="Domain not found")
+    team = Team(name=data.name, domain_id=data.domain_id)
+    db.add(team)
+    db.commit()
+    db.refresh(team)
+    return team
 
 
 @router.get("/{team_id}", response_model=TeamResponse)
@@ -31,7 +39,10 @@ def get_team(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    raise HTTPException(status_code=501, detail="Not implemented yet — Phase 1")
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+    return team
 
 
 @router.put("/{team_id}", response_model=TeamResponse)
@@ -41,7 +52,19 @@ def update_team(
     db: Session = Depends(get_db),
     current_user: User = require_role(UserRole.admin),
 ):
-    raise HTTPException(status_code=501, detail="Not implemented yet — Phase 1")
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+    if data.domain_id is not None:
+        domain = db.query(Domain).filter(Domain.id == data.domain_id).first()
+        if domain is None:
+            raise HTTPException(status_code=404, detail="Domain not found")
+        team.domain_id = data.domain_id
+    if data.name is not None:
+        team.name = data.name
+    db.commit()
+    db.refresh(team)
+    return team
 
 
 @router.delete("/{team_id}")
@@ -50,4 +73,14 @@ def delete_team(
     db: Session = Depends(get_db),
     current_user: User = require_role(UserRole.admin),
 ):
-    raise HTTPException(status_code=501, detail="Not implemented yet — Phase 1")
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+    member_count = db.query(User).filter(User.team_id == team_id).count()
+    if member_count > 0:
+        raise HTTPException(
+            status_code=400, detail="Cannot delete team with active members"
+        )
+    db.delete(team)
+    db.commit()
+    return {"detail": "Team deleted"}

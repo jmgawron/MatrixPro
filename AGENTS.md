@@ -1,7 +1,7 @@
 # MatrixPro — Cross-Session Knowledge Base
 
 > **Purpose**: Reference document for OpenCode agents working on MatrixPro across sessions.
-> **Last updated**: Phase 0 completion.
+> **Last updated**: Phase 1 completion.
 
 ---
 
@@ -192,7 +192,7 @@ GET    /api/export/skills/csv                # Skill catalog CSV (Phase 6)
 GET    /api/health               # {"status":"ok","service":"MatrixPro API"}
 ```
 
-**Note**: All routes except auth/login, auth/me, and health are currently **stubs returning 501**. They will be implemented in their respective phases.
+**Note**: Auth, users, and teams routes are fully implemented (Phase 1). Skills, plans, and export routes are **stubs returning 501** (Phases 2-6).
 
 ---
 
@@ -300,7 +300,7 @@ docker compose up --build
 | Phase | Scope | Status |
 |-------|-------|--------|
 | 0 | Project scaffold, DB schema, design CSS, SPA shell, seed data | **COMPLETE** |
-| 1 | Auth (JWT login, /me), user CRUD with RBAC | Pending |
+| 1 | Auth (JWT login, /me), user CRUD with RBAC, teams CRUD | **COMPLETE** |
 | 2 | Skill catalog CRUD, Catalog Explorer UI (tree, cards, search) | Pending |
 | 3 | My Plan kanban (drag-drop, cards, training log, audit) | Pending |
 | 4 | My Team matrix (2D grid, sticky headers, drill-down) | Pending |

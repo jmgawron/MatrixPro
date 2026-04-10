@@ -85,8 +85,7 @@ function buildPageShell(container, params) {
 
   const header = el('div', { className: 'mp-header' });
   const title = el('h1', { className: 'mp-title' });
-  title.appendChild(document.createTextNode('My Development'));
-  title.appendChild(document.createElement('br'));
+  title.appendChild(document.createTextNode('My Development '));
   const gradientSpan = el('span', { className: 'mp-title-gradient' });
   gradientSpan.textContent = 'Plan';
   title.appendChild(gradientSpan);
@@ -119,8 +118,7 @@ function buildPageShell(container, params) {
   wrapper.appendChild(searchWrap);
 
   const infobar = el('div', { className: 'mp-infobar' });
-  const infoLeft = el('span', { className: 'mp-infobar-left', id: 'mp-skill-count' });
-  infoLeft.textContent = '0 Skills';
+  const statsRow = el('div', { className: 'mp-stats-row', id: 'mp-stats-row' });
   const infoRight = el('div', { className: 'mp-infobar-right' });
 
   const pdfBtn = el('button', { className: 'mp-export-btn' });
@@ -138,7 +136,7 @@ function buildPageShell(container, params) {
   infoRight.appendChild(pdfBtn);
   infoRight.appendChild(csvBtn);
   infoRight.appendChild(addBtn);
-  infobar.appendChild(infoLeft);
+  infobar.appendChild(statsRow);
   infobar.appendChild(infoRight);
   wrapper.appendChild(infobar);
 
@@ -218,8 +216,7 @@ function renderSections() {
   };
 
   const totalCount = filtered.length;
-  const countLabel = document.getElementById('mp-skill-count');
-  if (countLabel) countLabel.textContent = `${totalCount} Skill${totalCount !== 1 ? 's' : ''}`;
+  updateStatsRow(skills, groups);
 
   Object.entries(groups).forEach(([status, statusSkills]) => {
     const grid = _sectionGridEls[status];
@@ -244,6 +241,52 @@ function renderSections() {
       const card = buildCard(planSkill, status, sectionDef?.iconClass || 'mp-card-icon--dev');
       grid.appendChild(card);
     });
+  });
+}
+
+function updateStatsRow(allSkills, groups) {
+  const row = document.getElementById('mp-stats-row');
+  if (!row) return;
+  row.innerHTML = '';
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentQ = Math.floor(now.getMonth() / 3);
+  const qStart = new Date(currentYear, currentQ * 3, 1);
+
+  let logsThisQ = 0;
+  let logsThisYear = 0;
+
+  allSkills.forEach(s => {
+    const logs = Array.isArray(s.training_logs) ? s.training_logs : [];
+    logs.forEach(log => {
+      const d = log.completed_at ? new Date(log.completed_at) : null;
+      if (!d || isNaN(d.getTime())) return;
+      if (d.getFullYear() === currentYear) logsThisYear++;
+      if (d >= qStart) logsThisQ++;
+    });
+  });
+
+  const stats = [
+    { value: allSkills.length, label: 'Total Skills', icon: '📚' },
+    { value: groups.in_development.length, label: 'In Development', icon: '🔨' },
+    { value: groups.proficiency.length, label: 'Proficient', icon: '✅' },
+    { value: logsThisQ, label: 'Logs This Quarter', icon: '📝' },
+    { value: logsThisYear, label: 'Logs This Year', icon: '📅' },
+  ];
+
+  stats.forEach(({ value, label, icon }) => {
+    const chip = el('div', { className: 'mp-stat-chip' });
+    const iconEl = el('span', { className: 'mp-stat-icon' });
+    iconEl.textContent = icon;
+    const valEl = el('span', { className: 'mp-stat-value' });
+    valEl.textContent = value;
+    const labelEl = el('span', { className: 'mp-stat-label' });
+    labelEl.textContent = label;
+    chip.appendChild(iconEl);
+    chip.appendChild(valEl);
+    chip.appendChild(labelEl);
+    row.appendChild(chip);
   });
 }
 

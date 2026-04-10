@@ -1868,7 +1868,7 @@ textarea.is-error:focus {
 
 /* ── Toast / Notification ──────────────────────────────── */
 
-.toast {
+#toastRoot {
   position: fixed;
   bottom: 24px;
   right: 24px;
@@ -1949,7 +1949,8 @@ textarea.is-error:focus {
 /* Toast variants */
 .toast-item--success { border-left: 3px solid var(--success); }
 .toast-item--warning { border-left: 3px solid var(--warning); }
-.toast-item--danger  { border-left: 3px solid var(--danger); }
+.toast-item--danger,
+.toast-item--error   { border-left: 3px solid var(--danger); }
 .toast-item--info    { border-left: 3px solid var(--info); }
 
 

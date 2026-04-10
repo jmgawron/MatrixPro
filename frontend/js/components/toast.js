@@ -10,14 +10,14 @@ export function showToast(message, type = 'info', duration = DURATION_DEFAULT) {
   if (!root) return;
 
   const toast = document.createElement('div');
-  toast.className = `toast toast--${type}`;
+  toast.className = `toast-item toast-item--${type}`;
 
   const icon = document.createElement('span');
   icon.className = 'toast-icon';
   icon.textContent = ICONS[type] ?? ICONS.info;
 
   const text = document.createElement('span');
-  text.className = 'toast-message';
+  text.className = 'toast-msg';
   text.textContent = message;
 
   const close = document.createElement('button');
@@ -30,11 +30,8 @@ export function showToast(message, type = 'info', duration = DURATION_DEFAULT) {
   toast.appendChild(close);
   root.appendChild(toast);
 
-  requestAnimationFrame(() => toast.classList.add('toast-enter'));
-
   function dismiss() {
-    toast.classList.remove('toast-enter');
-    toast.classList.add('toast-exit');
+    toast.classList.add('toast-out');
     toast.addEventListener('animationend', () => toast.remove(), { once: true });
   }
 

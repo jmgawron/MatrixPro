@@ -33,3 +33,25 @@ def create_tables():
 @app.get("/api/health")
 def health():
     return {"status": "ok", "service": "MatrixPro API"}
+
+
+@app.get("/api/stats")
+def get_stats():
+    from sqlalchemy.orm import Session
+    from app.database import SessionLocal
+    from app.models.user import User, UserRole
+    from app.models.org import Team
+    from app.models.skill import Skill
+
+    db = SessionLocal()
+    try:
+        total_engineers = db.query(User).filter(User.role == UserRole.engineer).count()
+        total_teams = db.query(Team).count()
+        total_skills = db.query(Skill).filter(Skill.is_archived == False).count()  # noqa: E712
+        return {
+            "total_engineers": total_engineers,
+            "total_teams": total_teams,
+            "total_skills": total_skills,
+        }
+    finally:
+        db.close()

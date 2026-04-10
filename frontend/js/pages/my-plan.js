@@ -93,10 +93,32 @@ function buildPageShell(container, params) {
   titleEl.textContent = 'My Plan';
   topBar.appendChild(titleEl);
 
+  const exportRow = createElement('div', { style: 'display:flex;align-items:center;gap:8px;' });
+
+  const pdfBtn = createElement('button', {
+    style: 'display:flex;align-items:center;gap:6px;background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s,color 0.15s;',
+  });
+  pdfBtn.textContent = '📄 Export PDF';
+  pdfBtn.addEventListener('click', () => {
+    downloadExport(`/api/export/plans/${_engineerId}/pdf`, `plan_${_engineerId}.pdf`);
+  });
+
+  const csvBtn = createElement('button', {
+    style: 'display:flex;align-items:center;gap:6px;background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s,color 0.15s;',
+  });
+  csvBtn.textContent = '📊 Export CSV';
+  csvBtn.addEventListener('click', () => {
+    downloadExport(`/api/export/plans/${_engineerId}/csv`, `plan_${_engineerId}.csv`);
+  });
+
   const addBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
   addBtn.textContent = '+ Add Skill';
   addBtn.addEventListener('click', openAddSkillModal);
-  topBar.appendChild(addBtn);
+
+  exportRow.appendChild(pdfBtn);
+  exportRow.appendChild(csvBtn);
+  exportRow.appendChild(addBtn);
+  topBar.appendChild(exportRow);
 
   wrapper.appendChild(topBar);
 
@@ -333,6 +355,7 @@ function showCardActionsMenu(e, planSkill, currentStatus) {
   });
   menu.appendChild(removeItem);
 
+  const rect = e.currentTarget.getBoundingClientRect();
   menu.style.top = `${rect.bottom + 4}px`;
   menu.style.left = `${rect.left - 120}px`;
 
@@ -801,6 +824,29 @@ function createElement(tag, props) {
     else el.setAttribute(k, v);
   });
   return el;
+}
+
+async function downloadExport(url, filename) {
+  try {
+    const token = localStorage.getItem('matrixpro_token');
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Export failed (${res.status})`);
+    }
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  } catch (err) {
+    showToast(err.message || 'Export failed', 'error');
+  }
 }
 
 function formatDate(isoStr) {

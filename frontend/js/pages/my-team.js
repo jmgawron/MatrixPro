@@ -134,6 +134,17 @@ function buildPageShell(container) {
   filterRow.appendChild(filterLabel);
   filterRow.appendChild(filterSelect);
   filterRow.appendChild(clearBtn);
+
+  const csvBtn = createElement('button', {
+    style: 'display:flex;align-items:center;gap:6px;background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s,color 0.15s;margin-left:auto;',
+  });
+  csvBtn.textContent = '📊 Export CSV';
+  csvBtn.addEventListener('click', () => {
+    if (!_matrixData) return;
+    downloadExport(`/api/export/teams/${_matrixData.team_id}/matrix/csv`, 'team_matrix.csv');
+  });
+  filterRow.appendChild(csvBtn);
+
   topBar.appendChild(filterRow);
 
   wrapper.appendChild(topBar);
@@ -692,6 +703,29 @@ function renderErrorState(container, msg) {
 }
 
 // ─── Utility helpers ──────────────────────────────────────────────────────────
+
+async function downloadExport(url, filename) {
+  try {
+    const token = localStorage.getItem('matrixpro_token');
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Export failed (${res.status})`);
+    }
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  } catch (err) {
+    showToast(err.message || 'Export failed', 'error');
+  }
+}
 
 function createElement(tag, props) {
   const el = document.createElement(tag);

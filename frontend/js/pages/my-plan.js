@@ -34,9 +34,9 @@ function svgIcon(name, size) {
 }
 
 const SECTIONS = [
-  { status: 'in_development', title: 'In Development', svgIcon: 'wrench', iconClass: 'mp-card-icon--dev' },
-  { status: 'in_pipeline', title: 'In Pipeline', svgIcon: 'layers', iconClass: 'mp-card-icon--pipe' },
-  { status: 'proficiency', title: 'Proficiency', svgIcon: 'shield', iconClass: 'mp-card-icon--prof' },
+  { status: 'in_development', title: 'In Development', subtitle: 'Actively building these skills', svgIcon: 'wrench', iconClass: 'mp-card-icon--dev' },
+  { status: 'in_pipeline', title: 'In Pipeline', subtitle: 'Queued and waiting to start', svgIcon: 'layers', iconClass: 'mp-card-icon--pipe' },
+  { status: 'proficiency', title: 'Proficiency', subtitle: 'Completed — skill fully acquired', svgIcon: 'shield', iconClass: 'mp-card-icon--prof' },
 ];
 
 const STATUS_LABELS = {
@@ -142,22 +142,10 @@ function buildPageShell(container, params) {
   const statsRow = el('div', { className: 'mp-stats-row', id: 'mp-stats-row' });
   const infoRight = el('div', { className: 'mp-infobar-right' });
 
-  const pdfBtn = el('button', { className: 'mp-export-btn' });
-  pdfBtn.appendChild(svgIcon('fileText', '14px'));
-  pdfBtn.appendChild(document.createTextNode(' Export PDF'));
-  pdfBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/pdf`, `plan_${_engineerId}.pdf`));
-
-  const csvBtn = el('button', { className: 'mp-export-btn' });
-  csvBtn.appendChild(svgIcon('table', '14px'));
-  csvBtn.appendChild(document.createTextNode(' Export CSV'));
-  csvBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/csv`, `plan_${_engineerId}.csv`));
-
   const addBtn = el('button', { className: 'btn btn-primary btn-sm' });
   addBtn.textContent = '+ Add Skill';
   addBtn.addEventListener('click', openAddSkillModal);
 
-  infoRight.appendChild(pdfBtn);
-  infoRight.appendChild(csvBtn);
   infoRight.appendChild(addBtn);
   infobar.appendChild(statsRow);
   infobar.appendChild(infoRight);
@@ -165,28 +153,49 @@ function buildPageShell(container, params) {
 
   const sections = el('div', { className: 'mp-sections' });
 
-  SECTIONS.forEach(({ status, title: sTitle, svgIcon: sIcon }) => {
-    const section = buildSection(status, sTitle, sIcon);
+  SECTIONS.forEach(({ status, title: sTitle, subtitle: sSub, svgIcon: sIcon }) => {
+    const section = buildSection(status, sTitle, sSub, sIcon);
     sections.appendChild(section);
   });
 
   wrapper.appendChild(sections);
+
+  const exportFooter = el('div', { className: 'mp-export-footer' });
+  const pdfBtn = el('button', { className: 'mp-export-btn' });
+  pdfBtn.appendChild(svgIcon('fileText', '14px'));
+  pdfBtn.appendChild(document.createTextNode(' Export PDF'));
+  pdfBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/pdf`, `plan_${_engineerId}.pdf`));
+  const csvBtn = el('button', { className: 'mp-export-btn' });
+  csvBtn.appendChild(svgIcon('table', '14px'));
+  csvBtn.appendChild(document.createTextNode(' Export CSV'));
+  csvBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/csv`, `plan_${_engineerId}.csv`));
+  exportFooter.appendChild(pdfBtn);
+  exportFooter.appendChild(csvBtn);
+  wrapper.appendChild(exportFooter);
+
   container.appendChild(wrapper);
 }
 
-function buildSection(status, title, iconName) {
+function buildSection(status, title, subtitle, iconName) {
   const wrapper = el('div', { className: 'mp-section-wrapper' });
 
   const header = el('div', { className: 'mp-section-header' });
   header.dataset.status = status;
-  const iconEl = svgIcon(iconName, '20px');
+  const iconEl = svgIcon(iconName, '28px');
   iconEl.classList.add('mp-section-icon');
+
+  const titleGroup = el('div', { className: 'mp-section-title-group' });
   const titleEl = el('span', { className: 'mp-section-title' });
   titleEl.textContent = title;
+  const subtitleEl = el('div', { className: 'mp-section-subtitle' });
+  subtitleEl.textContent = subtitle;
+  titleGroup.appendChild(titleEl);
+  titleGroup.appendChild(subtitleEl);
+
   const countEl = el('span', { className: 'mp-section-count', id: `mp-count-${status}` });
   countEl.textContent = '0';
   header.appendChild(iconEl);
-  header.appendChild(titleEl);
+  header.appendChild(titleGroup);
   header.appendChild(countEl);
   wrapper.appendChild(header);
 
@@ -302,17 +311,14 @@ function updateStatsRow(allSkills, groups) {
   ];
 
   stats.forEach(({ value, label, icon }) => {
-    const chip = el('div', { className: 'mp-stat-chip' });
-    const iconEl = svgIcon(icon, '14px');
-    iconEl.classList.add('mp-stat-icon');
-    const valEl = el('span', { className: 'mp-stat-value' });
+    const block = el('div', { className: 'mp-stat-block' });
+    const valEl = el('div', { className: 'mp-stat-value' });
     valEl.textContent = value;
-    const labelEl = el('span', { className: 'mp-stat-label' });
+    const labelEl = el('div', { className: 'mp-stat-label' });
     labelEl.textContent = label;
-    chip.appendChild(iconEl);
-    chip.appendChild(valEl);
-    chip.appendChild(labelEl);
-    row.appendChild(chip);
+    block.appendChild(valEl);
+    block.appendChild(labelEl);
+    row.appendChild(block);
   });
 }
 

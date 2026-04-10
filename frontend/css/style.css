@@ -2292,41 +2292,34 @@ textarea.is-error:focus {
   color: var(--text-secondary);
 }
 
-/* Stats row */
+/* Stats row — home-page style centered numbers */
 .mp-stats-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 40px;
   flex-wrap: wrap;
+  padding: 8px 0;
 }
 
-.mp-stat-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.mp-stat-icon {
-  font-size: 13px;
-  line-height: 1;
+.mp-stat-block {
+  text-align: center;
 }
 
 .mp-stat-value {
+  font-size: 28px;
   font-weight: 700;
   color: var(--text-primary);
-  font-size: 13px;
+  line-height: 1;
 }
 
 .mp-stat-label {
-  color: var(--text-muted);
   font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-top: 5px;
 }
 
 .mp-icon {
@@ -2369,6 +2362,14 @@ textarea.is-error:focus {
   color: var(--accent);
 }
 
+.mp-export-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 32px 32px;
+}
+
 /* Sections container */
 .mp-sections {
   flex: 1;
@@ -2376,14 +2377,14 @@ textarea.is-error:focus {
   padding: 0 32px 32px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 40px;
 }
 
 /* Individual section */
 .mp-section {
   background: var(--bg-panel);
   border: 1px solid var(--border-soft);
-  border-radius: var(--radius-lg);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   overflow: hidden;
   transition: border-color var(--transition);
 }
@@ -2397,24 +2398,50 @@ textarea.is-error:focus {
 .mp-section-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 
 .mp-section-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 4px;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.mp-section-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+.mp-section-header[data-status="in_development"] {
+  background: linear-gradient(135deg, rgba(0, 114, 255, 0.12) 0%, rgba(0, 198, 255, 0.06) 100%);
+  border-bottom: 2px solid rgba(0, 174, 239, 0.4);
+}
+
+.mp-section-header[data-status="in_pipeline"] {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.08) 0%, rgba(100, 116, 139, 0.04) 100%);
+  border-bottom: 2px solid rgba(148, 163, 184, 0.25);
+}
+
+.mp-section-header[data-status="proficiency"] {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(16, 185, 129, 0.04) 100%);
+  border-bottom: 2px solid rgba(34, 197, 94, 0.25);
 }
 
 .mp-section-icon {
-  font-size: 20px;
+  font-size: 28px;
   flex-shrink: 0;
   color: var(--text-muted);
 }
 
 .mp-section-header[data-status="in_development"] .mp-section-icon {
-  color: #0072FF;
+  color: #00AEEF;
 }
 
 .mp-section-header[data-status="in_pipeline"] .mp-section-icon {
@@ -2422,7 +2449,11 @@ textarea.is-error:focus {
 }
 
 .mp-section-header[data-status="proficiency"] .mp-section-icon {
-  color: #e2e8f0;
+  color: #22c55e;
+}
+
+[data-theme="light"] .mp-section-header[data-status="in_development"] .mp-section-icon {
+  color: #0072FF;
 }
 
 [data-theme="light"] .mp-section-header[data-status="in_pipeline"] .mp-section-icon {
@@ -2430,43 +2461,51 @@ textarea.is-error:focus {
 }
 
 [data-theme="light"] .mp-section-header[data-status="proficiency"] .mp-section-icon {
-  color: #1e293b;
+  color: #16a34a;
+}
+
+.mp-section-title-group {
+  flex: 1;
+  min-width: 0;
 }
 
 .mp-section-title {
-  font-size: clamp(18px, 2vw, 24px);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -.02em;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-image: linear-gradient(90deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
 }
 
-/* In Development — Cisco blue/cyan gradient (like "for TAC Engineers") */
 .mp-section-header[data-status="in_development"] .mp-section-title {
-  background-image: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%);
+  color: #00AEEF;
 }
 
-/* In Pipeline — silver/slate gradient (readable on dark bg) */
 .mp-section-header[data-status="in_pipeline"] .mp-section-title {
-  background-image: linear-gradient(90deg, #cbd5e1 0%, #94a3b8 100%);
+  color: #94a3b8;
 }
 
-/* Proficiency — clean white-to-silver gradient (readable on dark bg) */
 .mp-section-header[data-status="proficiency"] .mp-section-title {
-  background-image: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 100%);
+  color: #22c55e;
 }
 
-/* Light theme: In Pipeline — darker gray for readability on light bg */
+[data-theme="light"] .mp-section-header[data-status="in_development"] .mp-section-title {
+  color: #0072FF;
+}
+
 [data-theme="light"] .mp-section-header[data-status="in_pipeline"] .mp-section-title {
-  background-image: linear-gradient(90deg, #64748b 0%, #475569 100%);
+  color: #475569;
 }
 
-/* Light theme: Proficiency — deep black gradient for light bg */
 [data-theme="light"] .mp-section-header[data-status="proficiency"] .mp-section-title {
-  background-image: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
+  color: #16a34a;
+}
+
+.mp-section-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 2px;
+  opacity: 0.8;
 }
 
 .mp-section-count {
@@ -2488,9 +2527,9 @@ textarea.is-error:focus {
 /* Card grid inside section */
 .mp-section-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  padding: 16px 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 14px 18px;
   min-height: 60px;
 }
 
@@ -2506,13 +2545,13 @@ textarea.is-error:focus {
   background: var(--bg-card);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 12px;
   cursor: grab;
   user-select: none;
   transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .mp-card:hover {
@@ -2545,22 +2584,26 @@ textarea.is-error:focus {
 }
 
 .mp-card-icon {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   color: #fff;
   flex-shrink: 0;
   text-transform: uppercase;
 }
 
-.mp-card-icon--dev  { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-.mp-card-icon--pipe { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.mp-card-icon--dev  { background: linear-gradient(135deg, #00AEEF, #0072FF); }
+.mp-card-icon--pipe { background: linear-gradient(135deg, #94a3b8, #64748b); }
 .mp-card-icon--prof { background: linear-gradient(135deg, #22c55e, #16a34a); }
+
+[data-theme="light"] .mp-card-icon--dev  { background: linear-gradient(135deg, #0072FF, #005acc); }
+[data-theme="light"] .mp-card-icon--pipe { background: linear-gradient(135deg, #64748b, #475569); }
+[data-theme="light"] .mp-card-icon--prof { background: linear-gradient(135deg, #16a34a, #15803d); }
 
 .mp-card-info {
   flex: 1;
@@ -2568,7 +2611,7 @@ textarea.is-error:focus {
 }
 
 .mp-card-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.3;
@@ -2599,9 +2642,9 @@ textarea.is-error:focus {
 
 /* Card body: notes */
 .mp-card-body {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.4;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -2613,10 +2656,10 @@ textarea.is-error:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
+  gap: 6px;
+  font-size: 11px;
   color: var(--text-muted);
-  padding-top: 6px;
+  padding-top: 5px;
   border-top: 1px solid var(--border-soft);
 }
 
@@ -2698,6 +2741,12 @@ textarea.is-error:focus {
 }
 
 /* Responsive grid */
+@media (max-width: 1280px) {
+  .mp-section-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 @media (max-width: 1024px) {
   .mp-section-grid {
     grid-template-columns: repeat(2, 1fr);

@@ -1,66 +1,6 @@
 import { Store } from '../state.js';
 import { API_BASE } from '../api.js';
 
-// ─── SVG Icons ────────────────────────────────────────────────────────────────
-
-const ICONS = {
-  myPlan: `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>`,
-  myTeam: `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`,
-  catalog: `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>`,
-  skillExplorer: `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>`,
-};
-
-// ─── Module definitions ───────────────────────────────────────────────────────
-
-const MODULES = [
-  {
-    key: 'myPlan',
-    label: 'My Plan',
-    desc: 'View and manage your skill development plan',
-    route: '#/my-plan',
-    minRole: 'engineer',
-    icon: ICONS.myPlan,
-    color: '#3b82f6',
-  },
-  {
-    key: 'myTeam',
-    label: 'My Team',
-    desc: 'Team skills matrix and progress overview',
-    route: '#/my-team',
-    minRole: 'manager',
-    icon: ICONS.myTeam,
-    color: '#22c55e',
-  },
-  {
-    key: 'catalog',
-    label: 'Catalog Explorer',
-    desc: 'Browse and search the skill catalog',
-    route: '#/catalog',
-    minRole: 'engineer',
-    icon: ICONS.catalog,
-    color: '#f59e0b',
-  },
-  {
-    key: 'skillExplorer',
-    label: 'Skill Explorer',
-    desc: 'Find engineers by skill, compare teams',
-    route: '#/skill-explorer',
-    minRole: 'engineer',
-    icon: ICONS.skillExplorer,
-    color: '#a855f7',
-  },
-];
-
-// ─── Role helpers ─────────────────────────────────────────────────────────────
-
-const ROLE_ORDER = { engineer: 0, manager: 1, admin: 2 };
-
-function roleAllows(userRole, minRole) {
-  if (!minRole) return true;
-  if (!userRole) return false;
-  return (ROLE_ORDER[userRole] ?? -1) >= (ROLE_ORDER[minRole] ?? 0);
-}
-
 // ─── Count-up animation ───────────────────────────────────────────────────────
 
 function animateCountUp(el, target) {
@@ -75,7 +15,7 @@ function animateCountUp(el, target) {
 
   function tick(now) {
     const elapsed = Math.min(now - start, duration);
-    const progress = 1 - Math.pow(1 - elapsed / duration, 3); // ease-out cubic
+    const progress = 1 - Math.pow(1 - elapsed / duration, 3);
     const current = Math.round(target * progress);
     el.textContent = String(current);
     if (elapsed < duration) {
@@ -90,68 +30,58 @@ function animateCountUp(el, target) {
 
 // ─── createElement helper ─────────────────────────────────────────────────────
 
-function createElement(tag, props) {
+function h(tag, attrs, ...children) {
   const el = document.createElement(tag);
-  if (!props) return el;
-  Object.entries(props).forEach(([k, v]) => {
-    if (k === 'className') el.className = v;
-    else if (k === 'textContent') el.textContent = v;
-    else if (k === 'htmlFor') el.htmlFor = v;
-    else el.setAttribute(k, v);
-  });
+  if (attrs) {
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === 'className') el.className = v;
+      else if (k === 'textContent') el.textContent = v;
+      else if (k === 'innerHTML') el.innerHTML = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
+      else el.setAttribute(k, v);
+    }
+  }
+  for (const child of children) {
+    if (typeof child === 'string') el.appendChild(document.createTextNode(child));
+    else if (child) el.appendChild(child);
+  }
   return el;
 }
 
-// ─── Stat cards ───────────────────────────────────────────────────────────────
+// ─── Stats row (ide.cisco.com style — inline in hero) ─────────────────────────
 
-function buildStatCard(label, valueEl) {
-  const card = createElement('div', {
+function buildStatsRow() {
+  const wrapper = h('div', {
     style: [
-      'background:var(--bg-elevated);',
-      'backdrop-filter:blur(12px);',
-      '-webkit-backdrop-filter:blur(12px);',
-      'border:1px solid var(--border-soft);',
-      'border-radius:16px;',
-      'padding:24px 32px;',
-      'text-align:center;',
-      'min-width:180px;',
-      'flex:1;',
+      'display:flex;align-items:center;justify-content:center;',
+      'gap:48px;flex-wrap:wrap;',
     ].join(''),
-  });
-
-  card.appendChild(valueEl);
-
-  const labelEl = createElement('div', {
-    style: 'font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:8px;',
-    textContent: label,
-  });
-  card.appendChild(labelEl);
-
-  return card;
-}
-
-function buildStatSection() {
-  const row = createElement('div', {
-    style: 'display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin:32px 0;',
   });
 
   const statDefs = [
     { key: 'total_engineers', label: 'Engineers' },
-    { key: 'total_teams',     label: 'Teams' },
-    { key: 'total_skills',    label: 'Skills' },
+    { key: 'total_teams', label: 'Teams' },
+    { key: 'total_skills', label: 'Skills' },
   ];
 
   const valueEls = {};
+
   statDefs.forEach(({ key, label }) => {
-    const valueEl = createElement('div', {
-      style: 'font-size:36px;font-weight:800;color:var(--text-primary);',
+    const numEl = h('div', {
+      style: 'font-size:36px;font-weight:700;color:var(--text-primary);line-height:1;',
       textContent: '—',
     });
-    valueEls[key] = valueEl;
-    row.appendChild(buildStatCard(label, valueEl));
+    valueEls[key] = numEl;
+
+    const labelEl = h('div', {
+      style: 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-top:6px;',
+      textContent: label,
+    });
+
+    const statBlock = h('div', { style: 'text-align:center;' }, numEl, labelEl);
+    wrapper.appendChild(statBlock);
   });
 
-  // Fetch stats async (no auth required)
   fetch(`${API_BASE}/api/stats`)
     .then(r => r.ok ? r.json() : Promise.reject(r.status))
     .then(data => {
@@ -160,76 +90,9 @@ function buildStatSection() {
         animateCountUp(valueEls[key], val);
       });
     })
-    .catch(() => {
-      // Silently degrade — leave "—" placeholders
-    });
+    .catch(() => {});
 
-  return row;
-}
-
-// ─── Module nav cards ─────────────────────────────────────────────────────────
-
-function buildModuleCard(mod) {
-  const card = createElement('div', {
-    style: [
-      'background:var(--bg-card);',
-      'border:1px solid var(--border-soft);',
-      'border-radius:var(--radius-lg);',
-      'padding:24px;',
-      'cursor:pointer;',
-      'transition:transform 0.2s,box-shadow 0.2s,border-color 0.2s;',
-      'display:flex;flex-direction:column;gap:12px;',
-    ].join(''),
-  });
-
-  card.addEventListener('mouseenter', () => {
-    card.style.transform = 'translateY(-2px)';
-    card.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
-    card.style.borderColor = `${mod.color}55`;
-  });
-  card.addEventListener('mouseleave', () => {
-    card.style.transform = '';
-    card.style.boxShadow = '';
-    card.style.borderColor = 'var(--border-soft)';
-  });
-  card.addEventListener('click', () => {
-    window.location.hash = mod.route;
-  });
-
-  // Icon wrapper
-  const iconWrap = createElement('div', {
-    style: `display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;background:${mod.color}22;color:${mod.color};`,
-  });
-  iconWrap.innerHTML = mod.icon;
-  card.appendChild(iconWrap);
-
-  const nameEl = createElement('h3', {
-    style: 'font-size:16px;font-weight:700;color:var(--text-primary);margin:0;',
-    textContent: mod.label,
-  });
-  card.appendChild(nameEl);
-
-  const descEl = createElement('p', {
-    style: 'font-size:13px;color:var(--text-secondary);margin:0;line-height:1.5;',
-    textContent: mod.desc,
-  });
-  card.appendChild(descEl);
-
-  return card;
-}
-
-function buildModuleGrid(userRole) {
-  const visible = MODULES.filter(m => roleAllows(userRole, m.minRole));
-
-  const grid = createElement('div', {
-    style: 'display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:900px;margin:0 auto;',
-  });
-
-  visible.forEach(mod => {
-    grid.appendChild(buildModuleCard(mod));
-  });
-
-  return grid;
+  return wrapper;
 }
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
@@ -239,76 +102,174 @@ export function mountHome(container) {
 
   const user = Store.get('user');
 
-  // Full-viewport gradient wrapper
-  const page = createElement('div', {
+  // Full-page wrapper with radial glow background
+  const page = h('div', {
     style: [
-      'background:linear-gradient(135deg,#0d1117 0%,#111d3a 30%,#0f2847 60%,#0d1117 100%);',
+      'background:var(--home-bg);',
       'min-height:calc(100vh - 60px);',
       'display:flex;flex-direction:column;align-items:center;',
-      'padding:60px 24px 80px;',
+      'position:relative;overflow:hidden;',
     ].join(''),
   });
 
-  // Hero section
-  const hero = createElement('div', {
-    style: 'text-align:center;max-width:640px;width:100%;',
+  // Radial glow behind hero (subtle blue orb)
+  const glow = h('div', {
+    style: [
+      'position:absolute;top:-200px;left:50%;transform:translateX(-50%);',
+      'width:900px;height:600px;',
+      'background:radial-gradient(ellipse at center, var(--home-glow) 0%, transparent 70%);',
+      'pointer-events:none;z-index:0;',
+    ].join(''),
+  });
+  page.appendChild(glow);
+
+  // Content layer
+  const content = h('div', {
+    style: 'position:relative;z-index:1;width:100%;display:flex;flex-direction:column;align-items:center;padding:0 24px;',
   });
 
-  // Logo mark + title
-  const titleEl = createElement('h1', {
-    style: 'font-size:42px;font-weight:800;color:var(--text-primary);letter-spacing:-1px;margin-bottom:12px;',
-    textContent: 'MatrixPro',
+  // ── Announcement pill ──
+  const pill = h('div', {
+    style: [
+      'display:inline-flex;align-items:center;gap:8px;',
+      'margin-top:72px;margin-bottom:28px;',
+      'padding:6px 18px;',
+      'border-radius:9999px;',
+      'background:var(--home-pill-bg);',
+      'border:1px solid var(--home-pill-border);',
+      'font-size:13px;font-weight:500;color:var(--text-secondary);',
+    ].join(''),
   });
-  hero.appendChild(titleEl);
-
-  const taglineEl = createElement('p', {
-    style: 'font-size:17px;color:var(--text-secondary);margin-bottom:8px;',
-    textContent: 'Build, track, and manage skill development plans',
+  const pillDot = h('span', {
+    style: 'width:6px;height:6px;border-radius:50%;background:#00AEEF;flex-shrink:0;',
   });
-  hero.appendChild(taglineEl);
+  pill.appendChild(pillDot);
+  pill.appendChild(document.createTextNode('Skill Development Platform'));
+  content.appendChild(pill);
 
-  // User greeting or sign-in prompt
+  // ── Title with gradient ──
+  const title = h('h1', {
+    style: [
+      'font-size:clamp(36px, 5vw, 56px);font-weight:800;',
+      'line-height:1.1;letter-spacing:-0.02em;',
+      'text-align:center;margin-bottom:16px;',
+      'color:var(--text-primary);',
+    ].join(''),
+  });
+  // First line normal, second line gradient
+  title.appendChild(document.createTextNode('Skill Development'));
+  title.appendChild(h('br'));
+  const gradientSpan = h('span', {
+    style: [
+      'background:linear-gradient(90deg, #00C6FF 0%, #0072FF 100%);',
+      '-webkit-background-clip:text;-webkit-text-fill-color:transparent;',
+      'background-clip:text;',
+    ].join(''),
+    textContent: 'for TAC Engineers',
+  });
+  title.appendChild(gradientSpan);
+  content.appendChild(title);
+
+  // ── Subtitle ──
+  const subtitle = h('p', {
+    style: [
+      'font-size:18px;color:var(--text-muted);',
+      'text-align:center;max-width:600px;line-height:1.6;',
+      'margin-bottom:40px;',
+    ].join(''),
+    textContent: 'Build, track, and manage individual skill development plans with kanban workflows, team matrices, and cross-team analytics.',
+  });
+  content.appendChild(subtitle);
+
+  // ── Stats row ──
+  const stats = buildStatsRow();
+  stats.style.marginBottom = '40px';
+  content.appendChild(stats);
+
+  // ── CTA buttons ──
+  const ctaRow = h('div', {
+    style: 'display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:80px;',
+  });
+
   if (user) {
-    const greetingEl = createElement('p', {
-      style: 'font-size:15px;color:var(--text-muted);margin-top:6px;',
-      textContent: `Welcome back, ${user.name}`,
-    });
-    hero.appendChild(greetingEl);
-  } else {
-    const signInBtn = createElement('button', {
+    // Primary CTA
+    const primaryBtn = h('a', {
       style: [
-        'margin-top:16px;',
-        'background:var(--accent);',
-        'color:#fff;',
-        'border:none;',
-        'border-radius:var(--radius-md);',
-        'padding:10px 28px;',
+        'display:inline-flex;align-items:center;gap:8px;',
+        'background:#00AEEF;color:#fff;',
+        'padding:12px 28px;border-radius:8px;',
         'font-size:15px;font-weight:600;',
-        'cursor:pointer;',
-        'transition:background 0.15s;',
+        'text-decoration:none;cursor:pointer;',
+        'transition:transform 0.15s, box-shadow 0.15s;',
+        'border:none;',
       ].join(''),
-      textContent: 'Sign In',
+      href: '#/my-plan',
+      textContent: 'Go to My Plan',
     });
-    signInBtn.addEventListener('mouseenter', () => { signInBtn.style.background = 'var(--accent-strong)'; });
-    signInBtn.addEventListener('mouseleave', () => { signInBtn.style.background = 'var(--accent)'; });
-    signInBtn.addEventListener('click', () => { window.location.hash = '#/login'; });
-    hero.appendChild(signInBtn);
+    const arrow = h('span', { style: 'font-size:16px;', textContent: '→' });
+    primaryBtn.appendChild(arrow);
+    primaryBtn.addEventListener('mouseenter', () => {
+      primaryBtn.style.transform = 'translateY(-1px)';
+      primaryBtn.style.boxShadow = '0 6px 20px rgba(0,174,239,0.35)';
+    });
+    primaryBtn.addEventListener('mouseleave', () => {
+      primaryBtn.style.transform = '';
+      primaryBtn.style.boxShadow = '';
+    });
+    ctaRow.appendChild(primaryBtn);
+
+    // Secondary CTA
+    const secBtn = h('a', {
+      style: [
+        'display:inline-flex;align-items:center;gap:8px;',
+        'background:var(--home-card-bg);',
+        'border:1px solid var(--home-card-border);',
+        'color:var(--text-secondary);',
+        'padding:12px 28px;border-radius:8px;',
+        'font-size:15px;font-weight:600;',
+        'text-decoration:none;cursor:pointer;',
+        'transition:transform 0.15s, border-color 0.15s, color 0.15s;',
+      ].join(''),
+      href: '#/catalog',
+      textContent: 'Browse Catalog',
+    });
+    secBtn.addEventListener('mouseenter', () => {
+      secBtn.style.borderColor = 'var(--text-muted)';
+      secBtn.style.color = 'var(--text-primary)';
+    });
+    secBtn.addEventListener('mouseleave', () => {
+      secBtn.style.borderColor = 'var(--home-card-border)';
+      secBtn.style.color = 'var(--text-secondary)';
+    });
+    ctaRow.appendChild(secBtn);
+  } else {
+    const signInBtn = h('a', {
+      style: [
+        'display:inline-flex;align-items:center;gap:8px;',
+        'background:#00AEEF;color:#fff;',
+        'padding:12px 28px;border-radius:8px;',
+        'font-size:15px;font-weight:600;',
+        'text-decoration:none;cursor:pointer;',
+        'transition:transform 0.15s, box-shadow 0.15s;',
+        'border:none;',
+      ].join(''),
+      href: '#/login',
+    });
+    signInBtn.textContent = 'Get Started';
+    const arrow2 = h('span', { style: 'font-size:16px;', textContent: '→' });
+    signInBtn.appendChild(arrow2);
+    signInBtn.addEventListener('mouseenter', () => {
+      signInBtn.style.transform = 'translateY(-1px)';
+      signInBtn.style.boxShadow = '0 6px 20px rgba(0,174,239,0.35)';
+    });
+    signInBtn.addEventListener('mouseleave', () => {
+      signInBtn.style.transform = '';
+      signInBtn.style.boxShadow = '';
+    });
+    ctaRow.appendChild(signInBtn);
   }
+  content.appendChild(ctaRow);
 
-  page.appendChild(hero);
-
-  // Stat cards
-  page.appendChild(buildStatSection());
-
-  // Section label
-  const sectionLabel = createElement('div', {
-    style: 'font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:20px;text-align:center;',
-    textContent: 'Quick Access',
-  });
-  page.appendChild(sectionLabel);
-
-  // Module navigation grid
-  page.appendChild(buildModuleGrid(user?.role ?? null));
-
+  page.appendChild(content);
   container.appendChild(page);
 }

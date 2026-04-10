@@ -7,10 +7,15 @@ from sqlalchemy.orm import Session, selectinload
 from app.database import get_db
 from app.dependencies import get_current_user, require_role
 from app.models.org import Domain, Team
-from app.models.plan import PlanSkill
+from app.models.plan import DevelopmentPlan, PlanSkill
 from app.models.skill import Skill, SkillLevelContent, SkillTag, SkillTeam, Tag
 from app.models.user import User, UserRole
 from app.schemas.skill import (
+    CompareResponse,
+    CompareSkillInfo,
+    CompareTeamResult,
+    ExplorerEngineerResult,
+    ExplorerResponse,
     SkillCreate,
     SkillLevelContentCreate,
     SkillLevelContentResponse,
@@ -141,6 +146,115 @@ def create_skill(
 
     loaded = _eager_load_skill(db, skill.id)
     return _to_skill_response(loaded)
+
+
+@router.get("/explorer", response_model=ExplorerResponse)
+def explorer_search(
+    q: Optional[str] = Query(None),
+    domain_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    query = (
+        db.query(PlanSkill, Skill, User, Team)
+        .join(Skill, PlanSkill.skill_id == Skill.id)
+        .join(DevelopmentPlan, PlanSkill.plan_id == DevelopmentPlan.id)
+        .join(User, DevelopmentPlan.engineer_id == User.id)
+        .outerjoin(Team, User.team_id == Team.id)
+    )
+
+    if q:
+        query = query.filter(Skill.name.ilike(f"%{q}%"))
+
+    if domain_id is not None:
+        query = query.filter(Skill.domain_id == domain_id)
+
+    if status is not None:
+        query = query.filter(PlanSkill.status == status)
+
+    query = query.order_by(Skill.name, User.name)
+    rows = query.all()
+
+    results = [
+        ExplorerEngineerResult(
+            engineer_id=user.id,
+            engineer_name=user.name,
+            team_id=team.id if team else None,
+            team_name=team.name if team else None,
+            skill_name=skill.name,
+            status=plan_skill.status.value,
+            proficiency_level=plan_skill.proficiency_level,
+        )
+        for plan_skill, skill, user, team in rows
+    ]
+
+    return ExplorerResponse(results=results, total=len(results))
+
+
+@router.get("/compare", response_model=CompareResponse)
+def compare_teams(
+    team_a: Optional[int] = Query(None),
+    team_b: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if team_a is None or team_b is None:
+        raise HTTPException(
+            status_code=400, detail="Both team_a and team_b are required"
+        )
+
+    team_a_obj = db.query(Team).filter(Team.id == team_a).first()
+    if team_a_obj is None:
+        raise HTTPException(status_code=404, detail=f"Team {team_a} not found")
+
+    team_b_obj = db.query(Team).filter(Team.id == team_b).first()
+    if team_b_obj is None:
+        raise HTTPException(status_code=404, detail=f"Team {team_b} not found")
+
+    skills_a = (
+        db.query(Skill)
+        .join(SkillTeam, Skill.id == SkillTeam.skill_id)
+        .filter(SkillTeam.team_id == team_a, Skill.is_archived == False)  # noqa: E712
+        .all()
+    )
+
+    skills_b = (
+        db.query(Skill)
+        .join(SkillTeam, Skill.id == SkillTeam.skill_id)
+        .filter(SkillTeam.team_id == team_b, Skill.is_archived == False)  # noqa: E712
+        .all()
+    )
+
+    ids_a = {s.id for s in skills_a}
+    ids_b = {s.id for s in skills_b}
+    overlap_ids = ids_a & ids_b
+    union_count = len(ids_a | ids_b)
+    overlap_count = len(overlap_ids)
+    overlap_percent = (
+        round((overlap_count / union_count) * 100, 1) if union_count > 0 else 0.0
+    )
+
+    return CompareResponse(
+        team_a=CompareTeamResult(
+            team_id=team_a_obj.id,
+            team_name=team_a_obj.name,
+            skills=[
+                CompareSkillInfo(id=s.id, name=s.name, is_overlap=s.id in overlap_ids)
+                for s in skills_a
+            ],
+        ),
+        team_b=CompareTeamResult(
+            team_id=team_b_obj.id,
+            team_name=team_b_obj.name,
+            skills=[
+                CompareSkillInfo(id=s.id, name=s.name, is_overlap=s.id in overlap_ids)
+                for s in skills_b
+            ],
+        ),
+        overlap_count=overlap_count,
+        overlap_percent=overlap_percent,
+    )
 
 
 @router.get("/{skill_id}", response_model=SkillResponse)

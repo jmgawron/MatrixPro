@@ -72,3 +72,37 @@ class SkillResponse(BaseModel):
     teams: list[TeamInfo] = []
 
     model_config = {"from_attributes": True}
+
+
+class ExplorerEngineerResult(BaseModel):
+    engineer_id: int
+    engineer_name: str
+    team_id: int | None = None
+    team_name: str | None = None
+    skill_name: str
+    status: str
+    proficiency_level: int | None = None
+
+
+class ExplorerResponse(BaseModel):
+    results: list[ExplorerEngineerResult]
+    total: int
+
+
+class CompareSkillInfo(BaseModel):
+    id: int
+    name: str
+    is_overlap: bool = False
+
+
+class CompareTeamResult(BaseModel):
+    team_id: int
+    team_name: str
+    skills: list[CompareSkillInfo]
+
+
+class CompareResponse(BaseModel):
+    team_a: CompareTeamResult
+    team_b: CompareTeamResult
+    overlap_count: int
+    overlap_percent: float

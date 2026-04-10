@@ -42,3 +42,26 @@ class TeamResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class MatrixSkillInfo(BaseModel):
+    id: int
+    name: str
+
+
+class MatrixCellInfo(BaseModel):
+    status: str
+    proficiency_level: int | None = None
+
+
+class MatrixEngineerRow(BaseModel):
+    id: int
+    name: str
+    cells: dict[str, MatrixCellInfo]
+
+
+class TeamMatrixResponse(BaseModel):
+    team_id: int
+    team_name: str
+    skills: list[MatrixSkillInfo]
+    engineers: list[MatrixEngineerRow]

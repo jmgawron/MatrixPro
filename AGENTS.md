@@ -1,7 +1,7 @@
 # MatrixPro — Cross-Session Knowledge Base
 
 > **Purpose**: Reference document for OpenCode agents working on MatrixPro across sessions.
-> **Last updated**: Phase 3 completion.
+> **Last updated**: Phase 4 completion.
 
 ---
 
@@ -58,7 +58,7 @@ MatrixPro/
 │       │   ├── __init__.py
 │       │   ├── auth.py            # LoginRequest, TokenResponse, UserProfile
 │       │   ├── user.py            # UserCreate, UserUpdate, UserOut
-│       │   ├── org.py             # OrgOut, DomainOut, TeamOut, TeamCreate
+│       │   ├── org.py             # OrgOut, DomainOut, TeamOut, TeamCreate, MatrixSkillInfo, MatrixCellInfo, MatrixEngineerRow, TeamMatrixResponse
 │       │   ├── skill.py           # SkillCreate, SkillUpdate, SkillOut, SkillLevelContentCreate, etc.
 │       │   └── plan.py            # PlanSkillCreate/Update, PlanSkillResponse (skill_name, training_logs), PlanResponse (engineer_name), TrainingLogCreate/Response
 │       ├── routers/
@@ -89,7 +89,7 @@ MatrixPro/
 │           ├── login.js           # FUNCTIONAL login form
 │           ├── home.js            # Placeholder (Phase 6)
 │           ├── my-plan.js         # My Plan kanban (Phase 3)
-│           ├── my-team.js         # Placeholder (Phase 4)
+│           ├── my-team.js         # My Team matrix (Phase 4)
 │           ├── catalog.js         # Catalog Explorer (Phase 2)
 │           └── skill-explorer.js  # Placeholder (Phase 5)
 └── data/
@@ -303,7 +303,7 @@ docker compose up --build
 | 1 | Auth (JWT login, /me), user CRUD with RBAC, teams CRUD | **COMPLETE** |
 | 2 | Skill catalog CRUD, Catalog Explorer UI (tree, cards, search) | **COMPLETE** |
 | 3 | My Plan kanban (drag-drop, cards, training log, audit) | **COMPLETE** |
-| 4 | My Team matrix (2D grid, sticky headers, drill-down) | Pending |
+| 4 | My Team matrix (2D grid, sticky headers, drill-down) | **COMPLETE** |
 | 5 | Skill Explorer (search, cross-team comparison, overlap %, import) | Pending |
 | 6 | Start Page (stats, animations), PDF/CSV export, polish | Pending |
 
@@ -338,3 +338,9 @@ docker compose up --build
 - PlanSkill deletion cascades training logs manually (not via DB cascade)
 - Seed data: Bob(4) has skills 1,2,4; Dave(5) has 3,5,9; Eve(6) has 6,7,8
 - Background agents can get stuck in curl test loops — cancel and test manually when this happens
+
+### Phase 4 Discoveries
+- Admin matrix view shows ALL users on a team (including managers) via `User.team_id` filter — intentional for full admin visibility
+- Carol manages both Dave (WLAN Controllers team) and Eve (Firewall team) — Eve appears in Carol's matrix but all her skills are Firewall-domain, so they show as not_in_plan for WLAN team skills
+- `GET /api/teams/matrix` route must be defined BEFORE `/{team_id}` in teams.py to avoid path parameter conflict
+- Dead code after `return` is a recurring agent bug — always check for unreachable code blocks after return statements

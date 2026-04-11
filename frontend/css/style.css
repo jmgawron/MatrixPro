@@ -3068,6 +3068,272 @@ textarea.is-error:focus {
   }
 }
 
+/* ─── Enhanced Plan Skill Modal (two-column layout) ───────────────────────── */
+
+.mp-plan-modal {
+  max-width: 960px;
+}
+
+.mp-plan-modal .modal-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 20px 24px;
+}
+
+.mp-modal-top-row {
+  display: flex;
+  gap: 24px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.mp-modal-form-col {
+  flex: 0 0 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.mp-modal-content-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.mp-modal-content-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+/* Overall progress bar */
+.mp-modal-overall-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0 4px;
+  margin-top: auto;
+}
+
+.mp-modal-progress-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.mp-modal-progress-bar-wrap {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.mp-modal-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--success), var(--info));
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+.mp-modal-progress-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Tab progress indicator (per-tab done/total) */
+.mp-tab-progress-indicator {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-left: 2px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.skill-detail-tab.active .mp-tab-progress-indicator {
+  color: inherit;
+}
+
+/* Scrollable tab panels container */
+.mp-modal-tab-panels-wrap {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.mp-plan-modal .skill-detail-tab-panel {
+  max-height: none;
+}
+
+.mp-plan-modal .skill-detail-tabs {
+  margin: 0;
+  padding: 0;
+}
+
+/* Completion checkbox */
+.mp-content-checkbox {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--success);
+  cursor: pointer;
+  margin: 0;
+}
+
+.mp-content-checkbox:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+/* Modified badge */
+.mp-override-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--purple);
+  flex-shrink: 0;
+}
+
+/* Completed date */
+.mp-completed-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Completed accordion item styling */
+.skill-detail-accordion-item.completed {
+  opacity: 0.7;
+}
+
+.skill-detail-accordion-item.completed .skill-detail-accordion-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* ─── Collapsible Training Log Section ────────────────────────────────────── */
+
+.mp-modal-log-section {
+  border-top: 1px solid var(--border-soft);
+  margin-top: 16px;
+  padding-top: 0;
+}
+
+.mp-modal-log-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  transition: color var(--transition);
+}
+
+.mp-modal-log-toggle:hover {
+  color: var(--text-primary);
+}
+
+.mp-modal-log-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  transition: transform var(--transition);
+}
+
+.mp-modal-log-toggle-icon::before {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
+  transition: transform var(--transition);
+}
+
+.mp-modal-log-section.expanded .mp-modal-log-toggle-icon::before {
+  transform: rotate(-135deg) translate(-1px, -1px);
+}
+
+.mp-modal-log-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+}
+
+.mp-modal-log-body {
+  display: none;
+  padding-bottom: 4px;
+}
+
+.mp-modal-log-section.expanded .mp-modal-log-body {
+  display: block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mp-modal-log-body {
+    display: block;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+  }
+
+  .mp-modal-log-section.expanded .mp-modal-log-body {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+}
+
+/* ─── Responsive: stack columns on narrow viewports ───────────────────────── */
+
+@media (max-width: 768px) {
+  .mp-modal-top-row {
+    flex-direction: column;
+  }
+
+  .mp-modal-form-col {
+    flex: none;
+  }
+}
+
 /* ──────────────────────────────────────────────────────────
    §  CONTENT EDIT MODAL + ACCORDION ADMIN ACTIONS
    ────────────────────────────────────────────────────────── */

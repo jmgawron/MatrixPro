@@ -2,6 +2,7 @@ import enum
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     Enum,
@@ -65,3 +66,48 @@ class PlanSkillTrainingLog(Base):
     notes = Column(Text, nullable=True)
 
     plan_skill = relationship("PlanSkill", back_populates="training_log")
+
+
+class UserContentCompletion(Base):
+    __tablename__ = "user_content_completions"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "plan_skill_id", "content_id", name="uq_user_planskill_content"
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    plan_skill_id = Column(Integer, ForeignKey("plan_skills.id"), nullable=False)
+    content_id = Column(Integer, ForeignKey("skill_level_content.id"), nullable=False)
+    completed = Column(Boolean, default=False, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User")
+    plan_skill = relationship("PlanSkill")
+    content = relationship("SkillLevelContent")
+
+
+class UserContentOverride(Base):
+    __tablename__ = "user_content_overrides"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "plan_skill_id", "content_id", name="uq_user_override_content"
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    plan_skill_id = Column(Integer, ForeignKey("plan_skills.id"), nullable=False)
+    content_id = Column(Integer, ForeignKey("skill_level_content.id"), nullable=False)
+    override_description = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User")
+    plan_skill = relationship("PlanSkill")
+    content = relationship("SkillLevelContent")

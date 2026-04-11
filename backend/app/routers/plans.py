@@ -12,11 +12,19 @@ from app.models.plan import (
     PlanSkill,
     PlanSkillStatus,
     PlanSkillTrainingLog,
+    UserContentCompletion,
+    UserContentOverride,
 )
-from app.models.skill import Skill
+from app.models.skill import Skill, SkillLevelContent
 from app.models.user import User, UserRole
 from app.schemas.plan import (
+    ContentCompletionResponse,
+    ContentCompletionToggle,
+    ContentOverrideCreate,
+    ContentOverrideResponse,
+    MergedContentItem,
     PlanResponse,
+    PlanSkillContentResponse,
     PlanSkillCreate,
     PlanSkillResponse,
     PlanSkillUpdate,
@@ -406,3 +414,252 @@ def add_training_log(
     db.refresh(log_entry)
 
     return TrainingLogResponse.model_validate(log_entry)
+
+
+@router.get(
+    "/{engineer_id}/skills/{plan_skill_id}/content",
+    response_model=PlanSkillContentResponse,
+)
+def get_plan_skill_content(
+    engineer_id: int,
+    plan_skill_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+    plan = _get_or_create_plan(db, engineer_id)
+
+    plan_skill = (
+        db.query(PlanSkill)
+        .options(selectinload(PlanSkill.skill))
+        .filter(PlanSkill.id == plan_skill_id, PlanSkill.plan_id == plan.id)
+        .first()
+    )
+    if plan_skill is None:
+        raise HTTPException(status_code=404, detail="Plan skill not found")
+
+    catalog_items = (
+        db.query(SkillLevelContent)
+        .filter(SkillLevelContent.skill_id == plan_skill.skill_id)
+        .order_by(SkillLevelContent.level, SkillLevelContent.position)
+        .all()
+    )
+
+    completions = {
+        c.content_id: c
+        for c in db.query(UserContentCompletion).filter(
+            UserContentCompletion.user_id == engineer_id,
+            UserContentCompletion.plan_skill_id == plan_skill_id,
+        )
+    }
+
+    overrides = {
+        o.content_id: o
+        for o in db.query(UserContentOverride).filter(
+            UserContentOverride.user_id == engineer_id,
+            UserContentOverride.plan_skill_id == plan_skill_id,
+            UserContentOverride.is_active == True,
+        )
+    }
+
+    items = []
+    completed_count = 0
+    for item in catalog_items:
+        comp = completions.get(item.id)
+        ovr = overrides.get(item.id)
+        is_completed = comp.completed if comp else False
+        if is_completed:
+            completed_count += 1
+        items.append(
+            MergedContentItem(
+                id=item.id,
+                skill_id=item.skill_id,
+                level=item.level,
+                type=item.type,
+                title=item.title,
+                description=ovr.override_description if ovr else item.description,
+                url=item.url,
+                position=item.position,
+                completed=is_completed,
+                completed_at=comp.completed_at if comp else None,
+                completion_notes=comp.notes if comp else None,
+                has_override=ovr is not None,
+                override_description=ovr.override_description if ovr else None,
+            )
+        )
+
+    return PlanSkillContentResponse(
+        plan_skill_id=plan_skill_id,
+        skill_id=plan_skill.skill_id,
+        skill_name=plan_skill.skill.name,
+        proficiency_level=plan_skill.proficiency_level,
+        items=items,
+        total_items=len(items),
+        completed_items=completed_count,
+    )
+
+
+@router.post(
+    "/{engineer_id}/skills/{plan_skill_id}/content/{content_id}/complete",
+    response_model=ContentCompletionResponse,
+)
+def toggle_content_completion(
+    engineer_id: int,
+    plan_skill_id: int,
+    content_id: int,
+    data: ContentCompletionToggle = ContentCompletionToggle(),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+    plan = _get_or_create_plan(db, engineer_id)
+
+    plan_skill = (
+        db.query(PlanSkill)
+        .options(selectinload(PlanSkill.skill))
+        .filter(PlanSkill.id == plan_skill_id, PlanSkill.plan_id == plan.id)
+        .first()
+    )
+    if plan_skill is None:
+        raise HTTPException(status_code=404, detail="Plan skill not found")
+
+    content = (
+        db.query(SkillLevelContent)
+        .filter(
+            SkillLevelContent.id == content_id,
+            SkillLevelContent.skill_id == plan_skill.skill_id,
+        )
+        .first()
+    )
+    if content is None:
+        raise HTTPException(status_code=404, detail="Content item not found")
+
+    existing = (
+        db.query(UserContentCompletion)
+        .filter(
+            UserContentCompletion.user_id == engineer_id,
+            UserContentCompletion.plan_skill_id == plan_skill_id,
+            UserContentCompletion.content_id == content_id,
+        )
+        .first()
+    )
+
+    now = datetime.utcnow()
+
+    if existing is None:
+        existing = UserContentCompletion(
+            user_id=engineer_id,
+            plan_skill_id=plan_skill_id,
+            content_id=content_id,
+            completed=True,
+            completed_at=now,
+            notes=data.notes,
+        )
+        db.add(existing)
+    else:
+        existing.completed = not existing.completed
+        existing.completed_at = now if existing.completed else None
+        existing.updated_at = now
+        if data.notes is not None:
+            existing.notes = data.notes
+
+    log_action = "completed" if existing.completed else "uncompleted"
+    log_entry = PlanSkillTrainingLog(
+        plan_skill_id=plan_skill_id,
+        title=f"{log_action}: {content.title}",
+        type=content.type,
+        completed_at=now,
+        notes=data.notes,
+    )
+    db.add(log_entry)
+
+    _audit_log(
+        db,
+        entity_type="user_content_completion",
+        entity_id=content_id,
+        field="completed",
+        old_value=str(not existing.completed),
+        new_value=str(existing.completed),
+        changed_by=current_user.id,
+    )
+
+    db.commit()
+    db.refresh(existing)
+
+    return ContentCompletionResponse.model_validate(existing)
+
+
+@router.post(
+    "/{engineer_id}/skills/{plan_skill_id}/content/{content_id}/override",
+    response_model=ContentOverrideResponse,
+)
+def save_content_override(
+    engineer_id: int,
+    plan_skill_id: int,
+    content_id: int,
+    data: ContentOverrideCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+    plan = _get_or_create_plan(db, engineer_id)
+
+    plan_skill = (
+        db.query(PlanSkill)
+        .filter(PlanSkill.id == plan_skill_id, PlanSkill.plan_id == plan.id)
+        .first()
+    )
+    if plan_skill is None:
+        raise HTTPException(status_code=404, detail="Plan skill not found")
+
+    content = (
+        db.query(SkillLevelContent)
+        .filter(
+            SkillLevelContent.id == content_id,
+            SkillLevelContent.skill_id == plan_skill.skill_id,
+        )
+        .first()
+    )
+    if content is None:
+        raise HTTPException(status_code=404, detail="Content item not found")
+
+    existing = (
+        db.query(UserContentOverride)
+        .filter(
+            UserContentOverride.user_id == engineer_id,
+            UserContentOverride.plan_skill_id == plan_skill_id,
+            UserContentOverride.content_id == content_id,
+        )
+        .first()
+    )
+
+    now = datetime.utcnow()
+
+    if existing is None:
+        existing = UserContentOverride(
+            user_id=engineer_id,
+            plan_skill_id=plan_skill_id,
+            content_id=content_id,
+            override_description=data.override_description,
+            is_active=True,
+        )
+        db.add(existing)
+    else:
+        existing.override_description = data.override_description
+        existing.is_active = True
+        existing.updated_at = now
+
+    _audit_log(
+        db,
+        entity_type="user_content_override",
+        entity_id=content_id,
+        field="override_description",
+        old_value=None,
+        new_value="override saved",
+        changed_by=current_user.id,
+    )
+
+    db.commit()
+    db.refresh(existing)
+
+    return ContentOverrideResponse.model_validate(existing)

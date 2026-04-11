@@ -15,5 +15,7 @@ from app.models.plan import (  # noqa: F401
     PlanSkill,
     PlanSkillStatus,
     PlanSkillTrainingLog,
+    UserContentCompletion,
+    UserContentOverride,
 )
 from app.models.audit import AuditLog  # noqa: F401

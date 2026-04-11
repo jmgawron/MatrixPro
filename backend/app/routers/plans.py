@@ -9,6 +9,7 @@ from app.dependencies import get_current_user
 from app.models.audit import AuditLog
 from app.models.plan import (
     DevelopmentPlan,
+    HiddenCatalogContent,
     PlanSkill,
     PlanSkillStatus,
     PlanSkillTrainingLog,
@@ -466,9 +467,19 @@ def get_plan_skill_content(
         )
     }
 
+    hidden_ids = {
+        h.content_id
+        for h in db.query(HiddenCatalogContent).filter(
+            HiddenCatalogContent.user_id == engineer_id,
+            HiddenCatalogContent.plan_skill_id == plan_skill_id,
+        )
+    }
+
     items = []
     completed_count = 0
     for item in catalog_items:
+        if item.id in hidden_ids:
+            continue
         comp = completions.get(item.id)
         ovr = overrides.get(item.id)
         is_completed = comp.completed if comp else False
@@ -967,3 +978,164 @@ def toggle_user_content_completion(
     db.refresh(item)
 
     return UserContentResponse.model_validate(item)
+
+
+@router.post(
+    "/{engineer_id}/skills/{plan_skill_id}/content/{content_id}/hide",
+    status_code=204,
+)
+def hide_catalog_content(
+    engineer_id: int,
+    plan_skill_id: int,
+    content_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+    plan = _get_or_create_plan(db, engineer_id)
+
+    plan_skill = (
+        db.query(PlanSkill)
+        .options(selectinload(PlanSkill.skill))
+        .filter(PlanSkill.id == plan_skill_id, PlanSkill.plan_id == plan.id)
+        .first()
+    )
+    if plan_skill is None:
+        raise HTTPException(status_code=404, detail="Plan skill not found")
+
+    content = (
+        db.query(SkillLevelContent)
+        .filter(
+            SkillLevelContent.id == content_id,
+            SkillLevelContent.skill_id == plan_skill.skill_id,
+        )
+        .first()
+    )
+    if content is None:
+        raise HTTPException(status_code=404, detail="Content item not found")
+
+    existing = (
+        db.query(HiddenCatalogContent)
+        .filter(
+            HiddenCatalogContent.user_id == engineer_id,
+            HiddenCatalogContent.plan_skill_id == plan_skill_id,
+            HiddenCatalogContent.content_id == content_id,
+        )
+        .first()
+    )
+    if existing:
+        return None
+
+    hidden = HiddenCatalogContent(
+        user_id=engineer_id,
+        plan_skill_id=plan_skill_id,
+        content_id=content_id,
+    )
+    db.add(hidden)
+
+    _audit_log(
+        db,
+        entity_type="hidden_catalog_content",
+        entity_id=content_id,
+        field="hidden",
+        old_value=None,
+        new_value=content.title[:120],
+        changed_by=current_user.id,
+    )
+
+    db.commit()
+    return None
+
+
+@router.delete(
+    "/{engineer_id}/skills/{plan_skill_id}/content/{content_id}/hide",
+    status_code=204,
+)
+def unhide_catalog_content(
+    engineer_id: int,
+    plan_skill_id: int,
+    content_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+    plan = _get_or_create_plan(db, engineer_id)
+
+    plan_skill = (
+        db.query(PlanSkill)
+        .filter(PlanSkill.id == plan_skill_id, PlanSkill.plan_id == plan.id)
+        .first()
+    )
+    if plan_skill is None:
+        raise HTTPException(status_code=404, detail="Plan skill not found")
+
+    hidden = (
+        db.query(HiddenCatalogContent)
+        .filter(
+            HiddenCatalogContent.user_id == engineer_id,
+            HiddenCatalogContent.plan_skill_id == plan_skill_id,
+            HiddenCatalogContent.content_id == content_id,
+        )
+        .first()
+    )
+    if hidden is None:
+        raise HTTPException(status_code=404, detail="Item is not hidden")
+
+    _audit_log(
+        db,
+        entity_type="hidden_catalog_content",
+        entity_id=content_id,
+        field="unhidden",
+        old_value="hidden",
+        new_value=None,
+        changed_by=current_user.id,
+    )
+
+    db.delete(hidden)
+    db.commit()
+    return None
+
+
+@router.post(
+    "/{engineer_id}/skills/{plan_skill_id}/resync",
+    status_code=200,
+)
+def resync_catalog_content(
+    engineer_id: int,
+    plan_skill_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+    plan = _get_or_create_plan(db, engineer_id)
+
+    plan_skill = (
+        db.query(PlanSkill)
+        .filter(PlanSkill.id == plan_skill_id, PlanSkill.plan_id == plan.id)
+        .first()
+    )
+    if plan_skill is None:
+        raise HTTPException(status_code=404, detail="Plan skill not found")
+
+    count = (
+        db.query(HiddenCatalogContent)
+        .filter(
+            HiddenCatalogContent.user_id == engineer_id,
+            HiddenCatalogContent.plan_skill_id == plan_skill_id,
+        )
+        .delete()
+    )
+
+    if count > 0:
+        _audit_log(
+            db,
+            entity_type="hidden_catalog_content",
+            entity_id=plan_skill_id,
+            field="resync",
+            old_value=f"{count} hidden",
+            new_value="0 hidden",
+            changed_by=current_user.id,
+        )
+
+    db.commit()
+    return {"detail": f"Restored {count} hidden item(s)"}

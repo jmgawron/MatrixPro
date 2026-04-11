@@ -3277,7 +3277,41 @@ textarea.is-error:focus {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
+  margin-bottom: 0;
+}
+
+.mp-modal-content-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 8px;
+}
+
+.mp-resync-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  font-size: 13px;
+  gap: 4px;
+  border-radius: 6px;
+}
+
+.mp-resync-btn .mp-icon {
+  font-size: 14px;
+}
+
+.mp-hide-item-btn {
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.skill-detail-accordion-item:hover .mp-hide-item-btn {
+  opacity: 0.7;
+}
+
+.mp-hide-item-btn:hover {
+  opacity: 1 !important;
 }
 
 /* Overall progress bar */
@@ -3348,14 +3382,41 @@ textarea.is-error:focus {
   padding: 0;
 }
 
-/* Completion checkbox */
+/* Completion checkbox — custom styled for reliable theme switching */
 .mp-content-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  accent-color: var(--success);
   cursor: pointer;
   margin: 0;
+  border: 2px solid var(--text-muted);
+  border-radius: 4px;
+  background: transparent;
+  position: relative;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.mp-content-checkbox:checked {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.mp-content-checkbox:checked::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.mp-content-checkbox:hover:not(:disabled) {
+  border-color: var(--success);
 }
 
 .mp-content-checkbox:disabled {

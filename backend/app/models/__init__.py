@@ -18,5 +18,6 @@ from app.models.plan import (  # noqa: F401
     UserContentCompletion,
     UserContentOverride,
     UserLevelContent,
+    HiddenCatalogContent,
 )
 from app.models.audit import AuditLog  # noqa: F401

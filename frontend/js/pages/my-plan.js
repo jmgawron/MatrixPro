@@ -25,6 +25,7 @@ const SVG_ICONS = {
   checkCircle: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
   pencil: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>',
   calendar: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  refresh: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
 };
 
 function svgIcon(name, size) {
@@ -624,7 +625,28 @@ function openEditSkillModal(planSkill) {
 
   const contentTitle = el('div', { className: 'mp-modal-content-title' });
   contentTitle.textContent = 'Learning Content';
-  contentCol.appendChild(contentTitle);
+
+  const resyncBtn = el('button', { className: 'btn btn-secondary btn-sm mp-resync-btn', 'aria-label': 'Re-sync from catalog', title: 'Re-sync hidden items from catalog' });
+  resyncBtn.innerHTML = SVG_ICONS.refresh;
+  resyncBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirm('Restore all hidden catalog items for this skill? This will bring back any items you previously dismissed.', true);
+    if (!confirmed) return;
+    resyncBtn.disabled = true;
+    try {
+      const resp = await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/resync`, {});
+      showToast(resp.detail || 'Catalog items restored', 'success');
+      refreshContent();
+    } catch (err) {
+      showToast(err.message || 'Failed to re-sync', 'error');
+    } finally {
+      resyncBtn.disabled = false;
+    }
+  });
+
+  const contentTitleRow = el('div', { className: 'mp-modal-content-title-row' });
+  contentTitleRow.appendChild(contentTitle);
+  contentTitleRow.appendChild(resyncBtn);
+  contentCol.appendChild(contentTitleRow);
 
   const tabBar = el('div', { className: 'skill-detail-tabs', role: 'tablist', 'aria-label': 'Content level tabs' });
   const tabButtons = {};
@@ -861,6 +883,27 @@ function openEditSkillModal(planSkill) {
         });
         actions.appendChild(editBtn);
         actions.appendChild(delBtn);
+        trigger.appendChild(actions);
+      } else {
+        const hideBtn = el('button', { className: 'btn btn-secondary accordion-action-btn mp-hide-item-btn', 'aria-label': 'Hide item', title: 'Hide from my view' });
+        hideBtn.textContent = '✕';
+        hideBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const confirmed = await showConfirm(`Hide "${item.title}" from your view? You can restore it later with the re-sync button.`, true);
+          if (!confirmed) return;
+          hideBtn.disabled = true;
+          try {
+            await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/content/${item.id}/hide`, {});
+            showToast('Item hidden', 'success');
+            refreshContent();
+          } catch (err) {
+            showToast(err.message || 'Failed to hide item', 'error');
+          } finally {
+            hideBtn.disabled = false;
+          }
+        });
+        const actions = el('span', { className: 'accordion-admin-actions' });
+        actions.appendChild(hideBtn);
         trigger.appendChild(actions);
       }
 

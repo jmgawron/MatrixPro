@@ -138,3 +138,22 @@ class UserLevelContent(Base):
     user = relationship("User")
     plan_skill = relationship("PlanSkill")
     skill = relationship("Skill")
+
+
+class HiddenCatalogContent(Base):
+    __tablename__ = "hidden_catalog_content"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "plan_skill_id", "content_id", name="uq_user_hidden_content"
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    plan_skill_id = Column(Integer, ForeignKey("plan_skills.id"), nullable=False)
+    content_id = Column(Integer, ForeignKey("skill_level_content.id"), nullable=False)
+    hidden_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+    plan_skill = relationship("PlanSkill")
+    content = relationship("SkillLevelContent")

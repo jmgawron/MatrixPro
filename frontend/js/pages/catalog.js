@@ -670,6 +670,152 @@ function showSkillDetailModal(skill) {
 
   requestAnimationFrame(() => overlay.classList.add('open'));
 
+  const LEVEL_MAP = { 1: 'education', 2: 'exposure', 3: 'experience' };
+  const LEVEL_REVERSE = { education: 1, exposure: 2, experience: 3 };
+
+  const user = Store.get('user');
+  const canEdit = user?.role === 'admin' || user?.role === 'manager';
+
+  function renderPanelContent(key, items) {
+    const levelCfg = LEVEL_CONFIG.find(l => l.key === key);
+    const panel = tabPanels[key];
+    panel.innerHTML = '';
+
+    const sorted = items.slice().sort((a, b) => {
+      const pd = (a.position ?? 0) - (b.position ?? 0);
+      return pd !== 0 ? pd : a.id - b.id;
+    });
+
+    tabButtons[key].querySelector('.skill-detail-tab-count').textContent = sorted.length;
+
+    let openItem = null;
+
+    if (!sorted.length) {
+      const empty = createElement('div', { className: 'skill-detail-tab-empty' });
+      empty.textContent = 'No content added for this level yet.';
+      panel.appendChild(empty);
+    } else {
+      sorted.forEach(item => {
+        const accItem = createElement('div', { className: 'skill-detail-accordion-item' });
+
+        const trigger = createElement('button', { className: 'skill-detail-accordion-trigger' });
+
+        const typeChip = createElement('span', { className: `triage-chip ${levelCfg.chipClass}`, style: 'font-size:11px;padding:2px 8px;flex-shrink:0;' });
+        typeChip.textContent = item.type || 'resource';
+
+        const titleSpan = createElement('span', { className: 'skill-detail-accordion-title' });
+        titleSpan.textContent = item.title || 'Untitled';
+
+        if (canEdit) {
+          const adminActions = createElement('div', { className: 'accordion-admin-actions' });
+
+          const editBtn = createElement('button', { className: 'btn btn-sm btn-secondary accordion-action-btn', 'aria-label': 'Edit item' });
+          editBtn.textContent = '✏️';
+          editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showContentEditModal(skill.id, LEVEL_REVERSE[key], item, () => refreshModalContent());
+          });
+
+          const deleteBtn = createElement('button', { className: 'btn btn-sm btn-danger accordion-action-btn', 'aria-label': 'Delete item' });
+          deleteBtn.textContent = '🗑️';
+          deleteBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const confirmed = await showConfirm(`Delete "${item.title || 'this item'}"? This cannot be undone.`, true);
+            if (!confirmed) return;
+            try {
+              await api.del(`/api/skills/${skill.id}/content/${item.id}`);
+              showToast('Content item deleted', 'success');
+              refreshModalContent();
+            } catch (err) {
+              showToast(err.message || 'Failed to delete item', 'error');
+            }
+          });
+
+          adminActions.appendChild(editBtn);
+          adminActions.appendChild(deleteBtn);
+          trigger.appendChild(typeChip);
+          trigger.appendChild(titleSpan);
+          trigger.appendChild(adminActions);
+        } else {
+          trigger.appendChild(typeChip);
+          trigger.appendChild(titleSpan);
+        }
+
+        const chevron = createElement('span', { className: 'skill-detail-accordion-chevron', 'aria-hidden': 'true' });
+        trigger.appendChild(chevron);
+
+        const body = createElement('div', { className: 'skill-detail-accordion-body' });
+        const bodyInner = createElement('div', { className: 'skill-detail-accordion-body-inner' });
+
+        if (item.description) {
+          const descEl = createElement('div');
+          descEl.innerHTML = item.description;
+          bodyInner.appendChild(descEl);
+        }
+
+        if (item.url) {
+          const link = createElement('a', { className: 'skill-detail-accordion-link', href: item.url, target: '_blank', rel: 'noopener noreferrer' });
+          link.textContent = 'Open Resource';
+          bodyInner.appendChild(link);
+        }
+
+        body.appendChild(bodyInner);
+        accItem.appendChild(trigger);
+        accItem.appendChild(body);
+        panel.appendChild(accItem);
+
+        trigger.addEventListener('click', (e) => {
+          if (e.target.closest('.accordion-admin-actions')) return;
+          if (accItem === openItem) {
+            accItem.classList.remove('open');
+            openItem = null;
+          } else {
+            if (openItem) openItem.classList.remove('open');
+            accItem.classList.add('open');
+            openItem = accItem;
+          }
+        });
+      });
+    }
+
+    if (canEdit) {
+      const addBtn = createElement('button', { className: 'btn btn-secondary btn-sm content-add-btn' });
+      addBtn.textContent = '+ Add Item';
+      addBtn.addEventListener('click', () => {
+        showContentEditModal(skill.id, LEVEL_REVERSE[key], null, () => refreshModalContent());
+      });
+      panel.appendChild(addBtn);
+    }
+  }
+
+  function refreshModalContent() {
+    LEVEL_CONFIG.forEach(({ key }) => {
+      tabPanels[key].innerHTML = '';
+      const sk = createElement('div', { style: 'display:flex;flex-direction:column;gap:8px;padding:12px 0;' });
+      for (let i = 0; i < 2; i++) {
+        sk.appendChild(createElement('div', { className: 'skeleton', style: 'height:44px;border-radius:var(--radius-md);' }));
+      }
+      tabPanels[key].appendChild(sk);
+    });
+
+    api.get(`/api/skills/${skill.id}/content`).then(rawContent => {
+      const fresh = Array.isArray(rawContent) ? rawContent : [];
+      const freshGroups = { education: [], exposure: [], experience: [] };
+      fresh.forEach(item => {
+        const key = LEVEL_MAP[item.level] || 'education';
+        freshGroups[key].push(item);
+      });
+      LEVEL_CONFIG.forEach(({ key }) => renderPanelContent(key, freshGroups[key]));
+    }).catch(() => {
+      LEVEL_CONFIG.forEach(({ key }) => {
+        tabPanels[key].innerHTML = '';
+        const errEl = createElement('div', { className: 'skill-detail-tab-empty' });
+        errEl.textContent = 'Unable to reload content.';
+        tabPanels[key].appendChild(errEl);
+      });
+    });
+  }
+
   api.get(`/api/skills/${skill.id}/content`).then(rawContent => {
     skeletonEl.remove();
 
@@ -677,82 +823,11 @@ function showSkillDetailModal(skill) {
     const groups = { education: [], exposure: [], experience: [] };
 
     content.forEach(item => {
-      const level = item.level || '';
-      if (groups[level] !== undefined) {
-        groups[level].push(item);
-      } else {
-        groups.education.push(item);
-      }
+      const key = LEVEL_MAP[item.level] || 'education';
+      groups[key].push(item);
     });
 
-    LEVEL_CONFIG.forEach(({ key }) => {
-      const sorted = groups[key].slice().sort((a, b) => {
-        const pd = (a.position ?? 0) - (b.position ?? 0);
-        return pd !== 0 ? pd : a.id - b.id;
-      });
-
-      tabButtons[key].querySelector('.skill-detail-tab-count').textContent = sorted.length;
-
-      const panel = tabPanels[key];
-      panel.innerHTML = '';
-
-      if (!sorted.length) {
-        const empty = createElement('div', { className: 'skill-detail-tab-empty' });
-        empty.textContent = 'No content added for this level yet.';
-        panel.appendChild(empty);
-      } else {
-        let openItem = null;
-
-        sorted.forEach(item => {
-          const accItem = createElement('div', { className: 'skill-detail-accordion-item' });
-
-          const trigger = createElement('button', { className: 'skill-detail-accordion-trigger' });
-
-          const typeChip = createElement('span', { className: `triage-chip ${LEVEL_CONFIG.find(l => l.key === key).chipClass}`, style: 'font-size:11px;padding:2px 8px;flex-shrink:0;' });
-          typeChip.textContent = item.content_type || 'resource';
-
-          const titleSpan = createElement('span', { className: 'skill-detail-accordion-title' });
-          titleSpan.textContent = item.title || 'Untitled';
-
-          const chevron = createElement('span', { className: 'skill-detail-accordion-chevron', 'aria-hidden': 'true' });
-
-          trigger.appendChild(typeChip);
-          trigger.appendChild(titleSpan);
-          trigger.appendChild(chevron);
-
-          const body = createElement('div', { className: 'skill-detail-accordion-body' });
-          const bodyInner = createElement('div', { className: 'skill-detail-accordion-body-inner' });
-
-          if (item.description) {
-            const descEl = createElement('div');
-            descEl.innerHTML = item.description;
-            bodyInner.appendChild(descEl);
-          }
-
-          if (item.url) {
-            const link = createElement('a', { className: 'skill-detail-accordion-link', href: item.url, target: '_blank', rel: 'noopener noreferrer' });
-            link.textContent = 'Open Resource';
-            bodyInner.appendChild(link);
-          }
-
-          body.appendChild(bodyInner);
-          accItem.appendChild(trigger);
-          accItem.appendChild(body);
-          panel.appendChild(accItem);
-
-          trigger.addEventListener('click', () => {
-            if (accItem === openItem) {
-              accItem.classList.remove('open');
-              openItem = null;
-            } else {
-              if (openItem) openItem.classList.remove('open');
-              accItem.classList.add('open');
-              openItem = accItem;
-            }
-          });
-        });
-      }
-    });
+    LEVEL_CONFIG.forEach(({ key }) => renderPanelContent(key, groups[key]));
 
     const firstWithContent = LEVEL_CONFIG.find(({ key }) => groups[key].length > 0);
     activateTab(firstWithContent ? firstWithContent.key : 'education');
@@ -766,7 +841,195 @@ function showSkillDetailModal(skill) {
   });
 }
 
-// ─── Admin CRUD ───────────────────────────────────────────────────────────────
+// ─── Content Edit Modal ───────────────────────────────────────────────────────
+
+function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
+  const isEdit = !!existingItem;
+  const CONTENT_TYPES = ['course', 'certification', 'reading', 'link', 'action'];
+
+  const modalRoot = document.getElementById('modalRoot');
+  if (!modalRoot) return;
+
+  const overlay = createElement('div', { className: 'modal-overlay' });
+  const modal = createElement('div', { className: 'modal content-edit-modal' });
+
+  const modalHeader = createElement('div', { className: 'modal-header' });
+  const titleEl = createElement('h2', { className: 'modal-title' });
+  titleEl.textContent = isEdit ? 'Edit Content Item' : 'Add Content Item';
+  const closeBtn = createElement('button', { className: 'modal-close', 'aria-label': 'Close' });
+  closeBtn.textContent = '\u2715';
+  modalHeader.appendChild(titleEl);
+  modalHeader.appendChild(closeBtn);
+  modal.appendChild(modalHeader);
+
+  const modalBody = createElement('div', { className: 'modal-body' });
+
+  const titleGroup = createElement('div', { className: 'form-group' });
+  const titleLabel = createElement('label', { className: 'form-label required', htmlFor: 'content-title' });
+  titleLabel.textContent = 'Title';
+  const titleInput = createElement('input', { type: 'text', id: 'content-title', placeholder: 'e.g. Cisco Learning Network Course' });
+  if (existingItem?.title) titleInput.value = existingItem.title;
+  titleGroup.appendChild(titleLabel);
+  titleGroup.appendChild(titleInput);
+  modalBody.appendChild(titleGroup);
+
+  const typeGroup = createElement('div', { className: 'form-group' });
+  const typeLabel = createElement('label', { className: 'form-label required', htmlFor: 'content-type' });
+  typeLabel.textContent = 'Type';
+  const typeSelect = createElement('select', { id: 'content-type', className: 'form-select' });
+  CONTENT_TYPES.forEach(t => {
+    const opt = createElement('option', { value: t });
+    opt.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+    if (existingItem?.type === t) opt.selected = true;
+    typeSelect.appendChild(opt);
+  });
+  typeGroup.appendChild(typeLabel);
+  typeGroup.appendChild(typeSelect);
+  modalBody.appendChild(typeGroup);
+
+  const bodyGroup = createElement('div', { className: 'form-group' });
+  const bodyLabel = createElement('label', { className: 'form-label', htmlFor: 'content-body-editor' });
+  bodyLabel.textContent = 'Description';
+  const editorWrap = createElement('div', { className: 'content-edit-quill-wrap' });
+  const editorEl = createElement('div', { id: 'content-body-editor' });
+  editorWrap.appendChild(editorEl);
+  bodyGroup.appendChild(bodyLabel);
+  bodyGroup.appendChild(editorWrap);
+  modalBody.appendChild(bodyGroup);
+
+  const urlGroup = createElement('div', { className: 'form-group' });
+  const urlLabel = createElement('label', { className: 'form-label', htmlFor: 'content-url' });
+  urlLabel.textContent = 'URL (optional)';
+  const urlInput = createElement('input', { type: 'url', id: 'content-url', placeholder: 'https://...' });
+  if (existingItem?.url) urlInput.value = existingItem.url;
+  urlGroup.appendChild(urlLabel);
+  urlGroup.appendChild(urlInput);
+  modalBody.appendChild(urlGroup);
+
+  const footer = createElement('div', { className: 'modal-footer' });
+  const cancelBtn = createElement('button', { className: 'btn btn-secondary' });
+  cancelBtn.textContent = 'Cancel';
+  const saveBtn = createElement('button', { className: 'btn btn-primary' });
+  saveBtn.textContent = isEdit ? 'Save Changes' : 'Add Item';
+  footer.appendChild(cancelBtn);
+  footer.appendChild(saveBtn);
+  modal.appendChild(modalBody);
+  modal.appendChild(footer);
+  overlay.appendChild(modal);
+  modalRoot.appendChild(overlay);
+
+  let quillInstance = null;
+
+  requestAnimationFrame(() => {
+    overlay.classList.add('open');
+
+    if (typeof Quill !== 'undefined') {
+      quillInstance = new Quill(editorEl, {
+        theme: 'snow',
+        modules: {
+          toolbar: [
+            ['bold', 'italic'],
+            [{ header: [1, 2, 3, false] }],
+            [{ color: [] }],
+            ['link'],
+            ['clean'],
+          ],
+        },
+      });
+      if (existingItem?.description) {
+        quillInstance.root.innerHTML = existingItem.description;
+      }
+    } else {
+      editorEl.contentEditable = 'true';
+      editorEl.style.cssText = 'min-height:120px;padding:10px;border:1px solid var(--border-soft);border-radius:var(--radius-md);background:var(--bg-input);color:var(--text-primary);';
+      if (existingItem?.description) editorEl.innerHTML = existingItem.description;
+    }
+  });
+
+  function getBodyHtml() {
+    if (quillInstance) return quillInstance.root.innerHTML;
+    return editorEl.innerHTML;
+  }
+
+  function hasUnsavedChanges() {
+    const currentTitle = titleInput.value.trim();
+    const currentType = typeSelect.value;
+    const currentUrl = urlInput.value.trim();
+    const currentBody = getBodyHtml();
+    if (!isEdit) {
+      return currentTitle !== '' || currentUrl !== '' || (currentBody !== '<p><br></p>' && currentBody !== '');
+    }
+    return currentTitle !== (existingItem.title || '') ||
+      currentType !== (existingItem.type || '') ||
+      currentUrl !== (existingItem.url || '') ||
+      currentBody !== (existingItem.description || '');
+  }
+
+  function closeModal() {
+    overlay.classList.remove('open');
+    setTimeout(() => overlay.remove(), 200);
+    document.removeEventListener('keydown', onKeyDown);
+  }
+
+  async function handleCancel() {
+    if (hasUnsavedChanges()) {
+      const confirmed = await showConfirm('Discard unsaved changes?', false);
+      if (!confirmed) return;
+    }
+    closeModal();
+  }
+
+  async function handleSave() {
+    const title = titleInput.value.trim();
+    if (!title) {
+      showToast('Title is required', 'warning');
+      titleInput.focus();
+      return;
+    }
+
+    const payload = {
+      title,
+      type: typeSelect.value,
+      description: getBodyHtml(),
+      url: urlInput.value.trim() || null,
+    };
+
+    if (!isEdit) {
+      payload.level = levelInt;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    try {
+      if (isEdit) {
+        await api.put(`/api/skills/${skillId}/content/${existingItem.id}`, payload);
+        showToast('Content item updated', 'success');
+      } else {
+        await api.post(`/api/skills/${skillId}/content`, payload);
+        showToast('Content item added', 'success');
+      }
+      closeModal();
+      if (typeof onSaved === 'function') onSaved();
+    } catch (err) {
+      showToast(err.message || 'Failed to save content item', 'error');
+      saveBtn.disabled = false;
+      saveBtn.textContent = isEdit ? 'Save Changes' : 'Add Item';
+    }
+  }
+
+  function onKeyDown(e) {
+    if (e.key === 'Escape') handleCancel();
+  }
+
+  cancelBtn.addEventListener('click', handleCancel);
+  closeBtn.addEventListener('click', handleCancel);
+  saveBtn.addEventListener('click', handleSave);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) handleCancel();
+  });
+  document.addEventListener('keydown', onKeyDown);
+}
 
 function openSkillModal(existingSkill) {
   const isEdit = !!existingSkill;

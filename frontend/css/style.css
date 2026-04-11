@@ -3067,3 +3067,213 @@ textarea.is-error:focus {
     font-size: 13px;
   }
 }
+
+/* ──────────────────────────────────────────────────────────
+   §  CONTENT EDIT MODAL + ACCORDION ADMIN ACTIONS
+   ────────────────────────────────────────────────────────── */
+
+.content-edit-modal {
+  max-width: 640px;
+  width: 100%;
+}
+
+.content-edit-modal .modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  max-height: calc(80vh - 120px);
+}
+
+.content-edit-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-soft);
+  background: var(--bg-panel);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.content-edit-quill-wrap {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-input);
+}
+
+.content-add-btn {
+  margin-top: 12px;
+  width: 100%;
+  justify-content: center;
+  border-style: dashed;
+  opacity: 0.8;
+  transition: opacity var(--transition);
+}
+
+.content-add-btn:hover {
+  opacity: 1;
+}
+
+.accordion-admin-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition);
+  margin-left: auto;
+}
+
+.skill-detail-accordion-trigger:hover .accordion-admin-actions,
+.skill-detail-accordion-item.open .accordion-admin-actions {
+  opacity: 1;
+}
+
+.accordion-action-btn {
+  padding: 3px 7px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   §  QUILL 2.0 DARK MODE THEME OVERRIDES
+   ────────────────────────────────────────────────────────── */
+
+.ql-toolbar.ql-snow {
+  background: var(--bg-elevated);
+  border: none;
+  border-bottom: 1px solid var(--border-soft);
+  padding: 8px 12px;
+}
+
+.ql-container.ql-snow {
+  background: var(--bg-input);
+  border: none;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.ql-editor {
+  min-height: 120px;
+  padding: 12px 14px;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.ql-editor.ql-blank::before {
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+.ql-editor p,
+.ql-editor ol,
+.ql-editor ul,
+.ql-editor pre,
+.ql-editor blockquote,
+.ql-editor h1,
+.ql-editor h2,
+.ql-editor h3 {
+  color: var(--text-primary);
+}
+
+.ql-editor a {
+  color: var(--accent);
+}
+
+.ql-snow .ql-stroke {
+  stroke: var(--text-secondary);
+}
+
+.ql-snow .ql-fill,
+.ql-snow .ql-stroke.ql-fill {
+  fill: var(--text-secondary);
+}
+
+.ql-snow .ql-picker {
+  color: var(--text-secondary);
+}
+
+.ql-snow .ql-picker-label {
+  color: var(--text-secondary);
+}
+
+.ql-snow .ql-picker-label::before {
+  color: var(--text-secondary);
+}
+
+.ql-snow .ql-picker-options {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.ql-snow .ql-picker-item {
+  color: var(--text-primary);
+}
+
+.ql-snow .ql-picker-item:hover {
+  color: var(--accent);
+}
+
+.ql-toolbar.ql-snow button:hover .ql-stroke,
+.ql-toolbar.ql-snow button.ql-active .ql-stroke {
+  stroke: var(--accent);
+}
+
+.ql-toolbar.ql-snow button:hover .ql-fill,
+.ql-toolbar.ql-snow button.ql-active .ql-fill {
+  fill: var(--accent);
+}
+
+.ql-toolbar.ql-snow button:hover,
+.ql-toolbar.ql-snow button.ql-active {
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+}
+
+.ql-snow.ql-toolbar button,
+.ql-snow .ql-toolbar button {
+  height: 26px;
+  width: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition);
+}
+
+[data-theme="light"] .ql-toolbar.ql-snow {
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+[data-theme="light"] .ql-container.ql-snow {
+  background: var(--bg-input);
+}
+
+[data-theme="light"] .ql-snow .ql-stroke {
+  stroke: var(--text-secondary);
+}
+
+[data-theme="light"] .ql-snow .ql-fill,
+[data-theme="light"] .ql-snow .ql-stroke.ql-fill {
+  fill: var(--text-secondary);
+}
+
+[data-theme="light"] .ql-snow .ql-picker {
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .ql-snow .ql-picker-options {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+}
+
+[data-theme="light"] .ql-editor {
+  color: var(--text-primary);
+}

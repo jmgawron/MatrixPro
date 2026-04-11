@@ -96,23 +96,17 @@ function buildPageShell(container) {
     style: 'display:flex;flex-direction:column;min-height:calc(100vh - 60px);',
   });
 
-  // ── Top bar ──────────────────────────────────────────────────────────────
-  const topBar = createElement('div', {
-    style: 'background:var(--bg-panel);border-bottom:1px solid var(--border-soft);padding:16px 24px;flex-shrink:0;',
-  });
-
-  const titleRow = createElement('div', {
-    style: 'display:flex;align-items:center;gap:12px;',
-  });
-
-  const titleEl = createElement('h1', {
-    style: 'font-size:22px;font-weight:700;color:var(--text-primary);',
-  });
-  titleEl.textContent = 'Skill Explorer';
-
-  titleRow.appendChild(titleEl);
-  topBar.appendChild(titleRow);
-  wrapper.appendChild(topBar);
+  const header = createElement('div', { className: 'mp-header' });
+  const title = createElement('h1', { className: 'mp-title' });
+  title.appendChild(document.createTextNode('Skill '));
+  const gradientSpan = createElement('span', { className: 'mp-title-gradient' });
+  gradientSpan.textContent = 'Explorer';
+  title.appendChild(gradientSpan);
+  const subtitle = createElement('p', { className: 'mp-subtitle' });
+  subtitle.textContent = 'Search engineers by skill and compare teams';
+  header.appendChild(title);
+  header.appendChild(subtitle);
+  wrapper.appendChild(header);
 
   // ── Main scroll area ──────────────────────────────────────────────────────
   const main = createElement('div', {

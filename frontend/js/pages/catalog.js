@@ -87,6 +87,18 @@ async function loadData(page) {
 function buildPageShell(container) {
   const wrapper = createElement('div', { style: 'display:flex;flex-direction:column;height:100%;min-height:calc(100vh - 60px);' });
 
+  const header = createElement('div', { className: 'mp-header' });
+  const title = createElement('h1', { className: 'mp-title' });
+  title.appendChild(document.createTextNode('Skill '));
+  const gradientSpan = createElement('span', { className: 'mp-title-gradient' });
+  gradientSpan.textContent = 'Catalog';
+  title.appendChild(gradientSpan);
+  const subtitle = createElement('p', { className: 'mp-subtitle' });
+  subtitle.textContent = 'Browse, search and manage the skill catalog';
+  header.appendChild(title);
+  header.appendChild(subtitle);
+  wrapper.appendChild(header);
+
   const topBar = buildTopBar();
   wrapper.appendChild(topBar.el);
 
@@ -125,9 +137,6 @@ function buildTopBar() {
   const row1 = createElement('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;' });
 
   const titleGroup = createElement('div', { style: 'display:flex;align-items:center;gap:12px;' });
-  const title = createElement('h1', { style: 'font-size:22px;font-weight:700;color:var(--text-primary);' });
-  title.textContent = 'Skill Catalog';
-  titleGroup.appendChild(title);
 
   const breadcrumb = createElement('span', { className: 'triage-chip triage-signal', id: 'catalog-breadcrumb' });
   breadcrumb.textContent = 'All Skills';

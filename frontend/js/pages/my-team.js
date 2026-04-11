@@ -110,7 +110,20 @@ function buildPageShell(container) {
     style: 'display:flex;flex-direction:column;height:100%;min-height:calc(100vh - 60px);',
   });
 
-  // ── Top bar ──────────────────────────────────────────────────────────────
+  // ── Hero header ────────────────────────────────────────────────────────────
+  const header = createElement('div', { className: 'mp-header' });
+  const title = createElement('h1', { className: 'mp-title' });
+  title.appendChild(document.createTextNode('My Team '));
+  const gradientSpan = createElement('span', { className: 'mp-title-gradient' });
+  gradientSpan.textContent = 'Matrix';
+  title.appendChild(gradientSpan);
+  const subtitle = createElement('p', { className: 'mp-subtitle' });
+  subtitle.textContent = 'View and manage your team\'s skill development';
+  header.appendChild(title);
+  header.appendChild(subtitle);
+  wrapper.appendChild(header);
+
+  // ── Controls bar ─────────────────────────────────────────────────────────
   const topBar = createElement('div', {
     style: 'background:var(--bg-panel);border-bottom:1px solid var(--border-soft);padding:16px 24px;flex-shrink:0;',
   });
@@ -120,18 +133,12 @@ function buildPageShell(container) {
   });
 
   const titleGroup = createElement('div', { style: 'display:flex;align-items:center;gap:12px;' });
-  const titleEl = createElement('h1', {
-    style: 'font-size:22px;font-weight:700;color:var(--text-primary);',
-  });
-  titleEl.textContent = 'My Team';
-
   const teamBadge = createElement('span', {
     className: 'triage-chip triage-signal',
     id: 'my-team-badge',
   });
   teamBadge.textContent = 'Loading…';
 
-  titleGroup.appendChild(titleEl);
   titleGroup.appendChild(teamBadge);
   row1.appendChild(titleGroup);
 

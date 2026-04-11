@@ -606,14 +606,14 @@ function showSkillDetailModal(skill) {
     { key: 'experience', label: 'Experience', chipClass: 'chip-experience' },
   ];
 
-  const tabBar = createElement('div', { className: 'skill-detail-tabs' });
+  const tabBar = createElement('div', { className: 'skill-detail-tabs', role: 'tablist', 'aria-label': 'Skill level content' });
   const tabPanelsWrap = createElement('div', { style: 'flex:1;overflow:hidden;display:flex;flex-direction:column;' });
 
   const tabButtons = {};
   const tabPanels = {};
 
   LEVEL_CONFIG.forEach(({ key, label }) => {
-    const tabBtn = createElement('button', { className: 'skill-detail-tab', 'data-tab': key });
+    const tabBtn = createElement('button', { className: 'skill-detail-tab', 'data-tab': key, role: 'tab', 'aria-selected': 'false', 'aria-controls': `panel-${key}` });
     const tabLabel = createElement('span');
     tabLabel.textContent = label;
     const tabCount = createElement('span', { className: 'skill-detail-tab-count' });
@@ -623,7 +623,7 @@ function showSkillDetailModal(skill) {
     tabBar.appendChild(tabBtn);
     tabButtons[key] = tabBtn;
 
-    const panel = createElement('div', { className: 'skill-detail-tab-panel', 'data-panel': key });
+    const panel = createElement('div', { className: 'skill-detail-tab-panel', 'data-panel': key, role: 'tabpanel', id: `panel-${key}` });
     tabPanelsWrap.appendChild(panel);
     tabPanels[key] = panel;
   });
@@ -643,8 +643,10 @@ function showSkillDetailModal(skill) {
 
   function activateTab(key) {
     LEVEL_CONFIG.forEach(({ key: k }) => {
-      tabButtons[k].classList.toggle('active', k === key);
-      tabPanels[k].classList.toggle('active', k === key);
+      const isActive = k === key;
+      tabButtons[k].classList.toggle('active', isActive);
+      tabButtons[k].setAttribute('aria-selected', String(isActive));
+      tabPanels[k].classList.toggle('active', isActive);
     });
   }
 
@@ -660,6 +662,33 @@ function showSkillDetailModal(skill) {
 
   function onKeyDown(e) {
     if (e.key === 'Escape') closeModal();
+
+    // Focus trap: cycle Tab/Shift+Tab within modal
+    if (e.key === 'Tab') {
+      const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+
+    // Arrow keys switch tabs when a tab button is focused
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      const tabKeys = LEVEL_CONFIG.map(l => l.key);
+      const focused = document.activeElement;
+      const currentTab = focused?.dataset?.tab;
+      if (currentTab && tabKeys.includes(currentTab)) {
+        const idx = tabKeys.indexOf(currentTab);
+        const next = e.key === 'ArrowRight' ? (idx + 1) % tabKeys.length : (idx - 1 + tabKeys.length) % tabKeys.length;
+        activateTab(tabKeys[next]);
+        tabButtons[tabKeys[next]].focus();
+        e.preventDefault();
+      }
+    }
   }
 
   closeBtn.addEventListener('click', closeModal);
@@ -668,7 +697,11 @@ function showSkillDetailModal(skill) {
   });
   document.addEventListener('keydown', onKeyDown);
 
-  requestAnimationFrame(() => overlay.classList.add('open'));
+  // Set initial focus to close button for keyboard users
+  requestAnimationFrame(() => {
+    overlay.classList.add('open');
+    closeBtn.focus();
+  });
 
   const LEVEL_MAP = { 1: 'education', 2: 'exposure', 3: 'experience' };
   const LEVEL_REVERSE = { education: 1, exposure: 2, experience: 3 };

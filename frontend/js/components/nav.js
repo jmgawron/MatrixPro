@@ -52,12 +52,6 @@ function buildAuthItem(isLoggedIn, user) {
 
     li.appendChild(span);
     li.appendChild(btn);
-  } else {
-    const a = document.createElement('a');
-    a.href = '#/login';
-    a.textContent = 'Login';
-    a.className = 'btn btn-primary btn-sm';
-    li.appendChild(a);
   }
   return li;
 }
@@ -102,11 +96,6 @@ function renderNav() {
       closeMobileMenu();
     });
     mobileMenu.appendChild(logoutA);
-  } else {
-    const loginA = document.createElement('a');
-    loginA.href = '#/login';
-    loginA.textContent = 'Login';
-    mobileMenu.appendChild(loginA);
   }
 }
 

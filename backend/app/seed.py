@@ -253,7 +253,7 @@ def run():
                     all_tags[tname] = existing
                 db.add(SkillTag(skill_id=skill.id, tag_id=all_tags[tname].id))
 
-            for level, ctype, title, desc, url in content_templates:
+            for idx, (level, ctype, title, desc, url) in enumerate(content_templates):
                 db.add(
                     SkillLevelContent(
                         skill_id=skill.id,
@@ -262,6 +262,7 @@ def run():
                         title=f"{skill_name}: {title}",
                         description=desc,
                         url=url,
+                        position=idx,
                     )
                 )
 

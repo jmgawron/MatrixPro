@@ -2766,3 +2766,304 @@ textarea.is-error:focus {
     padding-right: 16px;
   }
 }
+
+/* ─── Skill Detail Modal ──────────────────────────────────────────────────── */
+
+.skill-detail-modal {
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.skill-detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: 0;
+}
+
+.skill-detail-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.skill-detail-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.skill-detail-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.skill-detail-header-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+/* Tab bar */
+.skill-detail-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-soft);
+  margin: 0 -24px;
+  padding: 0 24px;
+  flex-shrink: 0;
+}
+
+.skill-detail-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  transition: color var(--transition), border-color var(--transition);
+  white-space: nowrap;
+}
+
+.skill-detail-tab:hover {
+  color: var(--text-primary);
+}
+
+.skill-detail-tab.active[data-tab="education"] {
+  color: var(--success);
+  border-bottom-color: var(--success);
+}
+
+.skill-detail-tab.active[data-tab="exposure"] {
+  color: var(--info);
+  border-bottom-color: var(--info);
+}
+
+.skill-detail-tab.active[data-tab="experience"] {
+  color: var(--purple);
+  border-bottom-color: var(--purple);
+}
+
+.skill-detail-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  transition: background var(--transition), color var(--transition);
+}
+
+.skill-detail-tab.active[data-tab="education"] .skill-detail-tab-count {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+}
+
+.skill-detail-tab.active[data-tab="exposure"] .skill-detail-tab-count {
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--info);
+}
+
+.skill-detail-tab.active[data-tab="experience"] .skill-detail-tab-count {
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--purple);
+}
+
+/* Tab panel */
+.skill-detail-tab-panel {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: 45vh;
+  padding: 16px 0 4px;
+}
+
+.skill-detail-tab-panel.active {
+  display: flex;
+}
+
+.skill-detail-tab-empty {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* Accordion items */
+.skill-detail-accordion-item {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+
+.skill-detail-accordion-item.open {
+  border-color: var(--border-strong);
+}
+
+.skill-detail-accordion-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background var(--transition);
+}
+
+.skill-detail-accordion-trigger:hover {
+  background: var(--bg-elevated);
+}
+
+.skill-detail-accordion-title {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.skill-detail-accordion-chevron {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.skill-detail-accordion-chevron::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform var(--transition);
+}
+
+.skill-detail-accordion-item.open .skill-detail-accordion-chevron::before {
+  transform: rotate(-135deg) translate(-2px, -2px);
+}
+
+.skill-detail-accordion-body {
+  display: none;
+  padding: 0 16px 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  border-top: 1px solid var(--border-soft);
+}
+
+.skill-detail-accordion-item.open .skill-detail-accordion-body {
+  display: block;
+}
+
+.skill-detail-accordion-body-inner {
+  padding-top: 12px;
+}
+
+.skill-detail-accordion-body a {
+  color: var(--accent);
+}
+
+.skill-detail-accordion-body a:hover {
+  text-decoration: underline;
+}
+
+.skill-detail-accordion-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  text-decoration: none;
+  transition: background var(--transition), color var(--transition);
+}
+
+.skill-detail-accordion-link:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Smooth max-height animation for accordion */
+@media (prefers-reduced-motion: no-preference) {
+  .skill-detail-accordion-body {
+    display: block;
+    max-height: 0;
+    overflow: hidden;
+    padding-top: 0;
+    padding-bottom: 0;
+    transition: max-height 0.25s ease, padding var(--transition);
+  }
+
+  .skill-detail-accordion-item.open .skill-detail-accordion-body {
+    max-height: 800px;
+    padding-top: 0;
+    padding-bottom: 16px;
+  }
+}
+
+/* Skeleton in modal */
+.skill-detail-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 0;
+}
+
+@media (max-width: 640px) {
+  .skill-detail-modal {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .skill-detail-tabs {
+    margin: 0 -16px;
+    padding: 0 16px;
+    overflow-x: auto;
+  }
+
+  .skill-detail-tab {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+}

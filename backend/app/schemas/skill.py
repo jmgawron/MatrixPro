@@ -18,6 +18,25 @@ class SkillLevelContentCreate(BaseModel):
     title: str
     description: str | None = None
     url: str | None = None
+    position: int | None = None
+
+
+class SkillLevelContentUpdate(BaseModel):
+    level: int | None = None
+    type: SkillLevelContentType | None = None
+    title: str | None = None
+    description: str | None = None
+    url: str | None = None
+    position: int | None = None
+
+
+class ReorderItem(BaseModel):
+    id: int
+    position: int
+
+
+class ReorderRequest(BaseModel):
+    items: list[ReorderItem]
 
 
 class SkillLevelContentResponse(BaseModel):
@@ -28,6 +47,7 @@ class SkillLevelContentResponse(BaseModel):
     title: str
     description: str | None = None
     url: str | None = None
+    position: int = 0
     created_at: datetime
 
     model_config = {"from_attributes": True}

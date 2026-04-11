@@ -83,6 +83,7 @@ class SkillLevelContent(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     url = Column(String, nullable=True)
+    position = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     skill = relationship("Skill", back_populates="level_content")

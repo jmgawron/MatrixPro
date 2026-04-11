@@ -16,9 +16,11 @@ from app.schemas.skill import (
     CompareTeamResult,
     ExplorerEngineerResult,
     ExplorerResponse,
+    ReorderRequest,
     SkillCreate,
     SkillLevelContentCreate,
     SkillLevelContentResponse,
+    SkillLevelContentUpdate,
     SkillResponse,
     SkillUpdate,
     TagResponse,
@@ -371,6 +373,21 @@ def add_skill_content(
     if data.level not in (1, 2, 3):
         raise HTTPException(status_code=400, detail="Level must be 1, 2, or 3")
 
+    if data.position is not None:
+        position = data.position
+    else:
+        from sqlalchemy import func
+
+        max_pos = (
+            db.query(func.max(SkillLevelContent.position))
+            .filter(
+                SkillLevelContent.skill_id == skill_id,
+                SkillLevelContent.level == data.level,
+            )
+            .scalar()
+        )
+        position = (max_pos or 0) + 1
+
     content = SkillLevelContent(
         skill_id=skill_id,
         level=data.level,
@@ -378,6 +395,7 @@ def add_skill_content(
         title=data.title,
         description=data.description,
         url=data.url,
+        position=position,
         created_at=datetime.utcnow(),
     )
     db.add(content)
@@ -401,4 +419,98 @@ def list_skill_content(
     if level is not None:
         query = query.filter(SkillLevelContent.level == level)
 
-    return query.order_by(SkillLevelContent.level, SkillLevelContent.id).all()
+    return query.order_by(
+        SkillLevelContent.level, SkillLevelContent.position, SkillLevelContent.id
+    ).all()
+
+
+@router.put("/{skill_id}/content/reorder")
+def reorder_skill_content(
+    skill_id: int,
+    data: ReorderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
+):
+    skill = db.query(Skill).filter(Skill.id == skill_id).first()
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found")
+
+    for item in data.items:
+        content = (
+            db.query(SkillLevelContent)
+            .filter(
+                SkillLevelContent.id == item.id, SkillLevelContent.skill_id == skill_id
+            )
+            .first()
+        )
+        if content is None:
+            raise HTTPException(
+                status_code=404, detail=f"Content item {item.id} not found"
+            )
+        content.position = item.position
+
+    db.commit()
+    return {"detail": "Reorder successful"}
+
+
+@router.put(
+    "/{skill_id}/content/{content_id}", response_model=SkillLevelContentResponse
+)
+def update_skill_content(
+    skill_id: int,
+    content_id: int,
+    data: SkillLevelContentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
+):
+    content = (
+        db.query(SkillLevelContent)
+        .filter(
+            SkillLevelContent.id == content_id, SkillLevelContent.skill_id == skill_id
+        )
+        .first()
+    )
+    if content is None:
+        raise HTTPException(status_code=404, detail="Content item not found")
+
+    if data.level is not None:
+        if data.level not in (1, 2, 3):
+            raise HTTPException(status_code=400, detail="Level must be 1, 2, or 3")
+        content.level = data.level
+
+    if data.type is not None:
+        content.type = data.type
+    if data.title is not None:
+        content.title = data.title
+    if data.description is not None:
+        content.description = data.description
+    if data.url is not None:
+        content.url = data.url
+    if data.position is not None:
+        content.position = data.position
+
+    db.commit()
+    db.refresh(content)
+    return content
+
+
+@router.delete("/{skill_id}/content/{content_id}")
+def delete_skill_content(
+    skill_id: int,
+    content_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
+):
+    content = (
+        db.query(SkillLevelContent)
+        .filter(
+            SkillLevelContent.id == content_id, SkillLevelContent.skill_id == skill_id
+        )
+        .first()
+    )
+    if content is None:
+        raise HTTPException(status_code=404, detail="Content item not found")
+
+    db.delete(content)
+    db.commit()
+    return {"detail": "Content item deleted"}

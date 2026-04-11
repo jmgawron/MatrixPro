@@ -52,10 +52,7 @@ function h(tag, attrs, ...children) {
 
 function buildStatsRow() {
   const wrapper = h('div', {
-    style: [
-      'display:flex;align-items:center;justify-content:center;',
-      'gap:48px;flex-wrap:wrap;',
-    ].join(''),
+    className: 'stats-row',
   });
 
   const statDefs = [
@@ -68,17 +65,17 @@ function buildStatsRow() {
 
   statDefs.forEach(({ key, label }) => {
     const numEl = h('div', {
-      style: 'font-size:36px;font-weight:700;color:var(--text-primary);line-height:1;',
+      className: 'stat-block-value stat-block-value--lg',
       textContent: '—',
     });
     valueEls[key] = numEl;
 
     const labelEl = h('div', {
-      style: 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-top:6px;',
+      className: 'stat-block-label',
       textContent: label,
     });
 
-    const statBlock = h('div', { style: 'text-align:center;' }, numEl, labelEl);
+    const statBlock = h('div', { className: 'stat-block' }, numEl, labelEl);
     wrapper.appendChild(statBlock);
   });
 

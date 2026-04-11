@@ -122,7 +122,7 @@ function buildPageShell(container, params) {
   const searchIcon = el('span', { className: 'mp-search-icon' });
   searchIcon.appendChild(svgIcon('search', '16px'));
   const searchInput = el('input', {
-    className: 'mp-search-input',
+    className: 'search-input search-input--lg',
     type: 'text',
     placeholder: 'Search skills by name...',
   });
@@ -140,7 +140,7 @@ function buildPageShell(container, params) {
   wrapper.appendChild(searchWrap);
 
   const infobar = el('div', { className: 'mp-infobar' });
-  const statsRow = el('div', { className: 'mp-stats-row', id: 'mp-stats-row' });
+  const statsRow = el('div', { className: 'stats-row', id: 'mp-stats-row' });
   const infoRight = el('div', { className: 'mp-infobar-right' });
 
   const addBtn = el('button', { className: 'btn btn-primary btn-sm' });
@@ -263,7 +263,7 @@ function renderSections() {
     if (countEl) countEl.textContent = String(statusSkills.length);
 
     if (statusSkills.length === 0) {
-      const empty = el('div', { className: 'mp-empty' });
+      const empty = el('div', { className: 'empty-state empty-state--inline' });
       empty.textContent = _searchQuery
         ? 'No matching skills in this section.'
         : 'No skills yet — browse the catalog to get started!';
@@ -312,10 +312,10 @@ function updateStatsRow(allSkills, groups) {
   ];
 
   stats.forEach(({ value, label, icon }) => {
-    const block = el('div', { className: 'mp-stat-block' });
-    const valEl = el('div', { className: 'mp-stat-value' });
+    const block = el('div', { className: 'stat-block' });
+    const valEl = el('div', { className: 'stat-block-value' });
     valEl.textContent = value;
-    const labelEl = el('div', { className: 'mp-stat-label' });
+    const labelEl = el('div', { className: 'stat-block-label' });
     labelEl.textContent = label;
     block.appendChild(valEl);
     block.appendChild(labelEl);
@@ -616,7 +616,7 @@ function openEditSkillModal(planSkill) {
     const currentLogs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
     logToggleCount.textContent = String(currentLogs.length);
     if (currentLogs.length === 0) {
-      const emptyLog = el('div', { className: 'mp-log-empty' });
+      const emptyLog = el('div', { className: 'empty-state empty-state--compact' });
       emptyLog.textContent = 'No training log entries yet.';
       logListEl.appendChild(emptyLog);
     } else {
@@ -706,7 +706,7 @@ function openEditSkillModal(planSkill) {
     tabButtons[key].querySelector('.skill-detail-tab-count').textContent = String(sorted.length);
 
     if (!sorted.length) {
-      const empty = el('div', { className: 'skill-detail-tab-empty' });
+      const empty = el('div', { className: 'empty-state empty-state--compact' });
       empty.textContent = 'No content items for this level.';
       panel.appendChild(empty);
       return;
@@ -853,7 +853,7 @@ function openEditSkillModal(planSkill) {
     }).catch(() => {
       LEVEL_CONFIG.forEach(({ key }) => {
         tabPanels[key].innerHTML = '';
-        const errEl = el('div', { className: 'skill-detail-tab-empty' });
+        const errEl = el('div', { className: 'empty-state empty-state--compact' });
         errEl.textContent = 'Unable to load content.';
         tabPanels[key].appendChild(errEl);
       });
@@ -1160,7 +1160,7 @@ async function openAddSkillModal() {
   const searchInput = el('input', {
     type: 'text',
     placeholder: 'Search skills...',
-    className: 'mp-add-skill-search',
+    className: 'search-input',
   });
   bodyEl.appendChild(searchInput);
 
@@ -1179,7 +1179,7 @@ async function openAddSkillModal() {
       : available;
 
     if (filtered.length === 0) {
-      const empty = el('div', { className: 'mp-add-skill-empty' });
+      const empty = el('div', { className: 'empty-state empty-state--compact' });
       empty.textContent = query ? 'No skills match your search.' : 'All available skills are already in your plan.';
       listEl.appendChild(empty);
       return;
@@ -1280,11 +1280,11 @@ function showPermissionError(msg) {
   if (!sections) return;
   sections.innerHTML = '';
   const errDiv = el('div', {
-    className: 'mp-error-state',
+    className: 'empty-state empty-state--error',
   });
-  const title = el('div', { className: 'mp-error-title' });
+  const title = el('div', { className: 'empty-state-title' });
   title.textContent = "You don't have permission to view this plan";
-  const desc = el('div', { className: 'mp-error-desc' });
+  const desc = el('div', { className: 'empty-state-desc' });
   desc.textContent = msg || 'Contact your manager or administrator for access.';
   errDiv.appendChild(title);
   errDiv.appendChild(desc);

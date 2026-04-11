@@ -162,7 +162,7 @@ function buildTopBar() {
     type: 'text',
     placeholder: 'Search skills...',
     id: 'catalog-search',
-    className: 'catalog-search-input',
+    className: 'search-input',
   });
   searchInput.addEventListener('input', () => {
     clearTimeout(_debounceTimer);
@@ -474,8 +474,6 @@ function buildSkillCard(skill) {
     actions.appendChild(archiveBtn);
     headerRow.appendChild(actions);
 
-    card.addEventListener('mouseenter', () => { actions.style.opacity = '1'; });
-    card.addEventListener('mouseleave', () => { actions.style.opacity = '0'; });
   }
 
   card.appendChild(headerRow);
@@ -522,7 +520,6 @@ function buildSkillCard(skill) {
     card.appendChild(tagsRow);
   }
 
-  card.style.cursor = 'pointer';
   card.addEventListener('click', () => {
     showSkillDetailModal(skill);
   });
@@ -801,7 +798,7 @@ function showSkillDetailModal(skill) {
     }
 
     if (!sorted.length) {
-      const empty = createElement('div', { className: 'skill-detail-tab-empty' });
+      const empty = createElement('div', { className: 'empty-state empty-state--compact' });
       empty.textContent = 'No content added for this level yet.';
       panel.appendChild(empty);
     } else {
@@ -937,7 +934,7 @@ function showSkillDetailModal(skill) {
     }).catch(() => {
       LEVEL_CONFIG.forEach(({ key }) => {
         tabPanels[key].innerHTML = '';
-        const errEl = createElement('div', { className: 'skill-detail-tab-empty' });
+        const errEl = createElement('div', { className: 'empty-state empty-state--compact' });
         errEl.textContent = 'Unable to reload content.';
         tabPanels[key].appendChild(errEl);
       });
@@ -962,7 +959,7 @@ function showSkillDetailModal(skill) {
 
   }).catch(() => {
     skeletonEl.remove();
-    const errEl = createElement('div', { className: 'skill-detail-tab-empty' });
+    const errEl = createElement('div', { className: 'empty-state empty-state--compact' });
     errEl.textContent = 'Unable to load learning content.';
     tabPanelsWrap.appendChild(errEl);
     activateTab('education');

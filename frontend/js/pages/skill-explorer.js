@@ -160,7 +160,7 @@ function buildSearchSection() {
     type: 'text',
     placeholder: 'Search by skill name...',
     id: 'explorer-search',
-    className: 'explorer-search-input',
+    className: 'search-input',
   });
   searchInput.addEventListener('input', () => {
     clearTimeout(_debounceTimer);
@@ -215,7 +215,7 @@ function buildSearchSection() {
   });
 
   const placeholder = createElement('div', {
-    className: 'content-placeholder',
+    className: 'empty-state empty-state--inline',
   });
   placeholder.textContent = 'Enter a skill name or filter to search for engineers.';
   resultsContainer.appendChild(placeholder);
@@ -236,9 +236,9 @@ function renderSearchResults(data) {
 
   if (results.length === 0) {
     const empty = createElement('div', { className: 'empty-state' });
-    const icon = createElement('div', { className: 'explorer-empty-icon' });
+    const icon = createElement('div', { className: 'empty-state-icon' });
     icon.textContent = 'o';
-    const msg = createElement('div', { className: 'content-placeholder' });
+    const msg = createElement('div', { className: 'empty-state-desc' });
     msg.textContent = 'No engineers found matching your criteria.';
     empty.appendChild(icon);
     empty.appendChild(msg);
@@ -404,7 +404,7 @@ function buildComparisonSection() {
   });
 
   const comparePlaceholder = createElement('div', {
-    className: 'content-placeholder',
+    className: 'empty-state empty-state--inline',
   });
   comparePlaceholder.textContent = 'Select two teams above and click Compare to see skill overlap.';
   compareBody.appendChild(comparePlaceholder);
@@ -621,7 +621,7 @@ function buildTeamSkillPanel(team, side, compareData) {
 
   if (skills.length === 0) {
     const empty = createElement('div', {
-      className: 'content-placeholder',
+      className: 'empty-state empty-state--inline',
     });
     empty.textContent = 'No skills found for this team.';
     skillsList.appendChild(empty);

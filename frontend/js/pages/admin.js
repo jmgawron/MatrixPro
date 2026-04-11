@@ -92,7 +92,7 @@ function renderUsersTable(content, users, teams) {
     <div class="admin-tab-header">
       <h2>Users <span class="admin-count">${users.length}</span></h2>
       <div class="admin-tab-actions">
-        <input type="text" class="admin-search" id="userSearch" placeholder="Search users...">
+        <input type="text" class="search-input search-input--sm" id="userSearch" placeholder="Search users...">
         <button class="btn btn-primary btn-sm" id="addUserBtn">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add User
@@ -391,7 +391,7 @@ function renderTeamsTable(content, teams, users, domains) {
     <div class="admin-tab-header">
       <h2>Teams <span class="admin-count">${teams.length}</span></h2>
       <div class="admin-tab-actions">
-        <input type="text" class="admin-search" id="teamSearch" placeholder="Search teams...">
+        <input type="text" class="search-input search-input--sm" id="teamSearch" placeholder="Search teams...">
         <button class="btn btn-primary btn-sm" id="addTeamBtn">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add Team
@@ -591,7 +591,7 @@ function renderDomainsTable(content, domains, teams) {
     <div class="admin-tab-header">
       <h2>Domains <span class="admin-count">${domains.length}</span></h2>
       <div class="admin-tab-actions">
-        <input type="text" class="admin-search" id="domainSearch" placeholder="Search domains...">
+        <input type="text" class="search-input search-input--sm" id="domainSearch" placeholder="Search domains...">
         <button class="btn btn-primary btn-sm" id="addDomainBtn">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add Domain

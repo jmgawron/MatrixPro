@@ -787,10 +787,18 @@ body {
   transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
 }
 
+.tool-card {
+  cursor: pointer;
+}
+
 .tool-card:hover {
   transform: translateY(-2px);
   border-color: rgba(59, 130, 246, .55);
   box-shadow: var(--shadow-md);
+}
+
+.tool-card:hover .card-admin-actions {
+  opacity: 1;
 }
 
 .tool-card-name {
@@ -5288,4 +5296,127 @@ textarea.is-error:focus {
 .catalog-form-hint {
   margin-top: -10px;
   margin-bottom: 16px;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   §  PHASE D — Component Convergence (unified empty states, stats, search)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Empty-state modifiers ─────────────────────────────────────────────────
+   Base .empty-state is at line ~1918. These modifiers extend it for
+   compact (inline card/modal) and error contexts.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Compact empty — for inline contexts (tab panels, log sections, modal lists) */
+.empty-state--compact {
+  padding: 24px 12px;
+  font-size: 13px;
+}
+.empty-state--compact .empty-state-title {
+  font-size: 14px;
+}
+.empty-state--compact .empty-state-desc {
+  font-size: 13px;
+  margin-bottom: 0;
+}
+
+/* Inline empty — minimal, single-line (kanban column, skill list) */
+.empty-state--inline {
+  padding: 24px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Error variant — uses standard empty-state structure with error icon */
+.empty-state--error .empty-state-icon {
+  color: var(--text-secondary);
+}
+.empty-state--error .empty-state-title {
+  color: var(--text-primary);
+  font-size: 16px;
+}
+.empty-state--error .empty-state-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+/* ─── Unified stats row ────────────────────────────────────────────────────
+   Replaces: home.js inline stats, mp-stats-row + mp-stat-block
+   Canonical .stat-pill (line ~1046) is retained for small pill badges.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+}
+
+.stat-block {
+  text-align: center;
+}
+
+.stat-block-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+/* Larger hero variant (home page) */
+.stat-block-value--lg {
+  font-size: 36px;
+}
+
+.stat-block-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+/* ─── Unified search input ─────────────────────────────────────────────────
+   Replaces: mp-search-input, catalog-search-input, explorer-search-input,
+   admin-search — all converge on .search-input with size modifiers.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+/* Large search — centered hero-style (My Plan) */
+.search-input--lg {
+  padding: 12px 16px 12px 40px;
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+}
+
+/* Small search — compact (Admin) */
+.search-input--sm {
+  padding: 6px 12px;
+  font-size: 13px;
+  min-width: 200px;
 }

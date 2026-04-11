@@ -289,7 +289,7 @@ function renderMatrix() {
 
   if (skills.length === 0) {
     const noSkills = createElement('div', {
-      className: 'matrix-no-skills',
+      className: 'empty-state empty-state--inline',
     });
     noSkills.textContent = 'No skills match the current filter.';
     _matrixBodyEl.appendChild(noSkills);
@@ -632,19 +632,19 @@ function renderEmptyState(container) {
 
 function renderErrorState(container, msg) {
   const state = createElement('div', {
-    className: 'matrix-error-state',
+    className: 'empty-state empty-state--error',
   });
 
-  const icon = createElement('div', { className: 'matrix-error-icon' });
+  const icon = createElement('div', { className: 'empty-state-icon' });
   icon.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 
   const title = createElement('div', {
-    className: 'matrix-error-title',
+    className: 'empty-state-title',
   });
   title.textContent = 'Failed to load team matrix';
 
   const desc = createElement('div', {
-    className: 'matrix-error-desc',
+    className: 'empty-state-desc',
   });
   desc.textContent = msg || 'Please try refreshing the page.';
 

@@ -50,7 +50,13 @@ def create_team(
     db.add(team)
     db.commit()
     db.refresh(team)
-    return team
+    team = (
+        db.query(Team)
+        .options(joinedload(Team.domain))
+        .filter(Team.id == team.id)
+        .first()
+    )
+    return _team_to_response(team)
 
 
 @router.get("/matrix", response_model=TeamMatrixResponse)
@@ -168,10 +174,15 @@ def get_team(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    team = db.query(Team).filter(Team.id == team_id).first()
+    team = (
+        db.query(Team)
+        .options(joinedload(Team.domain))
+        .filter(Team.id == team_id)
+        .first()
+    )
     if team is None:
         raise HTTPException(status_code=404, detail="Team not found")
-    return team
+    return _team_to_response(team)
 
 
 @router.put("/{team_id}", response_model=TeamResponse)
@@ -193,7 +204,13 @@ def update_team(
         team.name = data.name
     db.commit()
     db.refresh(team)
-    return team
+    team = (
+        db.query(Team)
+        .options(joinedload(Team.domain))
+        .filter(Team.id == team_id)
+        .first()
+    )
+    return _team_to_response(team)
 
 
 @router.delete("/{team_id}")

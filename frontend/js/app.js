@@ -10,6 +10,8 @@ import { mountMyPlan } from './pages/my-plan.js';
 import { mountMyTeam } from './pages/my-team.js';
 import { mountCatalog } from './pages/catalog.js';
 import { mountSkillExplorer } from './pages/skill-explorer.js';
+import { mountSettings } from './pages/settings.js';
+import { mountAdmin } from './pages/admin.js';
 
 const routes = {
   '/': { mount: mountHome, title: 'Home', minRole: null },
@@ -19,6 +21,8 @@ const routes = {
   '/my-team': { mount: mountMyTeam, title: 'My Team', minRole: 'manager' },
   '/catalog': { mount: mountCatalog, title: 'Catalog Explorer', minRole: 'engineer' },
   '/skill-explorer': { mount: mountSkillExplorer, title: 'Skill Explorer', minRole: 'engineer' },
+  '/settings': { mount: mountSettings, title: 'Settings', minRole: 'engineer' },
+  '/admin': { mount: mountAdmin, title: 'Admin Panel', minRole: 'admin' },
 };
 
 async function init() {

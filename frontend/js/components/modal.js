@@ -8,8 +8,13 @@ function removeModal() {
   _activeModal = null;
 }
 
-export function showModal({ title, body, confirmText = 'Confirm', cancelText = 'Cancel', onConfirm, onCancel, danger = false }) {
+export function showModal({ title, body, confirmText = 'Confirm', cancelText = 'Cancel', onConfirm, onCancel, danger = false, actions }) {
   if (_activeModal) removeModal();
+
+  const useActions = Array.isArray(actions);
+
+  let promiseResolve;
+  const promise = useActions ? new Promise(resolve => { promiseResolve = resolve; }) : undefined;
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -46,16 +51,37 @@ export function showModal({ title, body, confirmText = 'Confirm', cancelText = '
   const footer = document.createElement('div');
   footer.className = 'modal-footer';
 
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'btn btn-secondary';
-  cancelBtn.textContent = cancelText;
+  const dismiss = (value) => {
+    removeModal();
+    document.removeEventListener('keydown', onKey);
+    if (useActions) {
+      promiseResolve(value ?? null);
+    }
+  };
 
-  const confirmBtn = document.createElement('button');
-  confirmBtn.className = danger ? 'btn btn-danger' : 'btn btn-primary';
-  confirmBtn.textContent = confirmText;
+  if (useActions) {
+    actions.forEach(action => {
+      const btn = document.createElement('button');
+      btn.className = action.className || 'btn btn-secondary';
+      btn.textContent = action.label;
+      btn.addEventListener('click', () => dismiss(action.value ?? null));
+      footer.appendChild(btn);
+    });
+  } else {
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-secondary';
+    cancelBtn.textContent = cancelText;
 
-  footer.appendChild(cancelBtn);
-  footer.appendChild(confirmBtn);
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = danger ? 'btn btn-danger' : 'btn btn-primary';
+    confirmBtn.textContent = confirmText;
+
+    footer.appendChild(cancelBtn);
+    footer.appendChild(confirmBtn);
+
+    confirmBtn.addEventListener('click', () => { removeModal(); onConfirm?.(); });
+    cancelBtn.addEventListener('click', () => { removeModal(); onCancel?.(); });
+  }
 
   modal.appendChild(header);
   modal.appendChild(bodyEl);
@@ -67,26 +93,42 @@ export function showModal({ title, body, confirmText = 'Confirm', cancelText = '
 
   requestAnimationFrame(() => overlay.classList.add('open'));
 
-  const confirm = () => { removeModal(); onConfirm?.(); };
-  const cancel = () => { removeModal(); onCancel?.(); };
+  const cancel = () => {
+    if (useActions) {
+      dismiss(null);
+    } else {
+      removeModal();
+      onCancel?.();
+    }
+  };
 
-  confirmBtn.addEventListener('click', confirm);
-  cancelBtn.addEventListener('click', cancel);
   closeBtn.addEventListener('click', cancel);
-
   overlay.addEventListener('click', e => { if (e.target === overlay) cancel(); });
 
   const onKey = e => {
     if (e.key === 'Escape') { cancel(); document.removeEventListener('keydown', onKey); }
   };
   document.addEventListener('keydown', onKey);
+
+  return promise;
 }
 
-export function showConfirm(message, danger = false) {
+export function showConfirm(messageOrOpts, danger = false) {
+  let title = 'Confirm';
+  let body;
+
+  if (typeof messageOrOpts === 'object' && messageOrOpts !== null) {
+    title = messageOrOpts.title || 'Confirm';
+    body = messageOrOpts.message || messageOrOpts.body || '';
+    danger = messageOrOpts.danger ?? danger;
+  } else {
+    body = messageOrOpts;
+  }
+
   return new Promise(resolve => {
     showModal({
-      title: 'Confirm',
-      body: message,
+      title,
+      body,
       confirmText: 'Yes',
       cancelText: 'No',
       danger,

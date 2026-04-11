@@ -7,17 +7,21 @@ from app.models.user import UserRole
 
 class UserCreate(BaseModel):
     name: str
+    surname: str = ""
     email: str
     password: str
     role: UserRole = UserRole.engineer
+    avatar: str | None = None
     team_id: int | None = None
     manager_id: int | None = None
 
 
 class UserUpdate(BaseModel):
     name: str | None = None
+    surname: str | None = None
     email: str | None = None
     role: UserRole | None = None
+    avatar: str | None = None
     team_id: int | None = None
     manager_id: int | None = None
 
@@ -25,8 +29,10 @@ class UserUpdate(BaseModel):
 class UserResponse(BaseModel):
     id: int
     name: str
+    surname: str
     email: str
     role: UserRole
+    avatar: str | None = None
     team_id: int | None = None
     manager_id: int | None = None
     created_at: datetime

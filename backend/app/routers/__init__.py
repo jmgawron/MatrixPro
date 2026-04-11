@@ -4,3 +4,4 @@ from app.routers.teams import router as teams_router  # noqa: F401
 from app.routers.skills import router as skills_router  # noqa: F401
 from app.routers.plans import router as plans_router  # noqa: F401
 from app.routers.export import router as export_router  # noqa: F401
+from app.routers.domains import router as domains_router  # noqa: F401

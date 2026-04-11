@@ -58,50 +58,62 @@ def run():
 
         admin_user = User(
             name="Admin",
+            surname="System",
             email="admin@matrixpro.com",
             password_hash=pwd,
             role=UserRole.admin,
+            avatar="avatar_shield",
         )
         alice = User(
             name="Alice",
+            surname="Johnson",
             email="alice@matrixpro.com",
             password_hash=pwd,
             role=UserRole.manager,
             team_id=wifi6_team.id,
+            avatar="avatar_crown",
         )
         carol = User(
             name="Carol",
+            surname="Williams",
             email="carol@matrixpro.com",
             password_hash=pwd,
             role=UserRole.manager,
             team_id=wlan_team.id,
+            avatar="avatar_star",
         )
         db.add_all([admin_user, alice, carol])
         db.flush()
 
         bob = User(
             name="Bob",
+            surname="Smith",
             email="bob@matrixpro.com",
             password_hash=pwd,
             role=UserRole.engineer,
             team_id=wifi6_team.id,
             manager_id=alice.id,
+            avatar="avatar_rocket",
         )
         dave = User(
             name="Dave",
+            surname="Brown",
             email="dave@matrixpro.com",
             password_hash=pwd,
             role=UserRole.engineer,
             team_id=wlan_team.id,
             manager_id=carol.id,
+            avatar="avatar_bolt",
         )
         eve = User(
             name="Eve",
+            surname="Davis",
             email="eve@matrixpro.com",
             password_hash=pwd,
             role=UserRole.engineer,
             team_id=firewall_team.id,
             manager_id=carol.id,
+            avatar="avatar_flame",
         )
         db.add_all([bob, dave, eve])
         db.flush()

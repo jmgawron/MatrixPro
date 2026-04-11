@@ -1,5 +1,6 @@
 import bcrypt
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -32,9 +33,11 @@ def create_user(
     password_hash = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
     user = User(
         name=data.name,
+        surname=data.surname,
         email=data.email,
         password_hash=password_hash,
         role=data.role,
+        avatar=data.avatar,
         team_id=data.team_id,
         manager_id=data.manager_id,
     )
@@ -93,6 +96,12 @@ def update_user(
     if data.name is not None:
         user.name = data.name
 
+    if data.surname is not None:
+        user.surname = data.surname
+
+    if data.avatar is not None:
+        user.avatar = data.avatar
+
     if data.team_id is not None:
         user.team_id = data.team_id
 
@@ -127,3 +136,28 @@ def delete_user(
     db.delete(user)
     db.commit()
     return {"detail": "User deleted"}
+
+
+class AdminPasswordReset(BaseModel):
+    new_password: str
+
+
+@router.put("/{user_id}/password")
+def admin_reset_password(
+    user_id: int,
+    data: AdminPasswordReset,
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin),
+):
+    if len(data.new_password) < 6:
+        raise HTTPException(
+            status_code=400, detail="Password must be at least 6 characters"
+        )
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.password_hash = bcrypt.hashpw(
+        data.new_password.encode(), bcrypt.gensalt()
+    ).decode()
+    db.commit()
+    return {"detail": "Password reset successfully"}

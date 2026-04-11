@@ -3,6 +3,7 @@ import { Store } from '../state.js';
 import { showSkeleton } from '../components/skeleton.js';
 import { showToast } from '../components/toast.js';
 import { showModal } from '../components/modal.js';
+import { createElement } from '../utils/dom.js';
 
 // ─── Module-level page state ─────────────────────────────────────────────────
 
@@ -93,7 +94,7 @@ async function runComparison(teamAId, teamBId) {
 
 function buildPageShell(container) {
   const wrapper = createElement('div', {
-    style: 'display:flex;flex-direction:column;min-height:calc(100vh - 60px);',
+    className: 'page-shell',
   });
 
   const header = createElement('div', { className: 'mp-header' });
@@ -110,7 +111,7 @@ function buildPageShell(container) {
 
   // ── Main scroll area ──────────────────────────────────────────────────────
   const main = createElement('div', {
-    style: 'flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:32px;',
+    className: 'page-body--col',
   });
 
   main.appendChild(buildSearchSection());
@@ -124,31 +125,21 @@ function buildPageShell(container) {
 
 function buildSearchSection() {
   const section = createElement('div', {
-    style: [
-      'background:var(--bg-card);',
-      'border:1px solid var(--border-soft);',
-      'border-radius:var(--radius-lg);',
-      'overflow:hidden;',
-    ].join(''),
+    className: 'content-section',
   });
 
   // Section header
   const header = createElement('div', {
-    style: [
-      'background:var(--bg-elevated);',
-      'border-bottom:1px solid var(--border-soft);',
-      'padding:16px 20px;',
-      'display:flex;align-items:center;gap:12px;',
-    ].join(''),
+    className: 'content-section-header',
   });
 
   const headerTitle = createElement('h2', {
-    style: 'font-size:16px;font-weight:700;color:var(--text-primary);',
+    className: 'content-section-title',
   });
   headerTitle.textContent = 'Engineer Search';
 
   const headerDesc = createElement('span', {
-    style: 'font-size:13px;color:var(--text-muted);',
+    className: 'content-section-desc',
   });
   headerDesc.textContent = 'Find engineers by skill across the organisation';
 
@@ -158,24 +149,18 @@ function buildSearchSection() {
 
   // Search controls
   const controls = createElement('div', {
-    style: 'padding:16px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--border-soft);',
+    className: 'content-section-controls',
   });
 
   // Search input
   const searchWrap = createElement('div', {
-    style: 'flex:1;min-width:200px;max-width:400px;',
+    className: 'explorer-search-wrap',
   });
   const searchInput = createElement('input', {
     type: 'text',
     placeholder: 'Search by skill name...',
     id: 'explorer-search',
-    style: 'width:100%;background:var(--bg-input);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:8px 12px;color:var(--text-primary);font-size:14px;outline:none;transition:border-color var(--transition);',
-  });
-  searchInput.addEventListener('focus', () => {
-    searchInput.style.borderColor = 'var(--accent)';
-  });
-  searchInput.addEventListener('blur', () => {
-    searchInput.style.borderColor = 'var(--border-soft)';
+    className: 'explorer-search-input',
   });
   searchInput.addEventListener('input', () => {
     clearTimeout(_debounceTimer);
@@ -190,17 +175,7 @@ function buildSearchSection() {
   // Status filter
   const statusSelect = createElement('select', {
     id: 'explorer-status-filter',
-    style: [
-      'background:var(--bg-input);',
-      'border:1px solid var(--border-soft);',
-      'border-radius:var(--radius-md);',
-      'padding:8px 12px;',
-      'color:var(--text-secondary);',
-      'font-size:14px;',
-      'cursor:pointer;',
-      'outline:none;',
-      'min-width:160px;',
-    ].join(''),
+    className: 'explorer-status-select',
   });
 
   const statusOptions = [
@@ -223,7 +198,6 @@ function buildSearchSection() {
   // Search button
   const searchBtn = createElement('button', {
     className: 'btn btn-primary btn-sm',
-    style: 'padding:8px 16px;',
   });
   searchBtn.textContent = 'Search';
   searchBtn.addEventListener('click', () => {
@@ -237,11 +211,11 @@ function buildSearchSection() {
   // Results container
   const resultsContainer = createElement('div', {
     id: 'explorer-results',
-    style: 'padding:16px 20px;min-height:120px;',
+    className: 'content-section-body',
   });
 
   const placeholder = createElement('div', {
-    style: 'text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px;',
+    className: 'content-placeholder',
   });
   placeholder.textContent = 'Enter a skill name or filter to search for engineers.';
   resultsContainer.appendChild(placeholder);
@@ -262,9 +236,9 @@ function renderSearchResults(data) {
 
   if (results.length === 0) {
     const empty = createElement('div', { className: 'empty-state' });
-    const icon = createElement('div', { style: 'font-size:32px;margin-bottom:12px;' });
+    const icon = createElement('div', { className: 'explorer-empty-icon' });
     icon.textContent = 'o';
-    const msg = createElement('div', { style: 'font-size:14px;color:var(--text-muted);' });
+    const msg = createElement('div', { className: 'content-placeholder' });
     msg.textContent = 'No engineers found matching your criteria.';
     empty.appendChild(icon);
     empty.appendChild(msg);
@@ -274,7 +248,7 @@ function renderSearchResults(data) {
 
   // Count badge
   const countBar = createElement('div', {
-    style: 'display:flex;align-items:center;gap:8px;margin-bottom:12px;',
+    className: 'explorer-count-bar',
   });
   const countBadge = createElement('span', { className: 'triage-chip triage-signal' });
   countBadge.textContent = `${data.total ?? results.length} result${(data.total ?? results.length) !== 1 ? 's' : ''}`;
@@ -283,32 +257,20 @@ function renderSearchResults(data) {
 
   // Table
   const tableWrap = createElement('div', {
-    style: 'overflow-x:auto;border:1px solid var(--border-soft);border-radius:var(--radius-md);',
+    className: 'explorer-table-wrap',
   });
 
   const table = createElement('table', {
-    style: 'width:100%;border-collapse:collapse;font-size:13px;',
+    className: 'explorer-table',
   });
 
   // Header
   const thead = createElement('thead');
-  const headerRow = createElement('tr', {
-    style: 'background:var(--bg-elevated);',
-  });
+  const headerRow = createElement('tr');
 
   const cols = ['Engineer', 'Team', 'Skill', 'Status', 'Proficiency Level'];
-  cols.forEach((col, i) => {
-    const th = createElement('th', {
-      style: [
-        'padding:10px 14px;',
-        'text-align:left;',
-        'font-size:11px;font-weight:700;',
-        'text-transform:uppercase;letter-spacing:.06em;',
-        'color:var(--text-muted);',
-        i > 0 ? 'border-left:1px solid var(--border-soft);' : '',
-        i === cols.length - 1 ? '' : 'white-space:nowrap;',
-      ].join(''),
-    });
+  cols.forEach((col) => {
+    const th = createElement('th');
     th.textContent = col;
     headerRow.appendChild(th);
   });
@@ -317,20 +279,8 @@ function renderSearchResults(data) {
 
   // Body
   const tbody = createElement('tbody');
-  results.forEach((row, idx) => {
-    const tr = createElement('tr', {
-      style: [
-        idx % 2 === 0 ? 'background:var(--bg-card);' : 'background:var(--bg-card-soft);',
-        'transition:background var(--transition);',
-      ].join(''),
-    });
-
-    tr.addEventListener('mouseenter', () => {
-      tr.style.background = 'rgba(59,130,246,.07)';
-    });
-    tr.addEventListener('mouseleave', () => {
-      tr.style.background = idx % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-card-soft)';
-    });
+  results.forEach((row) => {
+    const tr = createElement('tr');
 
     const cells = [
       { text: row.engineer_name || `Engineer ${row.engineer_id}`, bold: true },
@@ -340,14 +290,9 @@ function renderSearchResults(data) {
       { text: formatProficiencyLevel(row.proficiency_level) },
     ];
 
-    cells.forEach((cell, ci) => {
+    cells.forEach((cell) => {
       const td = createElement('td', {
-        style: [
-          'padding:10px 14px;',
-          'color:var(--text-secondary);',
-          ci > 0 ? 'border-left:1px solid var(--border-soft);' : '',
-          cell.bold ? 'font-weight:600;color:var(--text-primary);' : '',
-        ].join(''),
+        className: cell.bold ? 'bold-cell' : '',
       });
 
       if (cell.chip) {
@@ -368,25 +313,23 @@ function renderSearchResults(data) {
 }
 
 function buildStatusChip(status) {
-  const map = {
-    in_pipeline:    { label: 'In Pipeline',    color: 'var(--info)',    bg: 'rgba(6,182,212,.15)' },
-    in_development: { label: 'In Development', color: 'var(--warning)', bg: 'rgba(245,158,11,.15)' },
-    proficiency:    { label: 'Proficiency',    color: 'var(--success)', bg: 'rgba(34,197,94,.15)' },
+  const labelMap = {
+    in_pipeline:    'In Pipeline',
+    in_development: 'In Development',
+    proficiency:    'Proficiency',
   };
-  const cfg = map[status] || { label: status || '—', color: 'var(--text-muted)', bg: 'var(--bg-elevated)' };
+  const modifierMap = {
+    in_pipeline:    'pipeline',
+    in_development: 'development',
+    proficiency:    'proficiency',
+  };
+  const label = labelMap[status] || status || '—';
+  const modifier = modifierMap[status] || 'unknown';
 
   const chip = createElement('span', {
-    style: [
-      `background:${cfg.bg};`,
-      `color:${cfg.color};`,
-      'border-radius:20px;',
-      'padding:3px 10px;',
-      'font-size:12px;font-weight:600;',
-      'white-space:nowrap;',
-      'display:inline-block;',
-    ].join(''),
+    className: `explorer-status-chip explorer-status-chip--${modifier}`,
   });
-  chip.textContent = cfg.label;
+  chip.textContent = label;
   return chip;
 }
 
@@ -399,31 +342,21 @@ function formatProficiencyLevel(level) {
 
 function buildComparisonSection() {
   const section = createElement('div', {
-    style: [
-      'background:var(--bg-card);',
-      'border:1px solid var(--border-soft);',
-      'border-radius:var(--radius-lg);',
-      'overflow:hidden;',
-    ].join(''),
+    className: 'content-section',
   });
 
   // Section header
   const header = createElement('div', {
-    style: [
-      'background:var(--bg-elevated);',
-      'border-bottom:1px solid var(--border-soft);',
-      'padding:16px 20px;',
-      'display:flex;align-items:center;gap:12px;',
-    ].join(''),
+    className: 'content-section-header',
   });
 
   const headerTitle = createElement('h2', {
-    style: 'font-size:16px;font-weight:700;color:var(--text-primary);',
+    className: 'content-section-title',
   });
   headerTitle.textContent = 'Cross-Team Comparison';
 
   const headerDesc = createElement('span', {
-    style: 'font-size:13px;color:var(--text-muted);',
+    className: 'content-section-desc',
   });
   headerDesc.textContent = 'Compare skill coverage across two teams';
 
@@ -433,12 +366,12 @@ function buildComparisonSection() {
 
   // Team selectors row
   const selectorsRow = createElement('div', {
-    style: 'padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--border-soft);',
+    className: 'explorer-compare-selectors',
   });
 
   const teamAWrap = buildTeamSelectorGroup('compare-team-a', 'Compare Team');
   const vsLabel = createElement('div', {
-    style: 'font-size:14px;font-weight:700;color:var(--text-muted);padding-top:20px;flex-shrink:0;',
+    className: 'explorer-compare-vs',
   });
   vsLabel.textContent = 'vs.';
   const teamBWrap = buildTeamSelectorGroup('compare-team-b', 'With Team');
@@ -449,7 +382,6 @@ function buildComparisonSection() {
 
   const compareBtn = createElement('button', {
     className: 'btn btn-primary btn-sm',
-    style: 'margin-top:20px;padding:8px 18px;flex-shrink:0;',
   });
   compareBtn.textContent = 'Compare';
   compareBtn.addEventListener('click', () => {
@@ -468,11 +400,11 @@ function buildComparisonSection() {
   // Comparison body (skeleton / results)
   const compareBody = createElement('div', {
     id: 'compare-body',
-    style: 'padding:20px;',
+    className: 'content-section-body--lg',
   });
 
   const comparePlaceholder = createElement('div', {
-    style: 'text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px;',
+    className: 'content-placeholder',
   });
   comparePlaceholder.textContent = 'Select two teams above and click Compare to see skill overlap.';
   compareBody.appendChild(comparePlaceholder);
@@ -485,28 +417,18 @@ function buildComparisonSection() {
 
 function buildTeamSelectorGroup(inputId, label) {
   const wrap = createElement('div', {
-    style: 'display:flex;flex-direction:column;gap:6px;min-width:180px;',
+    className: 'explorer-selector-group',
   });
 
   const labelEl = createElement('label', {
-    style: 'font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;',
+    className: 'explorer-selector-label',
   });
   labelEl.textContent = label;
   labelEl.setAttribute('for', inputId);
 
   const select = createElement('select', {
     id: inputId,
-    style: [
-      'background:var(--bg-input);',
-      'border:1px solid var(--border-soft);',
-      'border-radius:var(--radius-md);',
-      'padding:8px 12px;',
-      'color:var(--text-secondary);',
-      'font-size:14px;',
-      'cursor:pointer;',
-      'outline:none;',
-      'min-width:180px;',
-    ].join(''),
+    className: 'explorer-selector-select',
   });
 
   const placeholder = createElement('option', { value: '' });
@@ -555,14 +477,14 @@ function renderComparison(data) {
 
   // Overlap circle row (centered)
   const circleRow = createElement('div', {
-    style: 'display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:24px;',
+    className: 'explorer-circle-row',
   });
 
   const circleWrap = buildOverlapCircle(overlapPercent);
   circleRow.appendChild(circleWrap);
 
   const overlapLabel = createElement('div', {
-    style: 'font-size:13px;color:var(--text-muted);text-align:center;',
+    className: 'explorer-overlap-label',
   });
   overlapLabel.textContent = `${data.overlap_count ?? 0} shared skill${(data.overlap_count ?? 0) !== 1 ? 's' : ''} between teams`;
   circleRow.appendChild(overlapLabel);
@@ -571,7 +493,7 @@ function renderComparison(data) {
 
   // Split panels
   const splitLayout = createElement('div', {
-    style: 'display:grid;grid-template-columns:1fr 1fr;gap:20px;',
+    className: 'explorer-split-layout',
   });
 
   const teamAPanel = buildTeamSkillPanel(teamA, 'A', data);
@@ -591,7 +513,7 @@ function buildOverlapCircle(percent) {
   const filled = (percent / 100) * circumference;
 
   const wrap = createElement('div', {
-    style: 'display:flex;flex-direction:column;align-items:center;',
+    className: 'explorer-circle-row',
   });
 
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -667,30 +589,20 @@ function buildOverlapCircle(percent) {
 
 function buildTeamSkillPanel(team, side, compareData) {
   const panel = createElement('div', {
-    style: [
-      'background:var(--bg-card-soft);',
-      'border:1px solid var(--border-soft);',
-      'border-radius:var(--radius-md);',
-      'overflow:hidden;',
-    ].join(''),
+    className: 'explorer-team-panel',
   });
 
   const panelHeader = createElement('div', {
-    style: [
-      'background:var(--bg-elevated);',
-      'border-bottom:1px solid var(--border-soft);',
-      'padding:12px 16px;',
-      'display:flex;align-items:center;gap:8px;',
-    ].join(''),
+    className: 'explorer-team-panel-header',
   });
 
   const teamLabel = createElement('span', {
-    style: 'font-size:13px;color:var(--text-muted);',
+    className: 'explorer-team-side-label',
   });
   teamLabel.textContent = side === 'A' ? 'Team A' : 'Team B';
 
   const teamName = createElement('span', {
-    style: 'font-size:14px;font-weight:700;color:var(--text-primary);',
+    className: 'explorer-team-name',
   });
   teamName.textContent = team.team_name || '—';
 
@@ -704,12 +616,12 @@ function buildTeamSkillPanel(team, side, compareData) {
   panel.appendChild(panelHeader);
 
   const skillsList = createElement('div', {
-    style: 'padding:12px;display:flex;flex-direction:column;gap:8px;max-height:480px;overflow-y:auto;',
+    className: 'explorer-skill-list',
   });
 
   if (skills.length === 0) {
     const empty = createElement('div', {
-      style: 'padding:20px;text-align:center;color:var(--text-muted);font-size:13px;',
+      className: 'content-placeholder',
     });
     empty.textContent = 'No skills found for this team.';
     skillsList.appendChild(empty);
@@ -727,36 +639,22 @@ function buildSkillCard(skill, side, compareData) {
   const isOverlap = skill.is_overlap === true;
 
   const card = createElement('div', {
-    style: [
-      isOverlap ? 'background:var(--accent-soft);border-left:3px solid var(--accent);' : 'background:var(--bg-card);border-left:3px solid transparent;',
-      'border-radius:var(--radius-md);',
-      'padding:10px 14px;',
-      'display:flex;align-items:center;justify-content:space-between;gap:10px;',
-      'transition:background var(--transition);',
-    ].join(''),
+    className: isOverlap ? 'explorer-skill-card explorer-skill-card--overlap' : 'explorer-skill-card',
   });
 
   const left = createElement('div', {
-    style: 'display:flex;flex-direction:column;gap:3px;flex:1;min-width:0;',
+    className: 'explorer-skill-card-info',
   });
 
   const nameEl = createElement('div', {
-    style: 'font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+    className: 'explorer-skill-card-name',
   });
   nameEl.textContent = skill.name || `Skill ${skill.id}`;
   left.appendChild(nameEl);
 
   if (isOverlap) {
     const overlapBadge = createElement('span', {
-      style: [
-        'display:inline-block;',
-        'font-size:11px;font-weight:600;',
-        'color:var(--accent);',
-        'background:rgba(59,130,246,.12);',
-        'border-radius:20px;',
-        'padding:2px 8px;',
-        'width:fit-content;',
-      ].join(''),
+      className: 'explorer-overlap-badge',
     });
     overlapBadge.textContent = 'Shared';
     left.appendChild(overlapBadge);
@@ -778,35 +676,9 @@ function buildSkillCard(skill, side, compareData) {
 
 function buildAddToPlanButton(skill, user) {
   const btn = createElement('button', {
-    style: [
-      'background:var(--bg-elevated);',
-      'border:1px solid var(--border-soft);',
-      'border-radius:var(--radius-md);',
-      'padding:5px 10px;',
-      'font-size:12px;font-weight:600;',
-      'color:var(--text-secondary);',
-      'cursor:pointer;',
-      'white-space:nowrap;',
-      'flex-shrink:0;',
-      'transition:background var(--transition),color var(--transition),border-color var(--transition);',
-    ].join(''),
+    className: 'explorer-add-btn',
   });
   btn.textContent = '+ Add to My Plan';
-
-  btn.addEventListener('mouseenter', () => {
-    if (!btn.disabled) {
-      btn.style.background = 'var(--accent)';
-      btn.style.color = '#fff';
-      btn.style.borderColor = 'var(--accent)';
-    }
-  });
-  btn.addEventListener('mouseleave', () => {
-    if (!btn.disabled) {
-      btn.style.background = 'var(--bg-elevated)';
-      btn.style.color = 'var(--text-secondary)';
-      btn.style.borderColor = 'var(--border-soft)';
-    }
-  });
 
   btn.addEventListener('click', async () => {
     if (user.role === 'manager' || user.role === 'admin') {
@@ -823,9 +695,7 @@ function buildAddToPlanButton(skill, user) {
     try {
       await api.post(`/api/plans/${user.id}/skills`, { skill_id: skill.id });
       btn.textContent = 'Added';
-      btn.style.background = 'rgba(34,197,94,.15)';
-      btn.style.color = 'var(--success)';
-      btn.style.borderColor = 'rgba(34,197,94,.4)';
+      btn.className = 'explorer-add-btn explorer-add-btn--added';
       btn.style.opacity = '1';
       showToast(`"${skill.name}" added to your plan`, 'success');
     } catch (err) {
@@ -839,9 +709,7 @@ function buildAddToPlanButton(skill, user) {
       btn.textContent = '+ Add to My Plan';
       btn.style.opacity = '1';
       btn.style.cursor = 'pointer';
-      btn.style.background = 'var(--bg-elevated)';
-      btn.style.color = 'var(--text-secondary)';
-      btn.style.borderColor = 'var(--border-soft)';
+      btn.className = 'explorer-add-btn';
     }
   });
 
@@ -852,19 +720,19 @@ function buildAddToPlanButton(skill, user) {
 
 function renderErrorState(container, msg) {
   const wrap = createElement('div', {
-    style: 'text-align:center;padding:40px 24px;',
+    className: 'explorer-error-state',
   });
 
-  const icon = createElement('div', { style: 'font-size:32px;margin-bottom:12px;' });
+  const icon = createElement('div', { className: 'explorer-error-icon' });
   icon.textContent = 'X';
 
   const title = createElement('div', {
-    style: 'font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:6px;',
+    className: 'explorer-error-title',
   });
   title.textContent = 'Something went wrong';
 
   const desc = createElement('div', {
-    style: 'font-size:13px;color:var(--text-secondary);',
+    className: 'explorer-error-desc',
   });
   desc.textContent = msg || 'Please try again.';
 
@@ -872,18 +740,4 @@ function renderErrorState(container, msg) {
   wrap.appendChild(title);
   wrap.appendChild(desc);
   container.appendChild(wrap);
-}
-
-// ─── Utility helpers ──────────────────────────────────────────────────────────
-
-function createElement(tag, props) {
-  const el = document.createElement(tag);
-  if (!props) return el;
-  Object.entries(props).forEach(([k, v]) => {
-    if (k === 'className') el.className = v;
-    else if (k === 'textContent') el.textContent = v;
-    else if (k === 'htmlFor') el.htmlFor = v;
-    else el.setAttribute(k, v);
-  });
-  return el;
 }

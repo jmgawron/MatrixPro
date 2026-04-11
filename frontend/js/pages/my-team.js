@@ -2,6 +2,7 @@ import { api, API_BASE } from '../api.js';
 import { Store } from '../state.js';
 import { showSkeleton } from '../components/skeleton.js';
 import { showToast } from '../components/toast.js';
+import { createElement } from '../utils/dom.js';
 
 // ─── Module-level page state ─────────────────────────────────────────────────
 
@@ -107,7 +108,7 @@ async function loadAdminTeamSelector() {
 
 function buildPageShell(container) {
   const wrapper = createElement('div', {
-    style: 'display:flex;flex-direction:column;height:100%;min-height:calc(100vh - 60px);',
+    className: 'page-shell',
   });
 
   // ── Hero header ────────────────────────────────────────────────────────────
@@ -125,14 +126,14 @@ function buildPageShell(container) {
 
   // ── Controls bar ─────────────────────────────────────────────────────────
   const topBar = createElement('div', {
-    style: 'background:var(--bg-panel);border-bottom:1px solid var(--border-soft);padding:16px 24px;flex-shrink:0;',
+    className: 'page-controls',
   });
 
   const row1 = createElement('div', {
-    style: 'display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;',
+    className: 'page-controls-row',
   });
 
-  const titleGroup = createElement('div', { style: 'display:flex;align-items:center;gap:12px;' });
+  const titleGroup = createElement('div', { className: 'page-controls-group' });
   const teamBadge = createElement('span', {
     className: 'triage-chip triage-signal',
     id: 'my-team-badge',
@@ -150,11 +151,11 @@ function buildPageShell(container) {
 
   // Skill filter row
   const filterRow = createElement('div', {
-    style: 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;',
+    className: 'page-controls-filters',
   });
 
   const filterLabel = createElement('span', {
-    style: 'font-size:13px;color:var(--text-secondary);white-space:nowrap;',
+    className: 'matrix-filter-label',
   });
   filterLabel.textContent = 'Filter skills:';
 
@@ -194,7 +195,7 @@ function buildPageShell(container) {
   filterRow.appendChild(clearBtn);
 
   const csvBtn = createElement('button', {
-    style: 'display:flex;align-items:center;gap:6px;background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s,color 0.15s;margin-left:auto;',
+    className: 'matrix-csv-btn',
   });
   csvBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export CSV';
   csvBtn.addEventListener('click', () => {
@@ -209,7 +210,7 @@ function buildPageShell(container) {
 
   // ── Main scrollable area ──────────────────────────────────────────────────
   const main = createElement('div', {
-    style: 'flex:1;overflow:auto;padding:24px;',
+    className: 'page-body',
   });
 
   const matrixBodyEl = createElement('div', { id: 'team-matrix-body' });
@@ -224,14 +225,7 @@ function buildPageShell(container) {
 
 function buildLegend() {
   const legend = createElement('div', {
-    style: [
-      'display:flex;align-items:center;gap:8px;flex-wrap:wrap;',
-      'padding:8px 14px;',
-      'background:var(--bg-elevated);',
-      'border:1px solid var(--border-soft);',
-      'border-radius:var(--radius-md);',
-      'font-size:12px;',
-    ].join(''),
+    className: 'matrix-legend',
   });
 
   const items = [
@@ -244,17 +238,8 @@ function buildLegend() {
 
   items.forEach(({ label, bg, border, text }) => {
     const chip = createElement('div', {
-      style: [
-        `background:${bg};`,
-        `border:1px solid ${border};`,
-        `color:${text};`,
-        'border-radius:4px;',
-        'padding:3px 10px;',
-        'font-size:11px;',
-        'font-weight:600;',
-        'white-space:nowrap;',
-        'letter-spacing:.02em;',
-      ].join(''),
+      className: 'matrix-legend-chip',
+      style: `background:${bg};border:1px solid ${border};color:${text};`,
     });
     chip.textContent = label;
     legend.appendChild(chip);
@@ -304,7 +289,7 @@ function renderMatrix() {
 
   if (skills.length === 0) {
     const noSkills = createElement('div', {
-      style: 'padding:40px;text-align:center;color:var(--text-muted);font-size:14px;',
+      className: 'matrix-no-skills',
     });
     noSkills.textContent = 'No skills match the current filter.';
     _matrixBodyEl.appendChild(noSkills);
@@ -313,23 +298,11 @@ function renderMatrix() {
 
   // Outer scrollable wrapper
   const scrollWrap = createElement('div', {
-    style: [
-      'overflow:auto;',
-      'position:relative;',
-      'border:1px solid var(--border-soft);',
-      'border-radius:var(--radius-md);',
-      'box-shadow:var(--shadow-sm);',
-      'max-height:calc(100vh - 260px);',
-    ].join(''),
+    className: 'matrix-scroll',
   });
 
   const table = createElement('table', {
-    style: [
-      'border-collapse:separate;',
-      'border-spacing:0;',
-      'min-width:100%;',
-      'font-size:13px;',
-    ].join(''),
+    className: 'matrix-table',
   });
 
   // ── THEAD ──────────────────────────────────────────────────────────────────
@@ -338,47 +311,19 @@ function renderMatrix() {
 
   // Corner cell
   const cornerTh = createElement('th', {
-    style: [
-      'position:sticky;top:0;left:0;z-index:3;',
-      'background:var(--bg-elevated);',
-      'border-bottom:2px solid var(--border-soft);',
-      'border-right:2px solid var(--border-soft);',
-      'padding:10px 16px;',
-      'min-width:140px;',
-      'text-align:left;',
-      'font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);',
-    ].join(''),
+    className: 'matrix-th-corner',
   });
   cornerTh.textContent = 'Engineer';
   headerRow.appendChild(cornerTh);
 
   skills.forEach(skill => {
     const th = createElement('th', {
-      style: [
-        'position:sticky;top:0;z-index:2;',
-        'background:var(--bg-elevated);',
-        'border-bottom:2px solid var(--border-soft);',
-        'border-right:1px solid var(--border-soft);',
-        'padding:10px 8px;',
-        'min-width:60px;width:60px;max-width:80px;',
-        'text-align:center;',
-        'vertical-align:bottom;',
-        'cursor:default;',
-      ].join(''),
+      className: 'matrix-th-skill',
     });
 
     // Rotated skill name for compact headers
     const nameWrap = createElement('div', {
-      style: [
-        'writing-mode:vertical-lr;',
-        'transform:rotate(180deg);',
-        'white-space:nowrap;',
-        'font-size:12px;font-weight:600;',
-        'color:var(--text-secondary);',
-        'letter-spacing:.02em;',
-        'max-height:120px;overflow:hidden;text-overflow:ellipsis;',
-        'padding-bottom:4px;',
-      ].join(''),
+      className: 'matrix-th-name',
     });
     nameWrap.textContent = skill.name;
     th.appendChild(nameWrap);
@@ -393,7 +338,7 @@ function renderMatrix() {
 
   engineers.forEach((engineer, rowIdx) => {
     const tr = createElement('tr', {
-      style: 'transition:background-color var(--transition);',
+      className: 'matrix-row',
     });
 
     // Row hover highlight (full row)
@@ -406,31 +351,16 @@ function renderMatrix() {
 
     // Engineer name cell (sticky left)
     const nameTd = createElement('td', {
-      style: [
-        'position:sticky;left:0;z-index:1;',
-        'background:var(--bg-elevated);',
-        `border-bottom:1px solid var(--border-soft);`,
-        'border-right:2px solid var(--border-soft);',
-        'padding:10px 16px;',
-        'min-width:140px;',
-        'white-space:nowrap;',
-        'cursor:pointer;',
-        'user-select:none;',
-      ].join(''),
+      className: 'matrix-td-name',
     });
 
     const nameSpan = createElement('span', {
-      style: [
-        'font-size:13px;font-weight:600;',
-        'color:var(--text-primary);',
-        'display:flex;align-items:center;gap:8px;',
-        'transition:color var(--transition);',
-      ].join(''),
+      className: 'matrix-engineer-name',
     });
     nameSpan.textContent = engineer.name || `Engineer ${engineer.id}`;
 
     const drillIcon = createElement('span', {
-      style: 'font-size:11px;color:var(--accent);opacity:0;transition:opacity var(--transition);',
+      className: 'matrix-drill-icon',
     });
     drillIcon.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
     nameSpan.appendChild(drillIcon);
@@ -442,16 +372,6 @@ function renderMatrix() {
       window.location.hash = `#/my-plan/${engineer.id}`;
     });
 
-    nameTd.addEventListener('mouseenter', () => {
-      nameSpan.style.color = 'var(--accent)';
-      drillIcon.style.opacity = '1';
-    });
-    nameTd.addEventListener('mouseleave', () => {
-      nameSpan.style.color = 'var(--text-primary)';
-      drillIcon.style.opacity = '0';
-    });
-
-    // Tooltip hint on name cell
     nameTd.title = '';
     nameTd.addEventListener('mouseenter', () => {
       showTooltip(nameTd, `Double-click to view ${engineer.name || 'engineer'}'s plan`);
@@ -490,21 +410,13 @@ function buildMatrixCell(cell, engineer, skill) {
   const { bg, border, icon } = getCellStyle(cell);
 
   const td = createElement('td', {
-    style: [
-      `background:${bg};`,
-      `border:1px solid ${border};`,
-      'padding:0;',
-      'min-width:60px;width:60px;max-width:80px;',
-      'height:44px;',
-      'text-align:center;vertical-align:middle;',
-      'cursor:default;',
-      'transition:background-color var(--transition),border-color var(--transition),filter var(--transition);',
-    ].join(''),
+    className: 'matrix-cell',
+    style: `background:${bg};border:1px solid ${border};`,
   });
 
   if (icon) {
     const iconEl = createElement('span', {
-      style: 'font-size:14px;line-height:1;pointer-events:none;display:inline-flex;align-items:center;justify-content:center;',
+      className: 'matrix-cell-icon',
     });
     iconEl.innerHTML = icon;
     td.appendChild(iconEl);
@@ -606,7 +518,7 @@ function buildTooltipContent(cell, engineer, skill) {
 
 function buildSummaryRow(engineers, skills) {
   const wrap = createElement('div', {
-    style: 'margin-top:16px;display:flex;flex-wrap:wrap;gap:12px;',
+    className: 'matrix-summary',
   });
 
   const totalEngineers = engineers.length;
@@ -656,21 +568,7 @@ function buildTooltip() {
   if (_tooltipEl) return;
   const tip = document.createElement('div');
   tip.id = 'team-matrix-tooltip';
-  tip.style.cssText = [
-    'position:fixed;z-index:9999;',
-    'background:var(--bg-elevated);',
-    'border:1px solid var(--border-soft);',
-    'border-radius:var(--radius-md);',
-    'padding:8px 12px;',
-    'font-size:12px;line-height:1.6;',
-    'color:var(--text-primary);',
-    'box-shadow:var(--shadow-md);',
-    'pointer-events:none;',
-    'white-space:pre-line;',
-    'max-width:220px;',
-    'opacity:0;',
-    'transition:opacity .15s ease;',
-  ].join('');
+  tip.className = 'matrix-tooltip';
   document.body.appendChild(tip);
   _tooltipEl = tip;
 }
@@ -734,19 +632,19 @@ function renderEmptyState(container) {
 
 function renderErrorState(container, msg) {
   const state = createElement('div', {
-    style: 'text-align:center;padding:60px 24px;',
+    className: 'matrix-error-state',
   });
 
-  const icon = createElement('div', { style: 'font-size:36px;margin-bottom:16px;' });
+  const icon = createElement('div', { className: 'matrix-error-icon' });
   icon.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 
   const title = createElement('div', {
-    style: 'font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:8px;',
+    className: 'matrix-error-title',
   });
   title.textContent = 'Failed to load team matrix';
 
   const desc = createElement('div', {
-    style: 'font-size:13px;color:var(--text-secondary);margin-bottom:20px;',
+    className: 'matrix-error-desc',
   });
   desc.textContent = msg || 'Please try refreshing the page.';
 
@@ -784,16 +682,4 @@ async function downloadExport(url, filename) {
   } catch (err) {
     showToast(err.message || 'Export failed', 'error');
   }
-}
-
-function createElement(tag, props) {
-  const el = document.createElement(tag);
-  if (!props) return el;
-  Object.entries(props).forEach(([k, v]) => {
-    if (k === 'className') el.className = v;
-    else if (k === 'textContent') el.textContent = v;
-    else if (k === 'htmlFor') el.htmlFor = v;
-    else el.setAttribute(k, v);
-  });
-  return el;
 }

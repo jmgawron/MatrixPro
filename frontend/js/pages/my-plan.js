@@ -3,6 +3,7 @@ import { Store } from '../state.js';
 import { showSkeleton } from '../components/skeleton.js';
 import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
+import { el } from '../utils/dom.js';
 
 let _container = null;
 let _engineerId = null;
@@ -412,8 +413,7 @@ function showCardActionsMenu(e, planSkill, currentStatus) {
   document.querySelectorAll('.card-actions-menu').forEach(m => m.remove());
 
   const menu = el('div', {
-    className: 'card-actions-menu',
-    style: 'position:fixed;background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:var(--radius-md);box-shadow:var(--shadow-md);z-index:999;min-width:160px;padding:4px 0;',
+    className: 'card-actions-menu mp-context-menu',
   });
 
   const statusFlow = ['in_pipeline', 'in_development', 'proficiency'];
@@ -421,7 +421,7 @@ function showCardActionsMenu(e, planSkill, currentStatus) {
 
   nextStatuses.forEach(targetStatus => {
     const item = el('button', {
-      style: 'display:block;width:100%;text-align:left;background:none;border:none;padding:8px 14px;font-size:13px;color:var(--text-secondary);cursor:pointer;',
+      className: 'mp-context-menu-item',
     });
     item.textContent = `Move to ${STATUS_LABELS[targetStatus]}`;
     item.addEventListener('mouseenter', () => { item.style.background = 'var(--bg-hover)'; });
@@ -434,11 +434,11 @@ function showCardActionsMenu(e, planSkill, currentStatus) {
     menu.appendChild(item);
   });
 
-  const sep = el('div', { style: 'border-top:1px solid var(--border-soft);margin:4px 0;' });
+  const sep = el('div', { className: 'mp-context-menu-sep' });
   menu.appendChild(sep);
 
   const removeItem = el('button', {
-    style: 'display:block;width:100%;text-align:left;background:none;border:none;padding:8px 14px;font-size:13px;color:var(--error, #ef4444);cursor:pointer;',
+    className: 'mp-context-menu-item mp-context-menu-item--danger',
   });
   removeItem.textContent = 'Remove from plan';
   removeItem.addEventListener('mouseenter', () => { removeItem.style.background = 'var(--bg-hover)'; });
@@ -616,7 +616,7 @@ function openEditSkillModal(planSkill) {
     const currentLogs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
     logToggleCount.textContent = String(currentLogs.length);
     if (currentLogs.length === 0) {
-      const emptyLog = el('div', { style: 'font-size:12px;color:var(--text-muted);padding:12px 0;text-align:center;' });
+      const emptyLog = el('div', { className: 'mp-log-empty' });
       emptyLog.textContent = 'No training log entries yet.';
       logListEl.appendChild(emptyLog);
     } else {
@@ -624,7 +624,7 @@ function openEditSkillModal(planSkill) {
         logListEl.appendChild(buildTrainingLogEntry(log));
       });
       if (currentLogs.length > 10) {
-        const moreEl = el('div', { style: 'font-size:11px;color:var(--text-muted);text-align:center;padding:4px;' });
+        const moreEl = el('div', { className: 'mp-log-more' });
         moreEl.textContent = `… and ${currentLogs.length - 10} more`;
         logListEl.appendChild(moreEl);
       }
@@ -749,7 +749,7 @@ function openEditSkillModal(planSkill) {
       trigger.appendChild(checkbox);
 
       const levelCfg = LEVEL_CONFIG.find(l => l.key === key);
-      const typeChip = el('span', { className: `triage-chip ${levelCfg.chipClass}`, style: 'font-size:11px;padding:2px 8px;flex-shrink:0;' });
+      const typeChip = el('span', { className: `triage-chip ${levelCfg.chipClass} chip-sm` });
       typeChip.textContent = item.type || 'resource';
       trigger.appendChild(typeChip);
 
@@ -787,7 +787,7 @@ function openEditSkillModal(planSkill) {
         bodyInner.appendChild(link);
       }
 
-      const editOverrideBtn = el('button', { className: 'btn btn-secondary btn-sm', style: 'margin-top:8px;font-size:11px;' });
+      const editOverrideBtn = el('button', { className: 'btn btn-secondary btn-sm mp-override-btn' });
       editOverrideBtn.textContent = item.has_override ? 'Edit My Notes' : 'Add My Notes';
       editOverrideBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -819,9 +819,9 @@ function openEditSkillModal(planSkill) {
   function refreshContent() {
     LEVEL_CONFIG.forEach(({ key }) => {
       tabPanels[key].innerHTML = '';
-      const sk = el('div', { style: 'display:flex;flex-direction:column;gap:8px;padding:12px 0;' });
+      const sk = el('div', { className: 'skeleton-list' });
       for (let i = 0; i < 2; i++) {
-        sk.appendChild(el('div', { className: 'skeleton', style: 'height:44px;border-radius:var(--radius-md);' }));
+        sk.appendChild(el('div', { className: 'skeleton skeleton-row' }));
       }
       tabPanels[key].appendChild(sk);
     });
@@ -862,7 +862,7 @@ function openEditSkillModal(planSkill) {
 
   const skeletonEl = el('div', { className: 'skill-detail-skeleton' });
   for (let i = 0; i < 3; i++) {
-    skeletonEl.appendChild(el('div', { className: 'skeleton', style: 'height:44px;border-radius:var(--radius-md);' }));
+    skeletonEl.appendChild(el('div', { className: 'skeleton skeleton-row' }));
   }
   tabPanelsWrap.appendChild(skeletonEl);
 
@@ -988,7 +988,7 @@ function openOverrideEditor(item, planSkill, onSaved) {
   modal.appendChild(header);
 
   const body = el('div', { className: 'modal-body' });
-  const hint = el('p', { style: 'font-size:12px;color:var(--text-muted);margin:0 0 12px;' });
+  const hint = el('p', { className: 'mp-form-hint' });
   hint.textContent = 'Your notes are personal and do not modify the global catalog.';
   body.appendChild(hint);
 
@@ -1065,22 +1065,22 @@ function openOverrideEditor(item, planSkill, onSaved) {
 
 function buildTrainingLogEntry(log) {
   const entry = el('div', {
-    style: 'padding:8px 10px;background:var(--bg-elevated);border-radius:var(--radius-sm);border:1px solid var(--border-soft);',
+    className: 'mp-log-entry',
   });
 
-  const topRow = el('div', { style: 'display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;' });
+  const topRow = el('div', { className: 'mp-log-entry-header' });
 
-  const typeChip = el('span', { className: 'triage-chip triage-signal', style: 'font-size:11px;padding:2px 7px;' });
+  const typeChip = el('span', { className: 'triage-chip triage-signal chip-sm' });
   typeChip.textContent = log.type || 'entry';
 
-  const titleEl = el('span', { style: 'font-size:13px;font-weight:600;color:var(--text-primary);flex:1;' });
+  const titleEl = el('span', { className: 'mp-log-entry-title' });
   titleEl.textContent = log.title || 'Untitled';
 
   topRow.appendChild(typeChip);
   topRow.appendChild(titleEl);
 
   if (log.completed_at) {
-    const dateEl = el('span', { style: 'font-size:11px;color:var(--text-muted);white-space:nowrap;' });
+    const dateEl = el('span', { className: 'mp-log-entry-date' });
     dateEl.textContent = formatDate(log.completed_at);
     topRow.appendChild(dateEl);
   }
@@ -1088,7 +1088,7 @@ function buildTrainingLogEntry(log) {
   entry.appendChild(topRow);
 
   if (log.notes) {
-    const notesEl = el('div', { style: 'font-size:12px;color:var(--text-secondary);line-height:1.5;margin-top:4px;' });
+    const notesEl = el('div', { className: 'mp-log-entry-notes' });
     notesEl.textContent = log.notes;
     entry.appendChild(notesEl);
   }
@@ -1155,17 +1155,17 @@ async function openAddSkillModal() {
 
   let searchQuery = '';
 
-  const bodyEl = el('div', { style: 'display:flex;flex-direction:column;gap:12px;' });
+  const bodyEl = el('div', { className: 'mp-add-skill-body' });
 
   const searchInput = el('input', {
     type: 'text',
     placeholder: 'Search skills...',
-    style: 'width:100%;padding:8px 12px;font-size:14px;',
+    className: 'mp-add-skill-search',
   });
   bodyEl.appendChild(searchInput);
 
   const listEl = el('div', {
-    style: 'display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;',
+    className: 'mp-add-skill-results',
   });
 
   function renderSkillList(query) {
@@ -1179,7 +1179,7 @@ async function openAddSkillModal() {
       : available;
 
     if (filtered.length === 0) {
-      const empty = el('div', { style: 'text-align:center;padding:24px;color:var(--text-muted);font-size:13px;' });
+      const empty = el('div', { className: 'mp-add-skill-empty' });
       empty.textContent = query ? 'No skills match your search.' : 'All available skills are already in your plan.';
       listEl.appendChild(empty);
       return;
@@ -1187,26 +1187,26 @@ async function openAddSkillModal() {
 
     filtered.forEach(skill => {
       const row = el('div', {
-        style: 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:var(--radius-md);cursor:pointer;transition:border-color 0.15s;',
+        className: 'mp-add-skill-item',
       });
       row.dataset.skillId = skill.id;
 
-      const info = el('div', { style: 'flex:1;min-width:0;' });
-      const nameEl = el('div', { style: 'font-size:14px;font-weight:600;color:var(--text-primary);' });
+      const info = el('div', { className: 'mp-add-skill-item-info' });
+      const nameEl = el('div', { className: 'mp-add-skill-item-name' });
       nameEl.textContent = skill.name;
       info.appendChild(nameEl);
 
-      const meta = el('div', { style: 'display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;' });
+      const meta = el('div', { className: 'mp-add-skill-item-meta' });
 
       if (skill.domain_name) {
-        const domBadge = el('span', { className: 'triage-chip triage-signal', style: 'font-size:11px;padding:2px 7px;' });
+        const domBadge = el('span', { className: 'triage-chip triage-signal chip-sm' });
         domBadge.textContent = skill.domain_name;
         meta.appendChild(domBadge);
       }
 
       if (Array.isArray(skill.tags)) {
         skill.tags.slice(0, 3).forEach(tag => {
-          const tagChip = el('span', { className: 'triage-chip triage-feedback', style: 'font-size:11px;padding:2px 7px;' });
+          const tagChip = el('span', { className: 'triage-chip triage-feedback chip-sm' });
           tagChip.textContent = tag.name || tag;
           meta.appendChild(tagChip);
         });
@@ -1215,7 +1215,7 @@ async function openAddSkillModal() {
       info.appendChild(meta);
       row.appendChild(info);
 
-      const addBtn = el('button', { className: 'btn btn-primary btn-sm', style: 'flex-shrink:0;' });
+      const addBtn = el('button', { className: 'btn btn-primary btn-sm mp-add-skill-btn' });
       addBtn.textContent = 'Add';
 
       addBtn.addEventListener('click', async (e) => {
@@ -1280,28 +1280,18 @@ function showPermissionError(msg) {
   if (!sections) return;
   sections.innerHTML = '';
   const errDiv = el('div', {
-    style: 'text-align:center;padding:60px 24px;color:var(--text-muted);',
+    className: 'mp-error-state',
   });
-  const title = el('div', { style: 'font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:8px;' });
+  const title = el('div', { className: 'mp-error-title' });
   title.textContent = "You don't have permission to view this plan";
-  const desc = el('div', { style: 'font-size:14px;' });
+  const desc = el('div', { className: 'mp-error-desc' });
   desc.textContent = msg || 'Contact your manager or administrator for access.';
   errDiv.appendChild(title);
   errDiv.appendChild(desc);
   sections.appendChild(errDiv);
 }
 
-function el(tag, props) {
-  const node = document.createElement(tag);
-  if (!props) return node;
-  Object.entries(props).forEach(([k, v]) => {
-    if (k === 'className') node.className = v;
-    else if (k === 'textContent') node.textContent = v;
-    else if (k === 'htmlFor') node.htmlFor = v;
-    else node.setAttribute(k, v);
-  });
-  return node;
-}
+
 
 async function downloadExport(url, filename) {
   try {

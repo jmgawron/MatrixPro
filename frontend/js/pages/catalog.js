@@ -3,6 +3,7 @@ import { Store } from '../state.js';
 import { showSkeleton } from '../components/skeleton.js';
 import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
+import { createElement } from '../utils/dom.js';
 
 // ─── Module-level page state ────────────────────────────────────────────────
 
@@ -85,7 +86,7 @@ async function loadData(page) {
 // ─── Page shell construction ──────────────────────────────────────────────────
 
 function buildPageShell(container) {
-  const wrapper = createElement('div', { style: 'display:flex;flex-direction:column;height:100%;min-height:calc(100vh - 60px);' });
+  const wrapper = createElement('div', { className: 'page-shell' });
 
   const header = createElement('div', { className: 'mp-header' });
   const title = createElement('h1', { className: 'mp-title' });
@@ -102,14 +103,14 @@ function buildPageShell(container) {
   const topBar = buildTopBar();
   wrapper.appendChild(topBar.el);
 
-  const body = createElement('div', { style: 'display:flex;flex:1;overflow:hidden;' });
+  const body = createElement('div', { className: 'catalog-body' });
 
   const treeEl = createElement('div', { className: 'sidebar-tree' });
   const treeHeader = createElement('div', { className: 'sidebar-tree-header', textContent: 'Browse Skills' });
   treeEl.appendChild(treeHeader);
   body.appendChild(treeEl);
 
-  const main = createElement('div', { style: 'flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:24px;' });
+  const main = createElement('div', { className: 'page-body--col catalog-main' });
 
   const gridEl = createElement('div');
   main.appendChild(gridEl);
@@ -131,12 +132,12 @@ function buildPageShell(container) {
 
 function buildTopBar() {
   const topBar = createElement('div', {
-    style: 'background:var(--bg-panel);border-bottom:1px solid var(--border-soft);padding:16px 24px;display:flex;flex-direction:column;gap:12px;flex-shrink:0;',
+    className: 'page-controls',
   });
 
-  const row1 = createElement('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;' });
+  const row1 = createElement('div', { className: 'page-controls-row' });
 
-  const titleGroup = createElement('div', { style: 'display:flex;align-items:center;gap:12px;' });
+  const titleGroup = createElement('div', { className: 'page-controls-group' });
 
   const breadcrumb = createElement('span', { className: 'triage-chip triage-signal', id: 'catalog-breadcrumb' });
   breadcrumb.textContent = 'All Skills';
@@ -154,14 +155,14 @@ function buildTopBar() {
 
   topBar.appendChild(row1);
 
-  const filterBarEl = createElement('div', { style: 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;' });
+  const filterBarEl = createElement('div', { className: 'page-controls-filters' });
 
-  const searchWrap = createElement('div', { style: 'flex:1;min-width:200px;max-width:360px;position:relative;' });
+  const searchWrap = createElement('div', { className: 'catalog-search-wrap' });
   const searchInput = createElement('input', {
     type: 'text',
     placeholder: 'Search skills...',
     id: 'catalog-search',
-    style: 'padding-left:14px;',
+    className: 'catalog-search-input',
   });
   searchInput.addEventListener('input', () => {
     clearTimeout(_debounceTimer);
@@ -173,7 +174,7 @@ function buildTopBar() {
   searchWrap.appendChild(searchInput);
   filterBarEl.appendChild(searchWrap);
 
-  const domainSelect = createElement('select', { id: 'filter-domain', style: 'width:auto;', className: 'form-select' });
+  const domainSelect = createElement('select', { id: 'filter-domain', className: 'form-select catalog-filter-select' });
   const domainAll = createElement('option', { value: '', textContent: 'All Domains' });
   domainSelect.appendChild(domainAll);
   domainSelect.addEventListener('change', () => {
@@ -184,7 +185,7 @@ function buildTopBar() {
   });
   filterBarEl.appendChild(domainSelect);
 
-  const teamSelect = createElement('select', { id: 'filter-team', style: 'width:auto;', className: 'form-select' });
+  const teamSelect = createElement('select', { id: 'filter-team', className: 'form-select catalog-filter-select' });
   const teamAll = createElement('option', { value: '', textContent: 'All Teams' });
   teamSelect.appendChild(teamAll);
   teamSelect.addEventListener('change', () => {
@@ -193,7 +194,7 @@ function buildTopBar() {
   });
   filterBarEl.appendChild(teamSelect);
 
-  const futureLabel = createElement('label', { style: 'display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-secondary);cursor:pointer;white-space:nowrap;' });
+  const futureLabel = createElement('label', { className: 'catalog-checkbox-label' });
   const futureCheck = createElement('input', { type: 'checkbox', id: 'filter-future' });
   futureCheck.addEventListener('change', () => {
     _showFuture = futureCheck.checked;
@@ -204,7 +205,7 @@ function buildTopBar() {
   filterBarEl.appendChild(futureLabel);
 
   if (user && user.role === 'admin') {
-    const archivedLabel = createElement('label', { style: 'display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-secondary);cursor:pointer;white-space:nowrap;' });
+    const archivedLabel = createElement('label', { className: 'catalog-checkbox-label' });
     const archivedCheck = createElement('input', { type: 'checkbox', id: 'filter-archived' });
     archivedCheck.addEventListener('change', () => {
       _showArchived = archivedCheck.checked;
@@ -285,7 +286,7 @@ function buildTreeItem(label, type, id, indent) {
   iconEl.textContent = type === 'all' ? '*' : type === 'domain' ? 'D' : 'T';
   iconEl.setAttribute('aria-hidden', 'true');
 
-  const labelEl = createElement('span', { style: 'flex:1;' });
+  const labelEl = createElement('span', { className: 'tree-item-label' });
   labelEl.textContent = label;
 
   item.appendChild(iconEl);
@@ -416,10 +417,10 @@ function renderSkillGrid(container, skills) {
   }
 
   if (future.length && _showFuture) {
-    const sep = createElement('div', { style: 'margin-top:32px;' });
+    const sep = createElement('div', { className: 'catalog-future-section' });
 
-    const sepHeader = createElement('div', { style: 'display:flex;align-items:center;gap:12px;margin-bottom:16px;' });
-    const sepTitle = createElement('h2', { style: 'font-size:18px;font-weight:700;color:var(--text-primary);' });
+    const sepHeader = createElement('div', { className: 'catalog-future-header' });
+    const sepTitle = createElement('h2', { className: 'catalog-future-title' });
     sepTitle.textContent = 'Future Skills';
     const badge = createElement('span', { className: 'triage-chip triage-pipeline' });
     badge.textContent = `${future.length} upcoming`;
@@ -440,21 +441,20 @@ function buildSkillCard(skill) {
   const isAdmin = user?.role === 'admin';
 
   const card = createElement('div', {
-    className: 'tool-card',
-    style: skill.is_archived ? 'opacity:0.6;' : '',
+    className: skill.is_archived ? 'tool-card tool-card--archived' : 'tool-card',
   });
   card.dataset.skillId = skill.id;
 
-  const headerRow = createElement('div', { style: 'display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;' });
+  const headerRow = createElement('div', { className: 'tool-card-header' });
 
   const nameEl = createElement('div', { className: 'tool-card-name' });
   nameEl.textContent = skill.name;
   headerRow.appendChild(nameEl);
 
   if (isAdmin) {
-    const actions = createElement('div', { className: 'card-admin-actions', style: 'display:flex;gap:4px;flex-shrink:0;opacity:0;transition:opacity 0.2s;' });
+    const actions = createElement('div', { className: 'card-admin-actions' });
 
-    const editBtn = createElement('button', { className: 'btn btn-sm btn-secondary', style: 'padding:4px 8px;font-size:12px;' });
+    const editBtn = createElement('button', { className: 'btn btn-sm btn-secondary card-action-btn' });
     editBtn.textContent = 'Edit';
     editBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -462,8 +462,7 @@ function buildSkillCard(skill) {
     });
 
     const archiveBtn = createElement('button', {
-      className: skill.is_archived ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-danger',
-      style: 'padding:4px 8px;font-size:12px;',
+      className: skill.is_archived ? 'btn btn-sm btn-primary card-action-btn' : 'btn btn-sm btn-danger card-action-btn',
     });
     archiveBtn.textContent = skill.is_archived ? 'Restore' : 'Archive';
     archiveBtn.addEventListener('click', (e) => {
@@ -487,7 +486,7 @@ function buildSkillCard(skill) {
   catBadge.textContent = domainName;
   card.appendChild(catBadge);
 
-  const badgesRow = createElement('div', { style: 'display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;' });
+  const badgesRow = createElement('div', { className: 'tool-card-badges' });
 
   if (skill.is_future) {
     const futureBadge = createElement('span', { className: 'triage-chip triage-pipeline' });
@@ -509,14 +508,14 @@ function buildSkillCard(skill) {
 
   const tags = Array.isArray(skill.tags) ? skill.tags : [];
   if (tags.length) {
-    const tagsRow = createElement('div', { style: 'display:flex;flex-wrap:wrap;gap:4px;margin-top:10px;' });
+    const tagsRow = createElement('div', { className: 'tool-card-tags' });
     tags.slice(0, 4).forEach(tag => {
-      const chip = createElement('span', { className: 'triage-chip triage-feedback', style: 'font-size:11px;padding:2px 8px;' });
+      const chip = createElement('span', { className: 'triage-chip triage-feedback chip-sm' });
       chip.textContent = tag.name || tag;
       tagsRow.appendChild(chip);
     });
     if (tags.length > 4) {
-      const more = createElement('span', { className: 'text-muted text-sm', style: 'align-self:center;' });
+      const more = createElement('span', { className: 'text-muted text-sm' });
       more.textContent = `+${tags.length - 4} more`;
       tagsRow.appendChild(more);
     }
@@ -549,7 +548,7 @@ function showSkillDetailModal(skill) {
   modalHeader.appendChild(closeBtn);
   modal.appendChild(modalHeader);
 
-  const modalBody = createElement('div', { className: 'modal-body', style: 'display:flex;flex-direction:column;gap:0;padding:20px 24px;overflow:hidden;' });
+  const modalBody = createElement('div', { className: 'modal-body skill-detail-body' });
 
   const detailHeader = createElement('div', { className: 'skill-detail-header' });
 
@@ -585,7 +584,7 @@ function showSkillDetailModal(skill) {
     tagsLabel.textContent = 'Tags';
     tagsRow.appendChild(tagsLabel);
     tags.forEach(tag => {
-      const chip = createElement('span', { className: 'triage-chip triage-feedback', style: 'font-size:11px;padding:2px 8px;' });
+      const chip = createElement('span', { className: 'triage-chip triage-feedback chip-sm' });
       chip.textContent = tag.name || tag;
       tagsRow.appendChild(chip);
     });
@@ -600,7 +599,7 @@ function showSkillDetailModal(skill) {
     teamsLabel.textContent = 'Teams';
     teamsRow.appendChild(teamsLabel);
     teamNames.forEach(name => {
-      const chip = createElement('span', { className: 'triage-chip triage-signal', style: 'font-size:11px;padding:2px 8px;' });
+      const chip = createElement('span', { className: 'triage-chip triage-signal chip-sm' });
       chip.textContent = name;
       teamsRow.appendChild(chip);
     });
@@ -616,7 +615,7 @@ function showSkillDetailModal(skill) {
   ];
 
   const tabBar = createElement('div', { className: 'skill-detail-tabs', role: 'tablist', 'aria-label': 'Skill level content' });
-  const tabPanelsWrap = createElement('div', { style: 'flex:1;overflow:hidden;display:flex;flex-direction:column;' });
+  const tabPanelsWrap = createElement('div', { className: 'skill-detail-panels' });
 
   const tabButtons = {};
   const tabPanels = {};
@@ -639,7 +638,7 @@ function showSkillDetailModal(skill) {
 
   const skeletonEl = createElement('div', { className: 'skill-detail-skeleton' });
   for (let i = 0; i < 3; i++) {
-    const skRow = createElement('div', { className: 'skeleton', style: 'height:56px;border-radius:var(--radius-md);' });
+    const skRow = createElement('div', { className: 'skeleton skeleton-row-lg' });
     skeletonEl.appendChild(skRow);
   }
   tabPanelsWrap.appendChild(skeletonEl);
@@ -828,7 +827,7 @@ function showSkillDetailModal(skill) {
           trigger.appendChild(dragHandle);
         }
 
-        const typeChip = createElement('span', { className: `triage-chip ${levelCfg.chipClass}`, style: 'font-size:11px;padding:2px 8px;flex-shrink:0;' });
+        const typeChip = createElement('span', { className: `triage-chip ${levelCfg.chipClass} chip-sm chip-shrink` });
         typeChip.textContent = item.type || 'resource';
 
         const titleSpan = createElement('span', { className: 'skill-detail-accordion-title' });
@@ -920,9 +919,9 @@ function showSkillDetailModal(skill) {
   function refreshModalContent() {
     LEVEL_CONFIG.forEach(({ key }) => {
       tabPanels[key].innerHTML = '';
-      const sk = createElement('div', { style: 'display:flex;flex-direction:column;gap:8px;padding:12px 0;' });
+      const sk = createElement('div', { className: 'skeleton-list' });
       for (let i = 0; i < 2; i++) {
-        sk.appendChild(createElement('div', { className: 'skeleton', style: 'height:44px;border-radius:var(--radius-md);' }));
+        sk.appendChild(createElement('div', { className: 'skeleton skeleton-row-sm' }));
       }
       tabPanels[key].appendChild(sk);
     });
@@ -1198,7 +1197,7 @@ function openSkillModal(existingSkill) {
 }
 
 function buildSkillForm(skill) {
-  const form = createElement('div', { style: 'display:flex;flex-direction:column;gap:0;' });
+  const form = createElement('div', { className: 'catalog-form' });
 
   form.appendChild(buildFormGroup('Name', 'skill-name', 'input', {
     type: 'text',
@@ -1232,10 +1231,10 @@ function buildSkillForm(skill) {
   const teamsGroup = createElement('div', { className: 'form-group' });
   const teamsLabel = createElement('div', { className: 'form-label' });
   teamsLabel.textContent = 'Associated Teams';
-  const teamsGrid = createElement('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:6px;' });
+  const teamsGrid = createElement('div', { className: 'catalog-teams-grid' });
   const skillTeamIds = Array.isArray(skill?.team_ids) ? skill.team_ids.map(String) : (Array.isArray(skill?.teams) ? skill.teams.map(t => String(t.id)) : []);
   _allTeams.forEach(t => {
-    const checkLabel = createElement('label', { style: 'display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);cursor:pointer;' });
+    const checkLabel = createElement('label', { className: 'catalog-check-label' });
     const check = createElement('input', { type: 'checkbox', value: t.id });
     if (skillTeamIds.includes(String(t.id))) check.checked = true;
     check.className = 'skill-team-check';
@@ -1252,12 +1251,12 @@ function buildSkillForm(skill) {
     placeholder: 'e.g. routing, bgp, advanced (comma-separated)',
     value: Array.isArray(skill?.tags) ? skill.tags.map(t => t.name || t).join(', ') : '',
   }));
-  const tagHint = createElement('div', { className: 'form-hint', style: 'margin-top:-10px;margin-bottom:16px;' });
+  const tagHint = createElement('div', { className: 'form-hint catalog-form-hint' });
   tagHint.textContent = 'Separate multiple tags with commas';
   form.appendChild(tagHint);
 
   const futureGroup = createElement('div', { className: 'form-group' });
-  const futureLabel = createElement('label', { style: 'display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-secondary);cursor:pointer;' });
+  const futureLabel = createElement('label', { className: 'catalog-checkbox-label' });
   const futureCheck = createElement('input', { type: 'checkbox', id: 'skill-future' });
   if (skill?.is_future) futureCheck.checked = true;
   futureLabel.appendChild(futureCheck);
@@ -1364,18 +1363,6 @@ function renderEmptyState(container, title, desc) {
 }
 
 // ─── Utility helpers ──────────────────────────────────────────────────────────
-
-function createElement(tag, props) {
-  const el = document.createElement(tag);
-  if (!props) return el;
-  Object.entries(props).forEach(([k, v]) => {
-    if (k === 'className') el.className = v;
-    else if (k === 'textContent') el.textContent = v;
-    else if (k === 'htmlFor') el.htmlFor = v;
-    else el.setAttribute(k, v);
-  });
-  return el;
-}
 
 function truncate(str, maxLen) {
   if (!str) return '';

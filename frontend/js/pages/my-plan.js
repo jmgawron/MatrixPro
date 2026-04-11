@@ -12,6 +12,7 @@ let _draggingPlanSkillId = null;
 let _sectionGridEls = {};
 let _allCatalogSkills = [];
 let _searchQuery = '';
+let _currentSection = 'in_development';
 
 const SVG_ICONS = {
   wrench: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
@@ -55,6 +56,7 @@ export function mountMyPlan(container, params) {
   _sectionGridEls = {};
   _allCatalogSkills = [];
   _searchQuery = '';
+  _currentSection = 'in_development';
 
   const user = Store.get('user');
   _engineerId = params?.id ? Number(params.id) : user?.id;
@@ -106,6 +108,7 @@ function buildPageShell(container, params) {
   }
 
   const header = el('div', { className: 'mp-header' });
+  const headerText = el('div', { className: 'mp-header-text' });
   const title = el('h1', { className: 'mp-title' });
   title.appendChild(document.createTextNode('My Development '));
   const gradientSpan = el('span', { className: 'mp-title-gradient' });
@@ -113,18 +116,105 @@ function buildPageShell(container, params) {
   title.appendChild(gradientSpan);
   const subtitle = el('p', { className: 'mp-subtitle' });
   subtitle.textContent = 'Track and manage your skill development journey';
-  header.appendChild(title);
-  header.appendChild(subtitle);
+  headerText.appendChild(title);
+  headerText.appendChild(subtitle);
+  header.appendChild(headerText);
+
+  const statsRow = el('div', { className: 'stats-row', id: 'mp-stats-row' });
+  header.appendChild(statsRow);
   wrapper.appendChild(header);
 
-  const searchWrap = el('div', { className: 'mp-search' });
-  const searchBox = el('div', { className: 'mp-search-box' });
+  const planLayout = el('div', { className: 'mp-plan-layout' });
+  const sidebar = el('aside', { className: 'mp-plan-sidebar' });
+
+  SECTIONS.forEach(({ status, title: sTitle, svgIcon: sIcon }) => {
+    const btn = el('button', { className: 'mp-plan-nav-btn' + (status === _currentSection ? ' active' : '') });
+    btn.dataset.status = status;
+    btn.appendChild(svgIcon(sIcon, '16px'));
+    const btnText = el('span', { className: 'mp-plan-nav-label' });
+    btnText.textContent = sTitle;
+    btn.appendChild(btnText);
+    const countBadge = el('span', { className: 'mp-nav-count', id: `mp-nav-count-${status}` });
+    countBadge.textContent = '0';
+    btn.appendChild(countBadge);
+
+    btn.addEventListener('click', () => {
+      _currentSection = status;
+      sidebar.querySelectorAll('.mp-plan-nav-btn[data-status]').forEach(b => {
+        b.classList.toggle('active', b.dataset.status === status);
+      });
+      renderActiveSection();
+    });
+
+    btn.addEventListener('dragover', (e) => {
+      if (_draggingPlanSkillId) {
+        e.preventDefault();
+        btn.classList.add('drag-over');
+      }
+    });
+    btn.addEventListener('dragleave', () => btn.classList.remove('drag-over'));
+    btn.addEventListener('drop', (e) => {
+      e.preventDefault();
+      btn.classList.remove('drag-over');
+      const planSkillId = Number(e.dataTransfer.getData('planSkillId'));
+      const fromStatus = e.dataTransfer.getData('fromStatus');
+      if (!planSkillId || fromStatus === status) return;
+      handleMoveCard(planSkillId, status);
+    });
+
+    sidebar.appendChild(btn);
+  });
+
+  const sep = el('hr', { className: 'mp-plan-sidebar-sep' });
+  sidebar.appendChild(sep);
+
+  const addBtn = el('button', { className: 'mp-plan-nav-btn mp-plan-nav-btn--action' });
+  addBtn.appendChild(svgIcon('search', '16px'));
+  const addLabel = el('span', { className: 'mp-plan-nav-label' });
+  addLabel.textContent = '+ Add Skill';
+  addBtn.appendChild(addLabel);
+  addBtn.addEventListener('click', openAddSkillModal);
+  sidebar.appendChild(addBtn);
+
+  const pdfBtn = el('button', { className: 'mp-plan-nav-btn mp-plan-nav-btn--action' });
+  pdfBtn.appendChild(svgIcon('fileText', '16px'));
+  const pdfLabel = el('span', { className: 'mp-plan-nav-label' });
+  pdfLabel.textContent = 'Export PDF';
+  pdfBtn.appendChild(pdfLabel);
+  pdfBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/pdf`, `plan_${_engineerId}.pdf`));
+  sidebar.appendChild(pdfBtn);
+
+  const csvBtn = el('button', { className: 'mp-plan-nav-btn mp-plan-nav-btn--action' });
+  csvBtn.appendChild(svgIcon('table', '16px'));
+  const csvLabel = el('span', { className: 'mp-plan-nav-label' });
+  csvLabel.textContent = 'Export CSV';
+  csvBtn.appendChild(csvLabel);
+  csvBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/csv`, `plan_${_engineerId}.csv`));
+  sidebar.appendChild(csvBtn);
+
+  planLayout.appendChild(sidebar);
+
+  const content = el('main', { className: 'mp-plan-content' });
+
+  const contentHeader = el('div', { className: 'mp-plan-content-header' });
+  const contentTitleWrap = el('div', { className: 'mp-plan-content-title-wrap' });
+  const contentTitle = el('h2', { className: 'mp-plan-content-title', id: 'mp-content-title' });
+  const activeSectionDef = SECTIONS.find(s => s.status === _currentSection);
+  contentTitle.textContent = activeSectionDef?.title || 'In Development';
+  const contentCount = el('span', { className: 'mp-nav-count mp-nav-count--header', id: 'mp-content-count' });
+  contentCount.textContent = '0';
+  contentTitleWrap.appendChild(contentTitle);
+  contentTitleWrap.appendChild(contentCount);
+  contentHeader.appendChild(contentTitleWrap);
+
+  const searchWrap = el('div', { className: 'mp-plan-search-wrap' });
   const searchIcon = el('span', { className: 'mp-search-icon' });
-  searchIcon.appendChild(svgIcon('search', '16px'));
+  searchIcon.appendChild(svgIcon('search', '14px'));
   const searchInput = el('input', {
-    className: 'search-input search-input--lg',
+    className: 'search-input',
     type: 'text',
-    placeholder: 'Search skills by name...',
+    placeholder: 'Search skills...',
+    id: 'mp-search-input',
   });
   let debounce = null;
   searchInput.addEventListener('input', () => {
@@ -134,102 +224,90 @@ function buildPageShell(container, params) {
       renderSections();
     }, 200);
   });
-  searchBox.appendChild(searchIcon);
-  searchBox.appendChild(searchInput);
-  searchWrap.appendChild(searchBox);
-  wrapper.appendChild(searchWrap);
+  searchWrap.appendChild(searchIcon);
+  searchWrap.appendChild(searchInput);
+  contentHeader.appendChild(searchWrap);
+  content.appendChild(contentHeader);
 
-  const infobar = el('div', { className: 'mp-infobar' });
-  const statsRow = el('div', { className: 'stats-row', id: 'mp-stats-row' });
-  const infoRight = el('div', { className: 'mp-infobar-right' });
+  const section = el('div', { className: 'mp-section', id: 'mp-active-section' });
+  section.dataset.status = _currentSection;
 
-  const addBtn = el('button', { className: 'btn btn-primary btn-sm' });
-  addBtn.textContent = '+ Add Skill';
-  addBtn.addEventListener('click', openAddSkillModal);
-
-  infoRight.appendChild(addBtn);
-  infobar.appendChild(statsRow);
-  infobar.appendChild(infoRight);
-  wrapper.appendChild(infobar);
-
-  const sections = el('div', { className: 'mp-sections' });
-
-  SECTIONS.forEach(({ status, title: sTitle, subtitle: sSub, svgIcon: sIcon }) => {
-    const section = buildSection(status, sTitle, sSub, sIcon);
-    sections.appendChild(section);
-  });
-
-  wrapper.appendChild(sections);
-
-  const exportFooter = el('div', { className: 'mp-export-footer' });
-  const pdfBtn = el('button', { className: 'mp-export-btn' });
-  pdfBtn.appendChild(svgIcon('fileText', '14px'));
-  pdfBtn.appendChild(document.createTextNode(' Export PDF'));
-  pdfBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/pdf`, `plan_${_engineerId}.pdf`));
-  const csvBtn = el('button', { className: 'mp-export-btn' });
-  csvBtn.appendChild(svgIcon('table', '14px'));
-  csvBtn.appendChild(document.createTextNode(' Export CSV'));
-  csvBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/csv`, `plan_${_engineerId}.csv`));
-  exportFooter.appendChild(pdfBtn);
-  exportFooter.appendChild(csvBtn);
-  wrapper.appendChild(exportFooter);
-
-  container.appendChild(wrapper);
-}
-
-function buildSection(status, title, subtitle, iconName) {
-  const wrapper = el('div', { className: 'mp-section-wrapper' });
-
-  const header = el('div', { className: 'mp-section-header' });
-  header.dataset.status = status;
-  const iconEl = svgIcon(iconName, '28px');
-  iconEl.classList.add('mp-section-icon');
-
-  const titleGroup = el('div', { className: 'mp-section-title-group' });
-  const titleEl = el('span', { className: 'mp-section-title' });
-  titleEl.textContent = title;
-  const subtitleEl = el('div', { className: 'mp-section-subtitle' });
-  subtitleEl.textContent = subtitle;
-  titleGroup.appendChild(titleEl);
-  titleGroup.appendChild(subtitleEl);
-
-  const countEl = el('span', { className: 'mp-section-count', id: `mp-count-${status}` });
-  countEl.textContent = '0';
-  header.appendChild(iconEl);
-  header.appendChild(titleGroup);
-  header.appendChild(countEl);
-  wrapper.appendChild(header);
-
-  const section = el('div', { className: 'mp-section' });
-  section.dataset.status = status;
-
-  const grid = el('div', { className: 'mp-section-grid', id: `mp-grid-${status}` });
-  _sectionGridEls[status] = grid;
+  const grid = el('div', { className: 'mp-section-grid', id: `mp-grid-${_currentSection}` });
+  _sectionGridEls[_currentSection] = grid;
 
   section.addEventListener('dragover', (e) => {
     e.preventDefault();
     section.classList.add('drag-over');
   });
-
   section.addEventListener('dragleave', (e) => {
     if (!section.contains(e.relatedTarget)) {
       section.classList.remove('drag-over');
     }
   });
-
   section.addEventListener('drop', (e) => {
     e.preventDefault();
     section.classList.remove('drag-over');
     const planSkillId = Number(e.dataTransfer.getData('planSkillId'));
     const fromStatus = e.dataTransfer.getData('fromStatus');
-    if (!planSkillId || fromStatus === status) return;
-    handleMoveCard(planSkillId, status);
+    if (!planSkillId || fromStatus === _currentSection) return;
+    handleMoveCard(planSkillId, _currentSection);
   });
 
   section.appendChild(grid);
-  wrapper.appendChild(section);
-  return wrapper;
+  content.appendChild(section);
+  planLayout.appendChild(content);
+  wrapper.appendChild(planLayout);
+
+  container.appendChild(wrapper);
 }
+
+function renderActiveSection() {
+  if (!_planData) return;
+
+  const skills = Array.isArray(_planData.skills) ? _planData.skills : [];
+  const filtered = _searchQuery
+    ? skills.filter(s => (s.skill_name || '').toLowerCase().includes(_searchQuery))
+    : skills;
+
+  const contentTitle = document.getElementById('mp-content-title');
+  const contentCount = document.getElementById('mp-content-count');
+  const activeDef = SECTIONS.find(s => s.status === _currentSection);
+  if (contentTitle) contentTitle.textContent = activeDef?.title || _currentSection;
+
+  const activeSkills = filtered.filter(s => s.status === _currentSection);
+  if (contentCount) contentCount.textContent = String(activeSkills.length);
+
+  const sectionEl = document.getElementById('mp-active-section');
+  if (sectionEl) {
+    sectionEl.dataset.status = _currentSection;
+    const oldGrid = sectionEl.querySelector('.mp-section-grid');
+    if (oldGrid) oldGrid.remove();
+    const newGrid = el('div', { className: 'mp-section-grid', id: `mp-grid-${_currentSection}` });
+    sectionEl.appendChild(newGrid);
+    _sectionGridEls = { [_currentSection]: newGrid };
+  }
+
+  const grid = document.getElementById(`mp-grid-${_currentSection}`);
+  if (!grid) return;
+
+  grid.innerHTML = '';
+
+  if (activeSkills.length === 0) {
+    const empty = el('div', { className: 'empty-state empty-state--inline' });
+    empty.textContent = _searchQuery
+      ? 'No matching skills in this section.'
+      : 'No skills yet — browse the catalog to get started!';
+    grid.appendChild(empty);
+    return;
+  }
+
+  const sectionDef = SECTIONS.find(s => s.status === _currentSection);
+  activeSkills.forEach(planSkill => {
+    const card = buildCard(planSkill, _currentSection, sectionDef?.iconClass || 'mp-card-icon--dev');
+    grid.appendChild(card);
+  });
+}
+
 
 function renderSections() {
   if (!_planData) return;
@@ -251,33 +329,14 @@ function renderSections() {
     proficiency: filtered.filter(s => s.status === 'proficiency'),
   };
 
-  const totalCount = filtered.length;
   updateStatsRow(skills, groups);
 
-  Object.entries(groups).forEach(([status, statusSkills]) => {
-    const grid = _sectionGridEls[status];
-    const countEl = document.getElementById(`mp-count-${status}`);
-    if (!grid) return;
-
-    grid.innerHTML = '';
-    if (countEl) countEl.textContent = String(statusSkills.length);
-
-    if (statusSkills.length === 0) {
-      const empty = el('div', { className: 'empty-state empty-state--inline' });
-      empty.textContent = _searchQuery
-        ? 'No matching skills in this section.'
-        : 'No skills yet — browse the catalog to get started!';
-      grid.appendChild(empty);
-      return;
-    }
-
-    const sectionDef = SECTIONS.find(s => s.status === status);
-
-    statusSkills.forEach(planSkill => {
-      const card = buildCard(planSkill, status, sectionDef?.iconClass || 'mp-card-icon--dev');
-      grid.appendChild(card);
-    });
+  SECTIONS.forEach(({ status }) => {
+    const navCount = document.getElementById(`mp-nav-count-${status}`);
+    if (navCount) navCount.textContent = String(groups[status].length);
   });
+
+  renderActiveSection();
 }
 
 function updateStatsRow(allSkills, groups) {
@@ -1276,9 +1335,9 @@ async function openAddSkillModal() {
 }
 
 function showPermissionError(msg) {
-  const sections = _container.querySelector('.mp-sections');
-  if (!sections) return;
-  sections.innerHTML = '';
+  const contentEl = _container.querySelector('.mp-plan-content');
+  if (!contentEl) return;
+  contentEl.innerHTML = '';
   const errDiv = el('div', {
     className: 'empty-state empty-state--error',
   });
@@ -1288,7 +1347,7 @@ function showPermissionError(msg) {
   desc.textContent = msg || 'Contact your manager or administrator for access.';
   errDiv.appendChild(title);
   errDiv.appendChild(desc);
-  sections.appendChild(errDiv);
+  contentEl.appendChild(errDiv);
 }
 
 

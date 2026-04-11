@@ -111,3 +111,30 @@ class UserContentOverride(Base):
     user = relationship("User")
     plan_skill = relationship("PlanSkill")
     content = relationship("SkillLevelContent")
+
+
+class UserLevelContent(Base):
+    __tablename__ = "user_level_content"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    plan_skill_id = Column(Integer, ForeignKey("plan_skills.id"), nullable=False)
+    skill_id = Column(Integer, ForeignKey("skills.id"), nullable=False)
+    level = Column(Integer, nullable=False)
+    type = Column(
+        Enum(SkillLevelContentType),
+        nullable=False,
+        default=SkillLevelContentType.action,
+    )
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    url = Column(String, nullable=True)
+    position = Column(Integer, default=1000, nullable=False)
+    completed = Column(Boolean, default=False, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User")
+    plan_skill = relationship("PlanSkill")
+    skill = relationship("Skill")

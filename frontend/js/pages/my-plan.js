@@ -768,14 +768,15 @@ function openEditSkillModal(planSkill) {
       const empty = el('div', { className: 'empty-state empty-state--compact' });
       empty.textContent = 'No content items for this level.';
       panel.appendChild(empty);
-      return;
     }
 
     let openItem = null;
 
     sorted.forEach(item => {
-      const accItem = el('div', { className: `skill-detail-accordion-item${item.completed ? ' completed' : ''}` });
+      const isUserItem = !!item.is_user_content;
+      const accItem = el('div', { className: `skill-detail-accordion-item${item.completed ? ' completed' : ''}${isUserItem ? ' user-content-item' : ''}` });
       accItem.dataset.itemId = item.id;
+      if (isUserItem) accItem.dataset.userContent = 'true';
 
       const trigger = el('button', { className: 'skill-detail-accordion-trigger' });
 
@@ -786,7 +787,10 @@ function openEditSkillModal(planSkill) {
         e.stopPropagation();
         checkbox.disabled = true;
         try {
-          const resp = await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/content/${item.id}/complete`, {});
+          const endpoint = isUserItem
+            ? `/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${item.id}/complete`
+            : `/api/plans/${_engineerId}/skills/${planSkill.id}/content/${item.id}/complete`;
+          const resp = await api.post(endpoint, {});
           item.completed = resp.completed;
           item.completed_at = resp.completed_at;
           checkbox.checked = item.completed;
@@ -816,7 +820,11 @@ function openEditSkillModal(planSkill) {
       titleSpan.textContent = item.title || 'Untitled';
       trigger.appendChild(titleSpan);
 
-      if (item.has_override) {
+      if (isUserItem) {
+        const userBadge = el('span', { className: 'mp-user-content-badge' });
+        userBadge.textContent = 'My Item';
+        trigger.appendChild(userBadge);
+      } else if (item.has_override) {
         const badge = el('span', { className: 'mp-override-badge' });
         badge.textContent = 'Modified';
         trigger.appendChild(badge);
@@ -826,6 +834,34 @@ function openEditSkillModal(planSkill) {
         const doneDate = el('span', { className: 'mp-completed-date' });
         doneDate.textContent = formatDate(item.completed_at);
         trigger.appendChild(doneDate);
+      }
+
+      /* Edit / Delete actions for user items */
+      if (isUserItem) {
+        const actions = el('span', { className: 'accordion-admin-actions' });
+        const editBtn = el('button', { className: 'btn btn-secondary accordion-action-btn', 'aria-label': 'Edit item', title: 'Edit' });
+        editBtn.innerHTML = SVG_ICONS.pencil;
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openUserContentEditor({ mode: 'edit', item, planSkill, levelKey: key }, () => refreshContent());
+        });
+        const delBtn = el('button', { className: 'btn btn-danger accordion-action-btn', 'aria-label': 'Delete item', title: 'Delete' });
+        delBtn.textContent = '✕';
+        delBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const confirmed = await showConfirm(`Delete "${item.title}"? This cannot be undone.`, true);
+          if (!confirmed) return;
+          try {
+            await api.del(`/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${item.id}`);
+            showToast('Item deleted', 'success');
+            refreshContent();
+          } catch (err) {
+            showToast(err.message || 'Failed to delete item', 'error');
+          }
+        });
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+        trigger.appendChild(actions);
       }
 
       const chevron = el('span', { className: 'skill-detail-accordion-chevron', 'aria-hidden': 'true' });
@@ -846,15 +882,18 @@ function openEditSkillModal(planSkill) {
         bodyInner.appendChild(link);
       }
 
-      const editOverrideBtn = el('button', { className: 'btn btn-secondary btn-sm mp-override-btn' });
-      editOverrideBtn.textContent = item.has_override ? 'Edit My Notes' : 'Add My Notes';
-      editOverrideBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openOverrideEditor(item, planSkill, () => {
-          refreshContent();
+      /* "Add My Notes" only for catalog items */
+      if (!isUserItem) {
+        const editOverrideBtn = el('button', { className: 'btn btn-secondary btn-sm mp-override-btn' });
+        editOverrideBtn.textContent = item.has_override ? 'Edit My Notes' : 'Add My Notes';
+        editOverrideBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openOverrideEditor(item, planSkill, () => {
+            refreshContent();
+          });
         });
-      });
-      bodyInner.appendChild(editOverrideBtn);
+        bodyInner.appendChild(editOverrideBtn);
+      }
 
       accBody.appendChild(bodyInner);
       accItem.appendChild(trigger);
@@ -862,7 +901,7 @@ function openEditSkillModal(planSkill) {
       panel.appendChild(accItem);
 
       trigger.addEventListener('click', (e) => {
-        if (e.target.closest('.mp-content-checkbox')) return;
+        if (e.target.closest('.mp-content-checkbox') || e.target.closest('.accordion-admin-actions')) return;
         if (accItem === openItem) {
           accItem.classList.remove('open');
           openItem = null;
@@ -873,6 +912,15 @@ function openEditSkillModal(planSkill) {
         }
       });
     });
+
+    /* "Add My Item" button at bottom of each tab panel */
+    const levelCfg = LEVEL_CONFIG.find(l => l.key === key);
+    const addMyItemBtn = el('button', { className: 'btn btn-secondary content-add-btn mp-add-my-item-btn' });
+    addMyItemBtn.textContent = `+ Add My ${levelCfg.label} Item`;
+    addMyItemBtn.addEventListener('click', () => {
+      openUserContentEditor({ mode: 'create', planSkill, levelKey: key, level: levelCfg.level }, () => refreshContent());
+    });
+    panel.appendChild(addMyItemBtn);
   }
 
   function refreshContent() {
@@ -886,13 +934,15 @@ function openEditSkillModal(planSkill) {
     });
 
     api.get(`/api/plans/${_engineerId}/skills/${planSkill.id}/content`).then(data => {
-      allContentItems = Array.isArray(data.items) ? data.items : [];
+      if (skeletonEl.parentNode) skeletonEl.remove();
+      allContentItems = (Array.isArray(data.items) ? data.items : [])
+        .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3].includes(item.level));
       const profLevel = parseInt(levelSelect.value, 10) || null;
 
       const groups = { education: [], exposure: [], experience: [] };
       allContentItems.forEach(item => {
-        const key = LEVEL_MAP[item.level] || 'education';
-        groups[key].push(item);
+        const key = LEVEL_MAP[item.level];
+        if (key) groups[key].push(item);
       });
 
       LEVEL_CONFIG.forEach(({ key, level }) => {
@@ -910,6 +960,7 @@ function openEditSkillModal(planSkill) {
 
       updateProgressDisplay();
     }).catch(() => {
+      if (skeletonEl.parentNode) skeletonEl.remove();
       LEVEL_CONFIG.forEach(({ key }) => {
         tabPanels[key].innerHTML = '';
         const errEl = el('div', { className: 'empty-state empty-state--compact' });
@@ -1118,6 +1169,171 @@ function openOverrideEditor(item, planSkill, onSaved) {
       showToast(err.message || 'Failed to save notes', 'error');
       saveBtn.disabled = false;
       saveBtn.textContent = 'Save Notes';
+    }
+  });
+}
+
+function openUserContentEditor(opts, onSaved) {
+  const { mode, item, planSkill, levelKey, level } = opts;
+  const isEdit = mode === 'edit';
+  const levelNum = isEdit ? item.level : level;
+  const levelLabel = { 1: 'Education', 2: 'Exposure', 3: 'Experience' }[levelNum] || 'Content';
+
+  const root = document.getElementById('modalRoot');
+  if (!root) return;
+
+  const overlay = el('div', { className: 'modal-overlay' });
+  const modal = el('div', { className: 'modal content-edit-modal user-content-editor-modal' });
+
+  const header = el('div', { className: 'modal-header' });
+  const titleEl = el('h2', { className: 'modal-title' });
+  titleEl.textContent = isEdit ? `Edit My Item — ${item.title}` : `Add My ${levelLabel} Item`;
+  const closeBtn = el('button', { className: 'modal-close', 'aria-label': 'Close' });
+  closeBtn.textContent = '\u2715';
+  header.appendChild(titleEl);
+  header.appendChild(closeBtn);
+  modal.appendChild(header);
+
+  const body = el('div', { className: 'modal-body' });
+
+  const hint = el('p', { className: 'mp-form-hint' });
+  hint.textContent = 'This item is personal to you and won\u2019t affect the global catalog.';
+  body.appendChild(hint);
+
+  const titleGroup = el('div', { className: 'form-group' });
+  const titleLabel = el('label', { className: 'form-label' });
+  titleLabel.textContent = 'Title';
+  const titleInput = el('input', { type: 'text', className: 'form-input', placeholder: 'e.g. Cisco Live session, Lab exercise…' });
+  if (isEdit) titleInput.value = item.title || '';
+  titleGroup.appendChild(titleLabel);
+  titleGroup.appendChild(titleInput);
+  body.appendChild(titleGroup);
+
+  const typeGroup = el('div', { className: 'form-group' });
+  const typeLabel = el('label', { className: 'form-label' });
+  typeLabel.textContent = 'Type';
+  const typeSelect = el('select', { className: 'form-select' });
+  ['course', 'certification', 'reading', 'link', 'action'].forEach(t => {
+    const opt = el('option', { value: t });
+    opt.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+    if (isEdit && item.type === t) opt.selected = true;
+    typeSelect.appendChild(opt);
+  });
+  typeGroup.appendChild(typeLabel);
+  typeGroup.appendChild(typeSelect);
+  body.appendChild(typeGroup);
+
+  const urlGroup = el('div', { className: 'form-group' });
+  const urlLabel = el('label', { className: 'form-label' });
+  urlLabel.textContent = 'URL (optional)';
+  const urlInput = el('input', { type: 'url', className: 'form-input', placeholder: 'https://…' });
+  if (isEdit && item.url) urlInput.value = item.url;
+  urlGroup.appendChild(urlLabel);
+  urlGroup.appendChild(urlInput);
+  body.appendChild(urlGroup);
+
+  const descGroup = el('div', { className: 'form-group' });
+  const descLabel = el('label', { className: 'form-label' });
+  descLabel.textContent = 'Description (optional)';
+  body.appendChild(descGroup);
+
+  const toolbar = el('div', { className: 'uce-toolbar' });
+  const toolbarActions = [
+    { cmd: 'bold', icon: '<b>B</b>', title: 'Bold' },
+    { cmd: 'italic', icon: '<i>I</i>', title: 'Italic' },
+    { cmd: 'insertUnorderedList', icon: '• List', title: 'Bullet list' },
+    { cmd: 'insertOrderedList', icon: '1. List', title: 'Numbered list' },
+    { cmd: 'createLink', icon: '🔗', title: 'Insert link' },
+    { cmd: 'removeFormat', icon: '⊘', title: 'Clear formatting' },
+  ];
+  toolbarActions.forEach(({ cmd, icon, title }) => {
+    const btn = el('button', { type: 'button', className: 'uce-toolbar-btn', title });
+    btn.innerHTML = icon;
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (cmd === 'createLink') {
+        const url = prompt('Enter URL:');
+        if (url) document.execCommand(cmd, false, url);
+      } else {
+        document.execCommand(cmd, false, null);
+      }
+      editorEl.focus();
+    });
+    toolbar.appendChild(btn);
+  });
+  descGroup.appendChild(descLabel);
+  descGroup.appendChild(toolbar);
+
+  const editorEl = el('div', { className: 'uce-editor', contentEditable: 'true' });
+  if (isEdit && item.description) editorEl.innerHTML = item.description;
+  descGroup.appendChild(editorEl);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancelBtn = el('button', { className: 'btn btn-secondary' });
+  cancelBtn.textContent = 'Cancel';
+  const saveBtn = el('button', { className: 'btn btn-primary' });
+  saveBtn.textContent = isEdit ? 'Save Changes' : 'Add Item';
+  footer.appendChild(cancelBtn);
+  footer.appendChild(saveBtn);
+
+  modal.appendChild(body);
+  modal.appendChild(footer);
+  overlay.appendChild(modal);
+  root.appendChild(overlay);
+
+  requestAnimationFrame(() => {
+    overlay.classList.add('open');
+    titleInput.focus();
+  });
+
+  function close() {
+    overlay.classList.remove('open');
+    setTimeout(() => overlay.remove(), 200);
+  }
+
+  cancelBtn.addEventListener('click', close);
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  saveBtn.addEventListener('click', async () => {
+    const titleVal = titleInput.value.trim();
+    if (!titleVal) {
+      showToast('Title is required', 'error');
+      titleInput.focus();
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    const descHtml = editorEl.innerHTML.trim();
+    const urlVal = urlInput.value.trim() || null;
+
+    try {
+      if (isEdit) {
+        await api.put(`/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${item.id}`, {
+          title: titleVal,
+          type: typeSelect.value,
+          description: descHtml || null,
+          url: urlVal,
+        });
+        showToast('Item updated', 'success');
+      } else {
+        await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/user-content`, {
+          level: levelNum,
+          type: typeSelect.value,
+          title: titleVal,
+          description: descHtml || null,
+          url: urlVal,
+        });
+        showToast('Item added', 'success');
+      }
+      close();
+      if (typeof onSaved === 'function') onSaved();
+    } catch (err) {
+      showToast(err.message || 'Failed to save item', 'error');
+      saveBtn.disabled = false;
+      saveBtn.textContent = isEdit ? 'Save Changes' : 'Add Item';
     }
   });
 }

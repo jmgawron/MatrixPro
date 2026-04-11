@@ -102,12 +102,44 @@ class ContentOverrideResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UserContentCreate(BaseModel):
+    level: int
+    type: SkillLevelContentType = SkillLevelContentType.action
+    title: str
+    description: str | None = None
+    url: str | None = None
+
+
+class UserContentUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    url: str | None = None
+    type: SkillLevelContentType | None = None
+
+
+class UserContentResponse(BaseModel):
+    id: int
+    user_id: int
+    plan_skill_id: int
+    skill_id: int
+    level: int
+    type: SkillLevelContentType
+    title: str
+    description: str | None = None
+    url: str | None = None
+    position: int
+    completed: bool = False
+    completed_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
 # --- Merged Content Item (catalog + user completion + user override) ---
 
 
 class MergedContentItem(BaseModel):
-    """A single catalog content item merged with user-specific completion and override data."""
-
     id: int
     skill_id: int
     level: int
@@ -116,12 +148,12 @@ class MergedContentItem(BaseModel):
     description: str | None = None
     url: str | None = None
     position: int
-    # User-specific fields
     completed: bool = False
     completed_at: datetime | None = None
     completion_notes: str | None = None
     has_override: bool = False
     override_description: str | None = None
+    is_user_content: bool = False
 
 
 class PlanSkillContentResponse(BaseModel):

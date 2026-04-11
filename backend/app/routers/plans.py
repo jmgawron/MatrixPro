@@ -14,6 +14,7 @@ from app.models.plan import (
     PlanSkillTrainingLog,
     UserContentCompletion,
     UserContentOverride,
+    UserLevelContent,
 )
 from app.models.skill import Skill, SkillLevelContent
 from app.models.user import User, UserRole
@@ -30,6 +31,9 @@ from app.schemas.plan import (
     PlanSkillUpdate,
     TrainingLogCreate,
     TrainingLogResponse,
+    UserContentCreate,
+    UserContentResponse,
+    UserContentUpdate,
 )
 
 router = APIRouter(prefix="/api/plans", tags=["plans"])
@@ -485,8 +489,43 @@ def get_plan_skill_content(
                 completion_notes=comp.notes if comp else None,
                 has_override=ovr is not None,
                 override_description=ovr.override_description if ovr else None,
+                is_user_content=False,
             )
         )
+
+    user_items = (
+        db.query(UserLevelContent)
+        .filter(
+            UserLevelContent.user_id == engineer_id,
+            UserLevelContent.plan_skill_id == plan_skill_id,
+        )
+        .order_by(UserLevelContent.level, UserLevelContent.position)
+        .all()
+    )
+
+    for ui in user_items:
+        if ui.completed:
+            completed_count += 1
+        items.append(
+            MergedContentItem(
+                id=ui.id,
+                skill_id=ui.skill_id,
+                level=ui.level,
+                type=ui.type,
+                title=ui.title,
+                description=ui.description,
+                url=ui.url,
+                position=ui.position,
+                completed=ui.completed,
+                completed_at=ui.completed_at,
+                completion_notes=None,
+                has_override=False,
+                override_description=None,
+                is_user_content=True,
+            )
+        )
+
+    items.sort(key=lambda x: (x.level, x.position, x.id))
 
     return PlanSkillContentResponse(
         plan_skill_id=plan_skill_id,
@@ -663,3 +702,268 @@ def save_content_override(
     db.refresh(existing)
 
     return ContentOverrideResponse.model_validate(existing)
+
+
+@router.post(
+    "/{engineer_id}/skills/{plan_skill_id}/user-content",
+    response_model=UserContentResponse,
+    status_code=201,
+)
+def create_user_content(
+    engineer_id: int,
+    plan_skill_id: int,
+    data: UserContentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+    plan = _get_or_create_plan(db, engineer_id)
+
+    plan_skill = (
+        db.query(PlanSkill)
+        .options(selectinload(PlanSkill.skill))
+        .filter(PlanSkill.id == plan_skill_id, PlanSkill.plan_id == plan.id)
+        .first()
+    )
+    if plan_skill is None:
+        raise HTTPException(status_code=404, detail="Plan skill not found")
+
+    if data.level not in (1, 2, 3):
+        raise HTTPException(status_code=400, detail="Level must be 1, 2, or 3")
+
+    if not data.title or not data.title.strip():
+        raise HTTPException(status_code=400, detail="Title is required")
+
+    max_pos = (
+        db.query(UserLevelContent.position)
+        .filter(
+            UserLevelContent.user_id == engineer_id,
+            UserLevelContent.plan_skill_id == plan_skill_id,
+            UserLevelContent.level == data.level,
+        )
+        .order_by(UserLevelContent.position.desc())
+        .first()
+    )
+    next_pos = (max_pos[0] + 1) if max_pos else 1000
+
+    item = UserLevelContent(
+        user_id=engineer_id,
+        plan_skill_id=plan_skill_id,
+        skill_id=plan_skill.skill_id,
+        level=data.level,
+        type=data.type,
+        title=data.title.strip(),
+        description=data.description,
+        url=data.url,
+        position=next_pos,
+    )
+    db.add(item)
+
+    log_entry = PlanSkillTrainingLog(
+        plan_skill_id=plan_skill_id,
+        title=f"added user content: {data.title.strip()[:80]}",
+        type=data.type,
+        completed_at=datetime.utcnow(),
+    )
+    db.add(log_entry)
+
+    _audit_log(
+        db,
+        entity_type="user_level_content",
+        entity_id=0,
+        field="created",
+        old_value=None,
+        new_value=data.title.strip()[:120],
+        changed_by=current_user.id,
+    )
+
+    db.commit()
+    db.refresh(item)
+
+    return UserContentResponse.model_validate(item)
+
+
+@router.put(
+    "/{engineer_id}/skills/{plan_skill_id}/user-content/{item_id}",
+    response_model=UserContentResponse,
+)
+def update_user_content(
+    engineer_id: int,
+    plan_skill_id: int,
+    item_id: int,
+    data: UserContentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+    plan = _get_or_create_plan(db, engineer_id)
+
+    plan_skill = (
+        db.query(PlanSkill)
+        .filter(PlanSkill.id == plan_skill_id, PlanSkill.plan_id == plan.id)
+        .first()
+    )
+    if plan_skill is None:
+        raise HTTPException(status_code=404, detail="Plan skill not found")
+
+    item = (
+        db.query(UserLevelContent)
+        .filter(
+            UserLevelContent.id == item_id,
+            UserLevelContent.user_id == engineer_id,
+            UserLevelContent.plan_skill_id == plan_skill_id,
+        )
+        .first()
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="User content item not found")
+
+    if data.title is not None:
+        if not data.title.strip():
+            raise HTTPException(status_code=400, detail="Title cannot be empty")
+        item.title = data.title.strip()
+    if data.description is not None:
+        item.description = data.description
+    if data.url is not None:
+        item.url = data.url
+    if data.type is not None:
+        item.type = data.type
+    item.updated_at = datetime.utcnow()
+
+    _audit_log(
+        db,
+        entity_type="user_level_content",
+        entity_id=item_id,
+        field="updated",
+        old_value=None,
+        new_value=item.title[:120],
+        changed_by=current_user.id,
+    )
+
+    db.commit()
+    db.refresh(item)
+
+    return UserContentResponse.model_validate(item)
+
+
+@router.delete(
+    "/{engineer_id}/skills/{plan_skill_id}/user-content/{item_id}",
+    status_code=204,
+)
+def delete_user_content(
+    engineer_id: int,
+    plan_skill_id: int,
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+    plan = _get_or_create_plan(db, engineer_id)
+
+    plan_skill = (
+        db.query(PlanSkill)
+        .filter(PlanSkill.id == plan_skill_id, PlanSkill.plan_id == plan.id)
+        .first()
+    )
+    if plan_skill is None:
+        raise HTTPException(status_code=404, detail="Plan skill not found")
+
+    item = (
+        db.query(UserLevelContent)
+        .filter(
+            UserLevelContent.id == item_id,
+            UserLevelContent.user_id == engineer_id,
+            UserLevelContent.plan_skill_id == plan_skill_id,
+        )
+        .first()
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="User content item not found")
+
+    _audit_log(
+        db,
+        entity_type="user_level_content",
+        entity_id=item_id,
+        field="deleted",
+        old_value=item.title[:120],
+        new_value=None,
+        changed_by=current_user.id,
+    )
+
+    log_entry = PlanSkillTrainingLog(
+        plan_skill_id=plan_skill_id,
+        title=f"removed user content: {item.title[:80]}",
+        type=item.type,
+        completed_at=datetime.utcnow(),
+    )
+    db.add(log_entry)
+
+    db.delete(item)
+    db.commit()
+
+    return None
+
+
+@router.post(
+    "/{engineer_id}/skills/{plan_skill_id}/user-content/{item_id}/complete",
+    response_model=UserContentResponse,
+)
+def toggle_user_content_completion(
+    engineer_id: int,
+    plan_skill_id: int,
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+    plan = _get_or_create_plan(db, engineer_id)
+
+    plan_skill = (
+        db.query(PlanSkill)
+        .options(selectinload(PlanSkill.skill))
+        .filter(PlanSkill.id == plan_skill_id, PlanSkill.plan_id == plan.id)
+        .first()
+    )
+    if plan_skill is None:
+        raise HTTPException(status_code=404, detail="Plan skill not found")
+
+    item = (
+        db.query(UserLevelContent)
+        .filter(
+            UserLevelContent.id == item_id,
+            UserLevelContent.user_id == engineer_id,
+            UserLevelContent.plan_skill_id == plan_skill_id,
+        )
+        .first()
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="User content item not found")
+
+    now = datetime.utcnow()
+    item.completed = not item.completed
+    item.completed_at = now if item.completed else None
+    item.updated_at = now
+
+    log_action = "completed" if item.completed else "uncompleted"
+    log_entry = PlanSkillTrainingLog(
+        plan_skill_id=plan_skill_id,
+        title=f"{log_action}: {item.title[:80]}",
+        type=item.type,
+        completed_at=now,
+    )
+    db.add(log_entry)
+
+    _audit_log(
+        db,
+        entity_type="user_level_content",
+        entity_id=item_id,
+        field="completed",
+        old_value=str(not item.completed),
+        new_value=str(item.completed),
+        changed_by=current_user.id,
+    )
+
+    db.commit()
+    db.refresh(item)
+
+    return UserContentResponse.model_validate(item)

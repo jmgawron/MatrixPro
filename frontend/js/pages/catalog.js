@@ -924,11 +924,12 @@ function showSkillDetailModal(skill) {
     });
 
     api.get(`/api/skills/${skill.id}/content`).then(rawContent => {
-      const fresh = Array.isArray(rawContent) ? rawContent : [];
+      const fresh = (Array.isArray(rawContent) ? rawContent : [])
+        .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3].includes(item.level));
       const freshGroups = { education: [], exposure: [], experience: [] };
       fresh.forEach(item => {
-        const key = LEVEL_MAP[item.level] || 'education';
-        freshGroups[key].push(item);
+        const key = LEVEL_MAP[item.level];
+        if (key) freshGroups[key].push(item);
       });
       LEVEL_CONFIG.forEach(({ key }) => renderPanelContent(key, freshGroups[key]));
     }).catch(() => {
@@ -944,12 +945,13 @@ function showSkillDetailModal(skill) {
   api.get(`/api/skills/${skill.id}/content`).then(rawContent => {
     skeletonEl.remove();
 
-    const content = Array.isArray(rawContent) ? rawContent : [];
+    const content = (Array.isArray(rawContent) ? rawContent : [])
+      .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3].includes(item.level));
     const groups = { education: [], exposure: [], experience: [] };
 
     content.forEach(item => {
-      const key = LEVEL_MAP[item.level] || 'education';
-      groups[key].push(item);
+      const key = LEVEL_MAP[item.level];
+      if (key) groups[key].push(item);
     });
 
     LEVEL_CONFIG.forEach(({ key }) => renderPanelContent(key, groups[key]));

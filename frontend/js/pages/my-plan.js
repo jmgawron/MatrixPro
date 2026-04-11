@@ -26,6 +26,8 @@ const SVG_ICONS = {
   pencil: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>',
   calendar: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
   refresh: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
+  circle: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
+  circleCheck: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
 };
 
 function svgIcon(name, size) {
@@ -802,12 +804,20 @@ function openEditSkillModal(planSkill) {
 
       const trigger = el('button', { className: 'skill-detail-accordion-trigger' });
 
-      const checkbox = el('input', { type: 'checkbox', className: 'mp-content-checkbox', 'aria-label': `Mark "${item.title}" as completed` });
-      checkbox.checked = item.completed;
-      checkbox.addEventListener('click', (e) => e.stopPropagation());
-      checkbox.addEventListener('change', async (e) => {
+      const checkbox = el('span', {
+        className: `mp-content-checkbox${item.completed ? ' checked' : ''}`,
+        role: 'checkbox',
+        'aria-checked': String(item.completed),
+        'aria-label': `Mark "${item.title}" as completed`,
+        tabIndex: 0,
+      });
+      checkbox.innerHTML = item.completed ? SVG_ICONS.circleCheck : SVG_ICONS.circle;
+      let _checkBusy = false;
+      const toggleCheck = async (e) => {
         e.stopPropagation();
-        checkbox.disabled = true;
+        if (_checkBusy) return;
+        _checkBusy = true;
+        checkbox.classList.add('busy');
         try {
           const endpoint = isUserItem
             ? `/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${item.id}/complete`
@@ -815,7 +825,9 @@ function openEditSkillModal(planSkill) {
           const resp = await api.post(endpoint, {});
           item.completed = resp.completed;
           item.completed_at = resp.completed_at;
-          checkbox.checked = item.completed;
+          checkbox.innerHTML = item.completed ? SVG_ICONS.circleCheck : SVG_ICONS.circle;
+          checkbox.classList.toggle('checked', item.completed);
+          checkbox.setAttribute('aria-checked', String(item.completed));
           accItem.classList.toggle('completed', item.completed);
           updateProgressDisplay();
 
@@ -825,12 +837,14 @@ function openEditSkillModal(planSkill) {
           if (freshSkill) planSkill.training_logs = freshSkill.training_logs;
           renderLogList();
         } catch (err) {
-          checkbox.checked = item.completed;
           showToast(err.message || 'Failed to toggle completion', 'error');
         } finally {
-          checkbox.disabled = false;
+          _checkBusy = false;
+          checkbox.classList.remove('busy');
         }
-      });
+      };
+      checkbox.addEventListener('click', toggleCheck);
+      checkbox.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleCheck(e); } });
       trigger.appendChild(checkbox);
 
       const levelCfg = LEVEL_CONFIG.find(l => l.key === key);

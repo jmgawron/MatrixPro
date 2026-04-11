@@ -690,6 +690,75 @@ function showSkillDetailModal(skill) {
 
     let openItem = null;
 
+    let dragSrcEl = null;
+
+    function handleDragStart(e) {
+      dragSrcEl = this;
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', this.dataset.itemId);
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const target = this;
+      if (target === dragSrcEl || !target.classList.contains('skill-detail-accordion-item')) return;
+      const rect = target.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) {
+        target.classList.add('drag-over-top');
+        target.classList.remove('drag-over-bottom');
+      } else {
+        target.classList.add('drag-over-bottom');
+        target.classList.remove('drag-over-top');
+      }
+    }
+
+    function handleDragLeave() {
+      this.classList.remove('drag-over-top', 'drag-over-bottom');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const target = this;
+      target.classList.remove('drag-over-top', 'drag-over-bottom');
+      if (!dragSrcEl || dragSrcEl === target) return;
+
+      const rect = target.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) {
+        target.parentNode.insertBefore(dragSrcEl, target);
+      } else {
+        target.parentNode.insertBefore(dragSrcEl, target.nextSibling);
+      }
+
+      persistReorder(panel, key);
+    }
+
+    function handleDragEnd() {
+      this.classList.remove('dragging');
+      panel.querySelectorAll('.skill-detail-accordion-item').forEach(el => {
+        el.classList.remove('drag-over-top', 'drag-over-bottom');
+      });
+      dragSrcEl = null;
+    }
+
+    async function persistReorder(panelEl, levelKey) {
+      const items = [...panelEl.querySelectorAll('.skill-detail-accordion-item')].map((el, idx) => ({
+        id: parseInt(el.dataset.itemId, 10),
+        position: idx
+      }));
+      try {
+        await api.put(`/api/skills/${skill.id}/content/reorder`, { items });
+        showToast('Order saved', 'success');
+      } catch (err) {
+        showToast(err.message || 'Failed to save order', 'error');
+        refreshModalContent();
+      }
+    }
+
     if (!sorted.length) {
       const empty = createElement('div', { className: 'skill-detail-tab-empty' });
       empty.textContent = 'No content added for this level yet.';
@@ -697,8 +766,25 @@ function showSkillDetailModal(skill) {
     } else {
       sorted.forEach(item => {
         const accItem = createElement('div', { className: 'skill-detail-accordion-item' });
+        accItem.dataset.itemId = item.id;
+
+        if (canEdit) {
+          accItem.draggable = true;
+          accItem.addEventListener('dragstart', handleDragStart);
+          accItem.addEventListener('dragover', handleDragOver);
+          accItem.addEventListener('dragleave', handleDragLeave);
+          accItem.addEventListener('drop', handleDrop);
+          accItem.addEventListener('dragend', handleDragEnd);
+        }
 
         const trigger = createElement('button', { className: 'skill-detail-accordion-trigger' });
+
+        if (canEdit) {
+          const dragHandle = createElement('span', { className: 'drag-handle', 'aria-hidden': 'true' });
+          dragHandle.textContent = '\u2630';
+          dragHandle.addEventListener('mousedown', () => { accItem.draggable = true; });
+          trigger.appendChild(dragHandle);
+        }
 
         const typeChip = createElement('span', { className: `triage-chip ${levelCfg.chipClass}`, style: 'font-size:11px;padding:2px 8px;flex-shrink:0;' });
         typeChip.textContent = item.type || 'resource';
@@ -710,14 +796,14 @@ function showSkillDetailModal(skill) {
           const adminActions = createElement('div', { className: 'accordion-admin-actions' });
 
           const editBtn = createElement('button', { className: 'btn btn-sm btn-secondary accordion-action-btn', 'aria-label': 'Edit item' });
-          editBtn.textContent = '✏️';
+          editBtn.textContent = '\u270F\uFE0F';
           editBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             showContentEditModal(skill.id, LEVEL_REVERSE[key], item, () => refreshModalContent());
           });
 
           const deleteBtn = createElement('button', { className: 'btn btn-sm btn-danger accordion-action-btn', 'aria-label': 'Delete item' });
-          deleteBtn.textContent = '🗑️';
+          deleteBtn.textContent = '\uD83D\uDDD1\uFE0F';
           deleteBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const confirmed = await showConfirm(`Delete "${item.title || 'this item'}"? This cannot be undone.`, true);
@@ -766,6 +852,7 @@ function showSkillDetailModal(skill) {
 
         trigger.addEventListener('click', (e) => {
           if (e.target.closest('.accordion-admin-actions')) return;
+          if (e.target.closest('.drag-handle')) return;
           if (accItem === openItem) {
             accItem.classList.remove('open');
             openItem = null;

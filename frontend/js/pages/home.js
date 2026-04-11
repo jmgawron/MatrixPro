@@ -206,7 +206,8 @@ export function mountHome(container) {
       href: '#/my-plan',
       textContent: 'Go to My Plan',
     });
-    const arrow = h('span', { style: 'font-size:16px;', textContent: '→' });
+    const arrow = h('span', { style: 'display:inline-flex;align-items:center;' });
+    arrow.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
     primaryBtn.appendChild(arrow);
     primaryBtn.addEventListener('mouseenter', () => {
       primaryBtn.style.transform = 'translateY(-1px)';
@@ -256,7 +257,8 @@ export function mountHome(container) {
       href: '#/login',
     });
     signInBtn.textContent = 'Get Started';
-    const arrow2 = h('span', { style: 'font-size:16px;', textContent: '→' });
+    const arrow2 = h('span', { style: 'display:inline-flex;align-items:center;' });
+    arrow2.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
     signInBtn.appendChild(arrow2);
     signInBtn.addEventListener('mouseenter', () => {
       signInBtn.style.transform = 'translateY(-1px)';

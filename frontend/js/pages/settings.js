@@ -14,11 +14,9 @@ async function renderSettingsPage(container) {
 
   container.innerHTML = `
     <div class="settings-page">
-      <div class="page-hero settings-hero">
-        <div class="hero-content">
-          <h1 class="hero-title">Settings</h1>
-          <p class="hero-subtitle">Manage your profile and preferences</p>
-        </div>
+      <div class="mp-header">
+        <h1 class="mp-title">My <span class="mp-title-gradient">Settings</span></h1>
+        <p class="mp-subtitle">Manage your profile and preferences</p>
       </div>
       <div class="settings-grid">
         <section class="settings-card profile-card">

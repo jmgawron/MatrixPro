@@ -196,7 +196,7 @@ function buildPageShell(container) {
   const csvBtn = createElement('button', {
     style: 'display:flex;align-items:center;gap:6px;background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s,color 0.15s;margin-left:auto;',
   });
-  csvBtn.textContent = '📊 Export CSV';
+  csvBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export CSV';
   csvBtn.addEventListener('click', () => {
     if (!_matrixData) return;
     downloadExport(`/api/export/teams/${_matrixData.team_id}/matrix/csv`, 'team_matrix.csv');
@@ -432,7 +432,7 @@ function renderMatrix() {
     const drillIcon = createElement('span', {
       style: 'font-size:11px;color:var(--accent);opacity:0;transition:opacity var(--transition);',
     });
-    drillIcon.textContent = '→';
+    drillIcon.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
     nameSpan.appendChild(drillIcon);
 
     nameTd.appendChild(nameSpan);
@@ -504,9 +504,9 @@ function buildMatrixCell(cell, engineer, skill) {
 
   if (icon) {
     const iconEl = createElement('span', {
-      style: 'font-size:14px;line-height:1;pointer-events:none;',
+      style: 'font-size:14px;line-height:1;pointer-events:none;display:inline-flex;align-items:center;justify-content:center;',
     });
-    iconEl.textContent = icon;
+    iconEl.innerHTML = icon;
     td.appendChild(iconEl);
   }
 
@@ -539,39 +539,40 @@ function getCellStyle(cell) {
     return {
       bg: 'rgba(245,158,11,.18)',
       border: 'rgba(245,158,11,.4)',
-      icon: '⏳',
+      icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     };
   }
 
   // in_development or proficiency — map by proficiency_level
   if (status === 'in_development' || status === 'proficiency') {
     const level = proficiency_level;
+    const checkSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
     if (level === 1) {
       return {
         bg: 'rgba(34,197,94,.18)',
         border: 'rgba(34,197,94,.35)',
-        icon: status === 'proficiency' ? '✓' : null,
+        icon: status === 'proficiency' ? checkSvg : null,
       };
     }
     if (level === 2) {
       return {
         bg: 'rgba(34,197,94,.42)',
         border: 'rgba(34,197,94,.55)',
-        icon: status === 'proficiency' ? '✓' : null,
+        icon: status === 'proficiency' ? checkSvg : null,
       };
     }
     if (level === 3) {
       return {
         bg: 'rgba(34,197,94,.75)',
         border: 'rgba(34,197,94,.85)',
-        icon: status === 'proficiency' ? '✓' : null,
+        icon: status === 'proficiency' ? checkSvg : null,
       };
     }
     // null level fallback → treat like in_pipeline
     return {
       bg: 'rgba(245,158,11,.18)',
       border: 'rgba(245,158,11,.4)',
-      icon: '⏳',
+      icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     };
   }
 
@@ -717,7 +718,7 @@ function renderEmptyState(container) {
   const state = createElement('div', { className: 'empty-state' });
 
   const icon = createElement('div', { className: 'empty-state-icon' });
-  icon.textContent = '👥';
+  icon.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
 
   const title = createElement('h3');
   title.textContent = 'No Direct Reports';
@@ -737,7 +738,7 @@ function renderErrorState(container, msg) {
   });
 
   const icon = createElement('div', { style: 'font-size:36px;margin-bottom:16px;' });
-  icon.textContent = '⚠️';
+  icon.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
 
   const title = createElement('div', {
     style: 'font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:8px;',

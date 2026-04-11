@@ -346,7 +346,7 @@ function buildCard(planSkill, status, iconClass) {
   top.appendChild(info);
 
   const actionsBtn = el('button', { className: 'mp-card-actions', title: 'Actions' });
-  actionsBtn.textContent = '⋯';
+  actionsBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>';
   actionsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     showCardActionsMenu(e, planSkill, status);

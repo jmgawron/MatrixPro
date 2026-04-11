@@ -24,11 +24,9 @@ export function mountAdmin(container) {
 function renderAdminShell(container) {
   container.innerHTML = `
     <div class="admin-page">
-      <div class="page-hero admin-hero">
-        <div class="hero-content">
-          <h1 class="hero-title">Admin Panel</h1>
-          <p class="hero-subtitle">Manage users, teams, and domains</p>
-        </div>
+      <div class="mp-header">
+        <h1 class="mp-title">Admin <span class="mp-title-gradient">Panel</span></h1>
+        <p class="mp-subtitle">Manage users, teams, and domains</p>
       </div>
       <div class="admin-layout">
         <aside class="admin-sidebar" id="adminSidebar"></aside>

@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { label: 'Catalog', href: '/catalog', minRole: 'engineer' },
   { label: 'Skill Explorer', href: '/skill-explorer', minRole: 'engineer' },
   { label: 'Admin', href: '/admin', minRole: 'admin' },
+  { label: 'Catalog Admin', href: '/admin/catalog', minRole: 'admin' },
 ];
 
 function rankOf(role) {

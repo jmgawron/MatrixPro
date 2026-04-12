@@ -12,6 +12,7 @@ import { mountCatalog } from './pages/catalog.js';
 import { mountSkillExplorer } from './pages/skill-explorer.js';
 import { mountSettings } from './pages/settings.js';
 import { mountAdmin } from './pages/admin.js';
+import { mountCatalogAdmin } from './pages/catalog-admin.js';
 
 const routes = {
   '/': { mount: mountHome, title: 'Home', minRole: null },
@@ -23,6 +24,7 @@ const routes = {
   '/skill-explorer': { mount: mountSkillExplorer, title: 'Skill Explorer', minRole: 'engineer' },
   '/settings': { mount: mountSettings, title: 'Settings', minRole: 'engineer' },
   '/admin': { mount: mountAdmin, title: 'Admin Panel', minRole: 'admin' },
+  '/admin/catalog': { mount: mountCatalogAdmin, title: 'Catalog Admin', minRole: 'admin' },
 };
 
 async function init() {

@@ -209,9 +209,10 @@ async function loadAdminTeamSelector() {
 // ─── Page shell ───────────────────────────────────────────────────────────────
 
 function buildPageShell(container) {
-  const wrapper = createElement('div', { className: 'page-shell' });
+  const wrapper = createElement('div', { className: 'mp-wrapper' });
 
   const header = createElement('div', { className: 'mp-header' });
+  const headerText = createElement('div', { className: 'mp-header-text' });
   const title = createElement('h1', { className: 'mp-title' });
   title.appendChild(document.createTextNode('My Team '));
   const gradientSpan = createElement('span', { className: 'mp-title-gradient' });
@@ -219,8 +220,9 @@ function buildPageShell(container) {
   title.appendChild(gradientSpan);
   const subtitle = createElement('p', { className: 'mp-subtitle' });
   subtitle.textContent = 'Team analytics, skills matrix, and development tracking';
-  header.appendChild(title);
-  header.appendChild(subtitle);
+  headerText.appendChild(title);
+  headerText.appendChild(subtitle);
+  header.appendChild(headerText);
   wrapper.appendChild(header);
 
   const tabBar = createElement('div', {
@@ -392,7 +394,7 @@ function renderSummaryTab() {
   const radarHeader = createElement('div', { className: 'mt-dash-card-header' });
   radarHeader.textContent = 'Team Skill Radar';
   const radarBody = createElement('div', { className: 'mt-dash-card-body' });
-  const radarChartEl = createElement('div', { style: 'height:320px;' });
+  const radarChartEl = createElement('div', { style: 'height:400px;' });
   radarBody.appendChild(radarChartEl);
   radarCard.appendChild(radarHeader);
   radarCard.appendChild(radarBody);
@@ -486,10 +488,12 @@ function renderActivityFeed(container, items) {
   items.forEach(item => {
     const row = createElement('div', { className: 'mt-activity-item' });
     const avatar = createElement('div', { className: 'mt-activity-avatar' });
-    avatar.textContent = getInitials(item.engineer_name || '?');
+    avatar.textContent = getInitials(item.actor_name || item.engineer_name || '?');
     const body = createElement('div', { className: 'mt-activity-body' });
     const text = createElement('div', { className: 'mt-activity-text' });
-    text.textContent = item.description || '';
+    const actorName = item.actor_name || item.engineer_name || 'Unknown';
+    const desc = formatActivityTitle(item.title || item.description || '', item.skill_name);
+    text.innerHTML = `<strong>${escapeHtml(actorName)}</strong> ${desc}`;
     const time = createElement('div', { className: 'mt-activity-time' });
     time.textContent = relativeTime(item.occurred_at);
     body.appendChild(text);
@@ -653,6 +657,24 @@ function renderMatrixTable() {
 
   const scrollWrap = createElement('div', { className: 'matrix-scroll' });
   const table = createElement('table', { className: 'matrix-table' });
+
+  const colgroup = document.createElement('colgroup');
+  const nameCol = document.createElement('col');
+  nameCol.style.width = '180px';
+  colgroup.appendChild(nameCol);
+  if (_bulkMode) {
+    const checkCol = document.createElement('col');
+    checkCol.style.width = '36px';
+    colgroup.appendChild(checkCol);
+  }
+  const skillColCount = skills.length;
+  skills.forEach(() => {
+    const col = document.createElement('col');
+    col.style.width = `${Math.floor((100 - 15) / skillColCount)}%`;
+    colgroup.appendChild(col);
+  });
+  table.appendChild(colgroup);
+
   const thead = createElement('thead');
   const headerRow = createElement('tr');
 
@@ -787,7 +809,7 @@ function getCellStyle(cell) {
   const clockSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
 
   if (status === 'not_in_plan') {
-    return { bg: 'var(--bg-elevated)', border: 'var(--border-soft)', icon: null };
+    return { bg: 'var(--bg-elevated)', border: 'var(--border-soft)', icon: '<span style="color:var(--text-muted);font-size:16px;opacity:.4">—</span>' };
   }
 
   if (status === 'in_pipeline') {
@@ -797,14 +819,15 @@ function getCellStyle(cell) {
   if (status === 'in_development' || status === 'proficiency') {
     const level = proficiency_level;
     const showCheck = status === 'proficiency';
+    const devIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
     if (level === 1) {
-      return { bg: 'rgba(34,197,94,.18)', border: 'rgba(34,197,94,.35)', icon: showCheck ? checkSvg : null };
+      return { bg: 'rgba(34,197,94,.18)', border: 'rgba(34,197,94,.35)', icon: showCheck ? checkSvg : devIcon };
     }
     if (level === 2) {
-      return { bg: 'rgba(34,197,94,.42)', border: 'rgba(34,197,94,.55)', icon: showCheck ? checkSvg : null };
+      return { bg: 'rgba(34,197,94,.42)', border: 'rgba(34,197,94,.55)', icon: showCheck ? checkSvg : devIcon };
     }
     if (level === 3) {
-      return { bg: 'rgba(34,197,94,.75)', border: 'rgba(34,197,94,.85)', icon: showCheck ? checkSvg : null };
+      return { bg: 'rgba(34,197,94,.75)', border: 'rgba(34,197,94,.85)', icon: showCheck ? checkSvg : devIcon };
     }
     return { bg: 'rgba(245,158,11,.18)', border: 'rgba(245,158,11,.4)', icon: clockSvg };
   }
@@ -1405,6 +1428,42 @@ function relativeTime(dateStr) {
 function getInitials(name) {
   if (!name) return '?';
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function formatActivityTitle(raw, skillName) {
+  const skill = skillName ? ` on <em>${escapeHtml(skillName)}</em>` : '';
+  if (!raw) return skill || '';
+
+  const lower = raw.toLowerCase();
+  if (lower.startsWith('proficiency_level:')) {
+    const lvl = raw.split(':')[1]?.trim() || '';
+    return `set proficiency to level ${escapeHtml(lvl)}${skill}`;
+  }
+  if (lower.startsWith('status:')) {
+    const st = raw.split(':')[1]?.trim().replace(/_/g, ' ') || '';
+    return `moved to <em>${escapeHtml(st)}</em>${skill}`;
+  }
+  if (lower.startsWith('training_log:')) {
+    const msg = raw.slice('training_log:'.length).trim();
+    return `${escapeHtml(msg)}${skill}`;
+  }
+  if (lower.startsWith('completed:')) {
+    const val = raw.slice('completed:'.length).trim();
+    if (val.toLowerCase() === 'true') return `completed a training${skill}`;
+    return `completed ${escapeHtml(val)}`;
+  }
+
+  if (raw.includes('Moved from') || raw.includes('Added to plan')) {
+    return escapeHtml(raw);
+  }
+
+  return `${escapeHtml(raw)}${skill}`;
 }
 
 function isStagnant(cell) {

@@ -1061,7 +1061,7 @@ body {
 }
 
 .matrix-cell:hover {
-  transform: scale(1.08);
+  filter: brightness(1.15);
   z-index: 1;
   position: relative;
 }
@@ -4556,7 +4556,8 @@ textarea.is-error:focus {
 .matrix-table {
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 100%;
+  width: 100%;
+  table-layout: fixed;
   font-size: 13px;
 }
 
@@ -4569,7 +4570,6 @@ textarea.is-error:focus {
   border-bottom: 2px solid var(--border-soft);
   border-right: 2px solid var(--border-soft);
   padding: 10px 16px;
-  min-width: 140px;
   text-align: left;
   font-size: 11px;
   text-transform: uppercase;
@@ -4585,9 +4585,6 @@ textarea.is-error:focus {
   border-bottom: 2px solid var(--border-soft);
   border-right: 1px solid var(--border-soft);
   padding: 10px 8px;
-  min-width: 60px;
-  width: 60px;
-  max-width: 80px;
   text-align: center;
   vertical-align: bottom;
   cursor: default;
@@ -4619,8 +4616,9 @@ textarea.is-error:focus {
   border-bottom: 1px solid var(--border-soft);
   border-right: 2px solid var(--border-soft);
   padding: 10px 16px;
-  min-width: 140px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
   user-select: none;
 }
@@ -4651,20 +4649,21 @@ textarea.is-error:focus {
 }
 
 .matrix-cell {
+  display: table-cell;
   padding: 0;
   min-width: 60px;
-  width: 60px;
-  max-width: 80px;
   height: 44px;
   text-align: center;
   vertical-align: middle;
+  border-bottom: 1px solid var(--border-soft);
+  border-right: 1px solid var(--border-soft);
   cursor: default;
   transition: background-color var(--transition), border-color var(--transition), filter var(--transition);
 }
 
 .matrix-cell-icon {
   font-size: 14px;
-  line-height: 1;
+  line-height: 44px;
   pointer-events: none;
   display: inline-flex;
   align-items: center;
@@ -6341,4 +6340,14 @@ textarea.is-error:focus {
   .mt-dash-cols {
     grid-template-columns: 1fr;
   }
+}
+
+.mp-wrapper > .skill-detail-tabs {
+  margin: 0;
+  padding: 0;
+}
+
+.mp-wrapper > .skill-detail-tab-panel {
+  max-height: none;
+  padding: 16px 0 0;
 }

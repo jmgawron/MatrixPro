@@ -3,7 +3,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.database import Base, engine
-from app.routers import auth, users, teams, skills, plans, export, domains
+from app.routers import (
+    auth,
+    users,
+    teams,
+    skills,
+    plans,
+    export,
+    domains,
+    catalog,
+    shifts,
+    certification,
+    campaigns,
+)
 
 app = FastAPI(title="MatrixPro API", version="0.1.0")
 
@@ -22,6 +34,10 @@ app.include_router(skills.router)
 app.include_router(plans.router)
 app.include_router(export.router)
 app.include_router(domains.router)
+app.include_router(catalog.router)
+app.include_router(shifts.router)
+app.include_router(certification.router)
+app.include_router(campaigns.router)
 
 
 @app.on_event("startup")

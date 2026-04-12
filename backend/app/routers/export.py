@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.dependencies import get_current_user, require_role
-from app.models.org import Team
+from app.models.catalog import SkillDomain
+from app.models.org import Domain, Team
 from app.models.plan import DevelopmentPlan, PlanSkill, PlanSkillStatus
 from app.models.skill import Skill, SkillTeam
 from app.models.user import User, UserRole
@@ -187,7 +188,23 @@ def export_skills_csv(
     db: Session = Depends(get_db),
     current_user: User = require_role(UserRole.admin, UserRole.manager),
 ):
-    skills = db.query(Skill).filter(Skill.is_archived == False).order_by(Skill.id).all()  # noqa: E712
+    skills = (
+        db.query(Skill)
+        .filter(Skill.is_archived == False)  # noqa: E712
+        .order_by(Skill.id)
+        .all()
+    )
+
+    skill_ids = [s.id for s in skills]
+    domain_rows = (
+        db.query(SkillDomain.skill_id, Domain.name)
+        .join(Domain, SkillDomain.domain_id == Domain.id)
+        .filter(SkillDomain.skill_id.in_(skill_ids))
+        .all()
+    )
+    skill_domain_names: dict[int, list[str]] = {}
+    for sid, dname in domain_rows:
+        skill_domain_names.setdefault(sid, []).append(dname)
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -196,7 +213,7 @@ def export_skills_csv(
             "ID",
             "Name",
             "Description",
-            "Domain ID",
+            "Domains",
             "Is Future",
             "Is Archived",
             "Catalog Version",
@@ -205,12 +222,13 @@ def export_skills_csv(
     )
 
     for skill in skills:
+        domains_str = "; ".join(skill_domain_names.get(skill.id, []))
         writer.writerow(
             [
                 skill.id,
                 skill.name,
                 skill.description or "",
-                skill.domain_id or "",
+                domains_str,
                 skill.is_future,
                 skill.is_archived,
                 skill.catalog_version,

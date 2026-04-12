@@ -30,18 +30,22 @@ class Skill(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    domain_id = Column(Integer, ForeignKey("domains.id"), nullable=False)
     is_future = Column(Boolean, default=False, nullable=False)
     is_archived = Column(Boolean, default=False, nullable=False)
     catalog_version = Column(Integer, default=1, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    domain = relationship("Domain", back_populates="skills")
     skill_teams = relationship("SkillTeam", back_populates="skill")
     skill_tags = relationship("SkillTag", back_populates="skill")
     level_content = relationship("SkillLevelContent", back_populates="skill")
     plan_skills = relationship("PlanSkill", back_populates="skill")
+
+    skill_organisations = relationship("SkillOrganisation", back_populates="skill")
+    skill_domains = relationship("SkillDomain", back_populates="skill")
+    skill_shifts = relationship("SkillShift", back_populates="skill")
+    skill_certificates = relationship("SkillCertificate", back_populates="skill")
+    skill_campaigns = relationship("SkillCampaign", back_populates="skill")
 
 
 class SkillTeam(Base):

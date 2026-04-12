@@ -27,7 +27,11 @@ def create_domain(
     org = db.query(Organisation).filter(Organisation.id == data.organisation_id).first()
     if org is None:
         raise HTTPException(status_code=404, detail="Organisation not found")
-    domain = Domain(name=data.name, organisation_id=data.organisation_id)
+    domain = Domain(
+        name=data.name,
+        organisation_id=data.organisation_id,
+        is_technical=data.is_technical,
+    )
     db.add(domain)
     db.commit()
     db.refresh(domain)
@@ -67,6 +71,8 @@ def update_domain(
         domain.organisation_id = data.organisation_id
     if data.name is not None:
         domain.name = data.name
+    if data.is_technical is not None:
+        domain.is_technical = data.is_technical
     db.commit()
     db.refresh(domain)
     return domain

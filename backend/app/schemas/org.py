@@ -20,12 +20,14 @@ class OrgResponse(BaseModel):
 class DomainCreate(BaseModel):
     name: str
     organisation_id: int
+    is_technical: bool = True
 
 
 class DomainResponse(BaseModel):
     id: int
     name: str
     organisation_id: int
+    is_technical: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}

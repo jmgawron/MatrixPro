@@ -5,21 +5,27 @@ import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
 import { createElement } from '../utils/dom.js';
 
-// ─── Module-level page state ────────────────────────────────────────────────
+// ─── Module-level page state ─────────────────────────────────────────────────
 
 let _container = null;
-let _allSkills = [];
-let _allTeams = [];
-let _domainMap = {};   // domain_id -> { id, name }
-let _teamMap = {};     // team_id  -> { id, name, domain_id }
-let _selectedNode = { type: 'all', id: null, label: 'All Skills' };
-let _searchQuery = '';
-let _filterDomainId = null;
-let _filterTeamId = null;
-let _showFuture = false;
-let _showArchived = false;
 let _debounceTimer = null;
 let _gridEl = null;
+let _treeEl = null;
+
+// Current active tab: 'org' | 'cert' | 'non-technical' | 'campaign'
+let _activeTab = 'org';
+
+// Per-tab cached tree data
+const _treeCache = {};
+
+// Selected filter state
+let _selectedFilter = { type: 'all', id: null, label: 'All Skills' };
+let _searchQuery = '';
+let _showFuture = false;
+let _showArchived = false;
+
+// Cached data for skill create/edit form
+let _formDataCache = null; // { orgs, domains, teams }
 
 // ─── Entry point ─────────────────────────────────────────────────────────────
 
@@ -27,67 +33,33 @@ export function mountCatalog(container, params) {
   _container = container;
   container.innerHTML = '';
 
-  _selectedNode = { type: 'all', id: null, label: 'All Skills' };
+  // Reset state
+  _activeTab = 'org';
+  _selectedFilter = { type: 'all', id: null, label: 'All Skills' };
   _searchQuery = '';
-  _filterDomainId = null;
-  _filterTeamId = null;
   _showFuture = false;
   _showArchived = false;
+  _formDataCache = null;
 
   const page = buildPageShell(container);
   _gridEl = page.gridEl;
+  _treeEl = page.treeEl;
 
-  loadData(page);
+  // Initial load: org tab
+  loadTabTree('org', page.treeEl);
+  fetchAndRenderSkills();
 
   return () => {
     clearTimeout(_debounceTimer);
   };
 }
 
-// ─── Data loading ─────────────────────────────────────────────────────────────
-
-async function loadData(page) {
-  showSkeleton(_gridEl, 'cards');
-
-  try {
-    const [skills, teams] = await Promise.all([
-      api.get('/api/skills/'),
-      api.get('/api/teams/'),
-    ]);
-
-    _allSkills = Array.isArray(skills) ? skills : [];
-    _allTeams = Array.isArray(teams) ? teams : [];
-
-    _domainMap = {};
-    _teamMap = {};
-    _allTeams.forEach(t => {
-      _teamMap[t.id] = t;
-      if (t.domain_id && !_domainMap[t.domain_id]) {
-        _domainMap[t.domain_id] = { id: t.domain_id, name: t.domain_name || `Domain ${t.domain_id}` };
-      }
-    });
-
-    _allSkills.forEach(s => {
-      if (s.domain_id && !_domainMap[s.domain_id]) {
-        _domainMap[s.domain_id] = { id: s.domain_id, name: `Domain ${s.domain_id}` };
-      }
-    });
-
-    buildSidebarTree(page.treeEl);
-    renderSkillGrid(_gridEl, getFilteredSkills());
-    updateFilterDropdowns(page.filterBarEl);
-  } catch (err) {
-    showToast(err.message || 'Failed to load catalog', 'error');
-    _gridEl.innerHTML = '';
-    renderEmptyState(_gridEl, 'Failed to load skills', 'Please try refreshing the page.');
-  }
-}
-
-// ─── Page shell construction ──────────────────────────────────────────────────
+// ─── Page shell ───────────────────────────────────────────────────────────────
 
 function buildPageShell(container) {
   const wrapper = createElement('div', { className: 'page-shell' });
 
+  // Header
   const header = createElement('div', { className: 'mp-header' });
   const title = createElement('h1', { className: 'mp-title' });
   title.appendChild(document.createTextNode('Skill '));
@@ -100,8 +72,15 @@ function buildPageShell(container) {
   header.appendChild(subtitle);
   wrapper.appendChild(header);
 
+  // Top controls
   const topBar = buildTopBar();
   wrapper.appendChild(topBar.el);
+
+  // Tab bar + body wrapper
+  const catalogWrapper = createElement('div', { className: 'catalog-tab-wrapper' });
+
+  const tabBar = buildTabBar(catalogWrapper);
+  catalogWrapper.appendChild(tabBar);
 
   const body = createElement('div', { className: 'catalog-body' });
 
@@ -111,42 +90,63 @@ function buildPageShell(container) {
   body.appendChild(treeEl);
 
   const main = createElement('div', { className: 'page-body--col catalog-main' });
-
   const gridEl = createElement('div');
   main.appendChild(gridEl);
-
-  const futureSectionEl = createElement('div', { className: 'hidden', id: 'future-skills-section' });
-  main.appendChild(futureSectionEl);
-
   body.appendChild(main);
-  wrapper.appendChild(body);
+
+  catalogWrapper.appendChild(body);
+  wrapper.appendChild(catalogWrapper);
   container.appendChild(wrapper);
 
-  return {
-    treeEl,
-    gridEl,
-    futureSectionEl,
-    filterBarEl: topBar.filterBarEl,
-  };
+  return { treeEl, gridEl, filterBarEl: topBar.filterBarEl };
+}
+
+function buildTabBar(catalogWrapper) {
+  const tabBar = createElement('div', { className: 'catalog-tab-bar' });
+
+  const TABS = [
+    { id: 'org', label: 'Organization' },
+    { id: 'cert', label: 'Certification' },
+    { id: 'non-technical', label: 'Non-Technical' },
+    { id: 'campaign', label: 'Campaigns' },
+  ];
+
+  TABS.forEach(tab => {
+    const btn = createElement('button', { className: 'catalog-tab' + (tab.id === _activeTab ? ' active' : '') });
+    btn.textContent = tab.label;
+    btn.dataset.tabId = tab.id;
+    btn.addEventListener('click', () => {
+      if (_activeTab === tab.id) return;
+      _activeTab = tab.id;
+
+      tabBar.querySelectorAll('.catalog-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      _selectedFilter = { type: 'all', id: null, label: 'All Skills' };
+      updateBreadcrumb('All Skills');
+
+      loadTabTree(tab.id, _treeEl);
+      fetchAndRenderSkills();
+    });
+    tabBar.appendChild(btn);
+  });
+
+  return tabBar;
 }
 
 function buildTopBar() {
-  const topBar = createElement('div', {
-    className: 'page-controls',
-  });
+  const topBar = createElement('div', { className: 'page-controls' });
 
   const row1 = createElement('div', { className: 'page-controls-row' });
 
   const titleGroup = createElement('div', { className: 'page-controls-group' });
-
   const breadcrumb = createElement('span', { className: 'triage-chip triage-signal', id: 'catalog-breadcrumb' });
   breadcrumb.textContent = 'All Skills';
   titleGroup.appendChild(breadcrumb);
-
   row1.appendChild(titleGroup);
 
   const user = Store.get('user');
-  if (user && (user.role === 'admin' || user.role === 'manager')) {
+  if (user && user.role === 'admin') {
     const addBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
     addBtn.textContent = 'Add Skill';
     addBtn.addEventListener('click', () => openSkillModal(null));
@@ -168,37 +168,17 @@ function buildTopBar() {
     clearTimeout(_debounceTimer);
     _debounceTimer = setTimeout(() => {
       _searchQuery = searchInput.value.trim();
-      refreshGrid();
+      fetchAndRenderSkills();
     }, 300);
   });
   searchWrap.appendChild(searchInput);
   filterBarEl.appendChild(searchWrap);
 
-  const domainSelect = createElement('select', { id: 'filter-domain', className: 'form-select catalog-filter-select' });
-  const domainAll = createElement('option', { value: '', textContent: 'All Domains' });
-  domainSelect.appendChild(domainAll);
-  domainSelect.addEventListener('change', () => {
-    _filterDomainId = domainSelect.value || null;
-    _filterTeamId = null;
-    updateTeamFilterOptions();
-    refreshGrid();
-  });
-  filterBarEl.appendChild(domainSelect);
-
-  const teamSelect = createElement('select', { id: 'filter-team', className: 'form-select catalog-filter-select' });
-  const teamAll = createElement('option', { value: '', textContent: 'All Teams' });
-  teamSelect.appendChild(teamAll);
-  teamSelect.addEventListener('change', () => {
-    _filterTeamId = teamSelect.value || null;
-    refreshGrid();
-  });
-  filterBarEl.appendChild(teamSelect);
-
   const futureLabel = createElement('label', { className: 'catalog-checkbox-label' });
   const futureCheck = createElement('input', { type: 'checkbox', id: 'filter-future' });
   futureCheck.addEventListener('change', () => {
     _showFuture = futureCheck.checked;
-    refreshGrid();
+    fetchAndRenderSkills();
   });
   futureLabel.appendChild(futureCheck);
   futureLabel.appendChild(document.createTextNode('Future Skills'));
@@ -209,7 +189,7 @@ function buildTopBar() {
     const archivedCheck = createElement('input', { type: 'checkbox', id: 'filter-archived' });
     archivedCheck.addEventListener('change', () => {
       _showArchived = archivedCheck.checked;
-      fetchAndRefreshWithArchived();
+      fetchAndRenderSkills();
     });
     archivedLabel.appendChild(archivedCheck);
     archivedLabel.appendChild(document.createTextNode('Show Archived'));
@@ -221,70 +201,270 @@ function buildTopBar() {
   return { el: topBar, filterBarEl };
 }
 
-// ─── Sidebar tree ─────────────────────────────────────────────────────────────
+// ─── Sidebar tree loading ─────────────────────────────────────────────────────
 
-function buildSidebarTree(treeEl) {
+async function loadTabTree(tabId, treeEl) {
+  // Preserve header
   const header = treeEl.querySelector('.sidebar-tree-header');
   treeEl.innerHTML = '';
   if (header) treeEl.appendChild(header);
 
-  const allItem = buildTreeItem('All Skills', 'all', null, 0);
-  if (_selectedNode.type === 'all') allItem.classList.add('active');
-  allItem.addEventListener('click', () => selectNode({ type: 'all', id: null, label: 'All Skills' }, allItem));
+  // Show skeleton
+  showSkeleton(treeEl, 'list');
+
+  try {
+    let treeData;
+    if (_treeCache[tabId]) {
+      treeData = _treeCache[tabId];
+    } else {
+      if (tabId === 'org') {
+        treeData = await api.get('/api/catalog/org-tree');
+      } else if (tabId === 'cert') {
+        treeData = await api.get('/api/catalog/cert-tree');
+      } else if (tabId === 'non-technical') {
+        treeData = await api.get('/api/catalog/org-tree');
+      } else if (tabId === 'campaign') {
+        treeData = await api.get('/api/catalog/campaign-tree');
+      }
+      _treeCache[tabId] = treeData;
+    }
+
+    // Remove skeleton
+    const skelEl = treeEl.querySelector('.skeleton-list');
+    if (skelEl) skelEl.remove();
+    treeEl.querySelectorAll('.skeleton').forEach(el => el.remove());
+
+    renderTreeForTab(tabId, treeData, treeEl);
+  } catch (err) {
+    treeEl.querySelectorAll('.skeleton-list, .skeleton').forEach(el => el.remove());
+    showToast(err.message || 'Failed to load tree', 'error');
+  }
+}
+
+function renderTreeForTab(tabId, treeData, treeEl) {
+  const data = Array.isArray(treeData) ? treeData : [];
+
+  // "All Skills" node
+  const allItem = buildTreeItem('All Skills', null, 0, false);
+  if (_selectedFilter.type === 'all') allItem.classList.add('active');
+  allItem.addEventListener('click', () => {
+    selectFilter({ type: 'all', id: null, label: 'All Skills' }, allItem, treeEl);
+  });
   treeEl.appendChild(allItem);
 
-  const domainIds = Object.keys(_domainMap);
-  domainIds.forEach(domainId => {
-    const domain = _domainMap[domainId];
-    const domainItem = buildTreeItem(domain.name, 'domain', domain.id, 0);
-    domainItem.classList.add('expanded');
+  if (tabId === 'org') {
+    renderOrgTree(data, treeEl);
+  } else if (tabId === 'cert') {
+    renderCertTree(data, treeEl);
+  } else if (tabId === 'non-technical') {
+    renderNonTechnicalTree(data, treeEl);
+  } else if (tabId === 'campaign') {
+    renderCampaignTree(data, treeEl);
+  }
+}
 
-    if (_selectedNode.type === 'domain' && String(_selectedNode.id) === String(domain.id)) {
-      domainItem.classList.add('active');
+function renderOrgTree(orgs, treeEl) {
+  orgs.forEach(org => {
+    const orgItem = buildTreeItem(org.name, 'org', 0, false);
+    orgItem.classList.add('expanded');
+    if (_selectedFilter.type === 'org_id' && String(_selectedFilter.id) === String(org.id)) {
+      orgItem.classList.add('active');
     }
 
-    domainItem.addEventListener('click', (e) => {
+    orgItem.addEventListener('click', (e) => {
       e.stopPropagation();
-      domainItem.classList.toggle('expanded');
-      selectNode({ type: 'domain', id: domain.id, label: domain.name }, domainItem);
+      selectFilter({ type: 'org_id', id: org.id, label: org.name }, orgItem, treeEl);
     });
 
-    const toggle = domainItem.querySelector('.tree-item-toggle');
-    if (toggle) {
-      toggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        domainItem.classList.toggle('expanded');
-      });
-    }
+    addToggleListener(orgItem, treeEl);
 
     const childrenEl = createElement('div', { className: 'tree-item-children' });
-    const teamsInDomain = _allTeams.filter(t => String(t.domain_id) === String(domain.id));
 
-    teamsInDomain.forEach(team => {
-      const teamItem = buildTreeItem(team.name, 'team', team.id, 1);
-      if (_selectedNode.type === 'team' && String(_selectedNode.id) === String(team.id)) {
-        teamItem.classList.add('active');
+    const domains = Array.isArray(org.domains) ? org.domains : [];
+    domains.forEach(domain => {
+      const domainItem = buildTreeItem(domain.name, 'domain', 1, true);
+      domainItem.classList.add('expanded');
+      if (_selectedFilter.type === 'domain_id' && String(_selectedFilter.id) === String(domain.id)) {
+        domainItem.classList.add('active');
       }
-      teamItem.addEventListener('click', (e) => {
+
+      domainItem.addEventListener('click', (e) => {
         e.stopPropagation();
-        selectNode({ type: 'team', id: team.id, label: team.name }, teamItem);
+        selectFilter({ type: 'domain_id', id: domain.id, label: domain.name }, domainItem, treeEl);
       });
-      childrenEl.appendChild(teamItem);
+
+      addToggleListener(domainItem, treeEl);
+
+      const domainChildrenEl = createElement('div', { className: 'tree-item-children' });
+
+      const teams = Array.isArray(domain.teams) ? domain.teams : [];
+      teams.forEach(team => {
+        const teamItem = buildTreeItem(team.name, 'team', 2, false);
+        if (_selectedFilter.type === 'team_id' && String(_selectedFilter.id) === String(team.id)) {
+          teamItem.classList.add('active');
+        }
+        teamItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectFilter({ type: 'team_id', id: team.id, label: team.name }, teamItem, treeEl);
+        });
+        domainChildrenEl.appendChild(teamItem);
+      });
+
+      const shifts = Array.isArray(domain.shifts) ? domain.shifts : [];
+      shifts.forEach(shift => {
+        const shiftItem = buildTreeItem(shift.name, 'shift', 2, false, '⏱');
+        if (_selectedFilter.type === 'shift_id' && String(_selectedFilter.id) === String(shift.id)) {
+          shiftItem.classList.add('active');
+        }
+        shiftItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectFilter({ type: 'shift_id', id: shift.id, label: shift.name }, shiftItem, treeEl);
+        });
+        domainChildrenEl.appendChild(shiftItem);
+      });
+
+      domainItem.appendChild(domainChildrenEl);
+      childrenEl.appendChild(domainItem);
     });
 
-    domainItem.appendChild(childrenEl);
-    treeEl.appendChild(domainItem);
+    orgItem.appendChild(childrenEl);
+    treeEl.appendChild(orgItem);
   });
 }
 
-function buildTreeItem(label, type, id, indent) {
-  const item = createElement('div', { className: 'tree-item', style: indent ? `padding-left:${16 + indent * 16}px;` : '' });
-  item.dataset.type = type;
-  item.dataset.id = id ?? '';
+function renderCertTree(certDomains, treeEl) {
+  certDomains.forEach(certDomain => {
+    const cdItem = buildTreeItem(certDomain.name, 'cert-domain', 0, true);
+    cdItem.classList.add('expanded');
+
+    addToggleListener(cdItem, treeEl);
+
+    const childrenEl = createElement('div', { className: 'tree-item-children' });
+
+    const certs = Array.isArray(certDomain.certificates) ? certDomain.certificates : [];
+    certs.forEach(cert => {
+      const certItem = buildTreeItem(cert.name, 'cert', 1, false, '🏆');
+      if (_selectedFilter.type === 'cert_id' && String(_selectedFilter.id) === String(cert.id)) {
+        certItem.classList.add('active');
+      }
+      certItem.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectFilter({ type: 'cert_id', id: cert.id, label: cert.name }, certItem, treeEl);
+      });
+      childrenEl.appendChild(certItem);
+    });
+
+    cdItem.appendChild(childrenEl);
+    treeEl.appendChild(cdItem);
+  });
+}
+
+function renderNonTechnicalTree(orgs, treeEl) {
+  orgs.forEach(org => {
+    const domains = Array.isArray(org.domains) ? org.domains : [];
+    const nonTechDomains = domains.filter(d => d.is_technical === false);
+    if (!nonTechDomains.length) return;
+
+    const orgItem = buildTreeItem(org.name, 'org', 0, false);
+    orgItem.classList.add('expanded');
+
+    addToggleListener(orgItem, treeEl);
+
+    const childrenEl = createElement('div', { className: 'tree-item-children' });
+
+    nonTechDomains.forEach(domain => {
+      const domainItem = buildTreeItem(domain.name, 'domain', 1, false);
+      if (_selectedFilter.type === 'domain_id' && String(_selectedFilter.id) === String(domain.id)) {
+        domainItem.classList.add('active');
+      }
+      domainItem.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectFilter({ type: 'domain_id', id: domain.id, label: domain.name }, domainItem, treeEl);
+      });
+      childrenEl.appendChild(domainItem);
+    });
+
+    orgItem.appendChild(childrenEl);
+    treeEl.appendChild(orgItem);
+  });
+}
+
+function renderCampaignTree(orgs, treeEl) {
+  orgs.forEach(org => {
+    const orgItem = buildTreeItem(org.name, 'org', 0, false);
+    orgItem.classList.add('expanded');
+
+    addToggleListener(orgItem, treeEl);
+
+    const childrenEl = createElement('div', { className: 'tree-item-children' });
+
+    const domains = Array.isArray(org.domains) ? org.domains : [];
+    domains.forEach(domain => {
+      const domainItem = buildTreeItem(domain.name, 'domain', 1, true);
+      domainItem.classList.add('expanded');
+
+      addToggleListener(domainItem, treeEl);
+
+      const domainChildrenEl = createElement('div', { className: 'tree-item-children' });
+
+      const campaigns = Array.isArray(domain.campaigns) ? domain.campaigns : [];
+      campaigns.forEach(campaign => {
+        const icon = campaign.is_mandatory ? '🔴' : '📋';
+        const label = campaign.is_mandatory ? `${campaign.name} (Required)` : campaign.name;
+        const campaignItem = buildTreeItem(label, 'campaign', 2, false, icon);
+
+        if (campaign.is_mandatory) {
+          const dot = createElement('span', { className: 'tree-mandatory-dot' });
+          campaignItem.insertBefore(dot, campaignItem.querySelector('.tree-item-label'));
+        }
+
+        if (_selectedFilter.type === 'campaign_id' && String(_selectedFilter.id) === String(campaign.id)) {
+          campaignItem.classList.add('active');
+        }
+        campaignItem.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectFilter({ type: 'campaign_id', id: campaign.id, label: campaign.name }, campaignItem, treeEl);
+        });
+        domainChildrenEl.appendChild(campaignItem);
+      });
+
+      domainItem.appendChild(domainChildrenEl);
+      childrenEl.appendChild(domainItem);
+    });
+
+    orgItem.appendChild(childrenEl);
+    treeEl.appendChild(orgItem);
+  });
+}
+
+// ─── Tree item builder ────────────────────────────────────────────────────────
+
+function buildTreeItem(label, type, indent, hasToggle, iconText) {
+  const item = createElement('div', { className: 'tree-item' });
+  if (indent) item.style.paddingLeft = `${16 + indent * 16}px`;
+  if (type) item.dataset.type = type;
 
   const iconEl = createElement('span', { className: 'tree-item-icon' });
-  iconEl.textContent = type === 'all' ? '*' : type === 'domain' ? 'D' : 'T';
   iconEl.setAttribute('aria-hidden', 'true');
+  if (iconText) {
+    iconEl.textContent = iconText;
+  } else if (type === 'all') {
+    iconEl.textContent = '✦';
+  } else if (type === 'org') {
+    iconEl.textContent = '🏢';
+  } else if (type === 'domain') {
+    iconEl.textContent = '📁';
+  } else if (type === 'team') {
+    iconEl.textContent = '👥';
+  } else if (type === 'cert-domain') {
+    iconEl.textContent = '🎓';
+  } else if (type === 'cert') {
+    iconEl.textContent = '🏆';
+  } else if (type === 'campaign') {
+    iconEl.textContent = '📋';
+  } else {
+    iconEl.textContent = '•';
+  }
 
   const labelEl = createElement('span', { className: 'tree-item-label' });
   labelEl.textContent = label;
@@ -292,133 +472,102 @@ function buildTreeItem(label, type, id, indent) {
   item.appendChild(iconEl);
   item.appendChild(labelEl);
 
-  if (type === 'domain') {
+  if (hasToggle) {
     const toggleEl = createElement('span', { className: 'tree-item-toggle' });
-    toggleEl.textContent = '>';
+    toggleEl.setAttribute('aria-hidden', 'true');
     item.appendChild(toggleEl);
   }
 
   return item;
 }
 
-function selectNode(node, itemEl) {
-  _selectedNode = node;
+function addToggleListener(item, treeEl) {
+  const toggle = item.querySelector('.tree-item-toggle');
+  if (!toggle) return;
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    item.classList.toggle('expanded');
+  });
+}
 
-  const allItems = _container.querySelectorAll('.tree-item');
+function selectFilter(filter, itemEl, treeEl) {
+  _selectedFilter = filter;
+
+  const allItems = (treeEl || _treeEl).querySelectorAll('.tree-item');
   allItems.forEach(i => i.classList.remove('active'));
   if (itemEl) itemEl.classList.add('active');
 
+  updateBreadcrumb(filter.label);
+  fetchAndRenderSkills();
+}
+
+function updateBreadcrumb(label) {
   const breadcrumb = document.getElementById('catalog-breadcrumb');
-  if (breadcrumb) breadcrumb.textContent = node.label;
-
-  refreshGrid();
+  if (breadcrumb) breadcrumb.textContent = label;
 }
 
-// ─── Filter state helpers ────────────────────────────────────────────────────
+// ─── API skill fetching ───────────────────────────────────────────────────────
 
-function getFilteredSkills() {
-  let skills = _allSkills;
+async function fetchAndRenderSkills() {
+  if (!_gridEl) return;
+  showSkeleton(_gridEl, 'cards');
 
-  if (_selectedNode.type === 'domain' && _selectedNode.id) {
-    skills = skills.filter(s => String(s.domain_id) === String(_selectedNode.id));
-  } else if (_selectedNode.type === 'team' && _selectedNode.id) {
-    skills = skills.filter(s => {
-      const ids = Array.isArray(s.team_ids) ? s.team_ids : (Array.isArray(s.teams) ? s.teams.map(t => t.id) : []);
-      return ids.map(String).includes(String(_selectedNode.id));
-    });
+  try {
+    const skills = await api.get('/api/skills/' + buildQueryString());
+    renderSkillGrid(_gridEl, Array.isArray(skills) ? skills : []);
+  } catch (err) {
+    showToast(err.message || 'Failed to load skills', 'error');
+    _gridEl.innerHTML = '';
+    renderEmptyState(_gridEl, 'Failed to load skills', 'Please try refreshing the page.');
   }
-
-  if (_filterDomainId) {
-    skills = skills.filter(s => String(s.domain_id) === String(_filterDomainId));
-  }
-
-  if (_filterTeamId) {
-    skills = skills.filter(s => {
-      const ids = Array.isArray(s.team_ids) ? s.team_ids : (Array.isArray(s.teams) ? s.teams.map(t => t.id) : []);
-      return ids.map(String).includes(String(_filterTeamId));
-    });
-  }
-
-  if (!_showFuture) {
-    skills = skills.filter(s => !s.is_future);
-  }
-
-  if (!_showArchived) {
-    skills = skills.filter(s => !s.is_archived);
-  }
-
-  if (_searchQuery) {
-    const q = _searchQuery.toLowerCase();
-    skills = skills.filter(s => {
-      const nameMatch = (s.name || '').toLowerCase().includes(q);
-      const descMatch = (s.description || '').toLowerCase().includes(q);
-      const tagMatch = Array.isArray(s.tags) && s.tags.some(t => (t.name || t).toLowerCase().includes(q));
-      return nameMatch || descMatch || tagMatch;
-    });
-  }
-
-  return skills;
 }
 
-function updateFilterDropdowns(filterBarEl) {
-  const domainSelect = document.getElementById('filter-domain');
-  if (!domainSelect) return;
+function buildQueryString() {
+  const params = new URLSearchParams();
 
-  while (domainSelect.options.length > 1) domainSelect.remove(1);
+  if (_selectedFilter.type !== 'all' && _selectedFilter.id != null) {
+    params.set(_selectedFilter.type, String(_selectedFilter.id));
+  }
 
-  Object.values(_domainMap).forEach(d => {
-    const opt = createElement('option', { value: d.id });
-    opt.textContent = d.name;
-    domainSelect.appendChild(opt);
-  });
+  if (_searchQuery) params.set('search', _searchQuery);
+  if (_showArchived) params.set('include_archived', 'true');
 
-  updateTeamFilterOptions();
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
 }
 
-function updateTeamFilterOptions() {
-  const teamSelect = document.getElementById('filter-team');
-  if (!teamSelect) return;
-
-  while (teamSelect.options.length > 1) teamSelect.remove(1);
-
-  const teamsToShow = _filterDomainId
-    ? _allTeams.filter(t => String(t.domain_id) === String(_filterDomainId))
-    : _allTeams;
-
-  teamsToShow.forEach(t => {
-    const opt = createElement('option', { value: t.id });
-    opt.textContent = t.name;
-    teamSelect.appendChild(opt);
-  });
+async function fetchAndRefreshWithArchived() {
+  fetchAndRenderSkills();
 }
 
 // ─── Grid rendering ───────────────────────────────────────────────────────────
 
-function refreshGrid() {
-  if (!_gridEl) return;
-  renderSkillGrid(_gridEl, getFilteredSkills());
-}
-
 function renderSkillGrid(container, skills) {
   container.innerHTML = '';
 
-  if (!skills.length) {
+  // Client-side: filter future if not showing
+  let regular = skills.filter(s => !s.is_future);
+  let future = skills.filter(s => s.is_future);
+
+  if (!_showFuture) {
+    future = [];
+  }
+
+  const all = regular;
+
+  if (!all.length && !future.length) {
     renderEmptyState(container, 'No skills found', 'Try adjusting your search or filters.');
     return;
   }
 
-  const regular = skills.filter(s => !s.is_future);
-  const future = skills.filter(s => s.is_future);
-
-  if (regular.length) {
+  if (all.length) {
     const grid = createElement('div', { className: 'grid-3' });
-    regular.forEach(skill => grid.appendChild(buildSkillCard(skill)));
+    all.forEach(skill => grid.appendChild(buildSkillCard(skill)));
     container.appendChild(grid);
   }
 
-  if (future.length && _showFuture) {
+  if (future.length) {
     const sep = createElement('div', { className: 'catalog-future-section' });
-
     const sepHeader = createElement('div', { className: 'catalog-future-header' });
     const sepTitle = createElement('h2', { className: 'catalog-future-title' });
     sepTitle.textContent = 'Future Skills';
@@ -426,15 +575,15 @@ function renderSkillGrid(container, skills) {
     badge.textContent = `${future.length} upcoming`;
     sepHeader.appendChild(sepTitle);
     sepHeader.appendChild(badge);
-
     const futureGrid = createElement('div', { className: 'grid-3' });
     future.forEach(skill => futureGrid.appendChild(buildSkillCard(skill)));
-
     sep.appendChild(sepHeader);
     sep.appendChild(futureGrid);
     container.appendChild(sep);
   }
 }
+
+// ─── Skill card ───────────────────────────────────────────────────────────────
 
 function buildSkillCard(skill) {
   const user = Store.get('user');
@@ -445,8 +594,8 @@ function buildSkillCard(skill) {
   });
   card.dataset.skillId = skill.id;
 
+  // Header row with name and admin actions
   const headerRow = createElement('div', { className: 'tool-card-header' });
-
   const nameEl = createElement('div', { className: 'tool-card-name' });
   nameEl.textContent = skill.name;
   headerRow.appendChild(nameEl);
@@ -473,37 +622,79 @@ function buildSkillCard(skill) {
     actions.appendChild(editBtn);
     actions.appendChild(archiveBtn);
     headerRow.appendChild(actions);
-
   }
-
   card.appendChild(headerRow);
 
-  const domainName = _domainMap[skill.domain_id]?.name || 'General';
-  const catClass = getDomainCatClass(skill.domain_id);
-  const catBadge = createElement('span', { className: `tool-card-category ${catClass}` });
-  catBadge.textContent = domainName;
-  card.appendChild(catBadge);
+  // M2M domain badges (primary)
+  const domains = Array.isArray(skill.domains) ? skill.domains : [];
+  if (domains.length) {
+    const domainsRow = createElement('div', { className: 'tool-card-meta-row' });
+    domains.forEach(d => {
+      const catClass = getDomainBadgeClass(d.name);
+      const badge = createElement('span', { className: `tool-card-category ${catClass}` });
+      badge.textContent = d.name;
+      domainsRow.appendChild(badge);
+    });
+    card.appendChild(domainsRow);
+  } else {
+    // Fallback: no domains
+    const catBadge = createElement('span', { className: 'tool-card-category cat-research' });
+    catBadge.textContent = 'General';
+    card.appendChild(catBadge);
+  }
 
+  // Org badges (small, muted)
+  const orgs = Array.isArray(skill.organisations) ? skill.organisations : [];
+  if (orgs.length) {
+    const orgsRow = createElement('div', { className: 'tool-card-meta-row' });
+    orgs.forEach(org => {
+      const badge = createElement('span', { className: 'meta-badge meta-badge--org' });
+      badge.textContent = org.name;
+      orgsRow.appendChild(badge);
+    });
+    card.appendChild(orgsRow);
+  }
+
+  // Status badges row
   const badgesRow = createElement('div', { className: 'tool-card-badges' });
 
   if (skill.is_future) {
-    const futureBadge = createElement('span', { className: 'triage-chip triage-pipeline' });
-    futureBadge.textContent = 'Future';
-    badgesRow.appendChild(futureBadge);
+    const b = createElement('span', { className: 'triage-chip triage-pipeline' });
+    b.textContent = 'Future';
+    badgesRow.appendChild(b);
+  }
+  if (skill.is_archived) {
+    const b = createElement('span', { className: 'triage-chip triage-blocking' });
+    b.textContent = 'Archived';
+    badgesRow.appendChild(b);
   }
 
-  if (skill.is_archived) {
-    const archivedBadge = createElement('span', { className: 'triage-chip triage-blocking' });
-    archivedBadge.textContent = 'Archived';
-    badgesRow.appendChild(archivedBadge);
-  }
+  // Cert badges
+  const certs = Array.isArray(skill.certificates) ? skill.certificates : [];
+  certs.forEach(cert => {
+    const badge = createElement('span', { className: 'meta-badge meta-badge--cert' });
+    badge.textContent = cert.name;
+    badgesRow.appendChild(badge);
+  });
+
+  // Campaign badges (mandatory highlighted)
+  const campaigns = Array.isArray(skill.campaigns) ? skill.campaigns : [];
+  campaigns.forEach(camp => {
+    const badge = createElement('span', {
+      className: camp.is_mandatory ? 'meta-badge meta-badge--campaign-required' : 'meta-badge meta-badge--campaign',
+    });
+    badge.textContent = camp.is_mandatory ? `${camp.name} ★` : camp.name;
+    badgesRow.appendChild(badge);
+  });
 
   if (badgesRow.children.length > 0) card.appendChild(badgesRow);
 
+  // Description
   const desc = createElement('div', { className: 'tool-card-desc' });
   desc.textContent = truncate(skill.description || 'No description available.', 120);
   card.appendChild(desc);
 
+  // Tags
   const tags = Array.isArray(skill.tags) ? skill.tags : [];
   if (tags.length) {
     const tagsRow = createElement('div', { className: 'tool-card-tags' });
@@ -520,9 +711,7 @@ function buildSkillCard(skill) {
     card.appendChild(tagsRow);
   }
 
-  card.addEventListener('click', () => {
-    showSkillDetailModal(skill);
-  });
+  card.addEventListener('click', () => showSkillDetailModal(skill));
 
   return card;
 }
@@ -536,6 +725,7 @@ function showSkillDetailModal(skill) {
   const overlay = createElement('div', { className: 'modal-overlay' });
   const modal = createElement('div', { className: 'modal skill-detail-modal' });
 
+  // Modal header
   const modalHeader = createElement('div', { className: 'modal-header' });
   const titleEl = createElement('h2', { className: 'modal-title' });
   titleEl.textContent = skill.name;
@@ -547,26 +737,79 @@ function showSkillDetailModal(skill) {
 
   const modalBody = createElement('div', { className: 'modal-body skill-detail-body' });
 
+  // Detail header with "Assigned To" section
   const detailHeader = createElement('div', { className: 'skill-detail-header' });
 
-  const metaRow = createElement('div', { className: 'skill-detail-header-meta' });
-  const domainName = _domainMap[skill.domain_id]?.name || 'General';
-  const catClass = getDomainCatClass(skill.domain_id);
-  const domainBadge = createElement('span', { className: `tool-card-category ${catClass}` });
-  domainBadge.textContent = domainName;
-  metaRow.appendChild(domainBadge);
+  // ── UPDATED: Assigned To section (M2M metadata) ──────────────────────────
+  const assignSection = createElement('div', { className: 'skill-detail-assignments' });
 
+  const organisations = Array.isArray(skill.organisations) ? skill.organisations : [];
+  const domains = Array.isArray(skill.domains) ? skill.domains : [];
+  const teams = Array.isArray(skill.teams) ? skill.teams : [];
+  const shifts = Array.isArray(skill.shifts) ? skill.shifts : [];
+  const certificates = Array.isArray(skill.certificates) ? skill.certificates : [];
+  const campaigns = Array.isArray(skill.campaigns) ? skill.campaigns : [];
+
+  function buildAssignRow(labelText, items, chipClassFn) {
+    if (!items.length) return null;
+    const row = createElement('div', { className: 'skill-detail-assign-row' });
+    const label = createElement('span', { className: 'skill-detail-assign-label' });
+    label.textContent = labelText;
+    row.appendChild(label);
+    items.forEach(item => {
+      const chip = createElement('span', { className: chipClassFn(item) });
+      chip.textContent = item.name || item;
+      row.appendChild(chip);
+    });
+    return row;
+  }
+
+  const orgRow = buildAssignRow('Orgs', organisations, () => 'meta-badge meta-badge--org');
+  if (orgRow) assignSection.appendChild(orgRow);
+
+  const domainRow = buildAssignRow('Domains', domains, (d) => `tool-card-category ${getDomainBadgeClass(d.name)}`);
+  if (domainRow) assignSection.appendChild(domainRow);
+
+  const teamRow = buildAssignRow('Teams', teams, () => 'triage-chip triage-signal chip-sm');
+  if (teamRow) assignSection.appendChild(teamRow);
+
+  const shiftRow = buildAssignRow('Shifts', shifts, () => 'triage-chip triage-feedback chip-sm');
+  if (shiftRow) assignSection.appendChild(shiftRow);
+
+  const certRow = buildAssignRow('Certs', certificates, () => 'meta-badge meta-badge--cert');
+  if (certRow) assignSection.appendChild(certRow);
+
+  if (campaigns.length) {
+    const campRowEl = createElement('div', { className: 'skill-detail-assign-row' });
+    const campLabel = createElement('span', { className: 'skill-detail-assign-label' });
+    campLabel.textContent = 'Campaigns';
+    campRowEl.appendChild(campLabel);
+    campaigns.forEach(camp => {
+      const chip = createElement('span', {
+        className: camp.is_mandatory ? 'meta-badge meta-badge--campaign-required' : 'meta-badge meta-badge--campaign',
+      });
+      chip.textContent = camp.is_mandatory ? `${camp.name} (Required)` : camp.name;
+      campRowEl.appendChild(chip);
+    });
+    assignSection.appendChild(campRowEl);
+  }
+
+  // Status badges
+  const statusRow = createElement('div', { className: 'skill-detail-assign-row' });
   if (skill.is_future) {
     const b = createElement('span', { className: 'triage-chip triage-pipeline' });
     b.textContent = 'Future Skill';
-    metaRow.appendChild(b);
+    statusRow.appendChild(b);
   }
   if (skill.is_archived) {
     const b = createElement('span', { className: 'triage-chip triage-blocking' });
     b.textContent = 'Archived';
-    metaRow.appendChild(b);
+    statusRow.appendChild(b);
   }
-  detailHeader.appendChild(metaRow);
+  if (statusRow.children.length) assignSection.appendChild(statusRow);
+
+  if (assignSection.children.length) detailHeader.appendChild(assignSection);
+  // ── END Assigned To section ───────────────────────────────────────────────
 
   if (skill.description) {
     const descEl = createElement('p', { className: 'skill-detail-description' });
@@ -588,22 +831,9 @@ function showSkillDetailModal(skill) {
     detailHeader.appendChild(tagsRow);
   }
 
-  const teamIds = Array.isArray(skill.team_ids) ? skill.team_ids : (Array.isArray(skill.teams) ? skill.teams.map(t => t.id) : []);
-  const teamNames = teamIds.map(id => _teamMap[id]?.name).filter(Boolean);
-  if (teamNames.length) {
-    const teamsRow = createElement('div', { className: 'skill-detail-header-row' });
-    const teamsLabel = createElement('span', { className: 'skill-detail-header-label' });
-    teamsLabel.textContent = 'Teams';
-    teamsRow.appendChild(teamsLabel);
-    teamNames.forEach(name => {
-      const chip = createElement('span', { className: 'triage-chip triage-signal chip-sm' });
-      chip.textContent = name;
-      teamsRow.appendChild(chip);
-    });
-    detailHeader.appendChild(teamsRow);
-  }
-
   modalBody.appendChild(detailHeader);
+
+  // ── Education/Exposure/Experience tabs (PRESERVED EXACTLY) ───────────────
 
   const LEVEL_CONFIG = [
     { key: 'education', label: 'Education', chipClass: 'chip-education' },
@@ -635,8 +865,7 @@ function showSkillDetailModal(skill) {
 
   const skeletonEl = createElement('div', { className: 'skill-detail-skeleton' });
   for (let i = 0; i < 3; i++) {
-    const skRow = createElement('div', { className: 'skeleton skeleton-row-lg' });
-    skeletonEl.appendChild(skRow);
+    skeletonEl.appendChild(createElement('div', { className: 'skeleton skeleton-row-lg' }));
   }
   tabPanelsWrap.appendChild(skeletonEl);
 
@@ -668,7 +897,6 @@ function showSkillDetailModal(skill) {
   function onKeyDown(e) {
     if (e.key === 'Escape') closeModal();
 
-    // Focus trap: cycle Tab/Shift+Tab within modal
     if (e.key === 'Tab') {
       const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
       if (!focusable.length) return;
@@ -681,7 +909,6 @@ function showSkillDetailModal(skill) {
       }
     }
 
-    // Arrow keys switch tabs when a tab button is focused
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       const tabKeys = LEVEL_CONFIG.map(l => l.key);
       const focused = document.activeElement;
@@ -702,7 +929,6 @@ function showSkillDetailModal(skill) {
   });
   document.addEventListener('keydown', onKeyDown);
 
-  // Set initial focus to close button for keyboard users
   requestAnimationFrame(() => {
     overlay.classList.add('open');
     closeBtn.focus();
@@ -727,7 +953,6 @@ function showSkillDetailModal(skill) {
     tabButtons[key].querySelector('.skill-detail-tab-count').textContent = sorted.length;
 
     let openItem = null;
-
     let dragSrcEl = null;
 
     function handleDragStart(e) {
@@ -763,7 +988,6 @@ function showSkillDetailModal(skill) {
       const target = this;
       target.classList.remove('drag-over-top', 'drag-over-bottom');
       if (!dragSrcEl || dragSrcEl === target) return;
-
       const rect = target.getBoundingClientRect();
       const midY = rect.top + rect.height / 2;
       if (e.clientY < midY) {
@@ -771,7 +995,6 @@ function showSkillDetailModal(skill) {
       } else {
         target.parentNode.insertBefore(dragSrcEl, target.nextSibling);
       }
-
       persistReorder(panel, key);
     }
 
@@ -784,12 +1007,12 @@ function showSkillDetailModal(skill) {
     }
 
     async function persistReorder(panelEl, levelKey) {
-      const items = [...panelEl.querySelectorAll('.skill-detail-accordion-item')].map((el, idx) => ({
+      const reorderItems = [...panelEl.querySelectorAll('.skill-detail-accordion-item')].map((el, idx) => ({
         id: parseInt(el.dataset.itemId, 10),
-        position: idx
+        position: idx,
       }));
       try {
-        await api.put(`/api/skills/${skill.id}/content/reorder`, { items });
+        await api.put(`/api/skills/${skill.id}/content/reorder`, { items: reorderItems });
         showToast('Order saved', 'success');
       } catch (err) {
         showToast(err.message || 'Failed to save order', 'error');
@@ -958,7 +1181,6 @@ function showSkillDetailModal(skill) {
 
     const firstWithContent = LEVEL_CONFIG.find(({ key }) => groups[key].length > 0);
     activateTab(firstWithContent ? firstWithContent.key : 'education');
-
   }).catch(() => {
     skeletonEl.remove();
     const errEl = createElement('div', { className: 'empty-state empty-state--compact' });
@@ -968,7 +1190,7 @@ function showSkillDetailModal(skill) {
   });
 }
 
-// ─── Content Edit Modal ───────────────────────────────────────────────────────
+// ─── Content Edit Modal (PRESERVED EXACTLY) ──────────────────────────────────
 
 function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
   const isEdit = !!existingItem;
@@ -1092,10 +1314,10 @@ function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
       currentBody !== (existingItem.description || '');
   }
 
-  function closeModal() {
+  function closeContentModal() {
     overlay.classList.remove('open');
     setTimeout(() => overlay.remove(), 200);
-    document.removeEventListener('keydown', onKeyDown);
+    document.removeEventListener('keydown', onContentKeyDown);
   }
 
   async function handleCancel() {
@@ -1103,19 +1325,19 @@ function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
       const confirmed = await showConfirm('Discard unsaved changes?', false);
       if (!confirmed) return;
     }
-    closeModal();
+    closeContentModal();
   }
 
   async function handleSave() {
-    const title = titleInput.value.trim();
-    if (!title) {
+    const titleVal = titleInput.value.trim();
+    if (!titleVal) {
       showToast('Title is required', 'warning');
       titleInput.focus();
       return;
     }
 
     const payload = {
-      title,
+      title: titleVal,
       type: typeSelect.value,
       description: getBodyHtml(),
       url: urlInput.value.trim() || null,
@@ -1126,7 +1348,7 @@ function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
     }
 
     saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
+    saveBtn.textContent = 'Saving\u2026';
 
     try {
       if (isEdit) {
@@ -1136,7 +1358,7 @@ function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
         await api.post(`/api/skills/${skillId}/content`, payload);
         showToast('Content item added', 'success');
       }
-      closeModal();
+      closeContentModal();
       if (typeof onSaved === 'function') onSaved();
     } catch (err) {
       showToast(err.message || 'Failed to save content item', 'error');
@@ -1145,7 +1367,7 @@ function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
     }
   }
 
-  function onKeyDown(e) {
+  function onContentKeyDown(e) {
     if (e.key === 'Escape') handleCancel();
   }
 
@@ -1155,12 +1377,40 @@ function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) handleCancel();
   });
-  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keydown', onContentKeyDown);
 }
 
-function openSkillModal(existingSkill) {
+// ─── Skill Create/Edit Modal (M2M) ────────────────────────────────────────────
+
+async function openSkillModal(existingSkill) {
   const isEdit = !!existingSkill;
-  const formEl = buildSkillForm(existingSkill);
+
+  // Load org/domain/team data for form (cached after first load)
+  if (!_formDataCache) {
+    try {
+      const orgTree = await api.get('/api/catalog/org-tree');
+      const orgs = [];
+      const domains = [];
+      const teams = [];
+
+      (Array.isArray(orgTree) ? orgTree : []).forEach(org => {
+        orgs.push({ id: org.id, name: org.name });
+        (Array.isArray(org.domains) ? org.domains : []).forEach(d => {
+          domains.push({ id: d.id, name: d.name });
+          (Array.isArray(d.teams) ? d.teams : []).forEach(t => {
+            teams.push({ id: t.id, name: t.name });
+          });
+        });
+      });
+
+      _formDataCache = { orgs, domains, teams };
+    } catch (err) {
+      showToast('Failed to load form data', 'error');
+      return;
+    }
+  }
+
+  const formEl = buildSkillForm(existingSkill, _formDataCache);
 
   showModal({
     title: isEdit ? 'Edit Skill' : 'Create Skill',
@@ -1178,16 +1428,15 @@ function openSkillModal(existingSkill) {
 
       try {
         if (isEdit) {
-          const updated = await api.put(`/api/skills/${existingSkill.id}`, formData);
-          const idx = _allSkills.findIndex(s => s.id === existingSkill.id);
-          if (idx !== -1) _allSkills[idx] = { ..._allSkills[idx], ...updated };
+          await api.put(`/api/skills/${existingSkill.id}`, formData);
           showToast('Skill updated successfully', 'success');
         } else {
-          const created = await api.post('/api/skills/', formData);
-          _allSkills.push(created);
+          await api.post('/api/skills/', formData);
           showToast('Skill created successfully', 'success');
         }
-        refreshGrid();
+        // Invalidate tree cache to pick up any new assignments
+        delete _treeCache[_activeTab];
+        fetchAndRenderSkills();
       } catch (err) {
         showToast(err.message || 'Failed to save skill', 'error');
       }
@@ -1195,9 +1444,10 @@ function openSkillModal(existingSkill) {
   });
 }
 
-function buildSkillForm(skill) {
+function buildSkillForm(skill, formData) {
   const form = createElement('div', { className: 'catalog-form' });
 
+  // Name
   form.appendChild(buildFormGroup('Name', 'skill-name', 'input', {
     type: 'text',
     placeholder: 'e.g. Wi-Fi 6 Configuration',
@@ -1205,46 +1455,30 @@ function buildSkillForm(skill) {
     value: skill?.name || '',
   }, true));
 
+  // Description
   form.appendChild(buildFormGroup('Description', 'skill-desc', 'textarea', {
     placeholder: 'Describe what this skill covers...',
     value: skill?.description || '',
   }));
 
-  const domainGroup = createElement('div', { className: 'form-group' });
-  const domainLabel = createElement('label', { className: 'form-label required', htmlFor: 'skill-domain' });
-  domainLabel.textContent = 'Domain';
-  const domainSelect = createElement('select', { id: 'skill-domain', className: 'form-select' });
-  const domainPlaceholder = createElement('option', { value: '' });
-  domainPlaceholder.textContent = '-- Select Domain --';
-  domainSelect.appendChild(domainPlaceholder);
-  Object.values(_domainMap).forEach(d => {
-    const opt = createElement('option', { value: d.id });
-    opt.textContent = d.name;
-    if (skill && String(skill.domain_id) === String(d.id)) opt.selected = true;
-    domainSelect.appendChild(opt);
-  });
-  domainGroup.appendChild(domainLabel);
-  domainGroup.appendChild(domainSelect);
-  form.appendChild(domainGroup);
+  // Organisations multi-select
+  const existingOrgIds = Array.isArray(skill?.organisations) ? skill.organisations.map(o => String(o.id)) : [];
+  const orgsGroup = buildCheckboxGroup('Organisations', 'skill-org-check', formData.orgs, existingOrgIds);
+  form.appendChild(orgsGroup);
 
-  const teamsGroup = createElement('div', { className: 'form-group' });
-  const teamsLabel = createElement('div', { className: 'form-label' });
-  teamsLabel.textContent = 'Associated Teams';
-  const teamsGrid = createElement('div', { className: 'catalog-teams-grid' });
-  const skillTeamIds = Array.isArray(skill?.team_ids) ? skill.team_ids.map(String) : (Array.isArray(skill?.teams) ? skill.teams.map(t => String(t.id)) : []);
-  _allTeams.forEach(t => {
-    const checkLabel = createElement('label', { className: 'catalog-check-label' });
-    const check = createElement('input', { type: 'checkbox', value: t.id });
-    if (skillTeamIds.includes(String(t.id))) check.checked = true;
-    check.className = 'skill-team-check';
-    checkLabel.appendChild(check);
-    checkLabel.appendChild(document.createTextNode(t.name));
-    teamsGrid.appendChild(checkLabel);
-  });
-  teamsGroup.appendChild(teamsLabel);
-  teamsGroup.appendChild(teamsGrid);
+  // Domains multi-select
+  const existingDomainIds = Array.isArray(skill?.domains) ? skill.domains.map(d => String(d.id)) : [];
+  const domainsGroup = buildCheckboxGroup('Domains', 'skill-domain-check', formData.domains, existingDomainIds);
+  form.appendChild(domainsGroup);
+
+  // Teams multi-select
+  const existingTeamIds = Array.isArray(skill?.teams)
+    ? skill.teams.map(t => String(t.id))
+    : (Array.isArray(skill?.team_ids) ? skill.team_ids.map(String) : []);
+  const teamsGroup = buildCheckboxGroup('Teams', 'skill-team-check', formData.teams, existingTeamIds);
   form.appendChild(teamsGroup);
 
+  // Tags
   form.appendChild(buildFormGroup('Tags', 'skill-tags', 'input', {
     type: 'text',
     placeholder: 'e.g. routing, bgp, advanced (comma-separated)',
@@ -1254,16 +1488,38 @@ function buildSkillForm(skill) {
   tagHint.textContent = 'Separate multiple tags with commas';
   form.appendChild(tagHint);
 
+  // Future checkbox
   const futureGroup = createElement('div', { className: 'form-group' });
   const futureLabel = createElement('label', { className: 'catalog-checkbox-label' });
   const futureCheck = createElement('input', { type: 'checkbox', id: 'skill-future' });
-  if (skill?.is_future) futureCheck.checked = true;
+  futureCheck.checked = skill?.is_future || false;
   futureLabel.appendChild(futureCheck);
   futureLabel.appendChild(document.createTextNode('Mark as Future Skill'));
   futureGroup.appendChild(futureLabel);
   form.appendChild(futureGroup);
 
   return form;
+}
+
+function buildCheckboxGroup(labelText, checkClass, items, selectedIds) {
+  const group = createElement('div', { className: 'form-group' });
+  const label = createElement('div', { className: 'form-label' });
+  label.textContent = labelText;
+  const grid = createElement('div', { className: 'catalog-teams-grid' });
+
+  items.forEach(item => {
+    const checkLabel = createElement('label', { className: 'catalog-check-label' });
+    const check = createElement('input', { type: 'checkbox', value: item.id });
+    check.className = checkClass;
+    check.checked = selectedIds.includes(String(item.id));
+    checkLabel.appendChild(check);
+    checkLabel.appendChild(document.createTextNode(item.name));
+    grid.appendChild(checkLabel);
+  });
+
+  group.appendChild(label);
+  group.appendChild(grid);
+  return group;
 }
 
 function buildFormGroup(labelText, inputId, inputTag, attrs, required) {
@@ -1290,24 +1546,30 @@ function buildFormGroup(labelText, inputId, inputTag, attrs, required) {
 function readSkillForm(formEl) {
   const name = formEl.querySelector('#skill-name')?.value.trim() || '';
   const description = formEl.querySelector('#skill-desc')?.value.trim() || '';
-  const domain_id = formEl.querySelector('#skill-domain')?.value || null;
   const is_future = formEl.querySelector('#skill-future')?.checked || false;
 
-  const teamCheckboxes = formEl.querySelectorAll('.skill-team-check:checked');
-  const team_ids = Array.from(teamCheckboxes).map(c => Number(c.value));
+  const orgChecks = formEl.querySelectorAll('.skill-org-check:checked');
+  const organisation_ids = Array.from(orgChecks).map(c => Number(c.value));
+
+  const domainChecks = formEl.querySelectorAll('.skill-domain-check:checked');
+  const domain_ids = Array.from(domainChecks).map(c => Number(c.value));
+
+  const teamChecks = formEl.querySelectorAll('.skill-team-check:checked');
+  const team_ids = Array.from(teamChecks).map(c => Number(c.value));
 
   const tagsRaw = formEl.querySelector('#skill-tags')?.value.trim() || '';
   const tag_names = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-  return { name, description, domain_id: domain_id ? Number(domain_id) : null, is_future, team_ids, tag_names };
+  return { name, description, is_future, organisation_ids, domain_ids, team_ids, tag_names };
 }
 
 function validateSkillForm(data) {
   const errors = [];
   if (!data.name) errors.push('Skill name is required.');
-  if (!data.domain_id) errors.push('Please select a domain.');
   return errors;
 }
+
+// ─── Archive / Restore ────────────────────────────────────────────────────────
 
 async function handleArchiveSkill(skill) {
   const action = skill.is_archived ? 'restore' : 'archive';
@@ -1319,24 +1581,15 @@ async function handleArchiveSkill(skill) {
   if (!confirmed) return;
 
   try {
-    await api.del(`/api/skills/${skill.id}`);
-    const idx = _allSkills.findIndex(s => s.id === skill.id);
-    if (idx !== -1) _allSkills[idx] = { ..._allSkills[idx], is_archived: !skill.is_archived };
+    if (action === 'archive') {
+      await api.del(`/api/skills/${skill.id}`);
+    } else {
+      await api.put(`/api/skills/${skill.id}`, { is_archived: false });
+    }
     showToast(`Skill ${action === 'archive' ? 'archived' : 'restored'} successfully`, 'success');
-    refreshGrid();
+    fetchAndRenderSkills();
   } catch (err) {
     showToast(err.message || `Failed to ${action} skill`, 'error');
-  }
-}
-
-async function fetchAndRefreshWithArchived() {
-  try {
-    const params = _showArchived ? '?include_archived=true' : '';
-    const skills = await api.get(`/api/skills/${params}`);
-    _allSkills = Array.isArray(skills) ? skills : [];
-    refreshGrid();
-  } catch (err) {
-    showToast(err.message || 'Failed to reload skills', 'error');
   }
 }
 
@@ -1347,7 +1600,7 @@ function renderEmptyState(container, title, desc) {
 
   const icon = createElement('span', { className: 'empty-state-icon' });
   icon.setAttribute('aria-hidden', 'true');
-  icon.textContent = 'o';
+  icon.textContent = '○';
 
   const titleEl = createElement('div', { className: 'empty-state-title' });
   titleEl.textContent = title;
@@ -1370,9 +1623,13 @@ function truncate(str, maxLen) {
 
 const DOMAIN_CAT_CLASSES = ['cat-wireless', 'cat-research', 'cat-case', 'cat-config', 'cat-platform', 'cat-bdb', 'cat-cve', 'cat-bug'];
 
-function getDomainCatClass(domainId) {
-  if (!domainId) return 'cat-research';
-  const keys = Object.keys(_domainMap);
-  const idx = keys.indexOf(String(domainId));
-  return DOMAIN_CAT_CLASSES[idx % DOMAIN_CAT_CLASSES.length] || 'cat-research';
+function getDomainBadgeClass(domainName) {
+  if (!domainName) return 'cat-research';
+  // Simple hash of the name string for deterministic color assignment
+  let hash = 0;
+  for (let i = 0; i < domainName.length; i++) {
+    hash = (hash * 31 + domainName.charCodeAt(i)) & 0xffffffff;
+  }
+  const idx = Math.abs(hash) % DOMAIN_CAT_CLASSES.length;
+  return DOMAIN_CAT_CLASSES[idx];
 }

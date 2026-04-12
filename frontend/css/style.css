@@ -6351,3 +6351,119 @@ textarea.is-error:focus {
   max-height: none;
   padding: 16px 0 0;
 }
+
+/* ──────────────────────────────────────────────────────────
+   §  CATALOG TAB BAR (Phase 3)
+   ────────────────────────────────────────────────────────── */
+
+.catalog-tab-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.catalog-tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: 0;
+  padding: 0 16px;
+  background: var(--bg-panel);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  flex-shrink: 0;
+}
+
+.catalog-tab {
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  transition: color var(--transition), border-color var(--transition);
+  white-space: nowrap;
+}
+
+.catalog-tab:hover {
+  color: var(--text-primary);
+}
+
+.catalog-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tool-card-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.meta-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+.meta-badge--org {
+  background: rgba(99, 102, 241, .12);
+  color: #818cf8;
+}
+
+.meta-badge--cert {
+  background: rgba(245, 158, 11, .12);
+  color: #fbbf24;
+}
+
+.meta-badge--campaign {
+  background: rgba(239, 68, 68, .12);
+  color: #f87171;
+}
+
+.meta-badge--campaign-required {
+  background: rgba(239, 68, 68, .2);
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.skill-detail-assignments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: 12px;
+}
+
+.skill-detail-assign-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.skill-detail-assign-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.tree-mandatory-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--error, #ef4444);
+  flex-shrink: 0;
+}

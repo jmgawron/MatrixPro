@@ -10,6 +10,17 @@ from app.models.skill import (  # noqa: F401
     SkillLevelContent,
     SkillLevelContentType,
 )
+from app.models.catalog import (  # noqa: F401
+    Shift,
+    CertificationDomain,
+    Certificate,
+    Campaign,
+    SkillOrganisation,
+    SkillDomain,
+    SkillShift,
+    SkillCertificate,
+    SkillCampaign,
+)
 from app.models.plan import (  # noqa: F401
     DevelopmentPlan,
     PlanSkill,

@@ -19,6 +19,7 @@ from app.models.plan import (
 )
 from app.models.skill import Skill, SkillLevelContent
 from app.models.user import User, UserRole
+from app.schemas.org import BulkAssignRequest, BulkAssignResponse, BulkAssignResultItem
 from app.schemas.plan import (
     ContentCompletionResponse,
     ContentCompletionToggle,
@@ -175,6 +176,127 @@ def list_plans(
         )
 
     return [_to_plan_response(p) for p in plans]
+
+
+@router.post("/bulk-assign", response_model=BulkAssignResponse)
+def bulk_assign_skill(
+    data: BulkAssignRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role not in (UserRole.admin, UserRole.manager):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    skill = db.query(Skill).filter(Skill.id == data.skill_id).first()
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    if skill.is_archived:
+        raise HTTPException(status_code=400, detail="Skill is archived")
+
+    results: list[BulkAssignResultItem] = []
+    assigned_count = 0
+    skipped_count = 0
+    error_count = 0
+
+    for eng_id in data.engineer_ids:
+        engineer = db.query(User).filter(User.id == eng_id).first()
+        if engineer is None:
+            results.append(
+                BulkAssignResultItem(
+                    engineer_id=eng_id,
+                    engineer_name="Unknown",
+                    result="error",
+                    detail="Engineer not found",
+                )
+            )
+            error_count += 1
+            continue
+
+        if current_user.role == UserRole.manager:
+            if engineer.manager_id != current_user.id:
+                results.append(
+                    BulkAssignResultItem(
+                        engineer_id=eng_id,
+                        engineer_name=engineer.name,
+                        result="error",
+                        detail="Not your direct report",
+                    )
+                )
+                error_count += 1
+                continue
+
+        plan = _get_or_create_plan(db, eng_id)
+
+        existing = (
+            db.query(PlanSkill)
+            .filter(PlanSkill.plan_id == plan.id, PlanSkill.skill_id == data.skill_id)
+            .first()
+        )
+        if existing:
+            if data.skip_existing:
+                results.append(
+                    BulkAssignResultItem(
+                        engineer_id=eng_id,
+                        engineer_name=engineer.name,
+                        result="skipped_existing",
+                        detail="Skill already in plan",
+                    )
+                )
+                skipped_count += 1
+                continue
+            else:
+                results.append(
+                    BulkAssignResultItem(
+                        engineer_id=eng_id,
+                        engineer_name=engineer.name,
+                        result="error",
+                        detail="Skill already in plan",
+                    )
+                )
+                error_count += 1
+                continue
+
+        plan_skill = PlanSkill(
+            plan_id=plan.id,
+            skill_id=data.skill_id,
+            status=data.status,
+            notes=data.notes,
+            skill_version_at_add=skill.catalog_version,
+            added_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(plan_skill)
+        db.flush()
+
+        _audit_log(
+            db,
+            entity_type="plan_skill",
+            entity_id=plan_skill.id,
+            field="bulk_assign",
+            old_value=None,
+            new_value=f"{skill.name} → {engineer.name}",
+            changed_by=current_user.id,
+        )
+
+        results.append(
+            BulkAssignResultItem(
+                engineer_id=eng_id,
+                engineer_name=engineer.name,
+                result="assigned",
+            )
+        )
+        assigned_count += 1
+
+    db.commit()
+
+    return BulkAssignResponse(
+        skill_id=data.skill_id,
+        skill_name=skill.name,
+        results=results,
+        assigned_count=assigned_count,
+        skipped_count=skipped_count,
+        error_count=error_count,
+    )
 
 
 @router.get("/{engineer_id}", response_model=PlanResponse)

@@ -119,6 +119,8 @@ def campaign_tree(
                                 id=c.id,
                                 name=c.name,
                                 is_mandatory=c.is_mandatory,
+                                start_date=c.start_date,
+                                end_date=c.end_date,
                             )
                             for c in domain_campaigns
                         ],

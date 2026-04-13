@@ -84,6 +84,7 @@ class CertificateInfo(BaseModel):
 class CampaignInfo(BaseModel):
     id: int
     name: str
+    is_mandatory: bool = False
 
     model_config = {"from_attributes": True}
 

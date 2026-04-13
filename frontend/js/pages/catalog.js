@@ -23,6 +23,7 @@ let _selectedFilter = { type: 'all', id: null, label: 'All Skills' };
 let _searchQuery = '';
 let _showFuture = false;
 let _showArchived = false;
+let _showActiveOnly = false;
 
 // Cached data for skill create/edit form
 let _formDataCache = null; // { orgs, domains, teams }
@@ -39,6 +40,7 @@ export function mountCatalog(container, params) {
   _searchQuery = '';
   _showFuture = false;
   _showArchived = false;
+  _showActiveOnly = false;
   _formDataCache = null;
 
   const page = buildPageShell(container);
@@ -125,6 +127,10 @@ function buildTabBar(catalogWrapper) {
       _selectedFilter = { type: 'all', id: null, label: 'All Skills' };
       updateBreadcrumb('All Skills');
 
+      // Show/hide Active Only toggle for campaign tab
+      const activeWrap = document.getElementById('filter-active-wrap');
+      if (activeWrap) activeWrap.style.display = tab.id === 'campaign' ? '' : 'none';
+
       loadTabTree(tab.id, _treeEl);
       fetchAndRenderSkills();
     });
@@ -195,6 +201,18 @@ function buildTopBar() {
     archivedLabel.appendChild(document.createTextNode('Show Archived'));
     filterBarEl.appendChild(archivedLabel);
   }
+
+  const activeLabel = createElement('label', { className: 'catalog-checkbox-label', id: 'filter-active-wrap' });
+  activeLabel.style.display = 'none';
+  const activeCheck = createElement('input', { type: 'checkbox', id: 'filter-active' });
+  activeCheck.addEventListener('change', () => {
+    _showActiveOnly = activeCheck.checked;
+    delete _treeCache['campaign'];
+    loadTabTree('campaign', _treeEl);
+  });
+  activeLabel.appendChild(activeCheck);
+  activeLabel.appendChild(document.createTextNode('Active Only'));
+  filterBarEl.appendChild(activeLabel);
 
   topBar.appendChild(filterBarEl);
 
@@ -390,6 +408,8 @@ function renderNonTechnicalTree(orgs, treeEl) {
 }
 
 function renderCampaignTree(orgs, treeEl) {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD for comparison
+
   orgs.forEach(org => {
     const orgItem = buildTreeItem(org.name, 'org', 0, false);
     orgItem.classList.add('expanded');
@@ -407,7 +427,18 @@ function renderCampaignTree(orgs, treeEl) {
 
       const domainChildrenEl = createElement('div', { className: 'tree-item-children' });
 
-      const campaigns = Array.isArray(domain.campaigns) ? domain.campaigns : [];
+      let campaigns = Array.isArray(domain.campaigns) ? domain.campaigns : [];
+
+      // Active-only filtering: hide campaigns outside their date range
+      if (_showActiveOnly) {
+        campaigns = campaigns.filter(c => {
+          if (!c.start_date && !c.end_date) return true;
+          if (c.start_date && today < c.start_date) return false;
+          if (c.end_date && today > c.end_date) return false;
+          return true;
+        });
+      }
+
       campaigns.forEach(campaign => {
         const icon = campaign.is_mandatory ? '🔴' : '📋';
         const label = campaign.is_mandatory ? `${campaign.name} (Required)` : campaign.name;
@@ -416,6 +447,15 @@ function renderCampaignTree(orgs, treeEl) {
         if (campaign.is_mandatory) {
           const dot = createElement('span', { className: 'tree-mandatory-dot' });
           campaignItem.insertBefore(dot, campaignItem.querySelector('.tree-item-label'));
+        }
+
+        // Date range subtitle
+        if (campaign.start_date || campaign.end_date) {
+          const dateText = formatDateRange(campaign.start_date, campaign.end_date);
+          const dateEl = createElement('span', { className: 'tree-item-date' });
+          dateEl.textContent = dateText;
+          const labelEl = campaignItem.querySelector('.tree-item-label');
+          if (labelEl) labelEl.appendChild(dateEl);
         }
 
         if (_selectedFilter.type === 'campaign_id' && String(_selectedFilter.id) === String(campaign.id)) {
@@ -428,9 +468,15 @@ function renderCampaignTree(orgs, treeEl) {
         domainChildrenEl.appendChild(campaignItem);
       });
 
+      // Skip empty domains after filtering
+      if (!campaigns.length && _showActiveOnly) return;
+
       domainItem.appendChild(domainChildrenEl);
       childrenEl.appendChild(domainItem);
     });
+
+    // Skip empty orgs after filtering
+    if (!childrenEl.children.length && _showActiveOnly) return;
 
     orgItem.appendChild(childrenEl);
     treeEl.appendChild(orgItem);
@@ -498,6 +544,33 @@ function selectFilter(filter, itemEl, treeEl) {
   if (itemEl) itemEl.classList.add('active');
 
   updateBreadcrumb(filter.label);
+  fetchAndRenderSkills();
+}
+
+function switchTabAndFilter(tabId, filterType, filterId, filterLabel) {
+  _activeTab = tabId;
+  _selectedFilter = { type: filterType, id: filterId, label: filterLabel };
+
+  const tabBar = document.querySelector('.catalog-tab-bar');
+  if (tabBar) {
+    tabBar.querySelectorAll('.catalog-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.tabId === tabId);
+    });
+  }
+
+  const activeWrap = document.getElementById('filter-active-wrap');
+  if (activeWrap) activeWrap.style.display = tabId === 'campaign' ? '' : 'none';
+
+  updateBreadcrumb(filterLabel);
+  loadTabTree(tabId, _treeEl).then(() => {
+    const allItems = _treeEl.querySelectorAll('.tree-item');
+    allItems.forEach(item => {
+      const label = item.querySelector('.tree-item-label');
+      if (label && label.textContent.includes(filterLabel)) {
+        item.classList.add('active');
+      }
+    });
+  });
   fetchAndRenderSkills();
 }
 
@@ -672,8 +745,12 @@ function buildSkillCard(skill) {
   // Cert badges
   const certs = Array.isArray(skill.certificates) ? skill.certificates : [];
   certs.forEach(cert => {
-    const badge = createElement('span', { className: 'meta-badge meta-badge--cert' });
+    const badge = createElement('span', { className: 'meta-badge meta-badge--cert meta-badge--clickable' });
     badge.textContent = cert.name;
+    badge.addEventListener('click', (e) => {
+      e.stopPropagation();
+      switchTabAndFilter('cert', 'cert_id', cert.id, cert.name);
+    });
     badgesRow.appendChild(badge);
   });
 
@@ -681,9 +758,13 @@ function buildSkillCard(skill) {
   const campaigns = Array.isArray(skill.campaigns) ? skill.campaigns : [];
   campaigns.forEach(camp => {
     const badge = createElement('span', {
-      className: camp.is_mandatory ? 'meta-badge meta-badge--campaign-required' : 'meta-badge meta-badge--campaign',
+      className: (camp.is_mandatory ? 'meta-badge meta-badge--campaign-required' : 'meta-badge meta-badge--campaign') + ' meta-badge--clickable',
     });
     badge.textContent = camp.is_mandatory ? `${camp.name} ★` : camp.name;
+    badge.addEventListener('click', (e) => {
+      e.stopPropagation();
+      switchTabAndFilter('campaign', 'campaign_id', camp.id, camp.name);
+    });
     badgesRow.appendChild(badge);
   });
 
@@ -776,8 +857,19 @@ function showSkillDetailModal(skill) {
   const shiftRow = buildAssignRow('Shifts', shifts, () => 'triage-chip triage-feedback chip-sm');
   if (shiftRow) assignSection.appendChild(shiftRow);
 
-  const certRow = buildAssignRow('Certs', certificates, () => 'meta-badge meta-badge--cert');
-  if (certRow) assignSection.appendChild(certRow);
+  const certRow = buildAssignRow('Certs', certificates, () => 'meta-badge meta-badge--cert meta-badge--clickable');
+  if (certRow) {
+    const certChips = certRow.querySelectorAll('.meta-badge--cert');
+    certificates.forEach((cert, i) => {
+      if (certChips[i]) {
+        certChips[i].addEventListener('click', () => {
+          closeModal();
+          switchTabAndFilter('cert', 'cert_id', cert.id, cert.name);
+        });
+      }
+    });
+    assignSection.appendChild(certRow);
+  }
 
   if (campaigns.length) {
     const campRowEl = createElement('div', { className: 'skill-detail-assign-row' });
@@ -786,9 +878,13 @@ function showSkillDetailModal(skill) {
     campRowEl.appendChild(campLabel);
     campaigns.forEach(camp => {
       const chip = createElement('span', {
-        className: camp.is_mandatory ? 'meta-badge meta-badge--campaign-required' : 'meta-badge meta-badge--campaign',
+        className: (camp.is_mandatory ? 'meta-badge meta-badge--campaign-required' : 'meta-badge meta-badge--campaign') + ' meta-badge--clickable',
       });
       chip.textContent = camp.is_mandatory ? `${camp.name} (Required)` : camp.name;
+      chip.addEventListener('click', () => {
+        closeModal();
+        switchTabAndFilter('campaign', 'campaign_id', camp.id, camp.name);
+      });
       campRowEl.appendChild(chip);
     });
     assignSection.appendChild(campRowEl);
@@ -1619,6 +1715,18 @@ function renderEmptyState(container, title, desc) {
 function truncate(str, maxLen) {
   if (!str) return '';
   return str.length > maxLen ? str.slice(0, maxLen) + '...' : str;
+}
+
+function formatDateRange(start, end) {
+  const fmt = d => {
+    if (!d) return '';
+    const dt = new Date(d + 'T00:00:00');
+    return dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  };
+  if (start && end) return `${fmt(start)} – ${fmt(end)}`;
+  if (start) return `From ${fmt(start)}`;
+  if (end) return `Until ${fmt(end)}`;
+  return '';
 }
 
 const DOMAIN_CAT_CLASSES = ['cat-wireless', 'cat-research', 'cat-case', 'cat-config', 'cat-platform', 'cat-bdb', 'cat-cve', 'cat-bug'];

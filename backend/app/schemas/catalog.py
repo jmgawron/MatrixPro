@@ -161,6 +161,8 @@ class CampaignNode(BaseModel):
     id: int
     name: str
     is_mandatory: bool
+    start_date: date
+    end_date: date
 
 
 class CampaignDomainNode(BaseModel):

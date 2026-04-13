@@ -100,7 +100,11 @@ def _to_skill_response(skill: Skill) -> SkillResponse:
             for sc in skill.skill_certificates
         ],
         campaigns=[
-            CampaignInfo(id=sc.campaign.id, name=sc.campaign.name)
+            CampaignInfo(
+                id=sc.campaign.id,
+                name=sc.campaign.name,
+                is_mandatory=sc.campaign.is_mandatory,
+            )
             for sc in skill.skill_campaigns
         ],
     )

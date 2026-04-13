@@ -93,7 +93,12 @@ def _to_skill_response(skill: Skill) -> SkillResponse:
             for sd in skill.skill_domains
         ],
         shifts=[
-            ShiftInfo(id=ss.shift.id, name=ss.shift.name) for ss in skill.skill_shifts
+            ShiftInfo(
+                id=ss.shift.id,
+                name=ss.shift.name,
+                domain_name=ss.shift.domain.name if ss.shift.domain else "",
+            )
+            for ss in skill.skill_shifts
         ],
         certificates=[
             CertificateInfo(id=sc.certificate.id, name=sc.certificate.name)

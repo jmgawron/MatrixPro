@@ -70,6 +70,7 @@ class DomainInfo(BaseModel):
 class ShiftInfo(BaseModel):
     id: int
     name: str
+    domain_name: str = ""
 
     model_config = {"from_attributes": True}
 

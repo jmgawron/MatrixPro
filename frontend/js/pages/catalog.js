@@ -330,13 +330,14 @@ function renderOrgTree(orgs, treeEl) {
 
       const shifts = Array.isArray(domain.shifts) ? domain.shifts : [];
       shifts.forEach(shift => {
-        const shiftItem = buildTreeItem(shift.name, 'shift', 2, false, '⏱');
+        const shiftLabel = `${domain.name} / ${shift.name}`;
+        const shiftItem = buildTreeItem(shiftLabel, 'shift', 2, false, '⏱');
         if (_selectedFilter.type === 'shift_id' && String(_selectedFilter.id) === String(shift.id)) {
           shiftItem.classList.add('active');
         }
         shiftItem.addEventListener('click', (e) => {
           e.stopPropagation();
-          selectFilter({ type: 'shift_id', id: shift.id, label: shift.name }, shiftItem, treeEl);
+          selectFilter({ type: 'shift_id', id: shift.id, label: shiftLabel }, shiftItem, treeEl);
         });
         domainChildrenEl.appendChild(shiftItem);
       });
@@ -854,7 +855,10 @@ function showSkillDetailModal(skill) {
   const teamRow = buildAssignRow('Teams', teams, () => 'triage-chip triage-signal chip-sm');
   if (teamRow) assignSection.appendChild(teamRow);
 
-  const shiftRow = buildAssignRow('Shifts', shifts, () => 'triage-chip triage-feedback chip-sm');
+  const shiftRow = buildAssignRow('Shifts', shifts.map(s => ({
+    ...s,
+    name: s.domain_name ? `${s.domain_name} / ${s.name}` : s.name,
+  })), () => 'triage-chip triage-feedback chip-sm');
   if (shiftRow) assignSection.appendChild(shiftRow);
 
   const certRow = buildAssignRow('Certs', certificates, () => 'meta-badge meta-badge--cert meta-badge--clickable');

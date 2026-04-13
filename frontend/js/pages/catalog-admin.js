@@ -2,6 +2,7 @@ import { api } from '../api.js';
 import { Store } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
+import { showSkeleton } from '../components/skeleton.js';
 
 const CATALOG_TABS = [
   {
@@ -90,7 +91,7 @@ function renderSidebar(container) {
 
 function switchTab(container, tabId) {
   const content = container.querySelector('#adminContent');
-  content.innerHTML = '<div class="admin-tab-loading">Loading...</div>';
+  showSkeleton(content, 'list');
   if (tabId === 'domains') renderDomainsTab(content);
   else if (tabId === 'shifts') renderShiftsTab(content);
   else if (tabId === 'certifications') renderCertificationsTab(content);
@@ -1177,7 +1178,7 @@ function renderAssignmentsUI(content, skills, domains, teams, shifts, certDomain
 async function loadSkillAssignments(content, skillId, skills, domains, teams, shifts, certDomains, certificates, campaigns) {
   const panel = content.querySelector('#assignmentsPanel');
   panel.style.display = 'block';
-  panel.innerHTML = '<div class="admin-tab-loading">Loading assignments...</div>';
+  showSkeleton(panel, 'detail');
 
   let current = {};
   try {
@@ -1234,12 +1235,15 @@ async function loadSkillAssignments(content, skillId, skills, domains, teams, sh
       </div>
       <div class="catalog-assign-group">
         <div class="catalog-assign-group-title">Shifts</div>
-        ${shifts.length === 0 ? '<span class="text-muted">No shifts</span>' : shifts.map(s => `
+        ${shifts.length === 0 ? '<span class="text-muted">No shifts</span>' : shifts.map(s => {
+          const domainName = (domains.find(d => d.id === s.domain_id) || {}).name || '';
+          const label = domainName ? `${domainName} / ${s.name}` : s.name;
+          return `
           <label class="catalog-checkbox-label">
             <input type="checkbox" name="shift_ids" value="${s.id}" ${(current.shift_ids || []).includes(s.id) ? 'checked' : ''}>
-            <span>${escHtml(s.name)}</span>
+            <span>${escHtml(label)}</span>
           </label>
-        `).join('')}
+        `;}).join('')}
       </div>
       <div class="catalog-assign-group">
         <div class="catalog-assign-group-title">Certificates</div>

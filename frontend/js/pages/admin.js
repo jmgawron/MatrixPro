@@ -3,11 +3,13 @@ import { Store } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
 import { renderAvatarThumbnail, AVATAR_CATALOG } from '../components/avatars.js';
+import { showSkeleton } from '../components/skeleton.js';
 
 const ADMIN_TABS = [
   { id: 'users', label: 'Users', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
   { id: 'teams', label: 'Teams', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>' },
   { id: 'domains', label: 'Domains', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' },
+  { id: 'certifications', label: 'Certifications', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' },
 ];
 
 let currentTab = 'users';
@@ -26,7 +28,7 @@ function renderAdminShell(container) {
     <div class="admin-page">
       <div class="mp-header">
         <h1 class="mp-title">Admin <span class="mp-title-gradient">Panel</span></h1>
-        <p class="mp-subtitle">Manage users, teams, and domains</p>
+        <p class="mp-subtitle">Manage users, teams, domains, and certifications</p>
       </div>
       <div class="admin-layout">
         <aside class="admin-sidebar" id="adminSidebar"></aside>
@@ -61,10 +63,11 @@ function renderSidebar(container) {
 
 function switchTab(container, tabId) {
   const content = container.querySelector('#adminContent');
-  content.innerHTML = '<div class="admin-tab-loading">Loading...</div>';
+  showSkeleton(content, 'list');
   if (tabId === 'users') renderUsersTab(content);
   else if (tabId === 'teams') renderTeamsTab(content);
   else if (tabId === 'domains') renderDomainsTab(content);
+  else if (tabId === 'certifications') renderCertificationsTab(content);
 }
 
 
@@ -373,20 +376,17 @@ async function openUserModal(content, existingUser, teams, allUsers) {
 
 async function renderTeamsTab(content) {
   try {
-    const [teams, users, domains] = await Promise.all([
+    const [teams, domains] = await Promise.all([
       api.get('/api/teams/'),
-      api.get('/api/users/'),
       api.get('/api/domains/'),
     ]);
-    renderTeamsTable(content, teams, users, domains);
+    renderTeamsTable(content, teams, domains);
   } catch (err) {
-    content.innerHTML = `<p class="admin-error">Failed to load teams: ${err.message}</p>`;
+    content.innerHTML = `<p class="admin-error">Failed to load teams: ${escHtml(err.message)}</p>`;
   }
 }
 
-function renderTeamsTable(content, teams, users, domains) {
-  const domainMap = Object.fromEntries(domains.map(d => [d.id, d.name]));
-
+function renderTeamsTable(content, teams, domains) {
   content.innerHTML = `
     <div class="admin-tab-header">
       <h2>Teams <span class="admin-count">${teams.length}</span></h2>
@@ -404,8 +404,7 @@ function renderTeamsTable(content, teams, users, domains) {
           <tr>
             <th class="sortable" data-sort="name">Name</th>
             <th class="sortable" data-sort="domain">Domain</th>
-            <th>Members</th>
-            <th>Managers</th>
+            <th class="sortable" data-sort="shift">Shift</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -421,49 +420,46 @@ function renderTeamsTable(content, teams, users, domains) {
   function renderRows() {
     const filtered = teams.filter(t => {
       if (!searchTerm) return true;
-      return (t.name + ' ' + (domainMap[t.domain_id] || '')).toLowerCase().includes(searchTerm.toLowerCase());
+      const s = searchTerm.toLowerCase();
+      return (t.name + ' ' + (t.domain_name || '')).toLowerCase().includes(s);
     });
 
     filtered.sort((a, b) => {
       let va, vb;
-      if (sortField === 'name') { va = a.name.toLowerCase(); vb = b.name.toLowerCase(); }
-      else if (sortField === 'domain') { va = (domainMap[a.domain_id] || '').toLowerCase(); vb = (domainMap[b.domain_id] || '').toLowerCase(); }
+      if (sortField === 'name') {
+        va = a.name.toLowerCase(); vb = b.name.toLowerCase();
+      } else if (sortField === 'domain') {
+        va = (a.domain_name || '').toLowerCase();
+        vb = (b.domain_name || '').toLowerCase();
+      } else if (sortField === 'shift') {
+        va = a.shift || 0; vb = b.shift || 0;
+        if (va < vb) return -sortDir;
+        if (va > vb) return sortDir;
+        return 0;
+      }
       if (va < vb) return -sortDir;
       if (va > vb) return sortDir;
       return 0;
     });
 
     const tbody = content.querySelector('#teamsBody');
-    tbody.innerHTML = filtered.map(t => {
-      const members = users.filter(u => u.team_id === t.id && u.role === 'engineer');
-      const mgrs = users.filter(u => u.team_id === t.id && (u.role === 'manager' || u.role === 'admin'));
-      return `
-        <tr>
-          <td><strong>${escHtml(t.name)}</strong></td>
-          <td>${domainMap[t.domain_id] || '<span class="text-muted">—</span>'}</td>
-          <td>
-            <div class="admin-member-chips">
-              ${members.slice(0, 5).map(m => `<span class="member-chip">${renderAvatarThumbnail(m.avatar, 20)} ${escHtml(m.name)}</span>`).join('')}
-              ${members.length > 5 ? `<span class="member-chip more">+${members.length - 5}</span>` : ''}
-              ${members.length === 0 ? '<span class="text-muted">No members</span>' : ''}
-            </div>
-          </td>
-          <td>
-            ${mgrs.map(m => escHtml(m.name)).join(', ') || '<span class="text-muted">—</span>'}
-          </td>
-          <td class="admin-actions-cell">
-            <button class="admin-action-btn edit-btn" data-id="${t.id}" title="Edit">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
-            <button class="admin-action-btn delete-btn" data-id="${t.id}" title="Delete">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+    tbody.innerHTML = filtered.map(t => `
+      <tr>
+        <td><strong>${escHtml(t.name)}</strong></td>
+        <td>${t.domain_name ? escHtml(t.domain_name) : '<span class="text-muted">—</span>'}</td>
+        <td>${t.shift != null ? t.shift : '<span class="text-muted">—</span>'}</td>
+        <td class="admin-actions-cell">
+          <button class="admin-action-btn edit-btn" data-id="${t.id}" title="Edit">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="admin-action-btn delete-btn" data-id="${t.id}" title="Delete">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </td>
+      </tr>
+    `).join('');
 
-    content.querySelectorAll('th.sortable').forEach(th => {
+    content.querySelectorAll('#teamsTable th.sortable').forEach(th => {
       th.classList.toggle('sort-asc', th.dataset.sort === sortField && sortDir === 1);
       th.classList.toggle('sort-desc', th.dataset.sort === sortField && sortDir === -1);
     });
@@ -487,7 +483,7 @@ function renderTeamsTable(content, teams, users, domains) {
 
   content.querySelector('#addTeamBtn').addEventListener('click', () => openTeamModal(content, null, domains));
 
-  content.querySelector('#teamsBody').addEventListener('click', async (e) => {
+  content.querySelector('#teamsBody').addEventListener('click', async e => {
     const editBtn = e.target.closest('.edit-btn');
     const deleteBtn = e.target.closest('.delete-btn');
 
@@ -503,7 +499,7 @@ function renderTeamsTable(content, teams, users, domains) {
       if (!team) return;
       const confirmed = await showConfirm({
         title: 'Delete Team',
-        message: `Are you sure you want to delete <strong>${escHtml(team.name)}</strong>? Members must be reassigned first.`,
+        message: `Are you sure you want to delete <strong>${escHtml(team.name)}</strong>?`,
       });
       if (!confirmed) return;
       try {
@@ -534,6 +530,13 @@ async function openTeamModal(content, existingTeam, domains) {
         ${domains.map(d => `<option value="${d.id}" ${isEdit && existingTeam.domain_id === d.id ? 'selected' : ''}>${escHtml(d.name)}</option>`).join('')}
       </select>
     </div>
+    <div class="form-group">
+      <label for="modalTeamShift">Shift *</label>
+      <select id="modalTeamShift" required>
+        <option value="">— Select Shift —</option>
+        ${[1, 2, 3, 4].map(n => `<option value="${n}" ${isEdit && existingTeam.shift === n ? 'selected' : ''}>${n}</option>`).join('')}
+      </select>
+    </div>
   `;
 
   const result = await showModal({
@@ -549,18 +552,19 @@ async function openTeamModal(content, existingTeam, domains) {
 
   const name = body.querySelector('#modalTeamName').value.trim();
   const domainId = parseInt(body.querySelector('#modalTeamDomain').value);
+  const shift = parseInt(body.querySelector('#modalTeamShift').value);
 
-  if (!name || !domainId) {
-    showToast({ message: 'Name and domain are required', type: 'error' });
+  if (!name || !domainId || !shift) {
+    showToast({ message: 'Name, domain, and shift are required', type: 'error' });
     return;
   }
 
   try {
     if (isEdit) {
-      await api.put(`/api/teams/${existingTeam.id}`, { name, domain_id: domainId });
+      await api.put(`/api/teams/${existingTeam.id}`, { name, domain_id: domainId, shift });
       showToast({ message: 'Team updated', type: 'success' });
     } else {
-      await api.post('/api/teams/', { name, domain_id: domainId });
+      await api.post('/api/teams/', { name, domain_id: domainId, shift });
       showToast({ message: 'Team created', type: 'success' });
     }
     renderTeamsTab(content);
@@ -582,7 +586,7 @@ async function renderDomainsTab(content) {
     ]);
     renderDomainsTable(content, domains, teams);
   } catch (err) {
-    content.innerHTML = `<p class="admin-error">Failed to load domains: ${err.message}</p>`;
+    content.innerHTML = `<p class="admin-error">Failed to load domains: ${escHtml(err.message)}</p>`;
   }
 }
 
@@ -603,6 +607,7 @@ function renderDomainsTable(content, domains, teams) {
         <thead>
           <tr>
             <th class="sortable" data-sort="name">Name</th>
+            <th>Technical</th>
             <th>Teams</th>
             <th>Actions</th>
           </tr>
@@ -623,7 +628,8 @@ function renderDomainsTable(content, domains, teams) {
     });
 
     filtered.sort((a, b) => {
-      const va = a.name.toLowerCase(), vb = b.name.toLowerCase();
+      const va = a.name.toLowerCase();
+      const vb = b.name.toLowerCase();
       if (va < vb) return -sortDir;
       if (va > vb) return sortDir;
       return 0;
@@ -632,13 +638,17 @@ function renderDomainsTable(content, domains, teams) {
     const tbody = content.querySelector('#domainsBody');
     tbody.innerHTML = filtered.map(d => {
       const domainTeams = teams.filter(t => t.domain_id === d.id);
+      const techBadge = d.is_technical
+        ? '<span class="role-badge" style="background:rgba(34,197,94,.15);color:var(--success);border-color:rgba(34,197,94,.3)">Yes</span>'
+        : '<span class="role-badge" style="background:rgba(239,68,68,.15);color:var(--danger);border-color:rgba(239,68,68,.3)">No</span>';
       return `
         <tr>
           <td><strong>${escHtml(d.name)}</strong></td>
+          <td>${techBadge}</td>
           <td>
             ${domainTeams.length > 0
-              ? domainTeams.map(t => `<span class="domain-team-chip">${escHtml(t.name)}</span>`).join(' ')
-              : '<span class="text-muted">No teams</span>'
+              ? `<span class="admin-count" style="font-size:13px;">${domainTeams.length}</span>`
+              : '<span class="text-muted">0</span>'
             }
           </td>
           <td class="admin-actions-cell">
@@ -652,6 +662,11 @@ function renderDomainsTable(content, domains, teams) {
         </tr>
       `;
     }).join('');
+
+    content.querySelectorAll('th.sortable').forEach(th => {
+      th.classList.toggle('sort-asc', th.dataset.sort === sortField && sortDir === 1);
+      th.classList.toggle('sort-desc', th.dataset.sort === sortField && sortDir === -1);
+    });
   }
 
   renderRows();
@@ -672,7 +687,7 @@ function renderDomainsTable(content, domains, teams) {
 
   content.querySelector('#addDomainBtn').addEventListener('click', () => openDomainModal(content, null));
 
-  content.querySelector('#domainsBody').addEventListener('click', async (e) => {
+  content.querySelector('#domainsBody').addEventListener('click', async e => {
     const editBtn = e.target.closest('.edit-btn');
     const deleteBtn = e.target.closest('.delete-btn');
 
@@ -688,7 +703,7 @@ function renderDomainsTable(content, domains, teams) {
       if (!domain) return;
       const confirmed = await showConfirm({
         title: 'Delete Domain',
-        message: `Are you sure you want to delete <strong>${escHtml(domain.name)}</strong>? All teams must be removed first.`,
+        message: `Are you sure you want to delete <strong>${escHtml(domain.name)}</strong>? All associated teams must be removed first.`,
       });
       if (!confirmed) return;
       try {
@@ -712,6 +727,12 @@ async function openDomainModal(content, existingDomain) {
       <label for="modalDomainName">Domain Name *</label>
       <input type="text" id="modalDomainName" value="${isEdit ? escHtml(existingDomain.name) : ''}" required>
     </div>
+    <div class="form-group">
+      <label class="catalog-checkbox-label">
+        <input type="checkbox" id="modalDomainTechnical" ${!isEdit || existingDomain.is_technical ? 'checked' : ''}>
+        <span>Technical Domain</span>
+      </label>
+    </div>
   `;
 
   const result = await showModal({
@@ -726,20 +747,377 @@ async function openDomainModal(content, existingDomain) {
   if (result !== 'save') return;
 
   const name = body.querySelector('#modalDomainName').value.trim();
+  const isTechnical = body.querySelector('#modalDomainTechnical').checked;
+
   if (!name) {
-    showToast({ message: 'Domain name is required', type: 'error' });
+    showToast({ message: 'Name is required', type: 'error' });
     return;
   }
 
   try {
     if (isEdit) {
-      await api.put(`/api/domains/${existingDomain.id}`, { name });
+      await api.put(`/api/domains/${existingDomain.id}`, { name, is_technical: isTechnical });
       showToast({ message: 'Domain updated', type: 'success' });
     } else {
-      await api.post('/api/domains/', { name });
+      await api.post('/api/domains/', { name, is_technical: isTechnical });
       showToast({ message: 'Domain created', type: 'success' });
     }
     renderDomainsTab(content);
+  } catch (err) {
+    showToast({ message: err.message || 'Operation failed', type: 'error' });
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// CERTIFICATIONS TAB
+// ═══════════════════════════════════════════════════════════
+
+async function renderCertificationsTab(content) {
+  try {
+    const [certDomains, certificates] = await Promise.all([
+      api.get('/api/certification-domains/'),
+      api.get('/api/certificates/'),
+    ]);
+    renderCertificationsContent(content, certDomains, certificates);
+  } catch (err) {
+    content.innerHTML = `<p class="admin-error">Failed to load certifications: ${escHtml(err.message)}</p>`;
+  }
+}
+
+function renderCertificationsContent(content, certDomains, certificates) {
+  const certDomainMap = Object.fromEntries(certDomains.map(d => [d.id, d.name]));
+
+  content.innerHTML = `
+    <div class="catalog-section">
+      <div class="admin-tab-header">
+        <h2>Certification Domains <span class="admin-count">${certDomains.length}</span></h2>
+        <div class="admin-tab-actions">
+          <input type="text" class="search-input search-input--sm" id="certDomainSearch" placeholder="Search cert domains...">
+          <button class="btn btn-primary btn-sm" id="addCertDomainBtn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Domain
+          </button>
+        </div>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="certDomainsTable">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="name">Name</th>
+              <th>Description</th>
+              <th>Certificates</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="certDomainsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="catalog-section" style="margin-top: 32px;">
+      <div class="admin-tab-header">
+        <h2>Certificates <span class="admin-count">${certificates.length}</span></h2>
+        <div class="admin-tab-actions">
+          <input type="text" class="search-input search-input--sm" id="certSearch" placeholder="Search certificates...">
+          <button class="btn btn-primary btn-sm" id="addCertBtn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Certificate
+          </button>
+        </div>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table" id="certsTable">
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="name">Name</th>
+              <th>Description</th>
+              <th class="sortable" data-sort="domain">Domain</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="certsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  let cdSearch = '';
+  let cdSort = 'name';
+  let cdDir = 1;
+
+  function renderCertDomainRows() {
+    const filtered = certDomains.filter(d => {
+      if (!cdSearch) return true;
+      return d.name.toLowerCase().includes(cdSearch.toLowerCase());
+    });
+    filtered.sort((a, b) => {
+      const va = a.name.toLowerCase(), vb = b.name.toLowerCase();
+      if (va < vb) return -cdDir;
+      if (va > vb) return cdDir;
+      return 0;
+    });
+
+    const tbody = content.querySelector('#certDomainsBody');
+    tbody.innerHTML = filtered.map(d => {
+      const certCount = certificates.filter(c => c.certification_domain_id === d.id).length;
+      return `
+        <tr>
+          <td><strong>${escHtml(d.name)}</strong></td>
+          <td>${d.description ? escHtml(d.description) : '<span class="text-muted">—</span>'}</td>
+          <td><span class="admin-count" style="font-size:13px;">${certCount}</span></td>
+          <td class="admin-actions-cell">
+            <button class="admin-action-btn edit-btn" data-id="${d.id}" data-type="certdomain" title="Edit">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="admin-action-btn delete-btn" data-id="${d.id}" data-type="certdomain" title="Delete">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  renderCertDomainRows();
+
+  content.querySelector('#certDomainSearch').addEventListener('input', e => {
+    cdSearch = e.target.value;
+    renderCertDomainRows();
+  });
+
+  content.querySelector('#certDomainsTable thead').addEventListener('click', e => {
+    const th = e.target.closest('th.sortable');
+    if (!th) return;
+    if (cdSort === th.dataset.sort) cdDir *= -1;
+    else { cdSort = th.dataset.sort; cdDir = 1; }
+    renderCertDomainRows();
+  });
+
+  content.querySelector('#addCertDomainBtn').addEventListener('click', () => openCertDomainModal(content, null));
+
+  content.querySelector('#certDomainsBody').addEventListener('click', async e => {
+    const editBtn = e.target.closest('.edit-btn[data-type="certdomain"]');
+    const deleteBtn = e.target.closest('.delete-btn[data-type="certdomain"]');
+
+    if (editBtn) {
+      const id = parseInt(editBtn.dataset.id);
+      const item = certDomains.find(d => d.id === id);
+      if (item) openCertDomainModal(content, item);
+    }
+
+    if (deleteBtn) {
+      const id = parseInt(deleteBtn.dataset.id);
+      const item = certDomains.find(d => d.id === id);
+      if (!item) return;
+      const confirmed = await showConfirm({
+        title: 'Delete Certification Domain',
+        message: `Are you sure you want to delete <strong>${escHtml(item.name)}</strong>?`,
+      });
+      if (!confirmed) return;
+      try {
+        await api.del(`/api/certification-domains/${id}`);
+        showToast({ message: 'Certification domain deleted', type: 'success' });
+        renderCertificationsTab(content);
+      } catch (err) {
+        showToast({ message: err.message || 'Failed to delete', type: 'error' });
+      }
+    }
+  });
+
+  let certSearch = '';
+  let certSort = 'name';
+  let certDir = 1;
+
+  function renderCertRows() {
+    const filtered = certificates.filter(c => {
+      if (!certSearch) return true;
+      return (c.name + ' ' + (certDomainMap[c.certification_domain_id] || '')).toLowerCase().includes(certSearch.toLowerCase());
+    });
+    filtered.sort((a, b) => {
+      let va, vb;
+      if (certSort === 'name') {
+        va = a.name.toLowerCase(); vb = b.name.toLowerCase();
+      } else if (certSort === 'domain') {
+        va = (certDomainMap[a.certification_domain_id] || '').toLowerCase();
+        vb = (certDomainMap[b.certification_domain_id] || '').toLowerCase();
+      }
+      if (va < vb) return -certDir;
+      if (va > vb) return certDir;
+      return 0;
+    });
+
+    const tbody = content.querySelector('#certsBody');
+    tbody.innerHTML = filtered.map(c => `
+      <tr>
+        <td><strong>${escHtml(c.name)}</strong></td>
+        <td>${c.description ? escHtml(c.description) : '<span class="text-muted">—</span>'}</td>
+        <td>${certDomainMap[c.certification_domain_id] || '<span class="text-muted">—</span>'}</td>
+        <td class="admin-actions-cell">
+          <button class="admin-action-btn edit-btn" data-id="${c.id}" data-type="cert" title="Edit">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="admin-action-btn delete-btn" data-id="${c.id}" data-type="cert" title="Delete">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    content.querySelectorAll('#certsTable th.sortable').forEach(th => {
+      th.classList.toggle('sort-asc', th.dataset.sort === certSort && certDir === 1);
+      th.classList.toggle('sort-desc', th.dataset.sort === certSort && certDir === -1);
+    });
+  }
+
+  renderCertRows();
+
+  content.querySelector('#certSearch').addEventListener('input', e => {
+    certSearch = e.target.value;
+    renderCertRows();
+  });
+
+  content.querySelector('#certsTable thead').addEventListener('click', e => {
+    const th = e.target.closest('th.sortable');
+    if (!th) return;
+    if (certSort === th.dataset.sort) certDir *= -1;
+    else { certSort = th.dataset.sort; certDir = 1; }
+    renderCertRows();
+  });
+
+  content.querySelector('#addCertBtn').addEventListener('click', () => openCertModal(content, null, certDomains));
+
+  content.querySelector('#certsBody').addEventListener('click', async e => {
+    const editBtn = e.target.closest('.edit-btn[data-type="cert"]');
+    const deleteBtn = e.target.closest('.delete-btn[data-type="cert"]');
+
+    if (editBtn) {
+      const id = parseInt(editBtn.dataset.id);
+      const item = certificates.find(c => c.id === id);
+      if (item) openCertModal(content, item, certDomains);
+    }
+
+    if (deleteBtn) {
+      const id = parseInt(deleteBtn.dataset.id);
+      const item = certificates.find(c => c.id === id);
+      if (!item) return;
+      const confirmed = await showConfirm({
+        title: 'Delete Certificate',
+        message: `Are you sure you want to delete <strong>${escHtml(item.name)}</strong>?`,
+      });
+      if (!confirmed) return;
+      try {
+        await api.del(`/api/certificates/${id}`);
+        showToast({ message: 'Certificate deleted', type: 'success' });
+        renderCertificationsTab(content);
+      } catch (err) {
+        showToast({ message: err.message || 'Failed to delete', type: 'error' });
+      }
+    }
+  });
+}
+
+async function openCertDomainModal(content, existing) {
+  const isEdit = !!existing;
+
+  const body = document.createElement('div');
+  body.className = 'admin-modal-form';
+  body.innerHTML = `
+    <div class="form-group">
+      <label for="modalCDName">Name *</label>
+      <input type="text" id="modalCDName" value="${isEdit ? escHtml(existing.name) : ''}" required>
+    </div>
+    <div class="form-group">
+      <label for="modalCDDesc">Description</label>
+      <textarea id="modalCDDesc" rows="3">${isEdit && existing.description ? escHtml(existing.description) : ''}</textarea>
+    </div>
+  `;
+
+  const result = await showModal({
+    title: isEdit ? 'Edit Certification Domain' : 'Add Certification Domain',
+    body,
+    actions: [
+      { label: 'Cancel', className: 'btn btn-secondary' },
+      { label: isEdit ? 'Save Changes' : 'Create', className: 'btn btn-primary', value: 'save' },
+    ],
+  });
+
+  if (result !== 'save') return;
+
+  const name = body.querySelector('#modalCDName').value.trim();
+  const description = body.querySelector('#modalCDDesc').value.trim() || null;
+
+  if (!name) {
+    showToast({ message: 'Name is required', type: 'error' });
+    return;
+  }
+
+  try {
+    if (isEdit) {
+      await api.put(`/api/certification-domains/${existing.id}`, { name, description });
+      showToast({ message: 'Certification domain updated', type: 'success' });
+    } else {
+      await api.post('/api/certification-domains/', { name, description });
+      showToast({ message: 'Certification domain created', type: 'success' });
+    }
+    renderCertificationsTab(content);
+  } catch (err) {
+    showToast({ message: err.message || 'Operation failed', type: 'error' });
+  }
+}
+
+async function openCertModal(content, existing, certDomains) {
+  const isEdit = !!existing;
+
+  const body = document.createElement('div');
+  body.className = 'admin-modal-form';
+  body.innerHTML = `
+    <div class="form-group">
+      <label for="modalCertName">Name *</label>
+      <input type="text" id="modalCertName" value="${isEdit ? escHtml(existing.name) : ''}" required>
+    </div>
+    <div class="form-group">
+      <label for="modalCertDesc">Description</label>
+      <textarea id="modalCertDesc" rows="3">${isEdit && existing.description ? escHtml(existing.description) : ''}</textarea>
+    </div>
+    <div class="form-group">
+      <label for="modalCertDomain">Certification Domain *</label>
+      <select id="modalCertDomain" required>
+        <option value="">— Select Domain —</option>
+        ${certDomains.map(d => `<option value="${d.id}" ${isEdit && existing.certification_domain_id === d.id ? 'selected' : ''}>${escHtml(d.name)}</option>`).join('')}
+      </select>
+    </div>
+  `;
+
+  const result = await showModal({
+    title: isEdit ? 'Edit Certificate' : 'Add Certificate',
+    body,
+    actions: [
+      { label: 'Cancel', className: 'btn btn-secondary' },
+      { label: isEdit ? 'Save Changes' : 'Create', className: 'btn btn-primary', value: 'save' },
+    ],
+  });
+
+  if (result !== 'save') return;
+
+  const name = body.querySelector('#modalCertName').value.trim();
+  const description = body.querySelector('#modalCertDesc').value.trim() || null;
+  const certDomainId = parseInt(body.querySelector('#modalCertDomain').value);
+
+  if (!name || !certDomainId) {
+    showToast({ message: 'Name and certification domain are required', type: 'error' });
+    return;
+  }
+
+  try {
+    if (isEdit) {
+      await api.put(`/api/certificates/${existing.id}`, { name, description, certification_domain_id: certDomainId });
+      showToast({ message: 'Certificate updated', type: 'success' });
+    } else {
+      await api.post('/api/certificates/', { name, description, certification_domain_id: certDomainId });
+      showToast({ message: 'Certificate created', type: 'success' });
+    }
+    renderCertificationsTab(content);
   } catch (err) {
     showToast({ message: err.message || 'Operation failed', type: 'error' });
   }

@@ -1,18 +1,17 @@
 import { Router } from './router.js';
 import { Store } from './state.js';
 import { api } from './api.js';
-import { initNav } from './components/nav.js';
+import { initNav } from './components/nav.js?v=6';
 import { initThemeToggle } from './components/theme.js';
 
-import { mountHome } from './pages/home.js?v=5';
+import { mountHome } from './pages/home.js?v=6';
 import { mountLogin } from './pages/login.js';
 import { mountMyPlan } from './pages/my-plan.js';
 import { mountMyTeam } from './pages/my-team.js';
-import { mountCatalog } from './pages/catalog.js?v=5';
+import { mountCatalog } from './pages/catalog.js?v=6';
 import { mountSkillExplorer } from './pages/skill-explorer.js';
 import { mountSettings } from './pages/settings.js';
-import { mountAdmin } from './pages/admin.js';
-import { mountCatalogAdmin } from './pages/catalog-admin.js';
+import { mountAdmin } from './pages/admin.js?v=6';
 
 const routes = {
   '/': { mount: mountHome, title: 'Home', minRole: null },
@@ -24,7 +23,6 @@ const routes = {
   '/skill-explorer': { mount: mountSkillExplorer, title: 'Skill Explorer', minRole: 'engineer' },
   '/settings': { mount: mountSettings, title: 'Settings', minRole: 'engineer' },
   '/admin': { mount: mountAdmin, title: 'Admin Panel', minRole: 'admin' },
-  '/admin/catalog': { mount: mountCatalogAdmin, title: 'Catalog Admin', minRole: 'admin' },
 };
 
 async function init() {

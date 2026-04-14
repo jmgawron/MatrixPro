@@ -30,6 +30,7 @@ class Skill(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
+    icon = Column(String, nullable=True)
     is_archived = Column(Boolean, default=False, nullable=False)
     catalog_version = Column(Integer, default=1, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -57,6 +57,7 @@ def _to_skill_response(skill: Skill) -> SkillResponse:
         id=skill.id,
         name=skill.name,
         description=skill.description,
+        icon=skill.icon,
         is_archived=skill.is_archived,
         catalog_version=skill.catalog_version,
         created_at=skill.created_at,
@@ -151,6 +152,7 @@ def create_skill(
     skill = Skill(
         name=data.name,
         description=data.description,
+        icon=data.icon,
         is_archived=False,
         catalog_version=1,
         created_at=datetime.utcnow(),
@@ -320,6 +322,10 @@ def update_skill(
 
     if data.description is not None:
         skill.description = data.description
+        updated = True
+
+    if data.icon is not None:
+        skill.icon = data.icon
         updated = True
 
     if data.is_archived is not None:

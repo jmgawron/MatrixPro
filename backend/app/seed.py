@@ -314,6 +314,7 @@ def run():
                 "teams": [wifi6],
                 "tags": ["wifi6", "wireless", "rf"],
                 "certs": ["CCNA", "Wi-Fi 6 Specialist"],
+                "icon": "wifi",
             },
             {
                 "name": "WPA3 & Wireless Security",
@@ -321,6 +322,7 @@ def run():
                 "teams": [wifi6, wlan_ctrl],
                 "tags": ["security", "wireless", "wpa3"],
                 "certs": ["CCNA", "SCOR"],
+                "icon": "shield-lock",
             },
             {
                 "name": "Cisco WLC 9800 Administration",
@@ -328,6 +330,7 @@ def run():
                 "teams": [wlan_ctrl],
                 "tags": ["wlc", "wireless", "9800"],
                 "certs": ["ENCOR", "Wi-Fi 6 Specialist"],
+                "icon": "access-point",
             },
             {
                 "name": "Cisco DNA Center for Wireless",
@@ -335,6 +338,7 @@ def run():
                 "teams": [wifi6, wlan_ctrl, wifi_assurance],
                 "tags": ["dnac", "automation", "assurance"],
                 "certs": ["ENCOR", "ENARSI"],
+                "icon": "dashboard",
             },
             {
                 "name": "RF Design & Site Survey",
@@ -342,6 +346,7 @@ def run():
                 "teams": [wifi_assurance],
                 "tags": ["rf", "design", "survey"],
                 "certs": ["Wi-Fi 6 Specialist"],
+                "icon": "antenna",
             },
             # ── Security ──
             {
@@ -350,6 +355,7 @@ def run():
                 "teams": [firewall],
                 "tags": ["firewall", "ftd", "ips"],
                 "certs": ["SCOR", "SVPN"],
+                "icon": "firewall",
             },
             {
                 "name": "ASA Firewall Administration",
@@ -357,6 +363,7 @@ def run():
                 "teams": [firewall, vpn_team],
                 "tags": ["firewall", "asa", "nat"],
                 "certs": ["SCOR"],
+                "icon": "shield",
             },
             {
                 "name": "Cisco ISE Configuration",
@@ -364,6 +371,7 @@ def run():
                 "teams": [ise_team],
                 "tags": ["ise", "aaa", "identity"],
                 "certs": ["SISE", "SCOR"],
+                "icon": "fingerprint",
             },
             {
                 "name": "Zero Trust Architecture",
@@ -371,6 +379,7 @@ def run():
                 "teams": [ise_team, firewall],
                 "tags": ["ztna", "security", "zero-trust"],
                 "certs": ["CyberOps Assoc", "SCOR"],
+                "icon": "lock",
             },
             {
                 "name": "AnyConnect & Remote Access VPN",
@@ -378,6 +387,7 @@ def run():
                 "teams": [vpn_team],
                 "tags": ["vpn", "anyconnect", "remote-access"],
                 "certs": ["SVPN"],
+                "icon": "vpn",
             },
             {
                 "name": "Site-to-Site VPN Technologies",
@@ -385,6 +395,7 @@ def run():
                 "teams": [vpn_team, routing_team],
                 "tags": ["vpn", "ipsec", "dmvpn"],
                 "certs": ["SVPN", "ENARSI"],
+                "icon": "tunnel",
             },
             # ── Switching & Routing ──
             {
@@ -393,6 +404,7 @@ def run():
                 "teams": [campus_sw],
                 "tags": ["switching", "catalyst", "9000"],
                 "certs": ["CCNA", "ENCOR"],
+                "icon": "switch",
             },
             {
                 "name": "SDA & Campus Fabric",
@@ -400,6 +412,7 @@ def run():
                 "teams": [campus_sw, routing_team],
                 "tags": ["sda", "fabric", "vxlan"],
                 "certs": ["ENCOR"],
+                "icon": "fabric",
             },
             {
                 "name": "OSPF & EIGRP Deep Dive",
@@ -407,6 +420,7 @@ def run():
                 "teams": [routing_team],
                 "tags": ["routing", "ospf", "eigrp"],
                 "certs": ["CCNA", "ENARSI"],
+                "icon": "route",
             },
             {
                 "name": "BGP for Enterprise",
@@ -414,6 +428,7 @@ def run():
                 "teams": [routing_team, sdwan_team],
                 "tags": ["routing", "bgp", "wan"],
                 "certs": ["ENARSI"],
+                "icon": "globe",
             },
             {
                 "name": "Cisco SD-WAN (Viptela)",
@@ -421,6 +436,7 @@ def run():
                 "teams": [sdwan_team],
                 "tags": ["sdwan", "viptela", "wan"],
                 "certs": ["SD-WAN Design"],
+                "icon": "cloud-network",
             },
             {
                 "name": "SD-WAN Security Integration",
@@ -428,6 +444,7 @@ def run():
                 "teams": [sdwan_team, firewall],
                 "tags": ["sdwan", "security", "umbrella"],
                 "certs": ["SD-WAN Design", "SCOR"],
+                "icon": "cloud-lock",
             },
             # ── Collaboration ──
             {
@@ -436,6 +453,7 @@ def run():
                 "teams": [webex_team],
                 "tags": ["webex", "calling", "cloud"],
                 "certs": ["CLCOR"],
+                "icon": "phone",
             },
             {
                 "name": "CUCM Administration",
@@ -443,6 +461,7 @@ def run():
                 "teams": [uc_team],
                 "tags": ["cucm", "voip", "dial-plan"],
                 "certs": ["CLCOR", "CLICA"],
+                "icon": "server-phone",
             },
             {
                 "name": "SIP Protocol & Oribits",
@@ -450,6 +469,7 @@ def run():
                 "teams": [webex_team, uc_team],
                 "tags": ["sip", "voip", "protocol"],
                 "certs": ["CLCOR"],
+                "icon": "protocol",
             },
             {
                 "name": "Webex Meetings & Devices",
@@ -457,6 +477,7 @@ def run():
                 "teams": [webex_team],
                 "tags": ["webex", "devices", "meetings"],
                 "certs": [],
+                "icon": "video",
             },
             # ── Data Center ──
             {
@@ -465,6 +486,7 @@ def run():
                 "teams": [aci_team],
                 "tags": ["aci", "datacenter", "fabric"],
                 "certs": ["DCCOR", "DCACI"],
+                "icon": "datacenter",
             },
             {
                 "name": "Nexus NX-OS Administration",
@@ -472,6 +494,7 @@ def run():
                 "teams": [aci_team],
                 "tags": ["nexus", "datacenter", "nxos"],
                 "certs": ["DCCOR"],
+                "icon": "rack-server",
             },
             # ── Cross-domain ──
             {
@@ -480,6 +503,7 @@ def run():
                 "teams": [wifi6, campus_sw, routing_team, aci_team],
                 "tags": ["automation", "python", "devnet"],
                 "certs": ["DevNet Assoc", "DEVCOR"],
+                "icon": "code",
             },
             {
                 "name": "Terraform for Network Infra",
@@ -487,6 +511,7 @@ def run():
                 "teams": [aci_team, sdwan_team],
                 "tags": ["automation", "terraform", "iac"],
                 "certs": ["DEVCOR"],
+                "icon": "infrastructure",
             },
             {
                 "name": "Cisco ThousandEyes",
@@ -494,6 +519,7 @@ def run():
                 "teams": [wifi_assurance, sdwan_team, webex_team],
                 "tags": ["monitoring", "thousandeyes", "assurance"],
                 "certs": [],
+                "icon": "eye",
             },
             # ── Soft skills (no team / non-technical) ──
             {
@@ -502,6 +528,7 @@ def run():
                 "teams": [],
                 "tags": ["communication", "documentation"],
                 "certs": [],
+                "icon": "document",
             },
             {
                 "name": "Customer Communication",
@@ -509,6 +536,7 @@ def run():
                 "teams": [],
                 "tags": ["communication", "soft-skill"],
                 "certs": [],
+                "icon": "users",
             },
             {
                 "name": "Root Cause Analysis",
@@ -516,6 +544,7 @@ def run():
                 "teams": [],
                 "tags": ["troubleshooting", "methodology"],
                 "certs": [],
+                "icon": "search",
             },
             {
                 "name": "Lab Recreation & Testing",
@@ -523,6 +552,7 @@ def run():
                 "teams": [],
                 "tags": ["lab", "testing", "cml"],
                 "certs": [],
+                "icon": "flask",
             },
         ]
 
@@ -578,6 +608,7 @@ def run():
             skill = Skill(
                 name=sd["name"],
                 description=sd["description"],
+                icon=sd.get("icon"),
                 is_archived=False,
                 catalog_version=1,
             )

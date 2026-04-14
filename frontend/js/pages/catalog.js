@@ -4,6 +4,7 @@ import { showSkeleton } from '../components/skeleton.js';
 import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
 import { createElement } from '../utils/dom.js';
+import { getSkillIconSVG, SKILL_ICONS, ICON_CATEGORIES } from '../components/icons.js';
 
 // ─── Module-level page state ─────────────────────────────────────────────────
 
@@ -693,9 +694,19 @@ function buildSkillCard(skill) {
 
   // Header row with name and admin/manager actions
   const headerRow = createElement('div', { className: 'tool-card-header' });
+
+  const headerLeft = createElement('div', { className: 'tool-card-header-left' });
+
+  if (skill.icon && SKILL_ICONS[skill.icon]) {
+    const iconWrap = createElement('div', { className: 'tool-card-icon' });
+    iconWrap.innerHTML = getSkillIconSVG(skill.icon, 22);
+    headerLeft.appendChild(iconWrap);
+  }
+
   const nameEl = createElement('div', { className: 'tool-card-name' });
   nameEl.textContent = skill.name;
-  headerRow.appendChild(nameEl);
+  headerLeft.appendChild(nameEl);
+  headerRow.appendChild(headerLeft);
 
   if (canEdit) {
     const actions = createElement('div', { className: 'card-admin-actions' });
@@ -1489,7 +1500,7 @@ async function openSkillModal(existingSkill) {
         });
       });
 
-      _formDataCache = { teams, certificates };
+      _formDataCache = { teams, certificates, orgTree: Array.isArray(orgTree) ? orgTree : [] };
     } catch (err) {
       showToast('Failed to load form data', 'error');
       return;
@@ -1551,39 +1562,23 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   if (descTextarea) descTextarea.textContent = skill?.description || '';
   form.appendChild(descGroup);
 
-  // Teams
-  const existingTeamIds = Array.isArray(skill?.teams)
-    ? skill.teams.map(t => String(t.id))
-    : (Array.isArray(skill?.team_ids) ? skill.team_ids.map(String) : []);
+  // Icon picker
+  form.appendChild(buildIconPicker(skill?.icon || null));
+
+  // Teams — hierarchical tree (Shift → Domain → Team)
+  const existingTeamIds = new Set(
+    Array.isArray(skill?.teams)
+      ? skill.teams.map(t => Number(t.id))
+      : (Array.isArray(skill?.team_ids) ? skill.team_ids.map(Number) : [])
+  );
 
   const teamsGroupEl = createElement('div', { className: 'form-group' });
   const teamsLabel = createElement('div', { className: 'form-label' });
   teamsLabel.textContent = 'Teams';
-  const teamsGrid = createElement('div', { className: 'catalog-teams-grid' });
-
-  formData.teams.forEach(team => {
-    const checkLabel = createElement('label', { className: 'catalog-check-label' });
-    const check = createElement('input', { type: 'checkbox', value: team.id });
-    check.className = 'skill-team-check';
-    check.checked = existingTeamIds.includes(String(team.id));
-
-    // Manager: can only assign/unassign their own team
-    if (isManager && !isAdmin) {
-      if (String(team.id) === String(user?.team_id)) {
-        check.checked = true;
-        check.disabled = true;
-      } else {
-        check.disabled = true;
-      }
-    }
-
-    checkLabel.appendChild(check);
-    checkLabel.appendChild(document.createTextNode(team.name));
-    teamsGrid.appendChild(checkLabel);
-  });
-
   teamsGroupEl.appendChild(teamsLabel);
-  teamsGroupEl.appendChild(teamsGrid);
+
+  const orgTree = formData.orgTree || [];
+  teamsGroupEl.appendChild(buildTeamTree(orgTree, existingTeamIds, isAdmin, isManager, user));
   form.appendChild(teamsGroupEl);
 
   // Certificates
@@ -1627,6 +1622,145 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   return form;
 }
 
+
+function buildIconPicker(selectedIcon) {
+  const group = createElement('div', { className: 'form-group' });
+  const label = createElement('div', { className: 'form-label' });
+  label.textContent = 'Icon';
+  group.appendChild(label);
+
+  const picker = createElement('div', { className: 'skill-icon-picker' });
+
+  const searchInput = createElement('input', { className: 'icon-picker-search' });
+  searchInput.type = 'text';
+  searchInput.placeholder = 'Search icons...';
+  picker.appendChild(searchInput);
+
+  const categoriesContainer = createElement('div', { className: 'icon-picker-categories' });
+
+  function renderIcons(filter) {
+    categoriesContainer.innerHTML = '';
+    const lowerFilter = (filter || '').toLowerCase();
+
+    Object.entries(ICON_CATEGORIES).forEach(([catName, iconKeys]) => {
+      const filtered = lowerFilter
+        ? iconKeys.filter(k => k.toLowerCase().includes(lowerFilter))
+        : iconKeys;
+      if (!filtered.length) return;
+
+      const catLabel = createElement('div', { className: 'icon-picker-category-label' });
+      catLabel.textContent = catName;
+      categoriesContainer.appendChild(catLabel);
+
+      const grid = createElement('div', { className: 'icon-picker-grid' });
+      filtered.forEach(key => {
+        const opt = createElement('div', { className: 'skill-icon-option' });
+        if (key === selectedIcon) opt.classList.add('selected');
+        opt.dataset.icon = key;
+        opt.title = key;
+        opt.innerHTML = getSkillIconSVG(key, 22);
+        opt.addEventListener('click', () => {
+          picker.querySelectorAll('.skill-icon-option.selected').forEach(el => el.classList.remove('selected'));
+          opt.classList.add('selected');
+          selectedIcon = key;
+        });
+        grid.appendChild(opt);
+      });
+      categoriesContainer.appendChild(grid);
+    });
+  }
+
+  renderIcons('');
+  searchInput.addEventListener('input', () => renderIcons(searchInput.value));
+
+  picker.appendChild(categoriesContainer);
+  group.appendChild(picker);
+  return group;
+}
+
+
+function buildTeamTree(orgTree, existingTeamIds, isAdmin, isManager, user) {
+  const treeEl = createElement('div', { className: 'skill-team-tree' });
+
+  const shiftMap = new Map();
+  orgTree.forEach(domain => {
+    if (!domain.teams || !domain.teams.length) return;
+    domain.teams.forEach(team => {
+      const shift = team.shift || 0;
+      if (!shiftMap.has(shift)) shiftMap.set(shift, []);
+      shiftMap.get(shift).push({ domain: domain.name, domainId: domain.id, team });
+    });
+  });
+
+  const sortedShifts = Array.from(shiftMap.keys()).sort((a, b) => a - b);
+
+  sortedShifts.forEach(shift => {
+    const shiftItems = shiftMap.get(shift);
+    const shiftNode = createElement('div', { className: 'team-tree-shift' });
+
+    const shiftLabel = shift === 0 ? 'No Shift' : `Shift ${shift}`;
+    const shiftToggle = createElement('div', { className: 'team-tree-toggle' });
+    const chevron = createElement('span', { className: 'tree-chevron open' });
+    chevron.textContent = '\u25B6';
+    shiftToggle.appendChild(chevron);
+    shiftToggle.appendChild(document.createTextNode(shiftLabel));
+    shiftNode.appendChild(shiftToggle);
+
+    const shiftChildren = createElement('div', { className: 'team-tree-children' });
+
+    const domainGroups = new Map();
+    shiftItems.forEach(item => {
+      if (!domainGroups.has(item.domainId)) {
+        domainGroups.set(item.domainId, { name: item.domain, teams: [] });
+      }
+      domainGroups.get(item.domainId).teams.push(item.team);
+    });
+
+    domainGroups.forEach((dg) => {
+      const domainNode = createElement('div', { className: 'team-tree-domain' });
+      const domainLabel = createElement('div', { className: 'team-tree-domain-label' });
+      domainLabel.textContent = dg.name;
+      domainNode.appendChild(domainLabel);
+
+      const teamsContainer = createElement('div', { className: 'team-tree-teams' });
+
+      dg.teams.forEach(team => {
+        const lbl = createElement('label');
+        const check = createElement('input', { type: 'checkbox', value: team.id });
+        check.className = 'skill-team-check';
+        check.checked = existingTeamIds.has(Number(team.id));
+
+        if (isManager && !isAdmin) {
+          if (Number(team.id) === Number(user?.team_id)) {
+            check.checked = true;
+            check.disabled = true;
+          } else {
+            check.disabled = true;
+          }
+        }
+
+        lbl.appendChild(check);
+        lbl.appendChild(document.createTextNode(team.name));
+        teamsContainer.appendChild(lbl);
+      });
+
+      domainNode.appendChild(teamsContainer);
+      shiftChildren.appendChild(domainNode);
+    });
+
+    shiftNode.appendChild(shiftChildren);
+    treeEl.appendChild(shiftNode);
+
+    shiftToggle.addEventListener('click', () => {
+      const isOpen = chevron.classList.contains('open');
+      chevron.classList.toggle('open', !isOpen);
+      shiftChildren.classList.toggle('collapsed', isOpen);
+    });
+  });
+
+  return treeEl;
+}
+
 function buildFormGroup(labelText, inputId, inputTag, attrs, required) {
   const group = createElement('div', { className: 'form-group' });
   const label = createElement('label', { className: required ? 'form-label required' : 'form-label', htmlFor: inputId });
@@ -1652,6 +1786,9 @@ function readSkillForm(formEl) {
   const name = formEl.querySelector('#skill-name')?.value.trim() || '';
   const description = formEl.querySelector('#skill-desc')?.value.trim() || '';
 
+  const selectedIconEl = formEl.querySelector('.skill-icon-option.selected');
+  const icon = selectedIconEl ? selectedIconEl.dataset.icon : null;
+
   const teamChecks = formEl.querySelectorAll('.skill-team-check:checked');
   const team_ids = Array.from(teamChecks).map(c => Number(c.value));
 
@@ -1661,7 +1798,7 @@ function readSkillForm(formEl) {
   const tagsRaw = formEl.querySelector('#skill-tags')?.value.trim() || '';
   const tag_names = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-  return { name, description, team_ids, certificate_ids, tag_names };
+  return { name, description, icon, team_ids, certificate_ids, tag_names };
 }
 
 function validateSkillForm(data) {

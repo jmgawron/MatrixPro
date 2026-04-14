@@ -1387,6 +1387,9 @@ tbody tr:hover td {
   box-shadow: var(--shadow-lg);
   width: 100%;
   max-width: 480px;
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
   transform: scale(.95);
   transition: transform 150ms ease-out;
 }
@@ -1405,6 +1408,7 @@ tbody tr:hover td {
   justify-content: space-between;
   padding: 20px 24px 16px;
   border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -1435,6 +1439,9 @@ tbody tr:hover td {
 
 .modal-body {
   padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-footer {
@@ -1443,6 +1450,7 @@ tbody tr:hover td {
   gap: 10px;
   padding: 16px 24px 20px;
   border-top: 1px solid var(--border-soft);
+  flex-shrink: 0;
 }
 
 
@@ -5507,6 +5515,192 @@ textarea.is-error:focus {
 .catalog-form-hint {
   margin-top: -10px;
   margin-bottom: 16px;
+}
+
+/* ─── Skill card icon (ide.cisco.com style) ──────────────────────────────── */
+
+.tool-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+.tool-card-icon svg {
+  width: 22px;
+  height: 22px;
+}
+[data-theme="light"] .tool-card-icon {
+  background: linear-gradient(135deg, #0891b2, #2563eb);
+}
+
+.tool-card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Icon picker (modal) ─────────────────────────────────────────────────── */
+
+.skill-icon-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.icon-picker-category-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 6px;
+}
+
+.skill-icon-option {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.skill-icon-option:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+.skill-icon-option.selected {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent);
+}
+.skill-icon-option svg {
+  width: 22px;
+  height: 22px;
+}
+.skill-icon-option .icon-label {
+  display: none;
+}
+
+.icon-picker-search {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+/* ─── Hierarchical team tree (modal) ──────────────────────────────────────── */
+
+.skill-team-tree {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  background: var(--bg-card);
+}
+
+.team-tree-shift {
+  margin-bottom: 4px;
+}
+
+.team-tree-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.team-tree-toggle:hover {
+  background: var(--bg-elevated);
+}
+.team-tree-toggle .tree-chevron {
+  display: inline-block;
+  width: 14px;
+  text-align: center;
+  transition: transform 0.15s;
+  font-size: 11px;
+}
+.team-tree-toggle .tree-chevron.open {
+  transform: rotate(90deg);
+}
+
+.team-tree-domain {
+  padding-left: 18px;
+}
+
+.team-tree-domain-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+.team-tree-domain-label:hover {
+  color: var(--text-primary);
+}
+
+.team-tree-teams {
+  padding-left: 20px;
+}
+
+.team-tree-teams label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.team-tree-teams label:hover {
+  color: var(--text-primary);
+}
+.team-tree-teams label input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+.team-tree-teams label input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.team-tree-children {
+  overflow: hidden;
+  transition: max-height 0.2s ease;
+}
+.team-tree-children.collapsed {
+  max-height: 0 !important;
 }
 
 

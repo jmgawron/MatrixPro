@@ -63,6 +63,7 @@ class CertificateInfo(BaseModel):
 class SkillCreate(BaseModel):
     name: str
     description: str | None = None
+    icon: str | None = None
     team_ids: list[int] = []
     tag_names: list[str] = []
     certificate_ids: list[int] = []
@@ -71,6 +72,7 @@ class SkillCreate(BaseModel):
 class SkillUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
+    icon: str | None = None
     is_archived: bool | None = None
     team_ids: list[int] | None = None
     tag_names: list[str] | None = None
@@ -89,6 +91,7 @@ class SkillResponse(BaseModel):
     id: int
     name: str
     description: str | None = None
+    icon: str | None = None
     is_archived: bool
     catalog_version: int
     created_at: datetime

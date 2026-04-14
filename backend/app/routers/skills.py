@@ -62,7 +62,10 @@ def _to_skill_response(skill: Skill) -> SkillResponse:
         created_at=skill.created_at,
         updated_at=skill.updated_at,
         tags=[TagResponse.model_validate(st.tag) for st in skill.skill_tags],
-        teams=[TeamInfo(id=st.team.id, name=st.team.name) for st in skill.skill_teams],
+        teams=[
+            TeamInfo(id=st.team.id, name=st.team.name, shift=st.team.shift)
+            for st in skill.skill_teams
+        ],
         certificates=[
             CertificateInfo(id=sc.certificate.id, name=sc.certificate.name)
             for sc in skill.skill_certificates

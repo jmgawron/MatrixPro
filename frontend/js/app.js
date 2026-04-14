@@ -4,11 +4,11 @@ import { api } from './api.js';
 import { initNav } from './components/nav.js';
 import { initThemeToggle } from './components/theme.js';
 
-import { mountHome } from './pages/home.js?v=2';
+import { mountHome } from './pages/home.js?v=3';
 import { mountLogin } from './pages/login.js';
 import { mountMyPlan } from './pages/my-plan.js';
 import { mountMyTeam } from './pages/my-team.js';
-import { mountCatalog } from './pages/catalog.js?v=2';
+import { mountCatalog } from './pages/catalog.js?v=3';
 import { mountSkillExplorer } from './pages/skill-explorer.js';
 import { mountSettings } from './pages/settings.js';
 import { mountAdmin } from './pages/admin.js';

@@ -6621,19 +6621,19 @@ textarea.is-error:focus {
 }
 
 .cat-shift-btn.active {
-  background: var(--info);
+  background: var(--accent);
   color: #fff;
-  border-color: var(--info);
+  border-color: var(--accent);
 }
 
 .cat-shift-btn:hover:not(.active) {
-  background: rgba(6, 182, 212, 0.12);
-  color: var(--info);
-  border-color: var(--info);
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 [data-theme="light"] .cat-shift-btn:hover:not(.active) {
-  background: rgba(6, 182, 212, 0.1);
+  background: rgba(59, 130, 246, 0.08);
 }
 
 .home-shift-filters {

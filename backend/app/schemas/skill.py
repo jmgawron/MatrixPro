@@ -80,6 +80,7 @@ class SkillUpdate(BaseModel):
 class TeamInfo(BaseModel):
     id: int
     name: str
+    shift: int | None = None
 
     model_config = {"from_attributes": True}
 

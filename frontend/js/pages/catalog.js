@@ -246,32 +246,6 @@ function buildToolbar() {
   tagWrap.appendChild(tagInput);
   leftGroup.appendChild(tagWrap);
 
-  // Shift filter toggles (org tab only)
-  const shiftFiltersEl = createElement('div', { className: 'cat-shift-filters' });
-  for (let i = 1; i <= 4; i++) {
-    const btn = createElement('button', { className: 'cat-shift-btn active' });
-    btn.textContent = `Shift ${i}`;
-    btn.dataset.shift = String(i);
-    btn.addEventListener('click', () => {
-      const shift = i;
-      if (_activeShifts.has(shift)) {
-        if (_activeShifts.size > 1) {
-          _activeShifts.delete(shift);
-          btn.classList.remove('active');
-        }
-      } else {
-        _activeShifts.add(shift);
-        btn.classList.add('active');
-      }
-      delete _treeCache['org'];
-      loadTabTree('org', _treeEl);
-      fetchAndRenderSkills();
-      recomputeFilteredStats();
-    });
-    shiftFiltersEl.appendChild(btn);
-  }
-  leftGroup.appendChild(shiftFiltersEl);
-
   const sortWrap = createElement('div', { style: 'position:relative;' });
   const sortBtn = createElement('button', { className: 'cat-sort-btn' });
   sortBtn.innerHTML = '&#x21C5; Sort';
@@ -320,6 +294,32 @@ function buildToolbar() {
   toolbar.appendChild(leftGroup);
 
   const rightGroup = createElement('div', { className: 'cat-toolbar-right' });
+
+  // Shift filter toggles (org tab only) — positioned in right group before Show Archived
+  const shiftFiltersEl = createElement('div', { className: 'cat-shift-filters' });
+  for (let i = 1; i <= 4; i++) {
+    const btn = createElement('button', { className: 'cat-shift-btn active' });
+    btn.textContent = `Shift ${i}`;
+    btn.dataset.shift = String(i);
+    btn.addEventListener('click', () => {
+      const shift = i;
+      if (_activeShifts.has(shift)) {
+        if (_activeShifts.size > 1) {
+          _activeShifts.delete(shift);
+          btn.classList.remove('active');
+        }
+      } else {
+        _activeShifts.add(shift);
+        btn.classList.add('active');
+      }
+      delete _treeCache['org'];
+      loadTabTree('org', _treeEl);
+      fetchAndRenderSkills();
+      recomputeFilteredStats();
+    });
+    shiftFiltersEl.appendChild(btn);
+  }
+  rightGroup.appendChild(shiftFiltersEl);
 
   // Archived toggle (admin and manager only)
   if (canEdit) {
@@ -650,13 +650,15 @@ function getNonTechnicalTeamIds() {
   return ids;
 }
 
-/** Get team IDs belonging to technical domains from cached org-tree */
+/** Get team IDs belonging to technical domains from cached org-tree, filtered by active shifts */
 function getTechnicalTeamIds() {
   const treeData = _treeCache['org'] || _treeCache['non-technical'];
   if (!Array.isArray(treeData)) return null;
   const ids = new Set();
   treeData.filter(d => d.is_technical === true).forEach(domain => {
-    (Array.isArray(domain.teams) ? domain.teams : []).forEach(t => ids.add(t.id));
+    (Array.isArray(domain.teams) ? domain.teams : []).forEach(t => {
+      if (_activeShifts.has(t.shift)) ids.add(t.id);
+    });
   });
   return ids;
 }

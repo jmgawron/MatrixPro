@@ -229,24 +229,7 @@ function buildToolbar() {
   searchWrap.appendChild(searchInput);
   leftGroup.appendChild(searchWrap);
 
-  // Tag search
-  const tagWrap = createElement('div', { className: 'catalog-search-wrap' });
-  const tagInput = createElement('input', {
-    type: 'text',
-    placeholder: 'Filter by tag...',
-    className: 'search-input',
-    id: 'cat-tag-input',
-  });
-  tagInput.addEventListener('input', () => {
-    clearTimeout(_debounceTimer);
-    _debounceTimer = setTimeout(() => {
-      _tagQuery = tagInput.value.trim().toLowerCase();
-      fetchAndRenderSkills();
-    }, 300);
-  });
-  tagWrap.appendChild(tagInput);
-  leftGroup.appendChild(tagWrap);
-
+  // Sort button + dropdown menu
   const sortWrap = createElement('div', { style: 'position:relative;' });
   const sortBtn = createElement('button', { className: 'cat-sort-btn' });
   sortBtn.innerHTML = '&#x21C5; Sort';
@@ -292,11 +275,7 @@ function buildToolbar() {
   sortWrap.appendChild(sortBtn);
   leftGroup.appendChild(sortWrap);
 
-  toolbar.appendChild(leftGroup);
-
-  const rightGroup = createElement('div', { className: 'cat-toolbar-right' });
-
-  // Shift filter toggles (org tab only) — positioned in right group before Show Archived
+  // Shift filter toggles (org tab only)
   const shiftFiltersEl = createElement('div', { className: 'cat-shift-filters' });
   for (let i = 1; i <= 4; i++) {
     const btn = createElement('button', { className: 'cat-shift-btn active' });
@@ -320,7 +299,25 @@ function buildToolbar() {
     });
     shiftFiltersEl.appendChild(btn);
   }
-  rightGroup.appendChild(shiftFiltersEl);
+  leftGroup.appendChild(shiftFiltersEl);
+
+  // Tag search
+  const tagWrap = createElement('div', { className: 'catalog-search-wrap' });
+  const tagInput = createElement('input', {
+    type: 'text',
+    placeholder: 'Filter by tag...',
+    className: 'search-input',
+    id: 'cat-tag-input',
+  });
+  tagInput.addEventListener('input', () => {
+    clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(() => {
+      _tagQuery = tagInput.value.trim().toLowerCase();
+      fetchAndRenderSkills();
+    }, 300);
+  });
+  tagWrap.appendChild(tagInput);
+  leftGroup.appendChild(tagWrap);
 
   // Archived toggle (admin and manager only)
   if (canEdit) {
@@ -332,8 +329,12 @@ function buildToolbar() {
     });
     archivedLabel.appendChild(archivedCheck);
     archivedLabel.appendChild(document.createTextNode(' Show Archived'));
-    rightGroup.appendChild(archivedLabel);
+    leftGroup.appendChild(archivedLabel);
   }
+
+  toolbar.appendChild(leftGroup);
+
+  const rightGroup = createElement('div', { className: 'cat-toolbar-right' });
 
   // Add New Skill button (admin and manager only)
   if (canEdit) {

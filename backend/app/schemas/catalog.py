@@ -1,30 +1,6 @@
-from datetime import date, datetime
+from datetime import datetime
 
 from pydantic import BaseModel
-
-
-# ---------------------------------------------------------------------------
-# Shifts
-# ---------------------------------------------------------------------------
-
-
-class ShiftCreate(BaseModel):
-    name: str
-    domain_id: int
-
-
-class ShiftUpdate(BaseModel):
-    name: str | None = None
-    domain_id: int | None = None
-
-
-class ShiftResponse(BaseModel):
-    id: int
-    name: str
-    domain_id: int
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
 
 
 # ---------------------------------------------------------------------------
@@ -79,57 +55,14 @@ class CertificateResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Campaigns
-# ---------------------------------------------------------------------------
-
-
-class CampaignCreate(BaseModel):
-    name: str
-    description: str | None = None
-    organisation_id: int
-    domain_id: int
-    start_date: date
-    end_date: date
-    is_mandatory: bool = False
-
-
-class CampaignUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    organisation_id: int | None = None
-    domain_id: int | None = None
-    start_date: date | None = None
-    end_date: date | None = None
-    is_mandatory: bool | None = None
-
-
-class CampaignResponse(BaseModel):
-    id: int
-    name: str
-    description: str | None = None
-    organisation_id: int
-    domain_id: int
-    start_date: date
-    end_date: date
-    is_mandatory: bool
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-# ---------------------------------------------------------------------------
 # Catalog Tree Responses
 # ---------------------------------------------------------------------------
-
-
-class ShiftNode(BaseModel):
-    id: int
-    name: str
 
 
 class TeamNode(BaseModel):
     id: int
     name: str
+    shift: int
 
 
 class DomainNode(BaseModel):
@@ -137,13 +70,6 @@ class DomainNode(BaseModel):
     name: str
     is_technical: bool
     teams: list[TeamNode] = []
-    shifts: list[ShiftNode] = []
-
-
-class OrgNode(BaseModel):
-    id: int
-    name: str
-    domains: list[DomainNode] = []
 
 
 class CertNode(BaseModel):
@@ -157,35 +83,12 @@ class CertDomainNode(BaseModel):
     certificates: list[CertNode] = []
 
 
-class CampaignNode(BaseModel):
-    id: int
-    name: str
-    is_mandatory: bool
-    start_date: date
-    end_date: date
-
-
-class CampaignDomainNode(BaseModel):
-    id: int
-    name: str
-    campaigns: list[CampaignNode] = []
-
-
-class CampaignOrgNode(BaseModel):
-    id: int
-    name: str
-    domains: list[CampaignDomainNode] = []
-
-
 # ---------------------------------------------------------------------------
 # Skill Assignment (Bulk M2M)
 # ---------------------------------------------------------------------------
 
 
 class SkillAssignmentRequest(BaseModel):
-    organisation_ids: list[int] = []
-    domain_ids: list[int] = []
     team_ids: list[int] = []
-    shift_ids: list[int] = []
     certificate_ids: list[int] = []
-    campaign_ids: list[int] = []
+    tag_names: list[str] = []

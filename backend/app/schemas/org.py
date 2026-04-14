@@ -5,28 +5,14 @@ from pydantic import BaseModel
 from app.models.plan import PlanSkillStatus
 
 
-class OrgCreate(BaseModel):
-    name: str
-
-
-class OrgResponse(BaseModel):
-    id: int
-    name: str
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
 class DomainCreate(BaseModel):
     name: str
-    organisation_id: int
     is_technical: bool = True
 
 
 class DomainResponse(BaseModel):
     id: int
     name: str
-    organisation_id: int
     is_technical: bool
     created_at: datetime
 
@@ -36,6 +22,7 @@ class DomainResponse(BaseModel):
 class TeamCreate(BaseModel):
     name: str
     domain_id: int
+    shift: int
 
 
 class TeamResponse(BaseModel):
@@ -43,6 +30,7 @@ class TeamResponse(BaseModel):
     name: str
     domain_id: int
     domain_name: str | None = None
+    shift: int
     created_at: datetime
 
     model_config = {"from_attributes": True}

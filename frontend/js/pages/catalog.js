@@ -11,8 +11,9 @@ let _container = null;
 let _debounceTimer = null;
 let _gridEl = null;
 let _treeEl = null;
+let _shiftFiltersEl = null;
 
-// Current active tab: 'org' | 'cert' | 'non-technical' | 'campaign'
+// Current active tab: 'org' | 'cert' | 'non-technical'
 let _activeTab = 'org';
 
 // Per-tab cached tree data
@@ -21,12 +22,12 @@ const _treeCache = {};
 // Selected filter state
 let _selectedFilter = { type: 'all', id: null, label: 'All Skills' };
 let _searchQuery = '';
-let _showFuture = false;
+let _tagQuery = '';
 let _showArchived = false;
-let _showActiveOnly = false;
+let _activeShifts = new Set([1, 2, 3, 4]);
 
 // Cached data for skill create/edit form
-let _formDataCache = null; // { orgs, domains, teams }
+let _formDataCache = null;
 
 // ─── Entry point ─────────────────────────────────────────────────────────────
 
@@ -38,31 +39,58 @@ export function mountCatalog(container, params) {
   _activeTab = 'org';
   _selectedFilter = { type: 'all', id: null, label: 'All Skills' };
   _searchQuery = '';
-  _showFuture = false;
+  _tagQuery = '';
   _showArchived = false;
-  _showActiveOnly = false;
+  _activeShifts = new Set([1, 2, 3, 4]);
   _formDataCache = null;
 
   const page = buildPageShell(container);
   _gridEl = page.gridEl;
   _treeEl = page.treeEl;
+  _shiftFiltersEl = page.shiftFiltersEl;
 
-  // Initial load: org tab
-  loadTabTree('org', page.treeEl);
-  fetchAndRenderSkills();
+  loadStats();
+  // Must await tree before fetching skills — client filters depend on cached tree data
+  loadTabTree('org', _treeEl).then(() => fetchAndRenderSkills());
 
   return () => {
     clearTimeout(_debounceTimer);
   };
 }
 
+// ─── Stats loading ────────────────────────────────────────────────────────────
+
+async function loadStats() {
+  try {
+    const stats = await api.get('/api/stats');
+    const certTree = await api.get('/api/catalog/cert-tree');
+    let certCount = 0;
+    (Array.isArray(certTree) ? certTree : []).forEach(cd => {
+      certCount += Array.isArray(cd.certificates) ? cd.certificates.length : 0;
+    });
+    updateStats(stats.total_skills || 0, stats.total_teams || 0, certCount);
+  } catch {
+    // stats are non-critical, fail silently
+  }
+}
+
+function updateStats(skills, teams, certs) {
+  const sv = document.getElementById('cat-stat-skills');
+  const tv = document.getElementById('cat-stat-teams');
+  const cv = document.getElementById('cat-stat-certs');
+  if (sv) sv.textContent = skills;
+  if (tv) tv.textContent = teams;
+  if (cv) cv.textContent = certs;
+}
+
 // ─── Page shell ───────────────────────────────────────────────────────────────
 
 function buildPageShell(container) {
-  const wrapper = createElement('div', { className: 'page-shell' });
+  const wrapper = createElement('div', { className: 'cat-wrapper' });
 
-  // Header
-  const header = createElement('div', { className: 'mp-header' });
+  // Hero
+  const hero = createElement('div', { className: 'cat-hero mp-header' });
+  const heroText = createElement('div', { className: 'mp-header-text' });
   const title = createElement('h1', { className: 'mp-title' });
   title.appendChild(document.createTextNode('Skill '));
   const gradientSpan = createElement('span', { className: 'mp-title-gradient' });
@@ -70,54 +98,68 @@ function buildPageShell(container) {
   title.appendChild(gradientSpan);
   const subtitle = createElement('p', { className: 'mp-subtitle' });
   subtitle.textContent = 'Browse, search and manage the skill catalog';
-  header.appendChild(title);
-  header.appendChild(subtitle);
-  wrapper.appendChild(header);
+  heroText.appendChild(title);
+  heroText.appendChild(subtitle);
+  hero.appendChild(heroText);
 
-  // Top controls
-  const topBar = buildTopBar();
-  wrapper.appendChild(topBar.el);
+  const statsRow = createElement('div', { className: 'stats-row' });
+  statsRow.appendChild(buildStatBlock('cat-stat-skills', '—', 'Skills'));
+  statsRow.appendChild(buildStatBlock('cat-stat-teams', '—', 'Teams'));
+  statsRow.appendChild(buildStatBlock('cat-stat-certs', '—', 'Certifications'));
+  hero.appendChild(statsRow);
+  wrapper.appendChild(hero);
 
-  // Tab bar + body wrapper
-  const catalogWrapper = createElement('div', { className: 'catalog-tab-wrapper' });
+  // Tabs
+  const tabsEl = buildTabBar();
+  wrapper.appendChild(tabsEl);
 
-  const tabBar = buildTabBar(catalogWrapper);
-  catalogWrapper.appendChild(tabBar);
+  // Toolbar
+  const toolbar = buildToolbar();
+  wrapper.appendChild(toolbar.el);
+  const shiftFiltersEl = toolbar.shiftFiltersEl;
 
-  const body = createElement('div', { className: 'catalog-body' });
+  // Two-panel content area
+  const contentEl = createElement('div', { className: 'cat-content' });
 
-  const treeEl = createElement('div', { className: 'sidebar-tree' });
-  const treeHeader = createElement('div', { className: 'sidebar-tree-header', textContent: 'Browse Skills' });
-  treeEl.appendChild(treeHeader);
-  body.appendChild(treeEl);
+  const treePanel = createElement('div', { className: 'cat-tree-panel' });
+  contentEl.appendChild(treePanel);
 
-  const main = createElement('div', { className: 'page-body--col catalog-main' });
+  const skillsPanel = createElement('div', { className: 'cat-skills-panel' });
   const gridEl = createElement('div');
-  main.appendChild(gridEl);
-  body.appendChild(main);
+  skillsPanel.appendChild(gridEl);
+  contentEl.appendChild(skillsPanel);
 
-  catalogWrapper.appendChild(body);
-  wrapper.appendChild(catalogWrapper);
+  wrapper.appendChild(contentEl);
   container.appendChild(wrapper);
 
-  return { treeEl, gridEl, filterBarEl: topBar.filterBarEl };
+  return { treeEl: treePanel, gridEl, shiftFiltersEl };
 }
 
-function buildTabBar(catalogWrapper) {
-  const tabBar = createElement('div', { className: 'catalog-tab-bar' });
+function buildStatBlock(id, value, label) {
+  const block = createElement('div', { className: 'stat-block' });
+  const val = createElement('div', { className: 'stat-block-value', id });
+  val.textContent = value;
+  const lbl = createElement('div', { className: 'stat-block-label' });
+  lbl.textContent = label;
+  block.appendChild(val);
+  block.appendChild(lbl);
+  return block;
+}
+
+function buildTabBar() {
+  const tabBar = createElement('div', { className: 'cat-tabs catalog-tab-bar' });
 
   const TABS = [
     { id: 'org', label: 'Organization' },
     { id: 'cert', label: 'Certification' },
     { id: 'non-technical', label: 'Non-Technical' },
-    { id: 'campaign', label: 'Campaigns' },
   ];
 
   TABS.forEach(tab => {
     const btn = createElement('button', { className: 'catalog-tab' + (tab.id === _activeTab ? ' active' : '') });
     btn.textContent = tab.label;
     btn.dataset.tabId = tab.id;
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       if (_activeTab === tab.id) return;
       _activeTab = tab.id;
 
@@ -125,13 +167,13 @@ function buildTabBar(catalogWrapper) {
       btn.classList.add('active');
 
       _selectedFilter = { type: 'all', id: null, label: 'All Skills' };
-      updateBreadcrumb('All Skills');
 
-      // Show/hide Active Only toggle for campaign tab
-      const activeWrap = document.getElementById('filter-active-wrap');
-      if (activeWrap) activeWrap.style.display = tab.id === 'campaign' ? '' : 'none';
+      if (_shiftFiltersEl) {
+        _shiftFiltersEl.style.display = tab.id === 'org' ? 'flex' : 'none';
+      }
 
-      loadTabTree(tab.id, _treeEl);
+      delete _treeCache[tab.id];
+      await loadTabTree(tab.id, _treeEl);
       fetchAndRenderSkills();
     });
     tabBar.appendChild(btn);
@@ -140,35 +182,21 @@ function buildTabBar(catalogWrapper) {
   return tabBar;
 }
 
-function buildTopBar() {
-  const topBar = createElement('div', { className: 'page-controls' });
-
-  const row1 = createElement('div', { className: 'page-controls-row' });
-
-  const titleGroup = createElement('div', { className: 'page-controls-group' });
-  const breadcrumb = createElement('span', { className: 'triage-chip triage-signal', id: 'catalog-breadcrumb' });
-  breadcrumb.textContent = 'All Skills';
-  titleGroup.appendChild(breadcrumb);
-  row1.appendChild(titleGroup);
+function buildToolbar() {
+  const toolbar = createElement('div', { className: 'cat-toolbar' });
 
   const user = Store.get('user');
-  if (user && user.role === 'admin') {
-    const addBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
-    addBtn.textContent = 'Add Skill';
-    addBtn.addEventListener('click', () => openSkillModal(null));
-    row1.appendChild(addBtn);
-  }
+  const isAdmin = user?.role === 'admin';
+  const isManager = user?.role === 'manager';
+  const canEdit = isAdmin || isManager;
 
-  topBar.appendChild(row1);
-
-  const filterBarEl = createElement('div', { className: 'page-controls-filters' });
-
+  // Search input
   const searchWrap = createElement('div', { className: 'catalog-search-wrap' });
   const searchInput = createElement('input', {
     type: 'text',
     placeholder: 'Search skills...',
-    id: 'catalog-search',
     className: 'search-input',
+    id: 'cat-search-input',
   });
   searchInput.addEventListener('input', () => {
     clearTimeout(_debounceTimer);
@@ -178,56 +206,79 @@ function buildTopBar() {
     }, 300);
   });
   searchWrap.appendChild(searchInput);
-  filterBarEl.appendChild(searchWrap);
+  toolbar.appendChild(searchWrap);
 
-  const futureLabel = createElement('label', { className: 'catalog-checkbox-label' });
-  const futureCheck = createElement('input', { type: 'checkbox', id: 'filter-future' });
-  futureCheck.addEventListener('change', () => {
-    _showFuture = futureCheck.checked;
-    fetchAndRenderSkills();
+  // Tag search
+  const tagWrap = createElement('div', { className: 'catalog-search-wrap' });
+  const tagInput = createElement('input', {
+    type: 'text',
+    placeholder: 'Filter by tag...',
+    className: 'search-input',
+    id: 'cat-tag-input',
   });
-  futureLabel.appendChild(futureCheck);
-  futureLabel.appendChild(document.createTextNode('Future Skills'));
-  filterBarEl.appendChild(futureLabel);
+  tagInput.addEventListener('input', () => {
+    clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(() => {
+      _tagQuery = tagInput.value.trim().toLowerCase();
+      fetchAndRenderSkills();
+    }, 300);
+  });
+  tagWrap.appendChild(tagInput);
+  toolbar.appendChild(tagWrap);
 
-  if (user && user.role === 'admin') {
+  // Shift filter toggles (org tab only)
+  const shiftFiltersEl = createElement('div', { className: 'cat-shift-filters' });
+  for (let i = 1; i <= 4; i++) {
+    const btn = createElement('button', { className: 'cat-shift-btn active' });
+    btn.textContent = `Shift ${i}`;
+    btn.dataset.shift = String(i);
+    btn.addEventListener('click', () => {
+      const shift = i;
+      if (_activeShifts.has(shift)) {
+        if (_activeShifts.size > 1) {
+          _activeShifts.delete(shift);
+          btn.classList.remove('active');
+        }
+      } else {
+        _activeShifts.add(shift);
+        btn.classList.add('active');
+      }
+      delete _treeCache['org'];
+      loadTabTree('org', _treeEl);
+      fetchAndRenderSkills();
+    });
+    shiftFiltersEl.appendChild(btn);
+  }
+  toolbar.appendChild(shiftFiltersEl);
+
+  // Archived toggle (admin and manager only)
+  if (canEdit) {
     const archivedLabel = createElement('label', { className: 'catalog-checkbox-label' });
-    const archivedCheck = createElement('input', { type: 'checkbox', id: 'filter-archived' });
+    const archivedCheck = createElement('input', { type: 'checkbox', id: 'cat-archived-check' });
     archivedCheck.addEventListener('change', () => {
       _showArchived = archivedCheck.checked;
       fetchAndRenderSkills();
     });
     archivedLabel.appendChild(archivedCheck);
-    archivedLabel.appendChild(document.createTextNode('Show Archived'));
-    filterBarEl.appendChild(archivedLabel);
+    archivedLabel.appendChild(document.createTextNode(' Show Archived'));
+    toolbar.appendChild(archivedLabel);
   }
 
-  const activeLabel = createElement('label', { className: 'catalog-checkbox-label', id: 'filter-active-wrap' });
-  activeLabel.style.display = 'none';
-  const activeCheck = createElement('input', { type: 'checkbox', id: 'filter-active' });
-  activeCheck.addEventListener('change', () => {
-    _showActiveOnly = activeCheck.checked;
-    delete _treeCache['campaign'];
-    loadTabTree('campaign', _treeEl);
-  });
-  activeLabel.appendChild(activeCheck);
-  activeLabel.appendChild(document.createTextNode('Active Only'));
-  filterBarEl.appendChild(activeLabel);
+  // Add New Skill button (admin and manager only)
+  if (canEdit) {
+    const addBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
+    addBtn.textContent = 'Add New Skill';
+    addBtn.addEventListener('click', () => openSkillModal(null));
+    toolbar.appendChild(addBtn);
+  }
 
-  topBar.appendChild(filterBarEl);
-
-  return { el: topBar, filterBarEl };
+  return { el: toolbar, shiftFiltersEl };
 }
 
 // ─── Sidebar tree loading ─────────────────────────────────────────────────────
 
 async function loadTabTree(tabId, treeEl) {
-  // Preserve header
-  const header = treeEl.querySelector('.sidebar-tree-header');
   treeEl.innerHTML = '';
-  if (header) treeEl.appendChild(header);
-
-  // Show skeleton
   showSkeleton(treeEl, 'list');
 
   try {
@@ -235,26 +286,18 @@ async function loadTabTree(tabId, treeEl) {
     if (_treeCache[tabId]) {
       treeData = _treeCache[tabId];
     } else {
-      if (tabId === 'org') {
+      if (tabId === 'org' || tabId === 'non-technical') {
         treeData = await api.get('/api/catalog/org-tree');
       } else if (tabId === 'cert') {
         treeData = await api.get('/api/catalog/cert-tree');
-      } else if (tabId === 'non-technical') {
-        treeData = await api.get('/api/catalog/org-tree');
-      } else if (tabId === 'campaign') {
-        treeData = await api.get('/api/catalog/campaign-tree');
       }
       _treeCache[tabId] = treeData;
     }
 
-    // Remove skeleton
-    const skelEl = treeEl.querySelector('.skeleton-list');
-    if (skelEl) skelEl.remove();
-    treeEl.querySelectorAll('.skeleton').forEach(el => el.remove());
-
+    treeEl.innerHTML = '';
     renderTreeForTab(tabId, treeData, treeEl);
   } catch (err) {
-    treeEl.querySelectorAll('.skeleton-list, .skeleton').forEach(el => el.remove());
+    treeEl.innerHTML = '';
     showToast(err.message || 'Failed to load tree', 'error');
   }
 }
@@ -263,7 +306,7 @@ function renderTreeForTab(tabId, treeData, treeEl) {
   const data = Array.isArray(treeData) ? treeData : [];
 
   // "All Skills" node
-  const allItem = buildTreeItem('All Skills', null, 0, false);
+  const allItem = buildTreeItem('All Skills', 'all', 0, false);
   if (_selectedFilter.type === 'all') allItem.classList.add('active');
   allItem.addEventListener('click', () => {
     selectFilter({ type: 'all', id: null, label: 'All Skills' }, allItem, treeEl);
@@ -276,78 +319,44 @@ function renderTreeForTab(tabId, treeData, treeEl) {
     renderCertTree(data, treeEl);
   } else if (tabId === 'non-technical') {
     renderNonTechnicalTree(data, treeEl);
-  } else if (tabId === 'campaign') {
-    renderCampaignTree(data, treeEl);
   }
 }
 
-function renderOrgTree(orgs, treeEl) {
-  orgs.forEach(org => {
-    const orgItem = buildTreeItem(org.name, 'org', 0, false);
-    orgItem.classList.add('expanded');
-    if (_selectedFilter.type === 'org_id' && String(_selectedFilter.id) === String(org.id)) {
-      orgItem.classList.add('active');
+function renderOrgTree(domains, treeEl) {
+  // org-tree returns [{id, name, is_technical, teams: [{id, name, shift}]}]
+  const techDomains = domains.filter(d => d.is_technical === true);
+  techDomains.forEach(domain => {
+    const teams = (Array.isArray(domain.teams) ? domain.teams : [])
+      .filter(t => _activeShifts.has(t.shift));
+    if (!teams.length) return;
+
+    const domainItem = buildTreeItem(domain.name, 'domain', 0, true);
+    domainItem.classList.add('expanded');
+    if (_selectedFilter.type === 'domain_id' && String(_selectedFilter.id) === String(domain.id)) {
+      domainItem.classList.add('active');
     }
-
-    orgItem.addEventListener('click', (e) => {
+    domainItem.addEventListener('click', (e) => {
       e.stopPropagation();
-      selectFilter({ type: 'org_id', id: org.id, label: org.name }, orgItem, treeEl);
+      selectFilter({ type: 'domain_id', id: domain.id, label: domain.name }, domainItem, treeEl);
     });
-
-    addToggleListener(orgItem, treeEl);
+    addToggleListener(domainItem);
 
     const childrenEl = createElement('div', { className: 'tree-item-children' });
 
-    const domains = Array.isArray(org.domains) ? org.domains : [];
-    domains.forEach(domain => {
-      const domainItem = buildTreeItem(domain.name, 'domain', 1, true);
-      domainItem.classList.add('expanded');
-      if (_selectedFilter.type === 'domain_id' && String(_selectedFilter.id) === String(domain.id)) {
-        domainItem.classList.add('active');
+    teams.forEach(team => {
+      const teamItem = buildTreeItem(team.name, 'team', 1, false);
+      if (_selectedFilter.type === 'team_id' && String(_selectedFilter.id) === String(team.id)) {
+        teamItem.classList.add('active');
       }
-
-      domainItem.addEventListener('click', (e) => {
+      teamItem.addEventListener('click', (e) => {
         e.stopPropagation();
-        selectFilter({ type: 'domain_id', id: domain.id, label: domain.name }, domainItem, treeEl);
+        selectFilter({ type: 'team_id', id: team.id, label: team.name }, teamItem, treeEl);
       });
-
-      addToggleListener(domainItem, treeEl);
-
-      const domainChildrenEl = createElement('div', { className: 'tree-item-children' });
-
-      const teams = Array.isArray(domain.teams) ? domain.teams : [];
-      teams.forEach(team => {
-        const teamItem = buildTreeItem(team.name, 'team', 2, false);
-        if (_selectedFilter.type === 'team_id' && String(_selectedFilter.id) === String(team.id)) {
-          teamItem.classList.add('active');
-        }
-        teamItem.addEventListener('click', (e) => {
-          e.stopPropagation();
-          selectFilter({ type: 'team_id', id: team.id, label: team.name }, teamItem, treeEl);
-        });
-        domainChildrenEl.appendChild(teamItem);
-      });
-
-      const shifts = Array.isArray(domain.shifts) ? domain.shifts : [];
-      shifts.forEach(shift => {
-        const shiftLabel = `${domain.name} / ${shift.name}`;
-        const shiftItem = buildTreeItem(shiftLabel, 'shift', 2, false, '⏱');
-        if (_selectedFilter.type === 'shift_id' && String(_selectedFilter.id) === String(shift.id)) {
-          shiftItem.classList.add('active');
-        }
-        shiftItem.addEventListener('click', (e) => {
-          e.stopPropagation();
-          selectFilter({ type: 'shift_id', id: shift.id, label: shiftLabel }, shiftItem, treeEl);
-        });
-        domainChildrenEl.appendChild(shiftItem);
-      });
-
-      domainItem.appendChild(domainChildrenEl);
-      childrenEl.appendChild(domainItem);
+      childrenEl.appendChild(teamItem);
     });
 
-    orgItem.appendChild(childrenEl);
-    treeEl.appendChild(orgItem);
+    domainItem.appendChild(childrenEl);
+    treeEl.appendChild(domainItem);
   });
 }
 
@@ -355,8 +364,7 @@ function renderCertTree(certDomains, treeEl) {
   certDomains.forEach(certDomain => {
     const cdItem = buildTreeItem(certDomain.name, 'cert-domain', 0, true);
     cdItem.classList.add('expanded');
-
-    addToggleListener(cdItem, treeEl);
+    addToggleListener(cdItem);
 
     const childrenEl = createElement('div', { className: 'tree-item-children' });
 
@@ -378,109 +386,39 @@ function renderCertTree(certDomains, treeEl) {
   });
 }
 
-function renderNonTechnicalTree(orgs, treeEl) {
-  orgs.forEach(org => {
-    const domains = Array.isArray(org.domains) ? org.domains : [];
-    const nonTechDomains = domains.filter(d => d.is_technical === false);
-    if (!nonTechDomains.length) return;
+function renderNonTechnicalTree(domains, treeEl) {
+  const nonTechDomains = domains.filter(d => d.is_technical === false);
+  nonTechDomains.forEach(domain => {
+    const teams = Array.isArray(domain.teams) ? domain.teams : [];
 
-    const orgItem = buildTreeItem(org.name, 'org', 0, false);
-    orgItem.classList.add('expanded');
-
-    addToggleListener(orgItem, treeEl);
-
-    const childrenEl = createElement('div', { className: 'tree-item-children' });
-
-    nonTechDomains.forEach(domain => {
-      const domainItem = buildTreeItem(domain.name, 'domain', 1, false);
-      if (_selectedFilter.type === 'domain_id' && String(_selectedFilter.id) === String(domain.id)) {
-        domainItem.classList.add('active');
-      }
-      domainItem.addEventListener('click', (e) => {
-        e.stopPropagation();
-        selectFilter({ type: 'domain_id', id: domain.id, label: domain.name }, domainItem, treeEl);
-      });
-      childrenEl.appendChild(domainItem);
+    const domainItem = buildTreeItem(domain.name, 'domain', 0, teams.length > 0);
+    domainItem.classList.add('expanded');
+    if (_selectedFilter.type === 'domain_id' && String(_selectedFilter.id) === String(domain.id)) {
+      domainItem.classList.add('active');
+    }
+    domainItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectFilter({ type: 'domain_id', id: domain.id, label: domain.name }, domainItem, treeEl);
     });
+    if (teams.length > 0) addToggleListener(domainItem);
 
-    orgItem.appendChild(childrenEl);
-    treeEl.appendChild(orgItem);
-  });
-}
-
-function renderCampaignTree(orgs, treeEl) {
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD for comparison
-
-  orgs.forEach(org => {
-    const orgItem = buildTreeItem(org.name, 'org', 0, false);
-    orgItem.classList.add('expanded');
-
-    addToggleListener(orgItem, treeEl);
-
-    const childrenEl = createElement('div', { className: 'tree-item-children' });
-
-    const domains = Array.isArray(org.domains) ? org.domains : [];
-    domains.forEach(domain => {
-      const domainItem = buildTreeItem(domain.name, 'domain', 1, true);
-      domainItem.classList.add('expanded');
-
-      addToggleListener(domainItem, treeEl);
-
-      const domainChildrenEl = createElement('div', { className: 'tree-item-children' });
-
-      let campaigns = Array.isArray(domain.campaigns) ? domain.campaigns : [];
-
-      // Active-only filtering: hide campaigns outside their date range
-      if (_showActiveOnly) {
-        campaigns = campaigns.filter(c => {
-          if (!c.start_date && !c.end_date) return true;
-          if (c.start_date && today < c.start_date) return false;
-          if (c.end_date && today > c.end_date) return false;
-          return true;
-        });
-      }
-
-      campaigns.forEach(campaign => {
-        const icon = campaign.is_mandatory ? '🔴' : '📋';
-        const label = campaign.is_mandatory ? `${campaign.name} (Required)` : campaign.name;
-        const campaignItem = buildTreeItem(label, 'campaign', 2, false, icon);
-
-        if (campaign.is_mandatory) {
-          const dot = createElement('span', { className: 'tree-mandatory-dot' });
-          campaignItem.insertBefore(dot, campaignItem.querySelector('.tree-item-label'));
+    if (teams.length > 0) {
+      const childrenEl = createElement('div', { className: 'tree-item-children' });
+      teams.forEach(team => {
+        const teamItem = buildTreeItem(team.name, 'team', 1, false);
+        if (_selectedFilter.type === 'team_id' && String(_selectedFilter.id) === String(team.id)) {
+          teamItem.classList.add('active');
         }
-
-        // Date range subtitle
-        if (campaign.start_date || campaign.end_date) {
-          const dateText = formatDateRange(campaign.start_date, campaign.end_date);
-          const dateEl = createElement('span', { className: 'tree-item-date' });
-          dateEl.textContent = dateText;
-          const labelEl = campaignItem.querySelector('.tree-item-label');
-          if (labelEl) labelEl.appendChild(dateEl);
-        }
-
-        if (_selectedFilter.type === 'campaign_id' && String(_selectedFilter.id) === String(campaign.id)) {
-          campaignItem.classList.add('active');
-        }
-        campaignItem.addEventListener('click', (e) => {
+        teamItem.addEventListener('click', (e) => {
           e.stopPropagation();
-          selectFilter({ type: 'campaign_id', id: campaign.id, label: campaign.name }, campaignItem, treeEl);
+          selectFilter({ type: 'team_id', id: team.id, label: team.name }, teamItem, treeEl);
         });
-        domainChildrenEl.appendChild(campaignItem);
+        childrenEl.appendChild(teamItem);
       });
+      domainItem.appendChild(childrenEl);
+    }
 
-      // Skip empty domains after filtering
-      if (!campaigns.length && _showActiveOnly) return;
-
-      domainItem.appendChild(domainChildrenEl);
-      childrenEl.appendChild(domainItem);
-    });
-
-    // Skip empty orgs after filtering
-    if (!childrenEl.children.length && _showActiveOnly) return;
-
-    orgItem.appendChild(childrenEl);
-    treeEl.appendChild(orgItem);
+    treeEl.appendChild(domainItem);
   });
 }
 
@@ -497,8 +435,6 @@ function buildTreeItem(label, type, indent, hasToggle, iconText) {
     iconEl.textContent = iconText;
   } else if (type === 'all') {
     iconEl.textContent = '✦';
-  } else if (type === 'org') {
-    iconEl.textContent = '🏢';
   } else if (type === 'domain') {
     iconEl.textContent = '📁';
   } else if (type === 'team') {
@@ -507,8 +443,6 @@ function buildTreeItem(label, type, indent, hasToggle, iconText) {
     iconEl.textContent = '🎓';
   } else if (type === 'cert') {
     iconEl.textContent = '🏆';
-  } else if (type === 'campaign') {
-    iconEl.textContent = '📋';
   } else {
     iconEl.textContent = '•';
   }
@@ -528,7 +462,7 @@ function buildTreeItem(label, type, indent, hasToggle, iconText) {
   return item;
 }
 
-function addToggleListener(item, treeEl) {
+function addToggleListener(item) {
   const toggle = item.querySelector('.tree-item-toggle');
   if (!toggle) return;
   toggle.addEventListener('click', (e) => {
@@ -544,40 +478,7 @@ function selectFilter(filter, itemEl, treeEl) {
   allItems.forEach(i => i.classList.remove('active'));
   if (itemEl) itemEl.classList.add('active');
 
-  updateBreadcrumb(filter.label);
   fetchAndRenderSkills();
-}
-
-function switchTabAndFilter(tabId, filterType, filterId, filterLabel) {
-  _activeTab = tabId;
-  _selectedFilter = { type: filterType, id: filterId, label: filterLabel };
-
-  const tabBar = document.querySelector('.catalog-tab-bar');
-  if (tabBar) {
-    tabBar.querySelectorAll('.catalog-tab').forEach(b => {
-      b.classList.toggle('active', b.dataset.tabId === tabId);
-    });
-  }
-
-  const activeWrap = document.getElementById('filter-active-wrap');
-  if (activeWrap) activeWrap.style.display = tabId === 'campaign' ? '' : 'none';
-
-  updateBreadcrumb(filterLabel);
-  loadTabTree(tabId, _treeEl).then(() => {
-    const allItems = _treeEl.querySelectorAll('.tree-item');
-    allItems.forEach(item => {
-      const label = item.querySelector('.tree-item-label');
-      if (label && label.textContent.includes(filterLabel)) {
-        item.classList.add('active');
-      }
-    });
-  });
-  fetchAndRenderSkills();
-}
-
-function updateBreadcrumb(label) {
-  const breadcrumb = document.getElementById('catalog-breadcrumb');
-  if (breadcrumb) breadcrumb.textContent = label;
 }
 
 // ─── API skill fetching ───────────────────────────────────────────────────────
@@ -588,7 +489,9 @@ async function fetchAndRenderSkills() {
 
   try {
     const skills = await api.get('/api/skills/' + buildQueryString());
-    renderSkillGrid(_gridEl, Array.isArray(skills) ? skills : []);
+    const allSkills = Array.isArray(skills) ? skills : [];
+    const filtered = applyClientFilters(allSkills);
+    renderSkillGrid(_gridEl, filtered);
   } catch (err) {
     showToast(err.message || 'Failed to load skills', 'error');
     _gridEl.innerHTML = '';
@@ -599,8 +502,12 @@ async function fetchAndRenderSkills() {
 function buildQueryString() {
   const params = new URLSearchParams();
 
-  if (_selectedFilter.type !== 'all' && _selectedFilter.id != null) {
-    params.set(_selectedFilter.type, String(_selectedFilter.id));
+  if (_selectedFilter.type === 'team_id' && _selectedFilter.id != null) {
+    params.set('team_id', String(_selectedFilter.id));
+  } else if (_selectedFilter.type === 'cert_id' && _selectedFilter.id != null) {
+    params.set('cert_id', String(_selectedFilter.id));
+  } else if (_selectedFilter.type === 'domain_id' && _selectedFilter.id != null) {
+    params.set('domain_id', String(_selectedFilter.id));
   }
 
   if (_searchQuery) params.set('search', _searchQuery);
@@ -610,8 +517,71 @@ function buildQueryString() {
   return qs ? `?${qs}` : '';
 }
 
-async function fetchAndRefreshWithArchived() {
-  fetchAndRenderSkills();
+function applyClientFilters(skills) {
+  let result = skills;
+
+  // Tag filter (client-side substring match)
+  if (_tagQuery) {
+    result = result.filter(skill => {
+      const tags = Array.isArray(skill.tags) ? skill.tags : [];
+      return tags.some(t => (t.name || t).toLowerCase().includes(_tagQuery));
+    });
+  }
+
+  // For org tab: filter by active shifts — skills must have at least one team with an active shift
+  if (_activeTab === 'org' && _activeShifts.size < 4) {
+    result = result.filter(skill => {
+      const teams = Array.isArray(skill.teams) ? skill.teams : [];
+      return teams.some(t => _activeShifts.has(t.shift));
+    });
+  }
+
+  // For non-technical tab with "All Skills": scope to teams under non-technical domains only
+  if (_activeTab === 'non-technical' && _selectedFilter.type === 'all') {
+    const nonTechTeamIds = getNonTechnicalTeamIds();
+    if (nonTechTeamIds) {
+      result = result.filter(skill => {
+        const teams = Array.isArray(skill.teams) ? skill.teams : [];
+        // Show skills that have at least one non-technical team, or no teams at all (unassigned)
+        return teams.length === 0 || teams.some(t => nonTechTeamIds.has(t.id));
+      });
+    }
+  }
+
+  // For org tab with "All Skills": scope to teams under technical domains only
+  if (_activeTab === 'org' && _selectedFilter.type === 'all') {
+    const techTeamIds = getTechnicalTeamIds();
+    if (techTeamIds) {
+      result = result.filter(skill => {
+        const teams = Array.isArray(skill.teams) ? skill.teams : [];
+        return teams.some(t => techTeamIds.has(t.id));
+      });
+    }
+  }
+
+  return result;
+}
+
+/** Get team IDs belonging to non-technical domains from cached org-tree */
+function getNonTechnicalTeamIds() {
+  const treeData = _treeCache['non-technical'] || _treeCache['org'];
+  if (!Array.isArray(treeData)) return null;
+  const ids = new Set();
+  treeData.filter(d => d.is_technical === false).forEach(domain => {
+    (Array.isArray(domain.teams) ? domain.teams : []).forEach(t => ids.add(t.id));
+  });
+  return ids;
+}
+
+/** Get team IDs belonging to technical domains from cached org-tree */
+function getTechnicalTeamIds() {
+  const treeData = _treeCache['org'] || _treeCache['non-technical'];
+  if (!Array.isArray(treeData)) return null;
+  const ids = new Set();
+  treeData.filter(d => d.is_technical === true).forEach(domain => {
+    (Array.isArray(domain.teams) ? domain.teams : []).forEach(t => ids.add(t.id));
+  });
+  return ids;
 }
 
 // ─── Grid rendering ───────────────────────────────────────────────────────────
@@ -619,42 +589,14 @@ async function fetchAndRefreshWithArchived() {
 function renderSkillGrid(container, skills) {
   container.innerHTML = '';
 
-  // Client-side: filter future if not showing
-  let regular = skills.filter(s => !s.is_future);
-  let future = skills.filter(s => s.is_future);
-
-  if (!_showFuture) {
-    future = [];
-  }
-
-  const all = regular;
-
-  if (!all.length && !future.length) {
+  if (!skills.length) {
     renderEmptyState(container, 'No skills found', 'Try adjusting your search or filters.');
     return;
   }
 
-  if (all.length) {
-    const grid = createElement('div', { className: 'grid-3' });
-    all.forEach(skill => grid.appendChild(buildSkillCard(skill)));
-    container.appendChild(grid);
-  }
-
-  if (future.length) {
-    const sep = createElement('div', { className: 'catalog-future-section' });
-    const sepHeader = createElement('div', { className: 'catalog-future-header' });
-    const sepTitle = createElement('h2', { className: 'catalog-future-title' });
-    sepTitle.textContent = 'Future Skills';
-    const badge = createElement('span', { className: 'triage-chip triage-pipeline' });
-    badge.textContent = `${future.length} upcoming`;
-    sepHeader.appendChild(sepTitle);
-    sepHeader.appendChild(badge);
-    const futureGrid = createElement('div', { className: 'grid-3' });
-    future.forEach(skill => futureGrid.appendChild(buildSkillCard(skill)));
-    sep.appendChild(sepHeader);
-    sep.appendChild(futureGrid);
-    container.appendChild(sep);
-  }
+  const grid = createElement('div', { className: 'grid-3' });
+  skills.forEach(skill => grid.appendChild(buildSkillCard(skill)));
+  container.appendChild(grid);
 }
 
 // ─── Skill card ───────────────────────────────────────────────────────────────
@@ -662,19 +604,21 @@ function renderSkillGrid(container, skills) {
 function buildSkillCard(skill) {
   const user = Store.get('user');
   const isAdmin = user?.role === 'admin';
+  const isManager = user?.role === 'manager';
+  const canEdit = isAdmin || isManager;
 
   const card = createElement('div', {
     className: skill.is_archived ? 'tool-card tool-card--archived' : 'tool-card',
   });
   card.dataset.skillId = skill.id;
 
-  // Header row with name and admin actions
+  // Header row with name and admin/manager actions
   const headerRow = createElement('div', { className: 'tool-card-header' });
   const nameEl = createElement('div', { className: 'tool-card-name' });
   nameEl.textContent = skill.name;
   headerRow.appendChild(nameEl);
 
-  if (isAdmin) {
+  if (canEdit) {
     const actions = createElement('div', { className: 'card-admin-actions' });
 
     const editBtn = createElement('button', { className: 'btn btn-sm btn-secondary card-action-btn' });
@@ -685,7 +629,9 @@ function buildSkillCard(skill) {
     });
 
     const archiveBtn = createElement('button', {
-      className: skill.is_archived ? 'btn btn-sm btn-primary card-action-btn' : 'btn btn-sm btn-danger card-action-btn',
+      className: skill.is_archived
+        ? 'btn btn-sm btn-primary card-action-btn'
+        : 'btn btn-sm btn-danger card-action-btn',
     });
     archiveBtn.textContent = skill.is_archived ? 'Restore' : 'Archive';
     archiveBtn.addEventListener('click', (e) => {
@@ -699,77 +645,42 @@ function buildSkillCard(skill) {
   }
   card.appendChild(headerRow);
 
-  // M2M domain badges (primary)
-  const domains = Array.isArray(skill.domains) ? skill.domains : [];
-  if (domains.length) {
-    const domainsRow = createElement('div', { className: 'tool-card-meta-row' });
-    domains.forEach(d => {
-      const catClass = getDomainBadgeClass(d.name);
-      const badge = createElement('span', { className: `tool-card-category ${catClass}` });
-      badge.textContent = d.name;
-      domainsRow.appendChild(badge);
-    });
-    card.appendChild(domainsRow);
-  } else {
-    // Fallback: no domains
-    const catBadge = createElement('span', { className: 'tool-card-category cat-research' });
-    catBadge.textContent = 'General';
-    card.appendChild(catBadge);
-  }
-
-  // Org badges (small, muted)
-  const orgs = Array.isArray(skill.organisations) ? skill.organisations : [];
-  if (orgs.length) {
-    const orgsRow = createElement('div', { className: 'tool-card-meta-row' });
-    orgs.forEach(org => {
-      const badge = createElement('span', { className: 'meta-badge meta-badge--org' });
-      badge.textContent = org.name;
-      orgsRow.appendChild(badge);
-    });
-    card.appendChild(orgsRow);
-  }
-
-  // Status badges row
-  const badgesRow = createElement('div', { className: 'tool-card-badges' });
-
-  if (skill.is_future) {
-    const b = createElement('span', { className: 'triage-chip triage-pipeline' });
-    b.textContent = 'Future';
-    badgesRow.appendChild(b);
-  }
+  // Archived badge
   if (skill.is_archived) {
-    const b = createElement('span', { className: 'triage-chip triage-blocking' });
+    const badgeRow = createElement('div', { className: 'tool-card-badges' });
+    const b = createElement('span', { className: 'triage-chip triage-blocking chip-sm' });
     b.textContent = 'Archived';
-    badgesRow.appendChild(b);
+    badgeRow.appendChild(b);
+    card.appendChild(badgeRow);
   }
 
-  // Cert badges
+  // Team badges
+  const teams = Array.isArray(skill.teams) ? skill.teams : [];
+  if (teams.length) {
+    const teamsRow = createElement('div', { className: 'tool-card-badges' });
+    teams.forEach(team => {
+      const chip = createElement('span', { className: 'triage-chip triage-signal chip-sm' });
+      chip.textContent = team.name;
+      teamsRow.appendChild(chip);
+    });
+    card.appendChild(teamsRow);
+  }
+
+  // Certificate badges
   const certs = Array.isArray(skill.certificates) ? skill.certificates : [];
-  certs.forEach(cert => {
-    const badge = createElement('span', { className: 'meta-badge meta-badge--cert meta-badge--clickable' });
-    badge.textContent = cert.name;
-    badge.addEventListener('click', (e) => {
-      e.stopPropagation();
-      switchTabAndFilter('cert', 'cert_id', cert.id, cert.name);
+  if (certs.length) {
+    const certsRow = createElement('div', { className: 'tool-card-badges' });
+    certs.forEach(cert => {
+      const badge = createElement('span', { className: 'meta-badge meta-badge--cert meta-badge--clickable' });
+      badge.textContent = cert.name;
+      badge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        switchTabAndFilter('cert', 'cert_id', cert.id, cert.name);
+      });
+      certsRow.appendChild(badge);
     });
-    badgesRow.appendChild(badge);
-  });
-
-  // Campaign badges (mandatory highlighted)
-  const campaigns = Array.isArray(skill.campaigns) ? skill.campaigns : [];
-  campaigns.forEach(camp => {
-    const badge = createElement('span', {
-      className: (camp.is_mandatory ? 'meta-badge meta-badge--campaign-required' : 'meta-badge meta-badge--campaign') + ' meta-badge--clickable',
-    });
-    badge.textContent = camp.is_mandatory ? `${camp.name} ★` : camp.name;
-    badge.addEventListener('click', (e) => {
-      e.stopPropagation();
-      switchTabAndFilter('campaign', 'campaign_id', camp.id, camp.name);
-    });
-    badgesRow.appendChild(badge);
-  });
-
-  if (badgesRow.children.length > 0) card.appendChild(badgesRow);
+    card.appendChild(certsRow);
+  }
 
   // Description
   const desc = createElement('div', { className: 'tool-card-desc' });
@@ -798,6 +709,36 @@ function buildSkillCard(skill) {
   return card;
 }
 
+// ─── Switch tab + filter (used by cert badge clicks) ─────────────────────────
+
+function switchTabAndFilter(tabId, filterType, filterId, filterLabel) {
+  _activeTab = tabId;
+  _selectedFilter = { type: filterType, id: filterId, label: filterLabel };
+
+  const tabBar = document.querySelector('.cat-tabs');
+  if (tabBar) {
+    tabBar.querySelectorAll('.catalog-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.tabId === tabId);
+    });
+  }
+
+  if (_shiftFiltersEl) {
+    _shiftFiltersEl.style.display = tabId === 'org' ? 'flex' : 'none';
+  }
+
+  delete _treeCache[tabId];
+  loadTabTree(tabId, _treeEl).then(() => {
+    const allItems = _treeEl.querySelectorAll('.tree-item');
+    allItems.forEach(item => {
+      const lbl = item.querySelector('.tree-item-label');
+      if (lbl && lbl.textContent === filterLabel) {
+        item.classList.add('active');
+      }
+    });
+  });
+  fetchAndRenderSkills();
+}
+
 // ─── Skill Detail Modal ───────────────────────────────────────────────────────
 
 function showSkillDetailModal(skill) {
@@ -811,7 +752,8 @@ function showSkillDetailModal(skill) {
   const modalHeader = createElement('div', { className: 'modal-header' });
   const titleEl = createElement('h2', { className: 'modal-title' });
   titleEl.textContent = skill.name;
-  const closeBtn = createElement('button', { className: 'modal-close', 'aria-label': 'Close' });
+  const closeBtn = createElement('button', { className: 'modal-close' });
+  closeBtn.setAttribute('aria-label', 'Close');
   closeBtn.textContent = '\u2715';
   modalHeader.appendChild(titleEl);
   modalHeader.appendChild(closeBtn);
@@ -822,15 +764,11 @@ function showSkillDetailModal(skill) {
   // Detail header with "Assigned To" section
   const detailHeader = createElement('div', { className: 'skill-detail-header' });
 
-  // ── UPDATED: Assigned To section (M2M metadata) ──────────────────────────
   const assignSection = createElement('div', { className: 'skill-detail-assignments' });
 
-  const organisations = Array.isArray(skill.organisations) ? skill.organisations : [];
-  const domains = Array.isArray(skill.domains) ? skill.domains : [];
   const teams = Array.isArray(skill.teams) ? skill.teams : [];
-  const shifts = Array.isArray(skill.shifts) ? skill.shifts : [];
   const certificates = Array.isArray(skill.certificates) ? skill.certificates : [];
-  const campaigns = Array.isArray(skill.campaigns) ? skill.campaigns : [];
+  const tags = Array.isArray(skill.tags) ? skill.tags : [];
 
   function buildAssignRow(labelText, items, chipClassFn) {
     if (!items.length) return null;
@@ -846,20 +784,8 @@ function showSkillDetailModal(skill) {
     return row;
   }
 
-  const orgRow = buildAssignRow('Orgs', organisations, () => 'meta-badge meta-badge--org');
-  if (orgRow) assignSection.appendChild(orgRow);
-
-  const domainRow = buildAssignRow('Domains', domains, (d) => `tool-card-category ${getDomainBadgeClass(d.name)}`);
-  if (domainRow) assignSection.appendChild(domainRow);
-
   const teamRow = buildAssignRow('Teams', teams, () => 'triage-chip triage-signal chip-sm');
   if (teamRow) assignSection.appendChild(teamRow);
-
-  const shiftRow = buildAssignRow('Shifts', shifts.map(s => ({
-    ...s,
-    name: s.domain_name ? `${s.domain_name} / ${s.name}` : s.name,
-  })), () => 'triage-chip triage-feedback chip-sm');
-  if (shiftRow) assignSection.appendChild(shiftRow);
 
   const certRow = buildAssignRow('Certs', certificates, () => 'meta-badge meta-badge--cert meta-badge--clickable');
   if (certRow) {
@@ -875,41 +801,19 @@ function showSkillDetailModal(skill) {
     assignSection.appendChild(certRow);
   }
 
-  if (campaigns.length) {
-    const campRowEl = createElement('div', { className: 'skill-detail-assign-row' });
-    const campLabel = createElement('span', { className: 'skill-detail-assign-label' });
-    campLabel.textContent = 'Campaigns';
-    campRowEl.appendChild(campLabel);
-    campaigns.forEach(camp => {
-      const chip = createElement('span', {
-        className: (camp.is_mandatory ? 'meta-badge meta-badge--campaign-required' : 'meta-badge meta-badge--campaign') + ' meta-badge--clickable',
-      });
-      chip.textContent = camp.is_mandatory ? `${camp.name} (Required)` : camp.name;
-      chip.addEventListener('click', () => {
-        closeModal();
-        switchTabAndFilter('campaign', 'campaign_id', camp.id, camp.name);
-      });
-      campRowEl.appendChild(chip);
-    });
-    assignSection.appendChild(campRowEl);
-  }
+  const tagsAssignRow = buildAssignRow('Tags', tags, () => 'triage-chip triage-feedback chip-sm');
+  if (tagsAssignRow) assignSection.appendChild(tagsAssignRow);
 
-  // Status badges
-  const statusRow = createElement('div', { className: 'skill-detail-assign-row' });
-  if (skill.is_future) {
-    const b = createElement('span', { className: 'triage-chip triage-pipeline' });
-    b.textContent = 'Future Skill';
-    statusRow.appendChild(b);
-  }
+  // Archived badge
   if (skill.is_archived) {
-    const b = createElement('span', { className: 'triage-chip triage-blocking' });
+    const statusRow = createElement('div', { className: 'skill-detail-assign-row' });
+    const b = createElement('span', { className: 'triage-chip triage-blocking chip-sm' });
     b.textContent = 'Archived';
     statusRow.appendChild(b);
+    assignSection.appendChild(statusRow);
   }
-  if (statusRow.children.length) assignSection.appendChild(statusRow);
 
   if (assignSection.children.length) detailHeader.appendChild(assignSection);
-  // ── END Assigned To section ───────────────────────────────────────────────
 
   if (skill.description) {
     const descEl = createElement('p', { className: 'skill-detail-description' });
@@ -917,23 +821,9 @@ function showSkillDetailModal(skill) {
     detailHeader.appendChild(descEl);
   }
 
-  const tags = Array.isArray(skill.tags) ? skill.tags : [];
-  if (tags.length) {
-    const tagsRow = createElement('div', { className: 'skill-detail-header-row' });
-    const tagsLabel = createElement('span', { className: 'skill-detail-header-label' });
-    tagsLabel.textContent = 'Tags';
-    tagsRow.appendChild(tagsLabel);
-    tags.forEach(tag => {
-      const chip = createElement('span', { className: 'triage-chip triage-feedback chip-sm' });
-      chip.textContent = tag.name || tag;
-      tagsRow.appendChild(chip);
-    });
-    detailHeader.appendChild(tagsRow);
-  }
-
   modalBody.appendChild(detailHeader);
 
-  // ── Education/Exposure/Experience tabs (PRESERVED EXACTLY) ───────────────
+  // ── Education/Exposure/Experience tabs ───────────────────────────────────
 
   const LEVEL_CONFIG = [
     { key: 'education', label: 'Education', chipClass: 'chip-education' },
@@ -941,7 +831,8 @@ function showSkillDetailModal(skill) {
     { key: 'experience', label: 'Experience', chipClass: 'chip-experience' },
   ];
 
-  const tabBar = createElement('div', { className: 'skill-detail-tabs', role: 'tablist', 'aria-label': 'Skill level content' });
+  const tabBar = createElement('div', { className: 'skill-detail-tabs', role: 'tablist' });
+  tabBar.setAttribute('aria-label', 'Skill level content');
   const tabPanelsWrap = createElement('div', { className: 'skill-detail-panels' });
 
   const tabButtons = {};
@@ -995,7 +886,10 @@ function showSkillDetailModal(skill) {
   }
 
   function onKeyDown(e) {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') {
+      closeModal();
+      return;
+    }
 
     if (e.key === 'Tab') {
       const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
@@ -1015,7 +909,9 @@ function showSkillDetailModal(skill) {
       const currentTab = focused?.dataset?.tab;
       if (currentTab && tabKeys.includes(currentTab)) {
         const idx = tabKeys.indexOf(currentTab);
-        const next = e.key === 'ArrowRight' ? (idx + 1) % tabKeys.length : (idx - 1 + tabKeys.length) % tabKeys.length;
+        const next = e.key === 'ArrowRight'
+          ? (idx + 1) % tabKeys.length
+          : (idx - 1 + tabKeys.length) % tabKeys.length;
         activateTab(tabKeys[next]);
         tabButtons[tabKeys[next]].focus();
         e.preventDefault();
@@ -1141,7 +1037,8 @@ function showSkillDetailModal(skill) {
         const trigger = createElement('button', { className: 'skill-detail-accordion-trigger' });
 
         if (canEdit) {
-          const dragHandle = createElement('span', { className: 'drag-handle', 'aria-hidden': 'true' });
+          const dragHandle = createElement('span', { className: 'drag-handle' });
+          dragHandle.setAttribute('aria-hidden', 'true');
           dragHandle.textContent = '\u2630';
           dragHandle.addEventListener('mousedown', () => { accItem.draggable = true; });
           trigger.appendChild(dragHandle);
@@ -1156,14 +1053,16 @@ function showSkillDetailModal(skill) {
         if (canEdit) {
           const adminActions = createElement('div', { className: 'accordion-admin-actions' });
 
-          const editBtn = createElement('button', { className: 'btn btn-sm btn-secondary accordion-action-btn', 'aria-label': 'Edit item' });
+          const editBtn = createElement('button', { className: 'btn btn-sm btn-secondary accordion-action-btn' });
+          editBtn.setAttribute('aria-label', 'Edit item');
           editBtn.textContent = '\u270F\uFE0F';
           editBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             showContentEditModal(skill.id, LEVEL_REVERSE[key], item, () => refreshModalContent());
           });
 
-          const deleteBtn = createElement('button', { className: 'btn btn-sm btn-danger accordion-action-btn', 'aria-label': 'Delete item' });
+          const deleteBtn = createElement('button', { className: 'btn btn-sm btn-danger accordion-action-btn' });
+          deleteBtn.setAttribute('aria-label', 'Delete item');
           deleteBtn.textContent = '\uD83D\uDDD1\uFE0F';
           deleteBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -1188,7 +1087,8 @@ function showSkillDetailModal(skill) {
           trigger.appendChild(titleSpan);
         }
 
-        const chevron = createElement('span', { className: 'skill-detail-accordion-chevron', 'aria-hidden': 'true' });
+        const chevron = createElement('span', { className: 'skill-detail-accordion-chevron' });
+        chevron.setAttribute('aria-hidden', 'true');
         trigger.appendChild(chevron);
 
         const body = createElement('div', { className: 'skill-detail-accordion-body' });
@@ -1251,8 +1151,8 @@ function showSkillDetailModal(skill) {
         .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3].includes(item.level));
       const freshGroups = { education: [], exposure: [], experience: [] };
       fresh.forEach(item => {
-        const key = LEVEL_MAP[item.level];
-        if (key) freshGroups[key].push(item);
+        const k = LEVEL_MAP[item.level];
+        if (k) freshGroups[k].push(item);
       });
       LEVEL_CONFIG.forEach(({ key }) => renderPanelContent(key, freshGroups[key]));
     }).catch(() => {
@@ -1273,8 +1173,8 @@ function showSkillDetailModal(skill) {
     const groups = { education: [], exposure: [], experience: [] };
 
     content.forEach(item => {
-      const key = LEVEL_MAP[item.level];
-      if (key) groups[key].push(item);
+      const k = LEVEL_MAP[item.level];
+      if (k) groups[k].push(item);
     });
 
     LEVEL_CONFIG.forEach(({ key }) => renderPanelContent(key, groups[key]));
@@ -1290,7 +1190,7 @@ function showSkillDetailModal(skill) {
   });
 }
 
-// ─── Content Edit Modal (PRESERVED EXACTLY) ──────────────────────────────────
+// ─── Content Edit Modal ───────────────────────────────────────────────────────
 
 function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
   const isEdit = !!existingItem;
@@ -1305,7 +1205,8 @@ function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
   const modalHeader = createElement('div', { className: 'modal-header' });
   const titleEl = createElement('h2', { className: 'modal-title' });
   titleEl.textContent = isEdit ? 'Edit Content Item' : 'Add Content Item';
-  const closeBtn = createElement('button', { className: 'modal-close', 'aria-label': 'Close' });
+  const closeBtn = createElement('button', { className: 'modal-close' });
+  closeBtn.setAttribute('aria-label', 'Close');
   closeBtn.textContent = '\u2715';
   modalHeader.appendChild(titleEl);
   modalHeader.appendChild(closeBtn);
@@ -1480,37 +1381,43 @@ function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
   document.addEventListener('keydown', onContentKeyDown);
 }
 
-// ─── Skill Create/Edit Modal (M2M) ────────────────────────────────────────────
+// ─── Skill Create/Edit Modal ──────────────────────────────────────────────────
 
 async function openSkillModal(existingSkill) {
   const isEdit = !!existingSkill;
+  const user = Store.get('user');
+  const isAdmin = user?.role === 'admin';
+  const isManager = user?.role === 'manager';
 
-  // Load org/domain/team data for form (cached after first load)
   if (!_formDataCache) {
     try {
-      const orgTree = await api.get('/api/catalog/org-tree');
-      const orgs = [];
-      const domains = [];
-      const teams = [];
+      const [orgTree, certTree] = await Promise.all([
+        api.get('/api/catalog/org-tree'),
+        api.get('/api/catalog/cert-tree'),
+      ]);
 
-      (Array.isArray(orgTree) ? orgTree : []).forEach(org => {
-        orgs.push({ id: org.id, name: org.name });
-        (Array.isArray(org.domains) ? org.domains : []).forEach(d => {
-          domains.push({ id: d.id, name: d.name });
-          (Array.isArray(d.teams) ? d.teams : []).forEach(t => {
-            teams.push({ id: t.id, name: t.name });
-          });
+      const teams = [];
+      (Array.isArray(orgTree) ? orgTree : []).forEach(domain => {
+        (Array.isArray(domain.teams) ? domain.teams : []).forEach(t => {
+          teams.push({ id: t.id, name: t.name, shift: t.shift });
         });
       });
 
-      _formDataCache = { orgs, domains, teams };
+      const certificates = [];
+      (Array.isArray(certTree) ? certTree : []).forEach(cd => {
+        (Array.isArray(cd.certificates) ? cd.certificates : []).forEach(c => {
+          certificates.push({ id: c.id, name: c.name, domain: cd.name });
+        });
+      });
+
+      _formDataCache = { teams, certificates };
     } catch (err) {
       showToast('Failed to load form data', 'error');
       return;
     }
   }
 
-  const formEl = buildSkillForm(existingSkill, _formDataCache);
+  const formEl = buildSkillForm(existingSkill, _formDataCache, isAdmin, isManager, user);
 
   showModal({
     title: isEdit ? 'Edit Skill' : 'Create Skill',
@@ -1534,7 +1441,7 @@ async function openSkillModal(existingSkill) {
           await api.post('/api/skills/', formData);
           showToast('Skill created successfully', 'success');
         }
-        // Invalidate tree cache to pick up any new assignments
+        _formDataCache = null;
         delete _treeCache[_activeTab];
         fetchAndRenderSkills();
       } catch (err) {
@@ -1544,82 +1451,101 @@ async function openSkillModal(existingSkill) {
   });
 }
 
-function buildSkillForm(skill, formData) {
+function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   const form = createElement('div', { className: 'catalog-form' });
 
   // Name
-  form.appendChild(buildFormGroup('Name', 'skill-name', 'input', {
+  const nameGroup = buildFormGroup('Name', 'skill-name', 'input', {
     type: 'text',
     placeholder: 'e.g. Wi-Fi 6 Configuration',
     required: true,
-    value: skill?.name || '',
-  }, true));
+  }, true);
+  const nameInput = nameGroup.querySelector('#skill-name');
+  if (nameInput) nameInput.value = skill?.name || '';
+  form.appendChild(nameGroup);
 
   // Description
-  form.appendChild(buildFormGroup('Description', 'skill-desc', 'textarea', {
+  const descGroup = buildFormGroup('Description', 'skill-desc', 'textarea', {
     placeholder: 'Describe what this skill covers...',
-    value: skill?.description || '',
-  }));
+  }, false);
+  const descTextarea = descGroup.querySelector('#skill-desc');
+  if (descTextarea) descTextarea.textContent = skill?.description || '';
+  form.appendChild(descGroup);
 
-  // Organisations multi-select
-  const existingOrgIds = Array.isArray(skill?.organisations) ? skill.organisations.map(o => String(o.id)) : [];
-  const orgsGroup = buildCheckboxGroup('Organisations', 'skill-org-check', formData.orgs, existingOrgIds);
-  form.appendChild(orgsGroup);
-
-  // Domains multi-select
-  const existingDomainIds = Array.isArray(skill?.domains) ? skill.domains.map(d => String(d.id)) : [];
-  const domainsGroup = buildCheckboxGroup('Domains', 'skill-domain-check', formData.domains, existingDomainIds);
-  form.appendChild(domainsGroup);
-
-  // Teams multi-select
+  // Teams
   const existingTeamIds = Array.isArray(skill?.teams)
     ? skill.teams.map(t => String(t.id))
     : (Array.isArray(skill?.team_ids) ? skill.team_ids.map(String) : []);
-  const teamsGroup = buildCheckboxGroup('Teams', 'skill-team-check', formData.teams, existingTeamIds);
-  form.appendChild(teamsGroup);
+
+  const teamsGroupEl = createElement('div', { className: 'form-group' });
+  const teamsLabel = createElement('div', { className: 'form-label' });
+  teamsLabel.textContent = 'Teams';
+  const teamsGrid = createElement('div', { className: 'catalog-teams-grid' });
+
+  formData.teams.forEach(team => {
+    const checkLabel = createElement('label', { className: 'catalog-check-label' });
+    const check = createElement('input', { type: 'checkbox', value: team.id });
+    check.className = 'skill-team-check';
+    check.checked = existingTeamIds.includes(String(team.id));
+
+    // Manager: can only assign/unassign their own team
+    if (isManager && !isAdmin) {
+      if (String(team.id) === String(user?.team_id)) {
+        check.checked = true;
+        check.disabled = true;
+      } else {
+        check.disabled = true;
+      }
+    }
+
+    checkLabel.appendChild(check);
+    checkLabel.appendChild(document.createTextNode(team.name));
+    teamsGrid.appendChild(checkLabel);
+  });
+
+  teamsGroupEl.appendChild(teamsLabel);
+  teamsGroupEl.appendChild(teamsGrid);
+  form.appendChild(teamsGroupEl);
+
+  // Certificates
+  const existingCertIds = Array.isArray(skill?.certificates)
+    ? skill.certificates.map(c => String(c.id))
+    : [];
+
+  const certsGroupEl = createElement('div', { className: 'form-group' });
+  const certsLabel = createElement('div', { className: 'form-label' });
+  certsLabel.textContent = 'Certificates';
+  const certsGrid = createElement('div', { className: 'catalog-teams-grid' });
+
+  formData.certificates.forEach(cert => {
+    const checkLabel = createElement('label', { className: 'catalog-check-label' });
+    const check = createElement('input', { type: 'checkbox', value: cert.id });
+    check.className = 'skill-cert-check';
+    check.checked = existingCertIds.includes(String(cert.id));
+    checkLabel.appendChild(check);
+    const certName = cert.domain ? `${cert.name} (${cert.domain})` : cert.name;
+    checkLabel.appendChild(document.createTextNode(certName));
+    certsGrid.appendChild(checkLabel);
+  });
+
+  certsGroupEl.appendChild(certsLabel);
+  certsGroupEl.appendChild(certsGrid);
+  form.appendChild(certsGroupEl);
 
   // Tags
-  form.appendChild(buildFormGroup('Tags', 'skill-tags', 'input', {
+  const tagsGroup = buildFormGroup('Tags', 'skill-tags', 'input', {
     type: 'text',
     placeholder: 'e.g. routing, bgp, advanced (comma-separated)',
-    value: Array.isArray(skill?.tags) ? skill.tags.map(t => t.name || t).join(', ') : '',
-  }));
+  }, false);
+  const tagsInput = tagsGroup.querySelector('#skill-tags');
+  if (tagsInput) tagsInput.value = Array.isArray(skill?.tags) ? skill.tags.map(t => t.name || t).join(', ') : '';
+  form.appendChild(tagsGroup);
+
   const tagHint = createElement('div', { className: 'form-hint catalog-form-hint' });
   tagHint.textContent = 'Separate multiple tags with commas';
   form.appendChild(tagHint);
 
-  // Future checkbox
-  const futureGroup = createElement('div', { className: 'form-group' });
-  const futureLabel = createElement('label', { className: 'catalog-checkbox-label' });
-  const futureCheck = createElement('input', { type: 'checkbox', id: 'skill-future' });
-  futureCheck.checked = skill?.is_future || false;
-  futureLabel.appendChild(futureCheck);
-  futureLabel.appendChild(document.createTextNode('Mark as Future Skill'));
-  futureGroup.appendChild(futureLabel);
-  form.appendChild(futureGroup);
-
   return form;
-}
-
-function buildCheckboxGroup(labelText, checkClass, items, selectedIds) {
-  const group = createElement('div', { className: 'form-group' });
-  const label = createElement('div', { className: 'form-label' });
-  label.textContent = labelText;
-  const grid = createElement('div', { className: 'catalog-teams-grid' });
-
-  items.forEach(item => {
-    const checkLabel = createElement('label', { className: 'catalog-check-label' });
-    const check = createElement('input', { type: 'checkbox', value: item.id });
-    check.className = checkClass;
-    check.checked = selectedIds.includes(String(item.id));
-    checkLabel.appendChild(check);
-    checkLabel.appendChild(document.createTextNode(item.name));
-    grid.appendChild(checkLabel);
-  });
-
-  group.appendChild(label);
-  group.appendChild(grid);
-  return group;
 }
 
 function buildFormGroup(labelText, inputId, inputTag, attrs, required) {
@@ -1646,21 +1572,17 @@ function buildFormGroup(labelText, inputId, inputTag, attrs, required) {
 function readSkillForm(formEl) {
   const name = formEl.querySelector('#skill-name')?.value.trim() || '';
   const description = formEl.querySelector('#skill-desc')?.value.trim() || '';
-  const is_future = formEl.querySelector('#skill-future')?.checked || false;
-
-  const orgChecks = formEl.querySelectorAll('.skill-org-check:checked');
-  const organisation_ids = Array.from(orgChecks).map(c => Number(c.value));
-
-  const domainChecks = formEl.querySelectorAll('.skill-domain-check:checked');
-  const domain_ids = Array.from(domainChecks).map(c => Number(c.value));
 
   const teamChecks = formEl.querySelectorAll('.skill-team-check:checked');
   const team_ids = Array.from(teamChecks).map(c => Number(c.value));
 
+  const certChecks = formEl.querySelectorAll('.skill-cert-check:checked');
+  const certificate_ids = Array.from(certChecks).map(c => Number(c.value));
+
   const tagsRaw = formEl.querySelector('#skill-tags')?.value.trim() || '';
   const tag_names = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-  return { name, description, is_future, organisation_ids, domain_ids, team_ids, tag_names };
+  return { name, description, team_ids, certificate_ids, tag_names };
 }
 
 function validateSkillForm(data) {
@@ -1714,34 +1636,9 @@ function renderEmptyState(container, title, desc) {
   container.appendChild(state);
 }
 
-// ─── Utility helpers ──────────────────────────────────────────────────────────
+// ─── Utilities ────────────────────────────────────────────────────────────────
 
 function truncate(str, maxLen) {
   if (!str) return '';
   return str.length > maxLen ? str.slice(0, maxLen) + '...' : str;
-}
-
-function formatDateRange(start, end) {
-  const fmt = d => {
-    if (!d) return '';
-    const dt = new Date(d + 'T00:00:00');
-    return dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  };
-  if (start && end) return `${fmt(start)} – ${fmt(end)}`;
-  if (start) return `From ${fmt(start)}`;
-  if (end) return `Until ${fmt(end)}`;
-  return '';
-}
-
-const DOMAIN_CAT_CLASSES = ['cat-wireless', 'cat-research', 'cat-case', 'cat-config', 'cat-platform', 'cat-bdb', 'cat-cve', 'cat-bug'];
-
-function getDomainBadgeClass(domainName) {
-  if (!domainName) return 'cat-research';
-  // Simple hash of the name string for deterministic color assignment
-  let hash = 0;
-  for (let i = 0; i < domainName.length; i++) {
-    hash = (hash * 31 + domainName.charCodeAt(i)) & 0xffffffff;
-  }
-  const idx = Math.abs(hash) % DOMAIN_CAT_CLASSES.length;
-  return DOMAIN_CAT_CLASSES[idx];
 }

@@ -1,6 +1,6 @@
 """Import all models so Base.metadata discovers them for create_all."""
 
-from app.models.org import Organisation, Domain, Team  # noqa: F401
+from app.models.org import Domain, Team  # noqa: F401
 from app.models.user import User, UserRole  # noqa: F401
 from app.models.skill import (  # noqa: F401
     Skill,
@@ -11,15 +11,9 @@ from app.models.skill import (  # noqa: F401
     SkillLevelContentType,
 )
 from app.models.catalog import (  # noqa: F401
-    Shift,
     CertificationDomain,
     Certificate,
-    Campaign,
-    SkillOrganisation,
-    SkillDomain,
-    SkillShift,
     SkillCertificate,
-    SkillCampaign,
 )
 from app.models.plan import (  # noqa: F401
     DevelopmentPlan,

@@ -1,8 +1,6 @@
 from app.schemas.auth import LoginRequest, TokenResponse  # noqa: F401
 from app.schemas.user import UserCreate, UserUpdate, UserResponse  # noqa: F401
 from app.schemas.org import (  # noqa: F401
-    OrgCreate,
-    OrgResponse,
     DomainCreate,
     DomainResponse,
     TeamCreate,

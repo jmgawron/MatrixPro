@@ -5,7 +5,6 @@ import bcrypt
 
 from app.database import Base, SessionLocal, engine
 from app.models import (
-    Organisation,
     Domain,
     Team,
     User,
@@ -22,15 +21,9 @@ from app.models import (
     PlanSkillTrainingLog,
 )
 from app.models.catalog import (
-    Shift,
     CertificationDomain,
     Certificate,
-    Campaign,
-    SkillOrganisation,
-    SkillDomain,
-    SkillShift,
     SkillCertificate,
-    SkillCampaign,
 )
 
 
@@ -46,46 +39,18 @@ def run():
     db = SessionLocal()
 
     try:
-        print("Seeding organisations...")
-        tac = Organisation(name="TAC")
-        ps = Organisation(name="PS")
-        cms = Organisation(name="CMS")
-        css = Organisation(name="CSS")
-        db.add_all([tac, ps, cms, css])
-        db.flush()
-
         print("Seeding domains...")
-        wireless = Domain(name="Wireless", organisation_id=tac.id, is_technical=True)
-        security = Domain(name="Security", organisation_id=tac.id, is_technical=True)
-        soft_skills = Domain(
-            name="Soft Skills", organisation_id=tac.id, is_technical=False
-        )
-        ps_general = Domain(name="PS General", organisation_id=ps.id, is_technical=True)
-        cms_general = Domain(
-            name="CMS General", organisation_id=cms.id, is_technical=True
-        )
-        css_general = Domain(
-            name="CSS General", organisation_id=css.id, is_technical=True
-        )
-        db.add_all(
-            [wireless, security, soft_skills, ps_general, cms_general, css_general]
-        )
+        wireless = Domain(name="Wireless", is_technical=True)
+        security = Domain(name="Security", is_technical=True)
+        soft_skills = Domain(name="Soft Skills", is_technical=False)
+        db.add_all([wireless, security, soft_skills])
         db.flush()
 
-        print("Seeding teams...")
-        wifi6_team = Team(name="Wi-Fi 6", domain_id=wireless.id)
-        wlan_team = Team(name="WLAN Controllers", domain_id=wireless.id)
-        firewall_team = Team(name="Firewall", domain_id=security.id)
+        print("Seeding teams (with shift assignments)...")
+        wifi6_team = Team(name="Wi-Fi 6", domain_id=wireless.id, shift=1)
+        wlan_team = Team(name="WLAN Controllers", domain_id=wireless.id, shift=2)
+        firewall_team = Team(name="Firewall", domain_id=security.id, shift=1)
         db.add_all([wifi6_team, wlan_team, firewall_team])
-        db.flush()
-
-        print("Seeding shifts (TAC only)...")
-        shifts = {}
-        for domain in [wireless, security]:
-            for i in range(1, 5):
-                s = Shift(name=f"Shift{i}", domain_id=domain.id)
-                db.add(s)
-                shifts[(domain.id, i)] = s
         db.flush()
 
         print("Seeding certification domains and certificates...")
@@ -133,28 +98,6 @@ def run():
                 db.add(c)
                 db.flush()
                 all_certs[cert_name] = c
-
-        print("Seeding campaigns...")
-        campaign_wireless_sec = Campaign(
-            name="Q3 Wireless Security Patching",
-            description="Mandatory training on latest wireless security patches and vulnerability mitigations",
-            organisation_id=tac.id,
-            domain_id=wireless.id,
-            start_date=date(2026, 7, 1),
-            end_date=date(2026, 9, 30),
-            is_mandatory=True,
-        )
-        campaign_soft_skills = Campaign(
-            name="FY26 Soft Skills Initiative",
-            description="Optional professional development program for communication and leadership skills",
-            organisation_id=tac.id,
-            domain_id=soft_skills.id,
-            start_date=date(2025, 7, 1),
-            end_date=date(2026, 6, 30),
-            is_mandatory=False,
-        )
-        db.add_all([campaign_wireless_sec, campaign_soft_skills])
-        db.flush()
 
         print("Seeding users...")
         pwd = hash_password("password123")
@@ -221,7 +164,7 @@ def run():
         db.add_all([bob, dave, eve])
         db.flush()
 
-        print("Seeding skills with M2M assignments...")
+        print("Seeding skills with team and certificate assignments...")
 
         skill_defs = [
             {
@@ -229,115 +172,70 @@ def run():
                 "description": "Core Wi-Fi 6 standard concepts and PHY layer",
                 "teams": [wifi6_team],
                 "tags": ["wifi6", "wireless"],
-                "orgs": [tac],
-                "domains": [wireless],
-                "shifts": [(wireless.id, 1), (wireless.id, 2)],
                 "certs": ["CCNA R&S"],
-                "campaigns": [],
             },
             {
                 "name": "WPA3 Security",
                 "description": "Modern wireless security protocol implementation",
                 "teams": [wifi6_team, wlan_team],
                 "tags": ["security", "wireless"],
-                "orgs": [tac],
-                "domains": [wireless, security],
-                "shifts": [(wireless.id, 1), (wireless.id, 2), (security.id, 1)],
                 "certs": ["CCNA R&S", "SCOR"],
-                "campaigns": [campaign_wireless_sec],
             },
             {
                 "name": "Cisco WLC 9800 Administration",
                 "description": "Managing Cisco Catalyst 9800 WLAN Controllers",
                 "teams": [wlan_team],
                 "tags": ["wlc", "wireless"],
-                "orgs": [tac],
-                "domains": [wireless],
-                "shifts": [(wireless.id, 3), (wireless.id, 4)],
                 "certs": ["ENCOR"],
-                "campaigns": [],
             },
             {
                 "name": "OFDMA and MU-MIMO",
                 "description": "Multi-user orthogonal frequency division for Wi-Fi 6",
                 "teams": [wifi6_team],
                 "tags": ["wifi6", "rf"],
-                "orgs": [tac],
-                "domains": [wireless],
-                "shifts": [(wireless.id, 1)],
                 "certs": [],
-                "campaigns": [],
             },
             {
                 "name": "Cisco DNA Center for Wireless",
                 "description": "Assurance and automation for wireless networks",
                 "teams": [wifi6_team, wlan_team],
                 "tags": ["dnac", "automation"],
-                "orgs": [tac],
-                "domains": [wireless],
-                "shifts": [
-                    (wireless.id, 1),
-                    (wireless.id, 2),
-                    (wireless.id, 3),
-                    (wireless.id, 4),
-                ],
                 "certs": ["ENCOR", "ENARSI"],
-                "campaigns": [],
             },
             {
                 "name": "Firepower Threat Defense",
                 "description": "Cisco FTD configuration and policy management",
                 "teams": [firewall_team],
                 "tags": ["firewall", "ftd"],
-                "orgs": [tac],
-                "domains": [security],
-                "shifts": [(security.id, 1), (security.id, 2)],
                 "certs": ["SCOR", "SVPN"],
-                "campaigns": [],
             },
             {
                 "name": "ASA Firewall Administration",
                 "description": "Cisco ASA configuration and troubleshooting",
                 "teams": [firewall_team],
                 "tags": ["firewall", "asa"],
-                "orgs": [tac],
-                "domains": [security],
-                "shifts": [(security.id, 3), (security.id, 4)],
                 "certs": ["SCOR"],
-                "campaigns": [],
             },
             {
                 "name": "Zero Trust Network Access",
                 "description": "ZTNA architecture and implementation",
                 "teams": [firewall_team],
                 "tags": ["ztna", "security"],
-                "orgs": [tac],
-                "domains": [security],
-                "shifts": [(security.id, 1), (security.id, 2)],
                 "certs": ["CyberOps Assoc"],
-                "campaigns": [],
             },
             {
                 "name": "Cisco ISE Fundamentals",
                 "description": "Identity services engine configuration and policy",
                 "teams": [firewall_team, wifi6_team],
                 "tags": ["ise", "aaa"],
-                "orgs": [tac],
-                "domains": [security, wireless],
-                "shifts": [(security.id, 1), (wireless.id, 1)],
                 "certs": ["SCOR", "CCNA R&S"],
-                "campaigns": [],
             },
             {
                 "name": "Network Automation with Python",
                 "description": "Python scripting for network automation tasks",
                 "teams": [wifi6_team, wlan_team, firewall_team],
                 "tags": ["automation", "python"],
-                "orgs": [tac, ps],
-                "domains": [wireless, security],
-                "shifts": [],
                 "certs": ["DevNet Assoc", "DEVCOR"],
-                "campaigns": [],
             },
         ]
 
@@ -393,7 +291,6 @@ def run():
             skill = Skill(
                 name=sd["name"],
                 description=sd["description"],
-                is_future=False,
                 is_archived=False,
                 catalog_version=1,
             )
@@ -413,22 +310,9 @@ def run():
                     all_tags[tname] = existing
                 db.add(SkillTag(skill_id=skill.id, tag_id=all_tags[tname].id))
 
-            for org in sd["orgs"]:
-                db.add(SkillOrganisation(skill_id=skill.id, organisation_id=org.id))
-
-            for dom in sd["domains"]:
-                db.add(SkillDomain(skill_id=skill.id, domain_id=dom.id))
-
-            for domain_id, shift_num in sd["shifts"]:
-                shift = shifts[(domain_id, shift_num)]
-                db.add(SkillShift(skill_id=skill.id, shift_id=shift.id))
-
             for cert_name in sd["certs"]:
                 cert = all_certs[cert_name]
                 db.add(SkillCertificate(skill_id=skill.id, certificate_id=cert.id))
-
-            for camp in sd["campaigns"]:
-                db.add(SkillCampaign(skill_id=skill.id, campaign_id=camp.id))
 
             for idx, (level, ctype, title, desc, url) in enumerate(content_templates):
                 db.add(
@@ -497,16 +381,12 @@ def run():
         print("  dave@matrixpro.com   (engineer) password: password123")
         print("  eve@matrixpro.com    (engineer) password: password123")
         print()
-        print("Organisations: TAC, PS, CMS, CSS")
+        print("Domains: Wireless, Security, Soft Skills")
         print(
-            "Domains: Wireless, Security, Soft Skills (TAC); PS General; CMS General; CSS General"
+            "Teams: Wi-Fi 6 (Shift 1), WLAN Controllers (Shift 2), Firewall (Shift 1)"
         )
-        print("Shifts: Shift1-4 per Wireless and Security domains")
         print(
             "Cert Domains: CCNA, CCNP Enterprise, CCNP Security, DevNet Associate, DevNet Professional, CyberOps"
-        )
-        print(
-            "Campaigns: Q3 Wireless Security Patching (mandatory), FY26 Soft Skills Initiative (optional)"
         )
 
     except Exception as exc:

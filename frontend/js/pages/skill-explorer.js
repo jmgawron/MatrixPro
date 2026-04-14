@@ -141,7 +141,7 @@ function buildSearchSection() {
   const headerDesc = createElement('span', {
     className: 'content-section-desc',
   });
-  headerDesc.textContent = 'Find engineers by skill across the organisation';
+    headerDesc.textContent = 'Find engineers by skill across all teams';
 
   header.appendChild(headerTitle);
   header.appendChild(headerDesc);

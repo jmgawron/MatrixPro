@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import require_role
-from app.models.org import Domain, Organisation, Team
+from app.models.org import Domain, Team
 from app.models.user import User, UserRole
 from app.schemas.org import DomainCreate, DomainResponse
 
@@ -24,12 +24,8 @@ def create_domain(
     db: Session = Depends(get_db),
     current_user: User = require_role(UserRole.admin),
 ):
-    org = db.query(Organisation).filter(Organisation.id == data.organisation_id).first()
-    if org is None:
-        raise HTTPException(status_code=404, detail="Organisation not found")
     domain = Domain(
         name=data.name,
-        organisation_id=data.organisation_id,
         is_technical=data.is_technical,
     )
     db.add(domain)
@@ -60,15 +56,6 @@ def update_domain(
     domain = db.query(Domain).filter(Domain.id == domain_id).first()
     if domain is None:
         raise HTTPException(status_code=404, detail="Domain not found")
-    if data.organisation_id is not None:
-        org = (
-            db.query(Organisation)
-            .filter(Organisation.id == data.organisation_id)
-            .first()
-        )
-        if org is None:
-            raise HTTPException(status_code=404, detail="Organisation not found")
-        domain.organisation_id = data.organisation_id
     if data.name is not None:
         domain.name = data.name
     if data.is_technical is not None:

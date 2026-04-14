@@ -5418,24 +5418,6 @@ textarea.is-error:focus {
   line-height: 1.3;
 }
 
-/* Future skills section */
-.catalog-future-section {
-  margin-top: 32px;
-}
-
-.catalog-future-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.catalog-future-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
 /* Skill card */
 .tool-card--archived {
   opacity: 0.6;
@@ -6432,17 +6414,6 @@ textarea.is-error:focus {
   color: #fbbf24;
 }
 
-.meta-badge--campaign {
-  background: rgba(239, 68, 68, .12);
-  color: #f87171;
-}
-
-.meta-badge--campaign-required {
-  background: rgba(239, 68, 68, .2);
-  color: #ef4444;
-  font-weight: 700;
-}
-
 .meta-badge--clickable {
   cursor: pointer;
   transition: filter .15s ease, transform .15s ease;
@@ -6476,14 +6447,6 @@ textarea.is-error:focus {
   text-transform: uppercase;
   letter-spacing: .04em;
   min-width: 90px;
-  flex-shrink: 0;
-}
-
-.tree-mandatory-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--error, #ef4444);
   flex-shrink: 0;
 }
 
@@ -6542,4 +6505,86 @@ textarea.is-error:focus {
   border-top: 1px solid var(--border-soft);
   display: flex;
   justify-content: flex-end;
+}
+
+/* ── Catalog V2 ─────────────────────────────────────────────────────────── */
+.cat-wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: calc(100vh - var(--nav-h));
+}
+
+.cat-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  flex-wrap: wrap;
+}
+
+.cat-toolbar .search-input {
+  flex: 1;
+  min-width: 160px;
+  max-width: 280px;
+}
+
+.cat-shift-filters {
+  display: flex;
+  gap: 6px;
+}
+
+.cat-shift-btn {
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.cat-shift-btn.active {
+  background: var(--accent);
+  color: var(--bg-card);
+  border-color: var(--accent);
+}
+
+.cat-shift-btn:hover:not(.active) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.cat-content {
+  display: flex;
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
+}
+
+.cat-tree-panel {
+  width: 280px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  max-height: calc(100vh - 340px);
+}
+
+.cat-skills-panel {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+  .cat-content {
+    flex-direction: column;
+  }
+  .cat-tree-panel {
+    width: 100%;
+    max-height: 260px;
+  }
 }

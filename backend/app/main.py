@@ -12,9 +12,7 @@ from app.routers import (
     export,
     domains,
     catalog,
-    shifts,
     certification,
-    campaigns,
 )
 
 app = FastAPI(title="MatrixPro API", version="0.1.0")
@@ -35,14 +33,12 @@ app.include_router(plans.router)
 app.include_router(export.router)
 app.include_router(domains.router)
 app.include_router(catalog.router)
-app.include_router(shifts.router)
 app.include_router(certification.router)
-app.include_router(campaigns.router)
 
 
 @app.on_event("startup")
 def create_tables():
-    import app.models  # noqa: F401 — ensure all models are registered with Base.metadata
+    import app.models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 

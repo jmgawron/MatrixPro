@@ -733,10 +733,10 @@ async function openDomainModal(content, existingDomain) {
 
   try {
     if (isEdit) {
-      await api.put(`/api/domains/${existingDomain.id}`, { name, organisation_id: existingDomain.organisation_id });
+      await api.put(`/api/domains/${existingDomain.id}`, { name });
       showToast({ message: 'Domain updated', type: 'success' });
     } else {
-      await api.post('/api/domains/', { name, organisation_id: 1 });
+      await api.post('/api/domains/', { name });
       showToast({ message: 'Domain created', type: 'success' });
     }
     renderDomainsTab(content);

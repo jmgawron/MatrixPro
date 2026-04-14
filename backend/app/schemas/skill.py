@@ -53,28 +53,6 @@ class SkillLevelContentResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class OrgInfo(BaseModel):
-    id: int
-    name: str
-
-    model_config = {"from_attributes": True}
-
-
-class DomainInfo(BaseModel):
-    id: int
-    name: str
-
-    model_config = {"from_attributes": True}
-
-
-class ShiftInfo(BaseModel):
-    id: int
-    name: str
-    domain_name: str = ""
-
-    model_config = {"from_attributes": True}
-
-
 class CertificateInfo(BaseModel):
     id: int
     name: str
@@ -82,39 +60,21 @@ class CertificateInfo(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class CampaignInfo(BaseModel):
-    id: int
-    name: str
-    is_mandatory: bool = False
-
-    model_config = {"from_attributes": True}
-
-
 class SkillCreate(BaseModel):
     name: str
     description: str | None = None
-    is_future: bool = False
     team_ids: list[int] = []
     tag_names: list[str] = []
-    organisation_ids: list[int] = []
-    domain_ids: list[int] = []
-    shift_ids: list[int] = []
     certificate_ids: list[int] = []
-    campaign_ids: list[int] = []
 
 
 class SkillUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
-    is_future: bool | None = None
     is_archived: bool | None = None
     team_ids: list[int] | None = None
     tag_names: list[str] | None = None
-    organisation_ids: list[int] | None = None
-    domain_ids: list[int] | None = None
-    shift_ids: list[int] | None = None
     certificate_ids: list[int] | None = None
-    campaign_ids: list[int] | None = None
 
 
 class TeamInfo(BaseModel):
@@ -128,18 +88,13 @@ class SkillResponse(BaseModel):
     id: int
     name: str
     description: str | None = None
-    is_future: bool
     is_archived: bool
     catalog_version: int
     created_at: datetime
     updated_at: datetime | None = None
     tags: list[TagResponse] = []
     teams: list[TeamInfo] = []
-    organisations: list[OrgInfo] = []
-    domains: list[DomainInfo] = []
-    shifts: list[ShiftInfo] = []
     certificates: list[CertificateInfo] = []
-    campaigns: list[CampaignInfo] = []
 
     model_config = {"from_attributes": True}
 

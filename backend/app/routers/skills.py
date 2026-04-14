@@ -6,34 +6,20 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.dependencies import get_current_user, require_role
-from app.models.catalog import (
-    Campaign,
-    Certificate,
-    CertificationDomain,
-    Shift,
-    SkillCampaign,
-    SkillCertificate,
-    SkillDomain,
-    SkillOrganisation,
-    SkillShift,
-)
-from app.models.org import Domain, Organisation, Team
+from app.models.catalog import Certificate, SkillCertificate
+from app.models.org import Domain, Team
 from app.models.plan import DevelopmentPlan, PlanSkill
 from app.models.skill import Skill, SkillLevelContent, SkillTag, SkillTeam, Tag
 from app.models.user import User, UserRole
 from app.schemas.catalog import SkillAssignmentRequest
 from app.schemas.skill import (
-    CampaignInfo,
     CertificateInfo,
     CompareResponse,
     CompareSkillInfo,
     CompareTeamResult,
-    DomainInfo,
     ExplorerEngineerResult,
     ExplorerResponse,
-    OrgInfo,
     ReorderRequest,
-    ShiftInfo,
     SkillCreate,
     SkillLevelContentCreate,
     SkillLevelContentResponse,
@@ -51,15 +37,9 @@ def _skill_eager_options():
     return [
         selectinload(Skill.skill_tags).selectinload(SkillTag.tag),
         selectinload(Skill.skill_teams).selectinload(SkillTeam.team),
-        selectinload(Skill.skill_organisations).selectinload(
-            SkillOrganisation.organisation
-        ),
-        selectinload(Skill.skill_domains).selectinload(SkillDomain.domain),
-        selectinload(Skill.skill_shifts).selectinload(SkillShift.shift),
         selectinload(Skill.skill_certificates).selectinload(
             SkillCertificate.certificate
         ),
-        selectinload(Skill.skill_campaigns).selectinload(SkillCampaign.campaign),
     ]
 
 
@@ -77,119 +57,43 @@ def _to_skill_response(skill: Skill) -> SkillResponse:
         id=skill.id,
         name=skill.name,
         description=skill.description,
-        is_future=skill.is_future,
         is_archived=skill.is_archived,
         catalog_version=skill.catalog_version,
         created_at=skill.created_at,
         updated_at=skill.updated_at,
         tags=[TagResponse.model_validate(st.tag) for st in skill.skill_tags],
         teams=[TeamInfo(id=st.team.id, name=st.team.name) for st in skill.skill_teams],
-        organisations=[
-            OrgInfo(id=so.organisation.id, name=so.organisation.name)
-            for so in skill.skill_organisations
-        ],
-        domains=[
-            DomainInfo(id=sd.domain.id, name=sd.domain.name)
-            for sd in skill.skill_domains
-        ],
-        shifts=[
-            ShiftInfo(
-                id=ss.shift.id,
-                name=ss.shift.name,
-                domain_name=ss.shift.domain.name if ss.shift.domain else "",
-            )
-            for ss in skill.skill_shifts
-        ],
         certificates=[
             CertificateInfo(id=sc.certificate.id, name=sc.certificate.name)
             for sc in skill.skill_certificates
         ],
-        campaigns=[
-            CampaignInfo(
-                id=sc.campaign.id,
-                name=sc.campaign.name,
-                is_mandatory=sc.campaign.is_mandatory,
-            )
-            for sc in skill.skill_campaigns
-        ],
     )
 
 
-def _sync_m2m(db: Session, skill_id: int, data: SkillCreate | SkillUpdate):
-    if hasattr(data, "organisation_ids") and (
-        isinstance(data, SkillCreate) or data.organisation_ids is not None
-    ):
-        ids = (
-            data.organisation_ids
-            if isinstance(data, SkillCreate)
-            else (data.organisation_ids or [])
-        )
-        db.query(SkillOrganisation).filter(
-            SkillOrganisation.skill_id == skill_id
-        ).delete()
-        for oid in ids:
-            db.add(SkillOrganisation(skill_id=skill_id, organisation_id=oid))
+def _sync_certificate_m2m(db: Session, skill_id: int, certificate_ids: list[int]):
+    db.query(SkillCertificate).filter(SkillCertificate.skill_id == skill_id).delete()
+    for cid in certificate_ids:
+        db.add(SkillCertificate(skill_id=skill_id, certificate_id=cid))
 
-    if hasattr(data, "domain_ids") and (
-        isinstance(data, SkillCreate) or data.domain_ids is not None
-    ):
-        ids = (
-            data.domain_ids
-            if isinstance(data, SkillCreate)
-            else (data.domain_ids or [])
-        )
-        db.query(SkillDomain).filter(SkillDomain.skill_id == skill_id).delete()
-        for did in ids:
-            db.add(SkillDomain(skill_id=skill_id, domain_id=did))
 
-    if hasattr(data, "shift_ids") and (
-        isinstance(data, SkillCreate) or data.shift_ids is not None
-    ):
-        ids = (
-            data.shift_ids if isinstance(data, SkillCreate) else (data.shift_ids or [])
-        )
-        db.query(SkillShift).filter(SkillShift.skill_id == skill_id).delete()
-        for sid in ids:
-            db.add(SkillShift(skill_id=skill_id, shift_id=sid))
-
-    if hasattr(data, "certificate_ids") and (
-        isinstance(data, SkillCreate) or data.certificate_ids is not None
-    ):
-        ids = (
-            data.certificate_ids
-            if isinstance(data, SkillCreate)
-            else (data.certificate_ids or [])
-        )
-        db.query(SkillCertificate).filter(
-            SkillCertificate.skill_id == skill_id
-        ).delete()
-        for cid in ids:
-            db.add(SkillCertificate(skill_id=skill_id, certificate_id=cid))
-
-    if hasattr(data, "campaign_ids") and (
-        isinstance(data, SkillCreate) or data.campaign_ids is not None
-    ):
-        ids = (
-            data.campaign_ids
-            if isinstance(data, SkillCreate)
-            else (data.campaign_ids or [])
-        )
-        db.query(SkillCampaign).filter(SkillCampaign.skill_id == skill_id).delete()
-        for cid in ids:
-            db.add(SkillCampaign(skill_id=skill_id, campaign_id=cid))
+def _check_manager_team_access(current_user: User, team_ids: list[int], db: Session):
+    if current_user.role == UserRole.admin:
+        return
+    if current_user.role == UserRole.manager:
+        for tid in team_ids:
+            if tid != current_user.team_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Managers can only manage skills for their own team (team {current_user.team_id})",
+                )
 
 
 @router.get("/", response_model=list[SkillResponse])
 def list_skills(
     search: Optional[str] = Query(None),
-    domain_id: Optional[int] = Query(None),
     team_id: Optional[int] = Query(None),
-    is_future: Optional[bool] = Query(None),
     include_archived: bool = Query(False),
-    org_id: Optional[int] = Query(None),
-    shift_id: Optional[int] = Query(None),
     cert_id: Optional[int] = Query(None),
-    campaign_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -198,38 +102,15 @@ def list_skills(
     if not include_archived:
         query = query.filter(Skill.is_archived == False)  # noqa: E712
 
-    if is_future is not None:
-        query = query.filter(Skill.is_future == is_future)
-
-    if org_id is not None:
-        query = query.join(
-            SkillOrganisation, Skill.id == SkillOrganisation.skill_id
-        ).filter(SkillOrganisation.organisation_id == org_id)
-
-    if domain_id is not None:
-        query = query.join(SkillDomain, Skill.id == SkillDomain.skill_id).filter(
-            SkillDomain.domain_id == domain_id
-        )
-
     if team_id is not None:
         query = query.join(SkillTeam, Skill.id == SkillTeam.skill_id).filter(
             SkillTeam.team_id == team_id
-        )
-
-    if shift_id is not None:
-        query = query.join(SkillShift, Skill.id == SkillShift.skill_id).filter(
-            SkillShift.shift_id == shift_id
         )
 
     if cert_id is not None:
         query = query.join(
             SkillCertificate, Skill.id == SkillCertificate.skill_id
         ).filter(SkillCertificate.certificate_id == cert_id)
-
-    if campaign_id is not None:
-        query = query.join(SkillCampaign, Skill.id == SkillCampaign.skill_id).filter(
-            SkillCampaign.campaign_id == campaign_id
-        )
 
     if search:
         search_term = f"%{search.lower()}%"
@@ -258,6 +139,8 @@ def create_skill(
     db: Session = Depends(get_db),
     current_user: User = require_role(UserRole.admin, UserRole.manager),
 ):
+    _check_manager_team_access(current_user, data.team_ids, db)
+
     for tid in data.team_ids:
         if not db.query(Team).filter(Team.id == tid).first():
             raise HTTPException(status_code=400, detail=f"Team {tid} not found")
@@ -265,7 +148,6 @@ def create_skill(
     skill = Skill(
         name=data.name,
         description=data.description,
-        is_future=data.is_future,
         is_archived=False,
         catalog_version=1,
         created_at=datetime.utcnow(),
@@ -284,7 +166,7 @@ def create_skill(
             db.flush()
         db.add(SkillTag(skill_id=skill.id, tag_id=tag.id))
 
-    _sync_m2m(db, skill.id, data)
+    _sync_certificate_m2m(db, skill.id, data.certificate_ids)
 
     db.commit()
 
@@ -295,7 +177,7 @@ def create_skill(
 @router.get("/explorer", response_model=ExplorerResponse)
 def explorer_search(
     q: Optional[str] = Query(None),
-    domain_id: Optional[int] = Query(None),
+    team_id: Optional[int] = Query(None),
     status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -311,10 +193,8 @@ def explorer_search(
     if q:
         query = query.filter(Skill.name.ilike(f"%{q}%"))
 
-    if domain_id is not None:
-        query = query.join(SkillDomain, Skill.id == SkillDomain.skill_id).filter(
-            SkillDomain.domain_id == domain_id
-        )
+    if team_id is not None:
+        query = query.filter(User.team_id == team_id)
 
     if status is not None:
         query = query.filter(PlanSkill.status == status)
@@ -426,6 +306,9 @@ def update_skill(
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
+    if data.team_ids is not None:
+        _check_manager_team_access(current_user, data.team_ids, db)
+
     updated = False
 
     if data.name is not None:
@@ -434,10 +317,6 @@ def update_skill(
 
     if data.description is not None:
         skill.description = data.description
-        updated = True
-
-    if data.is_future is not None:
-        skill.is_future = data.is_future
         updated = True
 
     if data.is_archived is not None:
@@ -464,18 +343,8 @@ def update_skill(
             db.add(SkillTag(skill_id=skill_id, tag_id=tag.id))
         updated = True
 
-    m2m_changed = any(
-        getattr(data, f) is not None
-        for f in (
-            "organisation_ids",
-            "domain_ids",
-            "shift_ids",
-            "certificate_ids",
-            "campaign_ids",
-        )
-    )
-    if m2m_changed:
-        _sync_m2m(db, skill_id, data)
+    if data.certificate_ids is not None:
+        _sync_certificate_m2m(db, skill_id, data.certificate_ids)
         updated = True
 
     if updated:
@@ -509,15 +378,9 @@ def delete_skill(
     else:
         db.query(SkillTag).filter(SkillTag.skill_id == skill_id).delete()
         db.query(SkillTeam).filter(SkillTeam.skill_id == skill_id).delete()
-        db.query(SkillOrganisation).filter(
-            SkillOrganisation.skill_id == skill_id
-        ).delete()
-        db.query(SkillDomain).filter(SkillDomain.skill_id == skill_id).delete()
-        db.query(SkillShift).filter(SkillShift.skill_id == skill_id).delete()
         db.query(SkillCertificate).filter(
             SkillCertificate.skill_id == skill_id
         ).delete()
-        db.query(SkillCampaign).filter(SkillCampaign.skill_id == skill_id).delete()
         db.query(SkillLevelContent).filter(
             SkillLevelContent.skill_id == skill_id
         ).delete()
@@ -537,34 +400,26 @@ def update_skill_assignments(
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    db.query(SkillOrganisation).filter(SkillOrganisation.skill_id == skill_id).delete()
-    for oid in data.organisation_ids:
-        db.add(SkillOrganisation(skill_id=skill_id, organisation_id=oid))
-
-    db.query(SkillDomain).filter(SkillDomain.skill_id == skill_id).delete()
-    for did in data.domain_ids:
-        db.add(SkillDomain(skill_id=skill_id, domain_id=did))
-
     db.query(SkillTeam).filter(SkillTeam.skill_id == skill_id).delete()
     for tid in data.team_ids:
         db.add(SkillTeam(skill_id=skill_id, team_id=tid))
-
-    db.query(SkillShift).filter(SkillShift.skill_id == skill_id).delete()
-    for sid in data.shift_ids:
-        db.add(SkillShift(skill_id=skill_id, shift_id=sid))
 
     db.query(SkillCertificate).filter(SkillCertificate.skill_id == skill_id).delete()
     for cid in data.certificate_ids:
         db.add(SkillCertificate(skill_id=skill_id, certificate_id=cid))
 
-    db.query(SkillCampaign).filter(SkillCampaign.skill_id == skill_id).delete()
-    for cid in data.campaign_ids:
-        db.add(SkillCampaign(skill_id=skill_id, campaign_id=cid))
+    if data.tag_names is not None:
+        db.query(SkillTag).filter(SkillTag.skill_id == skill_id).delete()
+        for tag_name in data.tag_names:
+            tag = db.query(Tag).filter(Tag.name == tag_name).first()
+            if not tag:
+                tag = Tag(name=tag_name)
+                db.add(tag)
+                db.flush()
+            db.add(SkillTag(skill_id=skill_id, tag_id=tag.id))
 
     skill.catalog_version += 1
-    from datetime import datetime as dt
-
-    skill.updated_at = dt.utcnow()
+    skill.updated_at = datetime.utcnow()
 
     db.commit()
     return {"status": "success"}

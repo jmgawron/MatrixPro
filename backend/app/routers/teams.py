@@ -40,6 +40,7 @@ def _team_to_response(team: Team) -> TeamResponse:
         name=team.name,
         domain_id=team.domain_id,
         domain_name=team.domain.name if team.domain else None,
+        shift=team.shift,
         created_at=team.created_at,
     )
 
@@ -88,7 +89,9 @@ def create_team(
     domain = db.query(Domain).filter(Domain.id == data.domain_id).first()
     if domain is None:
         raise HTTPException(status_code=404, detail="Domain not found")
-    team = Team(name=data.name, domain_id=data.domain_id)
+    if data.shift not in (1, 2, 3, 4):
+        raise HTTPException(status_code=400, detail="Shift must be 1, 2, 3, or 4")
+    team = Team(name=data.name, domain_id=data.domain_id, shift=data.shift)
     db.add(team)
     db.commit()
     db.refresh(team)
@@ -531,6 +534,10 @@ def update_team(
         team.domain_id = data.domain_id
     if data.name is not None:
         team.name = data.name
+    if data.shift is not None:
+        if data.shift not in (1, 2, 3, 4):
+            raise HTTPException(status_code=400, detail="Shift must be 1, 2, 3, or 4")
+        team.shift = data.shift
     db.commit()
     db.refresh(team)
     team = (

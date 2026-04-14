@@ -48,6 +48,57 @@ function h(tag, attrs, ...children) {
   return el;
 }
 
+// ─── Shift toggle state ───────────────────────────────────────────────────────
+
+let _homeActiveShifts = new Set([1, 2, 3, 4]);
+let _homeValueEls = {};
+
+function buildShiftToggles() {
+  const row = h('div', { className: 'home-shift-filters' });
+  for (let i = 1; i <= 4; i++) {
+    const btn = h('button', { className: 'cat-shift-btn active' });
+    btn.textContent = `Shift ${i}`;
+    btn.dataset.shift = String(i);
+    btn.addEventListener('click', () => {
+      if (_homeActiveShifts.has(i)) {
+        if (_homeActiveShifts.size > 1) {
+          _homeActiveShifts.delete(i);
+          btn.classList.remove('active');
+        }
+      } else {
+        _homeActiveShifts.add(i);
+        btn.classList.add('active');
+      }
+      fetchStats();
+    });
+    row.appendChild(btn);
+  }
+  return row;
+}
+
+async function fetchStats() {
+  const shiftsParam = [..._homeActiveShifts].sort().join(',');
+  try {
+    const r = await fetch(`${API_BASE}/api/stats?shifts=${shiftsParam}`);
+    if (!r.ok) return;
+    const data = await r.json();
+    const defs = [
+      { key: 'total_engineers' },
+      { key: 'total_teams' },
+      { key: 'total_skills' },
+    ];
+    defs.forEach(({ key }) => {
+      const el = _homeValueEls[key];
+      if (el) {
+        const val = typeof data[key] === 'number' ? data[key] : 0;
+        animateCountUp(el, val);
+      }
+    });
+  } catch {
+    // non-critical
+  }
+}
+
 // ─── Stats row (ide.cisco.com style — inline in hero) ─────────────────────────
 
 function buildStatsRow() {
@@ -61,14 +112,14 @@ function buildStatsRow() {
     { key: 'total_skills', label: 'Skills' },
   ];
 
-  const valueEls = {};
+  _homeValueEls = {};
 
   statDefs.forEach(({ key, label }) => {
     const numEl = h('div', {
       className: 'stat-block-value stat-block-value--lg',
       textContent: '—',
     });
-    valueEls[key] = numEl;
+    _homeValueEls[key] = numEl;
 
     const labelEl = h('div', {
       className: 'stat-block-label',
@@ -79,15 +130,7 @@ function buildStatsRow() {
     wrapper.appendChild(statBlock);
   });
 
-  fetch(`${API_BASE}/api/stats`)
-    .then(r => r.ok ? r.json() : Promise.reject(r.status))
-    .then(data => {
-      statDefs.forEach(({ key }) => {
-        const val = typeof data[key] === 'number' ? data[key] : 0;
-        animateCountUp(valueEls[key], val);
-      });
-    })
-    .catch(() => {});
+  fetchStats();
 
   return wrapper;
 }
@@ -97,9 +140,10 @@ function buildStatsRow() {
 export function mountHome(container) {
   container.innerHTML = '';
 
+  _homeActiveShifts = new Set([1, 2, 3, 4]);
+
   const user = Store.get('user');
 
-  // Full-page wrapper with radial glow background
   const page = h('div', {
     style: [
       'background:var(--home-bg);',
@@ -109,7 +153,6 @@ export function mountHome(container) {
     ].join(''),
   });
 
-  // Radial glow behind hero (subtle blue orb)
   const glow = h('div', {
     style: [
       'position:absolute;top:-200px;left:50%;transform:translateX(-50%);',
@@ -120,7 +163,6 @@ export function mountHome(container) {
   });
   page.appendChild(glow);
 
-  // Content layer
   const content = h('div', {
     style: 'position:relative;z-index:1;width:100%;display:flex;flex-direction:column;align-items:center;padding:0 24px;',
   });
@@ -153,7 +195,6 @@ export function mountHome(container) {
       'color:var(--text-primary);',
     ].join(''),
   });
-  // First line normal, second line gradient
   title.appendChild(document.createTextNode('Skill Development'));
   title.appendChild(h('br'));
   const gradientSpan = h('span', {
@@ -180,8 +221,13 @@ export function mountHome(container) {
 
   // ── Stats row ──
   const stats = buildStatsRow();
-  stats.style.marginBottom = '40px';
+  stats.style.marginBottom = '16px';
   content.appendChild(stats);
+
+  // ── Shift toggles ──
+  const shiftRow = buildShiftToggles();
+  shiftRow.style.marginBottom = '40px';
+  content.appendChild(shiftRow);
 
   // ── CTA buttons ──
   const ctaRow = h('div', {
@@ -189,7 +235,6 @@ export function mountHome(container) {
   });
 
   if (user) {
-    // Primary CTA
     const primaryBtn = h('a', {
       style: [
         'display:inline-flex;align-items:center;gap:8px;',
@@ -216,7 +261,6 @@ export function mountHome(container) {
     });
     ctaRow.appendChild(primaryBtn);
 
-    // Secondary CTA
     const secBtn = h('a', {
       style: [
         'display:inline-flex;align-items:center;gap:8px;',

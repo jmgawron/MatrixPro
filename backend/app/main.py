@@ -49,18 +49,58 @@ def health():
 
 
 @app.get("/api/stats")
-def get_stats():
+def get_stats(shifts: str | None = None):
     from sqlalchemy.orm import Session
     from app.database import SessionLocal
     from app.models.user import User, UserRole
     from app.models.org import Team
     from app.models.skill import Skill
+    from app.models.skill import SkillTeam
+
+    shift_filter: set[int] | None = None
+    if shifts:
+        try:
+            shift_filter = {int(s) for s in shifts.split(",") if s.strip()}
+        except ValueError:
+            shift_filter = None
 
     db = SessionLocal()
     try:
         total_engineers = db.query(User).filter(User.role == UserRole.engineer).count()
-        total_teams = db.query(Team).count()
-        total_skills = db.query(Skill).filter(Skill.is_archived == False).count()  # noqa: E712
+
+        teams_q = db.query(Team)
+        if shift_filter:
+            teams_q = teams_q.filter(Team.shift.in_(shift_filter))
+        total_teams = teams_q.count()
+
+        if shift_filter:
+            filtered_team_ids = [t.id for t in teams_q.all()]
+            skills_with_matching_team = (
+                (
+                    db.query(SkillTeam.skill_id).filter(
+                        SkillTeam.team_id.in_(filtered_team_ids)
+                    )
+                )
+                if filtered_team_ids
+                else db.query(SkillTeam.skill_id).filter(False)
+            )
+            skills_with_no_team = (
+                db.query(Skill.id)
+                .filter(Skill.is_archived == False)  # noqa: E712
+                .filter(~Skill.id.in_(db.query(SkillTeam.skill_id)))
+            )
+            total_skills = (
+                db.query(Skill)
+                .filter(Skill.is_archived == False)  # noqa: E712
+                .filter(
+                    Skill.id.in_(skills_with_matching_team)
+                    | Skill.id.in_(skills_with_no_team)
+                )
+                .count()
+            )
+        else:
+            total_skills = db.query(Skill).filter(Skill.is_archived == False).count()  # noqa: E712
+
         return {
             "total_engineers": total_engineers,
             "total_teams": total_teams,

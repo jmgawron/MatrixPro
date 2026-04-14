@@ -6526,10 +6526,82 @@ textarea.is-error:focus {
   flex-wrap: wrap;
 }
 
-.cat-toolbar .search-input {
+.cat-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   flex: 1;
+  min-width: 0;
+}
+
+.cat-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.cat-toolbar .search-input {
   min-width: 160px;
   max-width: 280px;
+}
+
+.cat-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  position: relative;
+}
+
+.cat-sort-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.cat-sort-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  min-width: 180px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 4px 0;
+}
+
+.cat-sort-option {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.cat-sort-option:hover {
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+.cat-sort-option.active {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .cat-shift-filters {
@@ -6549,14 +6621,25 @@ textarea.is-error:focus {
 }
 
 .cat-shift-btn.active {
-  background: var(--accent);
-  color: var(--bg-card);
-  border-color: var(--accent);
+  background: var(--info);
+  color: #fff;
+  border-color: var(--info);
 }
 
 .cat-shift-btn:hover:not(.active) {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: rgba(6, 182, 212, 0.12);
+  color: var(--info);
+  border-color: var(--info);
+}
+
+[data-theme="light"] .cat-shift-btn:hover:not(.active) {
+  background: rgba(6, 182, 212, 0.1);
+}
+
+.home-shift-filters {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
 }
 
 .cat-content {

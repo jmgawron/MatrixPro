@@ -26,6 +26,8 @@ let _tagQuery = '';
 let _showArchived = false;
 let _activeShifts = new Set([1, 2, 3, 4]);
 
+let _sortMode = 'name-asc';
+
 // Cached data for skill create/edit form
 let _formDataCache = null;
 
@@ -42,6 +44,7 @@ export function mountCatalog(container, params) {
   _tagQuery = '';
   _showArchived = false;
   _activeShifts = new Set([1, 2, 3, 4]);
+  _sortMode = 'name-asc';
   _formDataCache = null;
 
   const page = buildPageShell(container);
@@ -81,6 +84,21 @@ function updateStats(skills, teams, certs) {
   if (sv) sv.textContent = skills;
   if (tv) tv.textContent = teams;
   if (cv) cv.textContent = certs;
+}
+
+async function recomputeFilteredStats() {
+  try {
+    const shiftsParam = [..._activeShifts].sort().join(',');
+    const stats = await api.get(`/api/stats?shifts=${shiftsParam}`);
+    const certTree = await api.get('/api/catalog/cert-tree');
+    let certCount = 0;
+    (Array.isArray(certTree) ? certTree : []).forEach(cd => {
+      certCount += Array.isArray(cd.certificates) ? cd.certificates.length : 0;
+    });
+    updateStats(stats.total_skills || 0, stats.total_teams || 0, certCount);
+  } catch {
+    // non-critical
+  }
 }
 
 // ─── Page shell ───────────────────────────────────────────────────────────────
@@ -190,6 +208,8 @@ function buildToolbar() {
   const isManager = user?.role === 'manager';
   const canEdit = isAdmin || isManager;
 
+  const leftGroup = createElement('div', { className: 'cat-toolbar-left' });
+
   // Search input
   const searchWrap = createElement('div', { className: 'catalog-search-wrap' });
   const searchInput = createElement('input', {
@@ -206,7 +226,7 @@ function buildToolbar() {
     }, 300);
   });
   searchWrap.appendChild(searchInput);
-  toolbar.appendChild(searchWrap);
+  leftGroup.appendChild(searchWrap);
 
   // Tag search
   const tagWrap = createElement('div', { className: 'catalog-search-wrap' });
@@ -224,7 +244,7 @@ function buildToolbar() {
     }, 300);
   });
   tagWrap.appendChild(tagInput);
-  toolbar.appendChild(tagWrap);
+  leftGroup.appendChild(tagWrap);
 
   // Shift filter toggles (org tab only)
   const shiftFiltersEl = createElement('div', { className: 'cat-shift-filters' });
@@ -246,10 +266,60 @@ function buildToolbar() {
       delete _treeCache['org'];
       loadTabTree('org', _treeEl);
       fetchAndRenderSkills();
+      recomputeFilteredStats();
     });
     shiftFiltersEl.appendChild(btn);
   }
-  toolbar.appendChild(shiftFiltersEl);
+  leftGroup.appendChild(shiftFiltersEl);
+
+  const sortWrap = createElement('div', { style: 'position:relative;' });
+  const sortBtn = createElement('button', { className: 'cat-sort-btn' });
+  sortBtn.innerHTML = '&#x21C5; Sort';
+  let menuOpen = false;
+  let menuEl = null;
+
+  function closeSortMenu() {
+    if (menuEl) { menuEl.remove(); menuEl = null; }
+    menuOpen = false;
+    document.removeEventListener('click', closeSortMenuOnOutside);
+  }
+  function closeSortMenuOnOutside(e) {
+    if (!sortWrap.contains(e.target)) closeSortMenu();
+  }
+  function openSortMenu() {
+    menuEl = createElement('div', { className: 'cat-sort-menu' });
+    const options = [
+      { value: 'name-asc', label: 'Name A → Z' },
+      { value: 'name-desc', label: 'Name Z → A' },
+      { value: 'date-desc', label: 'Newest first' },
+      { value: 'date-asc', label: 'Oldest first' },
+    ];
+    options.forEach(opt => {
+      const optBtn = createElement('button', { className: 'cat-sort-option' + (opt.value === _sortMode ? ' active' : '') });
+      optBtn.textContent = opt.label;
+      optBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _sortMode = opt.value;
+        closeSortMenu();
+        fetchAndRenderSkills();
+      });
+      menuEl.appendChild(optBtn);
+    });
+    sortWrap.appendChild(menuEl);
+    menuOpen = true;
+    setTimeout(() => document.addEventListener('click', closeSortMenuOnOutside), 0);
+  }
+
+  sortBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (menuOpen) closeSortMenu(); else openSortMenu();
+  });
+  sortWrap.appendChild(sortBtn);
+  leftGroup.appendChild(sortWrap);
+
+  toolbar.appendChild(leftGroup);
+
+  const rightGroup = createElement('div', { className: 'cat-toolbar-right' });
 
   // Archived toggle (admin and manager only)
   if (canEdit) {
@@ -261,7 +331,7 @@ function buildToolbar() {
     });
     archivedLabel.appendChild(archivedCheck);
     archivedLabel.appendChild(document.createTextNode(' Show Archived'));
-    toolbar.appendChild(archivedLabel);
+    rightGroup.appendChild(archivedLabel);
   }
 
   // Add New Skill button (admin and manager only)
@@ -269,8 +339,10 @@ function buildToolbar() {
     const addBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
     addBtn.textContent = 'Add New Skill';
     addBtn.addEventListener('click', () => openSkillModal(null));
-    toolbar.appendChild(addBtn);
+    rightGroup.appendChild(addBtn);
   }
+
+  toolbar.appendChild(rightGroup);
 
   return { el: toolbar, shiftFiltersEl };
 }
@@ -558,6 +630,11 @@ function applyClientFilters(skills) {
       });
     }
   }
+
+  if (_sortMode === 'name-asc') result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  else if (_sortMode === 'name-desc') result.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+  else if (_sortMode === 'date-desc') result.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  else if (_sortMode === 'date-asc') result.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
 
   return result;
 }

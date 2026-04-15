@@ -691,9 +691,9 @@ def run():
         ]
 
         statuses = [
-            PlanSkillStatus.in_development,
-            PlanSkillStatus.in_pipeline,
-            PlanSkillStatus.proficiency,
+            PlanSkillStatus.developing,
+            PlanSkillStatus.planned,
+            PlanSkillStatus.mastered,
         ]
 
         for engineer, assigned_skills in plan_assignments:
@@ -707,7 +707,7 @@ def run():
                     skill_id=skill.id,
                     status=statuses[idx % len(statuses)],
                     proficiency_level=idx + 1
-                    if statuses[idx % len(statuses)] == PlanSkillStatus.proficiency
+                    if statuses[idx % len(statuses)] == PlanSkillStatus.mastered
                     else None,
                     skill_version_at_add=1,
                     notes=f"Auto-seeded for {engineer.name}",
@@ -715,7 +715,7 @@ def run():
                 db.add(ps)
                 db.flush()
 
-                if ps.status == PlanSkillStatus.proficiency:
+                if ps.status == PlanSkillStatus.mastered:
                     db.add(
                         PlanSkillTrainingLog(
                             plan_skill_id=ps.id,

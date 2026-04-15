@@ -26,7 +26,7 @@ class TrainingLogResponse(BaseModel):
 
 class PlanSkillCreate(BaseModel):
     skill_id: int
-    status: PlanSkillStatus = PlanSkillStatus.in_pipeline
+    status: PlanSkillStatus = PlanSkillStatus.planned
     proficiency_level: int | None = None
     notes: str | None = None
 
@@ -42,6 +42,8 @@ class PlanSkillResponse(BaseModel):
     plan_id: int
     skill_id: int
     skill_name: str
+    skill_icon: str | None = None
+    is_custom: bool = False
     status: PlanSkillStatus
     proficiency_level: int | None = None
     notes: str | None = None
@@ -51,6 +53,19 @@ class PlanSkillResponse(BaseModel):
     training_logs: list[TrainingLogResponse] = []
 
     model_config = {"from_attributes": True}
+
+
+class OwnSkillCreate(BaseModel):
+    name: str
+    description: str | None = None
+    status: PlanSkillStatus = PlanSkillStatus.planned
+    proficiency_level: int | None = None
+    notes: str | None = None
+
+
+class OwnSkillUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
 
 
 class PlanResponse(BaseModel):

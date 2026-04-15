@@ -180,9 +180,9 @@ function buildSearchSection() {
 
   const statusOptions = [
     { value: '', label: 'All Statuses' },
-    { value: 'in_pipeline', label: 'In Pipeline' },
-    { value: 'in_development', label: 'In Development' },
-    { value: 'proficiency', label: 'Proficiency' },
+    { value: 'planned', label: 'Planned' },
+    { value: 'developing', label: 'Developing' },
+    { value: 'mastered', label: 'Mastered' },
   ];
   statusOptions.forEach(({ value, label }) => {
     const opt = createElement('option', { value });
@@ -314,14 +314,14 @@ function renderSearchResults(data) {
 
 function buildStatusChip(status) {
   const labelMap = {
-    in_pipeline:    'In Pipeline',
-    in_development: 'In Development',
-    proficiency:    'Proficiency',
+    planned:    'Planned',
+    developing: 'Developing',
+    mastered:   'Mastered',
   };
   const modifierMap = {
-    in_pipeline:    'pipeline',
-    in_development: 'development',
-    proficiency:    'proficiency',
+    planned:    'pipeline',
+    developing: 'development',
+    mastered:   'proficiency',
   };
   const label = labelMap[status] || status || '—';
   const modifier = modifierMap[status] || 'unknown';

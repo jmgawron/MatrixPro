@@ -19,9 +19,9 @@ from app.models.skill import SkillLevelContentType
 
 
 class PlanSkillStatus(str, enum.Enum):
-    in_development = "in_development"
-    in_pipeline = "in_pipeline"
-    proficiency = "proficiency"
+    developing = "developing"
+    planned = "planned"
+    mastered = "mastered"
 
 
 class DevelopmentPlan(Base):
@@ -42,7 +42,7 @@ class PlanSkill(Base):
     plan_id = Column(Integer, ForeignKey("development_plans.id"), nullable=False)
     skill_id = Column(Integer, ForeignKey("skills.id"), nullable=False)
     status = Column(
-        Enum(PlanSkillStatus), nullable=False, default=PlanSkillStatus.in_pipeline
+        Enum(PlanSkillStatus), nullable=False, default=PlanSkillStatus.planned
     )
     proficiency_level = Column(Integer, nullable=True)
     notes = Column(Text, nullable=True)

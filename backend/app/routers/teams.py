@@ -304,13 +304,13 @@ def get_team_stats(
             if ps is not None:
                 engineers_with += 1
                 cells_with_skill += 1
-                if ps.status == PlanSkillStatus.in_pipeline:
-                    status_counts.in_pipeline += 1
-                elif ps.status == PlanSkillStatus.in_development:
-                    status_counts.in_development += 1
+                if ps.status == PlanSkillStatus.planned:
+                    status_counts.planned += 1
+                elif ps.status == PlanSkillStatus.developing:
+                    status_counts.developing += 1
                     active_developments += 1
-                elif ps.status == PlanSkillStatus.proficiency:
-                    status_counts.proficiency += 1
+                elif ps.status == PlanSkillStatus.mastered:
+                    status_counts.mastered += 1
                 if ps.proficiency_level is not None:
                     proficiency_levels.append(ps.proficiency_level)
                 ps_last = training_log_map.get(ps.id) or ps.updated_at
@@ -349,13 +349,13 @@ def get_team_stats(
         skills_map = eng_skill_map[eng_id]
         team_ps = {sid: ps for sid, ps in skills_map.items() if sid in team_skill_ids}
         n_pipeline = sum(
-            1 for ps in team_ps.values() if ps.status == PlanSkillStatus.in_pipeline
+            1 for ps in team_ps.values() if ps.status == PlanSkillStatus.planned
         )
         n_dev = sum(
-            1 for ps in team_ps.values() if ps.status == PlanSkillStatus.in_development
+            1 for ps in team_ps.values() if ps.status == PlanSkillStatus.developing
         )
         n_prof = sum(
-            1 for ps in team_ps.values() if ps.status == PlanSkillStatus.proficiency
+            1 for ps in team_ps.values() if ps.status == PlanSkillStatus.mastered
         )
 
         last_act: datetime | None = None

@@ -69,9 +69,9 @@ class TeamMatrixResponse(BaseModel):
 
 
 class SkillStatusCounts(BaseModel):
-    in_pipeline: int = 0
-    in_development: int = 0
-    proficiency: int = 0
+    planned: int = 0
+    developing: int = 0
+    mastered: int = 0
     not_in_plan: int = 0
 
 
@@ -134,7 +134,7 @@ class TeamActivityResponse(BaseModel):
 class BulkAssignRequest(BaseModel):
     engineer_ids: list[int]
     skill_id: int
-    status: PlanSkillStatus = PlanSkillStatus.in_pipeline
+    status: PlanSkillStatus = PlanSkillStatus.planned
     notes: str | None = None
     skip_existing: bool = True
 

@@ -4,6 +4,7 @@ import { showSkeleton } from '../components/skeleton.js';
 import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
 import { el } from '../utils/dom.js';
+import { getSkillIconSVG } from '../components/icons.js';
 
 let _container = null;
 let _engineerId = null;
@@ -12,7 +13,7 @@ let _draggingPlanSkillId = null;
 let _sectionGridEls = {};
 let _allCatalogSkills = [];
 let _searchQuery = '';
-let _currentSection = 'in_development';
+let _currentSection = 'developing';
 
 const SVG_ICONS = {
   wrench: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
@@ -39,15 +40,15 @@ function svgIcon(name, size) {
 }
 
 const SECTIONS = [
-  { status: 'in_development', title: 'In Development', subtitle: 'Actively building these skills', svgIcon: 'wrench', iconClass: 'mp-card-icon--dev' },
-  { status: 'in_pipeline', title: 'In Pipeline', subtitle: 'Queued and waiting to start', svgIcon: 'layers', iconClass: 'mp-card-icon--pipe' },
-  { status: 'proficiency', title: 'Proficiency', subtitle: 'Completed — skill fully acquired', svgIcon: 'shield', iconClass: 'mp-card-icon--prof' },
+  { status: 'developing', title: 'Developing', subtitle: 'Actively building these skills', svgIcon: 'wrench', iconClass: 'mp-card-icon--dev' },
+  { status: 'planned', title: 'Planned', subtitle: 'Queued and waiting to start', svgIcon: 'layers', iconClass: 'mp-card-icon--pipe' },
+  { status: 'mastered', title: 'Mastered', subtitle: 'Completed — skill fully acquired', svgIcon: 'shield', iconClass: 'mp-card-icon--prof' },
 ];
 
 const STATUS_LABELS = {
-  in_pipeline: 'In Pipeline',
-  in_development: 'In Development',
-  proficiency: 'Proficiency',
+  planned: 'Planned',
+  developing: 'Developing',
+  mastered: 'Mastered',
 };
 
 export function mountMyPlan(container, params) {
@@ -59,7 +60,7 @@ export function mountMyPlan(container, params) {
   _sectionGridEls = {};
   _allCatalogSkills = [];
   _searchQuery = '';
-  _currentSection = 'in_development';
+  _currentSection = 'developing';
 
   const user = Store.get('user');
   _engineerId = params?.id ? Number(params.id) : user?.id;
@@ -176,24 +177,16 @@ function buildPageShell(container, params) {
   const addLabel = el('span', { className: 'mp-plan-nav-label' });
   addLabel.textContent = '+ Add Skill';
   addBtn.appendChild(addLabel);
-  addBtn.addEventListener('click', openAddSkillModal);
+  addBtn.addEventListener('click', showAddSkillMenu);
   sidebar.appendChild(addBtn);
 
-  const pdfBtn = el('button', { className: 'mp-plan-nav-btn mp-plan-nav-btn--action' });
-  pdfBtn.appendChild(svgIcon('fileText', '16px'));
-  const pdfLabel = el('span', { className: 'mp-plan-nav-label' });
-  pdfLabel.textContent = 'Export PDF';
-  pdfBtn.appendChild(pdfLabel);
-  pdfBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/pdf`, `plan_${_engineerId}.pdf`));
-  sidebar.appendChild(pdfBtn);
-
-  const csvBtn = el('button', { className: 'mp-plan-nav-btn mp-plan-nav-btn--action' });
-  csvBtn.appendChild(svgIcon('table', '16px'));
-  const csvLabel = el('span', { className: 'mp-plan-nav-label' });
-  csvLabel.textContent = 'Export CSV';
-  csvBtn.appendChild(csvLabel);
-  csvBtn.addEventListener('click', () => downloadExport(`/api/export/plans/${_engineerId}/csv`, `plan_${_engineerId}.csv`));
-  sidebar.appendChild(csvBtn);
+  const reportBtn = el('button', { className: 'mp-plan-nav-btn mp-plan-nav-btn--action' });
+  reportBtn.appendChild(svgIcon('fileText', '16px'));
+  const reportLabel = el('span', { className: 'mp-plan-nav-label' });
+  reportLabel.textContent = 'Reporting';
+  reportBtn.appendChild(reportLabel);
+  reportBtn.addEventListener('click', openReportingModal);
+  sidebar.appendChild(reportBtn);
 
   planLayout.appendChild(sidebar);
 
@@ -203,7 +196,7 @@ function buildPageShell(container, params) {
   const contentTitleWrap = el('div', { className: 'mp-plan-content-title-wrap' });
   const contentTitle = el('h2', { className: 'mp-plan-content-title', id: 'mp-content-title' });
   const activeSectionDef = SECTIONS.find(s => s.status === _currentSection);
-  contentTitle.textContent = activeSectionDef?.title || 'In Development';
+  contentTitle.textContent = activeSectionDef?.title || 'Developing';
   const contentCount = el('span', { className: 'mp-nav-count mp-nav-count--header', id: 'mp-content-count' });
   contentCount.textContent = '0';
   contentTitleWrap.appendChild(contentTitle);
@@ -327,9 +320,9 @@ function renderSections() {
     : skills;
 
   const groups = {
-    in_development: filtered.filter(s => s.status === 'in_development'),
-    in_pipeline: filtered.filter(s => s.status === 'in_pipeline'),
-    proficiency: filtered.filter(s => s.status === 'proficiency'),
+    developing: filtered.filter(s => s.status === 'developing'),
+    planned: filtered.filter(s => s.status === 'planned'),
+    mastered: filtered.filter(s => s.status === 'mastered'),
   };
 
   updateStatsRow(skills, groups);
@@ -367,8 +360,8 @@ function updateStatsRow(allSkills, groups) {
 
   const stats = [
     { value: allSkills.length, label: 'Total Skills', icon: 'bookOpen' },
-    { value: groups.in_development.length, label: 'In Development', icon: 'wrench' },
-    { value: groups.proficiency.length, label: 'Proficient', icon: 'checkCircle' },
+    { value: groups.developing.length, label: 'Developing', icon: 'wrench' },
+    { value: groups.mastered.length, label: 'Mastered', icon: 'checkCircle' },
     { value: logsThisQ, label: 'Logs This Quarter', icon: 'pencil' },
     { value: logsThisYear, label: 'Logs This Year', icon: 'calendar' },
   ];
@@ -395,7 +388,20 @@ function buildCard(planSkill, status, iconClass) {
 
   const icon = el('div', { className: `mp-card-icon ${iconClass}` });
   const skillName = planSkill.skill_name || 'Unknown Skill';
-  icon.textContent = skillName.charAt(0);
+  if (planSkill.is_custom) {
+    icon.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l2 2"/></svg>';
+    icon.style.color = 'var(--text-muted)';
+    icon.style.background = 'var(--bg-tertiary)';
+  } else if (planSkill.skill_icon) {
+    const svg = getSkillIconSVG(planSkill.skill_icon, 20);
+    if (svg) {
+      icon.innerHTML = svg;
+    } else {
+      icon.textContent = skillName.charAt(0);
+    }
+  } else {
+    icon.textContent = skillName.charAt(0);
+  }
   top.appendChild(icon);
 
   const info = el('div', { className: 'mp-card-info' });
@@ -459,9 +465,9 @@ function buildCard(planSkill, status, iconClass) {
 
 function buildProficiencyBadge(level) {
   const config = {
-    1: { cls: 'chip-education', label: 'L1 · Education' },
-    2: { cls: 'chip-exposure', label: 'L2 · Exposure' },
-    3: { cls: 'chip-experience', label: 'L3 · Experience' },
+    1: { cls: 'chip-education', label: 'Education' },
+    2: { cls: 'chip-exposure', label: 'Exposure' },
+    3: { cls: 'chip-experience', label: 'Experience' },
   };
   const c = config[level];
   const badge = el('span', { className: c ? `triage-chip ${c.cls}` : 'triage-chip chip-pipeline' });
@@ -478,7 +484,7 @@ function showCardActionsMenu(e, planSkill, currentStatus) {
     className: 'card-actions-menu mp-context-menu',
   });
 
-  const statusFlow = ['in_pipeline', 'in_development', 'proficiency'];
+  const statusFlow = ['planned', 'developing', 'mastered'];
   const nextStatuses = statusFlow.filter(s => s !== currentStatus);
 
   nextStatuses.forEach(targetStatus => {
@@ -556,9 +562,9 @@ function openEditSkillModal(planSkill) {
   statusLabel.textContent = 'Status';
   const statusSelect = el('select', { className: 'form-select' });
   [
-    { value: 'in_pipeline', label: 'In Pipeline' },
-    { value: 'in_development', label: 'In Development' },
-    { value: 'proficiency', label: 'Proficiency' },
+    { value: 'planned', label: 'Planned' },
+    { value: 'developing', label: 'Developing' },
+    { value: 'mastered', label: 'Mastered' },
   ].forEach(({ value, label }) => {
     const opt = el('option', { value });
     opt.textContent = label;
@@ -575,9 +581,9 @@ function openEditSkillModal(planSkill) {
   const levelSelect = el('select', { className: 'form-select' });
   [
     { value: '', label: '— Not set —' },
-    { value: '1', label: '1 · Education' },
-    { value: '2', label: '2 · Exposure' },
-    { value: '3', label: '3 · Experience' },
+    { value: '1', label: 'Education' },
+    { value: '2', label: 'Exposure' },
+    { value: '3', label: 'Experience' },
   ].forEach(({ value, label }) => {
     const opt = el('option', { value });
     opt.textContent = label;
@@ -1468,143 +1474,417 @@ async function handleRemoveSkill(planSkill) {
   }
 }
 
-async function openAddSkillModal() {
-  if (!_allCatalogSkills.length) {
-    try {
-      const skills = await api.get('/api/skills/');
-      _allCatalogSkills = Array.isArray(skills) ? skills.filter(s => !s.is_archived) : [];
-    } catch (err) {
-      showToast(err.message || 'Failed to load skill catalog', 'error');
-      return;
-    }
-  }
+function showAddSkillMenu(e) {
+  document.querySelectorAll('.mp-add-skill-menu').forEach(m => m.remove());
 
-  const planSkillIds = new Set(
-    (Array.isArray(_planData?.skills) ? _planData.skills : []).map(s => s.skill_id)
-  );
+  const menu = el('div', { className: 'mp-add-skill-menu mp-context-menu' });
 
-  const available = _allCatalogSkills.filter(s => !planSkillIds.has(s.id));
-
-  let searchQuery = '';
-
-  const bodyEl = el('div', { className: 'mp-add-skill-body' });
-
-  const searchInput = el('input', {
-    type: 'text',
-    placeholder: 'Search skills...',
-    className: 'search-input',
+  const ownItem = el('button', { className: 'mp-context-menu-item' });
+  ownItem.appendChild(svgIcon('circle', '16px'));
+  const ownLabel = el('span');
+  ownLabel.textContent = 'Own Skill';
+  ownItem.appendChild(ownLabel);
+  ownItem.addEventListener('mouseenter', () => { ownItem.style.background = 'var(--bg-hover)'; });
+  ownItem.addEventListener('mouseleave', () => { ownItem.style.background = 'none'; });
+  ownItem.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    menu.remove();
+    openOwnSkillModal();
   });
-  bodyEl.appendChild(searchInput);
+  menu.appendChild(ownItem);
 
-  const listEl = el('div', {
-    className: 'mp-add-skill-results',
+  const teamItem = el('button', { className: 'mp-context-menu-item' });
+  const teamIconSpan = el('span', { className: 'mp-icon' });
+  teamIconSpan.style.fontSize = '16px';
+  teamIconSpan.innerHTML = '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+  teamItem.appendChild(teamIconSpan);
+  const teamLabel = el('span');
+  teamLabel.textContent = "My Team's Skills";
+  teamItem.appendChild(teamLabel);
+  teamItem.addEventListener('mouseenter', () => { teamItem.style.background = 'var(--bg-hover)'; });
+  teamItem.addEventListener('mouseleave', () => { teamItem.style.background = 'none'; });
+  teamItem.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    menu.remove();
+    window.location.hash = '#/catalog?addMode=team';
   });
+  menu.appendChild(teamItem);
 
-  function renderSkillList(query) {
-    listEl.innerHTML = '';
-    const filtered = query
-      ? available.filter(s =>
-          (s.name || '').toLowerCase().includes(query.toLowerCase()) ||
-          (s.description || '').toLowerCase().includes(query.toLowerCase()) ||
-          (Array.isArray(s.tags) && s.tags.some(t => (t.name || t).toLowerCase().includes(query.toLowerCase())))
-        )
-      : available;
+  const catalogItem = el('button', { className: 'mp-context-menu-item' });
+  catalogItem.appendChild(svgIcon('bookOpen', '16px'));
+  const catalogLabel = el('span');
+  catalogLabel.textContent = 'From Catalog';
+  catalogItem.appendChild(catalogLabel);
+  catalogItem.addEventListener('mouseenter', () => { catalogItem.style.background = 'var(--bg-hover)'; });
+  catalogItem.addEventListener('mouseleave', () => { catalogItem.style.background = 'none'; });
+  catalogItem.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    menu.remove();
+    window.location.hash = '#/catalog?addMode=all';
+  });
+  menu.appendChild(catalogItem);
 
-    if (filtered.length === 0) {
-      const empty = el('div', { className: 'empty-state empty-state--compact' });
-      empty.textContent = query ? 'No skills match your search.' : 'All available skills are already in your plan.';
-      listEl.appendChild(empty);
-      return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  menu.style.top = `${rect.bottom + 4}px`;
+  menu.style.left = `${rect.left}px`;
+  menu.style.minWidth = '180px';
+
+  document.body.appendChild(menu);
+
+  const dismiss = (ev) => {
+    if (!menu.contains(ev.target)) {
+      menu.remove();
+      document.removeEventListener('click', dismiss);
     }
+  };
+  setTimeout(() => document.addEventListener('click', dismiss), 0);
+}
 
-    filtered.forEach(skill => {
-      const row = el('div', {
-        className: 'mp-add-skill-item',
-      });
-      row.dataset.skillId = skill.id;
+function openOwnSkillModal() {
+  const bodyEl = el('div', { className: 'mp-own-skill-body' });
 
-      const info = el('div', { className: 'mp-add-skill-item-info' });
-      const nameEl = el('div', { className: 'mp-add-skill-item-name' });
-      nameEl.textContent = skill.name;
-      info.appendChild(nameEl);
+  const nameGroup = el('div', { className: 'form-group' });
+  const nameLabel = el('label', { className: 'form-label' });
+  nameLabel.textContent = 'Name *';
+  const nameInput = el('input', { type: 'text', className: 'form-input', placeholder: 'Skill name' });
+  nameGroup.appendChild(nameLabel);
+  nameGroup.appendChild(nameInput);
+  bodyEl.appendChild(nameGroup);
 
-      const meta = el('div', { className: 'mp-add-skill-item-meta' });
+  const descGroup = el('div', { className: 'form-group' });
+  const descLabel = el('label', { className: 'form-label' });
+  descLabel.textContent = 'Description';
+  const descInput = el('textarea', { className: 'form-textarea', rows: '3', placeholder: 'Optional description...' });
+  descGroup.appendChild(descLabel);
+  descGroup.appendChild(descInput);
+  bodyEl.appendChild(descGroup);
 
-      if (skill.domain_name) {
-        const domBadge = el('span', { className: 'triage-chip triage-signal chip-sm' });
-        domBadge.textContent = skill.domain_name;
-        meta.appendChild(domBadge);
+  const statusGroup = el('div', { className: 'form-group' });
+  const statusLabel = el('label', { className: 'form-label' });
+  statusLabel.textContent = 'Status';
+  const statusSelect = el('select', { className: 'form-select' });
+  [
+    { value: 'planned', label: 'Planned' },
+    { value: 'developing', label: 'Developing' },
+    { value: 'mastered', label: 'Mastered' },
+  ].forEach(({ value, label }) => {
+    const opt = el('option', { value });
+    opt.textContent = label;
+    if (value === 'planned') opt.selected = true;
+    statusSelect.appendChild(opt);
+  });
+  statusGroup.appendChild(statusLabel);
+  statusGroup.appendChild(statusSelect);
+  bodyEl.appendChild(statusGroup);
+
+  const profGroup = el('div', { className: 'form-group' });
+  const profLabel = el('label', { className: 'form-label' });
+  profLabel.textContent = 'Proficiency Level';
+  const profSelect = el('select', { className: 'form-select' });
+  [
+    { value: '', label: 'Not set' },
+    { value: '1', label: 'Education' },
+    { value: '2', label: 'Exposure' },
+    { value: '3', label: 'Experience' },
+  ].forEach(({ value, label }) => {
+    const opt = el('option', { value });
+    opt.textContent = label;
+    profSelect.appendChild(opt);
+  });
+  profGroup.appendChild(profLabel);
+  profGroup.appendChild(profSelect);
+  bodyEl.appendChild(profGroup);
+
+  const notesGroup = el('div', { className: 'form-group' });
+  const notesLabel = el('label', { className: 'form-label' });
+  notesLabel.textContent = 'Notes';
+  const notesInput = el('textarea', { className: 'form-textarea', rows: '3', placeholder: 'Optional notes...' });
+  notesGroup.appendChild(notesLabel);
+  notesGroup.appendChild(notesInput);
+  bodyEl.appendChild(notesGroup);
+
+  showModal({
+    title: 'Create Own Skill',
+    body: bodyEl,
+    confirmText: 'Create Skill',
+    cancelText: 'Cancel',
+    onConfirm: async () => {
+      const name = nameInput.value.trim();
+      if (!name) {
+        showToast('Skill name is required', 'error');
+        return false;
       }
+      const profVal = profSelect.value;
+      try {
+        await api.post(`/api/plans/${_engineerId}/own-skills`, {
+          name,
+          description: descInput.value.trim() || null,
+          status: statusSelect.value,
+          proficiency_level: profVal ? Number(profVal) : null,
+          notes: notesInput.value.trim() || null,
+        });
+        showToast('Own skill created', 'success');
+        await reloadPlan();
+      } catch (err) {
+        showToast(err.message || 'Failed to create own skill', 'error');
+        return false;
+      }
+    },
+  });
+}
 
-      if (Array.isArray(skill.tags)) {
-        skill.tags.slice(0, 3).forEach(tag => {
-          const tagChip = el('span', { className: 'triage-chip triage-feedback chip-sm' });
-          tagChip.textContent = tag.name || tag;
-          meta.appendChild(tagChip);
+function openReportingModal() {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const bodyEl = el('div');
+
+  const timeframeRow = el('div');
+  timeframeRow.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;';
+
+  const timeframeLabel = el('span');
+  timeframeLabel.textContent = 'Time Frame:';
+  timeframeLabel.style.cssText = 'font-size:13px;color:var(--text-muted);font-weight:600;white-space:nowrap;';
+
+  const fromLabel = el('label');
+  fromLabel.textContent = 'From';
+  fromLabel.style.cssText = 'font-size:13px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;';
+  const fromInput = el('input', { type: 'date' });
+  fromInput.value = thirtyDaysAgo;
+  fromInput.style.cssText = 'background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-size:13px;';
+  fromLabel.appendChild(fromInput);
+
+  const toLabel = el('label');
+  toLabel.textContent = 'To';
+  toLabel.style.cssText = 'font-size:13px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;';
+  const toInput = el('input', { type: 'date' });
+  toInput.value = todayStr;
+  toInput.style.cssText = 'background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-size:13px;';
+  toLabel.appendChild(toInput);
+
+  timeframeRow.appendChild(timeframeLabel);
+  timeframeRow.appendChild(fromLabel);
+  timeframeRow.appendChild(toLabel);
+  bodyEl.appendChild(timeframeRow);
+
+  const tabBar = el('div', { className: 'skill-detail-tabs', role: 'tablist', 'aria-label': 'Reporting tabs' });
+  const changeLogsTab = el('button', { className: 'skill-detail-tab active', role: 'tab', 'aria-selected': 'true' });
+  changeLogsTab.textContent = 'Change Logs';
+  const skillsOverviewTab = el('button', { className: 'skill-detail-tab', role: 'tab', 'aria-selected': 'false' });
+  skillsOverviewTab.textContent = 'Skills Overview';
+  tabBar.appendChild(changeLogsTab);
+  tabBar.appendChild(skillsOverviewTab);
+  bodyEl.appendChild(tabBar);
+
+  const contentArea = el('div');
+  contentArea.style.cssText = 'margin-top:12px;';
+  bodyEl.appendChild(contentArea);
+
+  const changeLogsPanel = el('div', { className: 'skill-detail-tab-panel' });
+
+  async function renderChangeLogs() {
+    const fromDate = fromInput.value;
+    const toDate = toInput.value;
+    changeLogsPanel.innerHTML = '';
+
+    const loadingMsg = el('div', { className: 'empty-state empty-state--compact' });
+    loadingMsg.textContent = 'Loading…';
+    changeLogsPanel.appendChild(loadingMsg);
+
+    try {
+      const logs = await api.get(`/api/export/plans/${_engineerId}/change-logs?from_date=${fromDate}&to_date=${toDate}`);
+      changeLogsPanel.innerHTML = '';
+
+      const listWrap = el('div');
+      listWrap.style.cssText = 'max-height:320px;overflow-y:auto;border:1px solid var(--border-soft);border-radius:var(--radius-md);margin-bottom:12px;';
+
+      if (!Array.isArray(logs) || logs.length === 0) {
+        const empty = el('div', { className: 'empty-state empty-state--compact' });
+        empty.textContent = 'No change logs found for this period.';
+        empty.style.padding = '24px';
+        listWrap.appendChild(empty);
+      } else {
+        logs.forEach(log => {
+          const entry = el('div');
+          entry.style.cssText = 'padding:10px 12px;border-bottom:1px solid var(--border-soft);display:flex;gap:12px;align-items:flex-start;';
+
+          const tsCol = el('div');
+          tsCol.style.cssText = 'min-width:110px;font-size:12px;color:var(--text-muted);padding-top:2px;white-space:nowrap;';
+          tsCol.textContent = formatDate(log.timestamp);
+
+          const mainCol = el('div');
+          mainCol.style.cssText = 'flex:1;';
+
+          const skillName = el('div');
+          skillName.style.cssText = 'font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:2px;';
+          skillName.textContent = log.skill_name || '—';
+
+          const desc = el('div');
+          desc.style.cssText = 'font-size:13px;color:var(--text-secondary);';
+          desc.textContent = log.description || '';
+
+          const typeBadge = el('span', { className: 'triage-chip' });
+          typeBadge.style.cssText = 'font-size:11px;margin-left:6px;';
+          typeBadge.textContent = log.type === 'training_log' ? 'Training' : 'Audit';
+          typeBadge.style.background = log.type === 'training_log' ? 'rgba(6,182,212,.12)' : 'rgba(168,85,247,.12)';
+          typeBadge.style.color = log.type === 'training_log' ? 'var(--info)' : 'var(--purple)';
+          typeBadge.style.border = log.type === 'training_log' ? '1px solid rgba(6,182,212,.3)' : '1px solid rgba(168,85,247,.3)';
+
+          skillName.appendChild(typeBadge);
+          mainCol.appendChild(skillName);
+          mainCol.appendChild(desc);
+          entry.appendChild(tsCol);
+          entry.appendChild(mainCol);
+          listWrap.appendChild(entry);
         });
       }
 
-      info.appendChild(meta);
-      row.appendChild(info);
+      changeLogsPanel.appendChild(listWrap);
 
-      const addBtn = el('button', { className: 'btn btn-primary btn-sm mp-add-skill-btn' });
-      addBtn.textContent = 'Add';
-
-      addBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        addBtn.disabled = true;
-        addBtn.textContent = '...';
-        try {
-          const plan = await api.post(`/api/plans/${_engineerId}/skills`, { skill_id: skill.id });
-          const newPlanSkill = (plan.skills || []).find(s => s.skill_id === skill.id);
-          if (newPlanSkill) {
-            try {
-              await api.post(`/api/plans/${_engineerId}/skills/${newPlanSkill.id}/log`, {
-                title: `Added to plan (${STATUS_LABELS[newPlanSkill.status] || newPlanSkill.status})`,
-                type: 'action',
-                completed_at: new Date().toISOString(),
-                notes: null,
-              });
-            } catch (_) { /* log failure is non-critical */ }
-          }
-          showToast(`"${skill.name}" added to plan`, 'success');
-          const idx = _allCatalogSkills.findIndex(s => s.id === skill.id);
-          if (idx !== -1) _allCatalogSkills.splice(idx, 1);
-          await reloadPlan();
-          planSkillIds.add(skill.id);
-          row.remove();
-          renderSkillList(searchQuery);
-        } catch (err) {
-          showToast(err.message || 'Failed to add skill', 'error');
-          addBtn.disabled = false;
-          addBtn.textContent = 'Add';
-        }
+      const exportPdfBtn = el('button', { className: 'btn btn-primary btn-sm' });
+      exportPdfBtn.textContent = 'Export to PDF';
+      exportPdfBtn.addEventListener('click', () => {
+        const fd = fromInput.value;
+        const td = toInput.value;
+        downloadExport(`/api/export/plans/${_engineerId}/change-logs/pdf?from_date=${fd}&to_date=${td}`, 'change_logs.pdf');
       });
-
-      row.appendChild(addBtn);
-      listEl.appendChild(row);
-    });
+      changeLogsPanel.appendChild(exportPdfBtn);
+    } catch (err) {
+      changeLogsPanel.innerHTML = '';
+      const errEl = el('div', { className: 'empty-state empty-state--compact' });
+      errEl.textContent = err.message || 'Failed to load change logs.';
+      changeLogsPanel.appendChild(errEl);
+    }
   }
 
-  renderSkillList('');
-  bodyEl.appendChild(listEl);
+  const skillsOverviewPanel = el('div', { className: 'skill-detail-tab-panel' });
+  skillsOverviewPanel.style.display = 'none';
 
-  let debounce = null;
-  searchInput.addEventListener('input', () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => {
-      searchQuery = searchInput.value.trim();
-      renderSkillList(searchQuery);
-    }, 250);
+  async function renderSkillsOverview() {
+    skillsOverviewPanel.innerHTML = '';
+
+    const loadingMsg = el('div', { className: 'empty-state empty-state--compact' });
+    loadingMsg.textContent = 'Loading…';
+    skillsOverviewPanel.appendChild(loadingMsg);
+
+    try {
+      const data = await api.get(`/api/export/plans/${_engineerId}/skills-overview`);
+      skillsOverviewPanel.innerHTML = '';
+
+      const groups = [
+        { key: 'developing', label: 'Developing', color: 'var(--warning)' },
+        { key: 'planned', label: 'Planned', color: 'var(--accent)' },
+        { key: 'mastered', label: 'Mastered', color: 'var(--success)' },
+      ];
+
+      const listWrap = el('div');
+      listWrap.style.cssText = 'max-height:320px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:12px;';
+
+      groups.forEach(({ key, label, color }) => {
+        const skills = Array.isArray(data[key]) ? data[key] : [];
+        const groupEl = el('div');
+        groupEl.style.cssText = 'border:1px solid var(--border-soft);border-radius:var(--radius-md);overflow:hidden;';
+
+        const groupHeader = el('div');
+        groupHeader.style.cssText = `display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg-elevated);border-bottom:1px solid var(--border-soft);`;
+        const dot = el('span');
+        dot.style.cssText = `width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0;`;
+        const headerText = el('span');
+        headerText.style.cssText = 'font-size:13px;font-weight:700;color:var(--text-primary);';
+        headerText.textContent = label;
+        const countBadge = el('span');
+        countBadge.style.cssText = 'font-size:12px;color:var(--text-muted);margin-left:4px;';
+        countBadge.textContent = `(${skills.length})`;
+        groupHeader.appendChild(dot);
+        groupHeader.appendChild(headerText);
+        groupHeader.appendChild(countBadge);
+        groupEl.appendChild(groupHeader);
+
+        if (skills.length === 0) {
+          const emptyRow = el('div');
+          emptyRow.style.cssText = 'padding:10px 14px;font-size:13px;color:var(--text-muted);font-style:italic;';
+          emptyRow.textContent = 'No skills in this category.';
+          groupEl.appendChild(emptyRow);
+        } else {
+          skills.forEach(skill => {
+            const row = el('div');
+            row.style.cssText = 'padding:8px 14px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:8px;';
+            const name = el('span');
+            name.style.cssText = 'font-size:13px;color:var(--text-secondary);';
+            name.textContent = skill.skill_name || skill;
+            row.appendChild(name);
+            if (skill.proficiency_level) {
+              const lvl = el('span');
+              lvl.style.cssText = 'font-size:11px;color:var(--text-muted);margin-left:auto;';
+              lvl.textContent = `Level ${skill.proficiency_level}`;
+              row.appendChild(lvl);
+            }
+            groupEl.appendChild(row);
+          });
+        }
+
+        listWrap.appendChild(groupEl);
+      });
+
+      skillsOverviewPanel.appendChild(listWrap);
+
+      const exportPdfBtn = el('button', { className: 'btn btn-primary btn-sm' });
+      exportPdfBtn.textContent = 'Export to PDF';
+      exportPdfBtn.addEventListener('click', () => {
+        downloadExport(`/api/export/plans/${_engineerId}/skills-overview/pdf`, 'skills_overview.pdf');
+      });
+      skillsOverviewPanel.appendChild(exportPdfBtn);
+    } catch (err) {
+      skillsOverviewPanel.innerHTML = '';
+      const errEl = el('div', { className: 'empty-state empty-state--compact' });
+      errEl.textContent = err.message || 'Failed to load skills overview.';
+      skillsOverviewPanel.appendChild(errEl);
+    }
+  }
+
+  contentArea.appendChild(changeLogsPanel);
+  contentArea.appendChild(skillsOverviewPanel);
+
+  function activateTab(tab) {
+    if (tab === 'change-logs') {
+      changeLogsTab.classList.add('active');
+      changeLogsTab.setAttribute('aria-selected', 'true');
+      skillsOverviewTab.classList.remove('active');
+      skillsOverviewTab.setAttribute('aria-selected', 'false');
+      changeLogsPanel.style.display = '';
+      skillsOverviewPanel.style.display = 'none';
+      renderChangeLogs();
+    } else {
+      skillsOverviewTab.classList.add('active');
+      skillsOverviewTab.setAttribute('aria-selected', 'true');
+      changeLogsTab.classList.remove('active');
+      changeLogsTab.setAttribute('aria-selected', 'false');
+      skillsOverviewPanel.style.display = '';
+      changeLogsPanel.style.display = 'none';
+      renderSkillsOverview();
+    }
+  }
+
+  changeLogsTab.addEventListener('click', () => activateTab('change-logs'));
+  skillsOverviewTab.addEventListener('click', () => activateTab('skills-overview'));
+
+  fromInput.addEventListener('change', () => {
+    if (changeLogsPanel.style.display !== 'none') renderChangeLogs();
+  });
+  toInput.addEventListener('change', () => {
+    if (changeLogsPanel.style.display !== 'none') renderChangeLogs();
   });
 
   showModal({
-    title: '+ Add Skill to Plan',
+    title: 'Reporting',
     body: bodyEl,
-    confirmText: 'Done',
-    cancelText: 'Close',
+    modalClass: 'modal-wide',
+    confirmText: 'Close',
+    cancelText: '',
     onConfirm: () => {},
   });
+
+  renderChangeLogs();
 }
 
 function showPermissionError(msg) {

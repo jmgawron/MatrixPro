@@ -26,6 +26,8 @@ from app.schemas.plan import (
     ContentOverrideCreate,
     ContentOverrideResponse,
     MergedContentItem,
+    OwnSkillCreate,
+    OwnSkillUpdate,
     PlanResponse,
     PlanSkillContentResponse,
     PlanSkillCreate,
@@ -103,6 +105,8 @@ def _to_plan_response(plan: DevelopmentPlan) -> PlanResponse:
                 plan_id=ps.plan_id,
                 skill_id=ps.skill_id,
                 skill_name=ps.skill.name,
+                skill_icon=ps.skill.icon,
+                is_custom=ps.skill.is_custom,
                 status=ps.status,
                 proficiency_level=ps.proficiency_level,
                 notes=ps.notes,
@@ -299,6 +303,111 @@ def bulk_assign_skill(
     )
 
 
+@router.post("/{engineer_id}/own-skills", response_model=PlanResponse)
+def create_own_skill(
+    engineer_id: int,
+    data: OwnSkillCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+
+    if not data.name or not data.name.strip():
+        raise HTTPException(status_code=400, detail="Skill name is required")
+
+    skill = Skill(
+        name=data.name.strip(),
+        description=data.description,
+        icon=None,
+        is_archived=False,
+        is_custom=True,
+        owner_id=engineer_id,
+        catalog_version=1,
+        created_at=datetime.utcnow(),
+    )
+    db.add(skill)
+    db.flush()
+
+    plan = _get_or_create_plan(db, engineer_id)
+
+    plan_skill = PlanSkill(
+        plan_id=plan.id,
+        skill_id=skill.id,
+        status=data.status,
+        proficiency_level=data.proficiency_level,
+        notes=data.notes,
+        skill_version_at_add=1,
+        added_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    db.add(plan_skill)
+    db.flush()
+
+    _audit_log(
+        db,
+        entity_type="plan_skill",
+        entity_id=plan_skill.id,
+        field="own_skill_created",
+        old_value=None,
+        new_value=skill.name,
+        changed_by=current_user.id,
+    )
+
+    db.commit()
+
+    loaded = _eager_load_plan(db, plan.id)
+    return _to_plan_response(loaded)
+
+
+@router.put("/{engineer_id}/own-skills/{skill_id}", response_model=PlanResponse)
+def update_own_skill(
+    engineer_id: int,
+    skill_id: int,
+    data: OwnSkillUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+
+    skill = (
+        db.query(Skill)
+        .filter(
+            Skill.id == skill_id, Skill.is_custom == True, Skill.owner_id == engineer_id
+        )
+        .first()
+    )
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Own skill not found")
+
+    updated = False
+    if data.name is not None:
+        if not data.name.strip():
+            raise HTTPException(status_code=400, detail="Skill name cannot be empty")
+        skill.name = data.name.strip()
+        updated = True
+    if data.description is not None:
+        skill.description = data.description
+        updated = True
+
+    if updated:
+        skill.updated_at = datetime.utcnow()
+        _audit_log(
+            db,
+            entity_type="skill",
+            entity_id=skill.id,
+            field="own_skill_updated",
+            old_value=None,
+            new_value=skill.name,
+            changed_by=current_user.id,
+        )
+
+    db.commit()
+
+    plan = _get_or_create_plan(db, engineer_id)
+    loaded = _eager_load_plan(db, plan.id)
+    return _to_plan_response(loaded)
+
+
 @router.get("/{engineer_id}", response_model=PlanResponse)
 def get_plan(
     engineer_id: int,
@@ -343,7 +452,7 @@ def add_skill_to_plan(
     plan_skill = PlanSkill(
         plan_id=plan.id,
         skill_id=data.skill_id,
-        status=PlanSkillStatus.in_pipeline,
+        status=PlanSkillStatus.planned,
         proficiency_level=data.proficiency_level,
         notes=data.notes,
         skill_version_at_add=skill.catalog_version,
@@ -359,7 +468,7 @@ def add_skill_to_plan(
         entity_id=plan_skill.id,
         field="status",
         old_value=None,
-        new_value=PlanSkillStatus.in_pipeline.value,
+        new_value=PlanSkillStatus.planned.value,
         changed_by=current_user.id,
     )
 

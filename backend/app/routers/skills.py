@@ -105,6 +105,9 @@ def list_skills(
 ):
     query = db.query(Skill).options(*_skill_eager_options())
 
+    # Exclude custom (own) skills from catalog listing
+    query = query.filter(Skill.is_custom == False)  # noqa: E712
+
     if not include_archived:
         query = query.filter(Skill.is_archived == False)  # noqa: E712
 

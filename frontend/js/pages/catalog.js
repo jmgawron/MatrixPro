@@ -11,6 +11,7 @@ import { getSkillIconSVG, SKILL_ICONS, ICON_CATEGORIES } from '../components/ico
 let _container = null;
 let _debounceTimer = null;
 let _gridEl = null;
+let _addMode = null;
 let _treeEl = null;
 let _shiftFiltersEl = null;
 
@@ -38,7 +39,10 @@ export function mountCatalog(container, params) {
   _container = container;
   container.innerHTML = '';
 
-  // Reset state
+  const hashParts = window.location.hash.split('?');
+  const urlParams = new URLSearchParams(hashParts[1] || '');
+  _addMode = urlParams.get('addMode') || null;
+
   _activeTab = 'org';
   _selectedFilter = { type: 'all', id: null, label: 'All Skills' };
   _searchQuery = '';
@@ -53,9 +57,30 @@ export function mountCatalog(container, params) {
   _treeEl = page.treeEl;
   _shiftFiltersEl = page.shiftFiltersEl;
 
+  if (_addMode) {
+    const banner = createElement('div', { className: 'cat-addmode-banner' });
+    banner.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--accent-soft);border-bottom:1px solid var(--border-soft);font-size:14px;color:var(--text-primary);';
+    const bannerText = createElement('span');
+    bannerText.textContent = 'Select skills to add to your plan';
+    bannerText.style.flex = '1';
+    const backLink = createElement('a', { href: '#/my-plan', className: 'btn btn-secondary btn-sm' });
+    backLink.textContent = '← Back to My Plan';
+    banner.appendChild(bannerText);
+    banner.appendChild(backLink);
+    container.insertBefore(banner, container.firstChild);
+  }
+
   loadStats();
-  // Must await tree before fetching skills — client filters depend on cached tree data
-  loadTabTree('org', _treeEl).then(() => fetchAndRenderSkills());
+  loadTabTree('org', _treeEl).then(() => {
+    if (_addMode === 'team') {
+      const user = Store.get('user');
+      const teamId = user?.team_id;
+      if (teamId) {
+        _selectedFilter = { type: 'team_id', id: teamId, label: user?.team_name || 'My Team' };
+      }
+    }
+    fetchAndRenderSkills();
+  });
 
   return () => {
     clearTimeout(_debounceTimer);
@@ -797,6 +822,34 @@ function buildSkillCard(skill) {
       tagsRow.appendChild(more);
     }
     card.appendChild(tagsRow);
+  }
+
+  if (_addMode && !skill.is_archived) {
+    const addRow = createElement('div', { className: 'tool-card-add-row' });
+    addRow.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px solid var(--border-soft);';
+    const addBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
+    addBtn.style.width = '100%';
+    addBtn.textContent = 'Add to My Plan';
+    addBtn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      const engineerId = Store.get('user')?.id;
+      if (!engineerId) return;
+      addBtn.disabled = true;
+      addBtn.textContent = '...';
+      try {
+        await api.post(`/api/plans/${engineerId}/skills`, { skill_id: skill.id });
+        showToast(`"${skill.name}" added to plan`, 'success');
+        addBtn.textContent = 'Added ✓';
+        addBtn.style.opacity = '0.6';
+        addBtn.style.cursor = 'default';
+      } catch (err) {
+        showToast(err.message || 'Failed to add skill', 'error');
+        addBtn.disabled = false;
+        addBtn.textContent = 'Add to My Plan';
+      }
+    });
+    addRow.appendChild(addBtn);
+    card.appendChild(addRow);
   }
 
   card.addEventListener('click', () => showSkillDetailModal(skill));

@@ -812,13 +812,13 @@ function getCellStyle(cell) {
     return { bg: 'var(--bg-elevated)', border: 'var(--border-soft)', icon: '<span style="color:var(--text-muted);font-size:16px;opacity:.4">—</span>' };
   }
 
-  if (status === 'in_pipeline') {
+  if (status === 'planned') {
     return { bg: 'rgba(245,158,11,.18)', border: 'rgba(245,158,11,.4)', icon: clockSvg };
   }
 
-  if (status === 'in_development' || status === 'proficiency') {
+  if (status === 'developing' || status === 'mastered') {
     const level = proficiency_level;
-    const showCheck = status === 'proficiency';
+    const showCheck = status === 'mastered';
     const devIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
     if (level === 1) {
       return { bg: 'rgba(34,197,94,.18)', border: 'rgba(34,197,94,.35)', icon: showCheck ? checkSvg : devIcon };
@@ -838,14 +838,14 @@ function getCellStyle(cell) {
 function buildTooltipContent(cell, engineer, skill) {
   const statusLabels = {
     not_in_plan: 'Not in Plan',
-    in_pipeline: 'In Pipeline',
-    in_development: 'In Development',
-    proficiency: 'Proficiency',
+    planned: 'Planned',
+    developing: 'Developing',
+    mastered: 'Mastered',
   };
   const levelLabels = { 1: 'Education', 2: 'Exposure', 3: 'Experience' };
   const statusLabel = statusLabels[cell.status] || cell.status;
   let levelPart = '';
-  if ((cell.status === 'in_development' || cell.status === 'proficiency') && cell.proficiency_level) {
+  if ((cell.status === 'developing' || cell.status === 'mastered') && cell.proficiency_level) {
     levelPart = ` · ${levelLabels[cell.proficiency_level] || `L${cell.proficiency_level}`}`;
   }
   const stagnantPart = isStagnant(cell) ? ' · Stagnant (90+ days)' : '';
@@ -858,7 +858,7 @@ function buildLegend() {
   const legend = createElement('div', { className: 'matrix-legend' });
   const items = [
     { label: 'Not in Plan', bg: 'var(--bg-elevated)', border: 'var(--border-soft)', text: 'var(--text-muted)' },
-    { label: 'In Pipeline', bg: 'rgba(245,158,11,.18)', border: 'rgba(245,158,11,.5)', text: 'var(--text-secondary)' },
+    { label: 'Planned', bg: 'rgba(245,158,11,.18)', border: 'rgba(245,158,11,.5)', text: 'var(--text-secondary)' },
     { label: 'Education', bg: 'rgba(34,197,94,.18)', border: 'rgba(34,197,94,.4)', text: 'var(--text-secondary)' },
     { label: 'Exposure', bg: 'rgba(34,197,94,.42)', border: 'rgba(34,197,94,.6)', text: 'var(--text-secondary)' },
     { label: 'Experience', bg: 'rgba(34,197,94,.75)', border: 'rgba(34,197,94,.8)', text: '#fff' },
@@ -888,8 +888,8 @@ function buildSummaryRow(engineers, skills) {
       const cell = cells[String(skill.id)];
       if (!cell || cell.status === 'not_in_plan') return;
       covered++;
-      if (cell.status === 'in_development') inDev++;
-      if (cell.status === 'proficiency') proficient++;
+      if (cell.status === 'developing') inDev++;
+      if (cell.status === 'mastered') proficient++;
     });
   });
 
@@ -900,8 +900,8 @@ function buildSummaryRow(engineers, skills) {
     { label: 'Engineers', value: String(engineers.length) },
     { label: 'Skills', value: String(skills.length) },
     { label: 'Coverage', value: `${coverage}%` },
-    { label: 'In Development', value: String(inDev) },
-    { label: 'Proficient', value: String(proficient) },
+    { label: 'Developing', value: String(inDev) },
+    { label: 'Mastered', value: String(proficient) },
   ];
 
   stats.forEach(({ label, value }) => {
@@ -1115,13 +1115,13 @@ function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
       const skillName = createElement('div', { className: 'drawer-progress-name' });
       skillName.textContent = planSkill.skill_name || 'Unknown';
       const barWrap = createElement('div', { className: 'drawer-progress-bar' });
-      const statusPct = planSkill.status === 'in_pipeline' ? 25 : planSkill.status === 'in_development' ? 60 : 100;
+      const statusPct = planSkill.status === 'planned' ? 25 : planSkill.status === 'developing' ? 60 : 100;
       const barFill = createElement('div', { className: 'drawer-progress-fill', style: `width:${statusPct}%;` });
       barWrap.appendChild(barFill);
       const statusChip = createElement('span', { className: 'drawer-progress-status triage-chip' });
-      statusChip.textContent = planSkill.status === 'in_pipeline' ? 'Pipeline' : planSkill.status === 'in_development' ? 'In Dev' : 'Proficient';
-      if (planSkill.status === 'in_pipeline') statusChip.style.background = 'rgba(245,158,11,.2)';
-      else if (planSkill.status === 'in_development') statusChip.style.background = 'rgba(59,130,246,.2)';
+      statusChip.textContent = planSkill.status === 'planned' ? 'Planned' : planSkill.status === 'developing' ? 'Developing' : 'Mastered';
+      if (planSkill.status === 'planned') statusChip.style.background = 'rgba(245,158,11,.2)';
+      else if (planSkill.status === 'developing') statusChip.style.background = 'rgba(59,130,246,.2)';
       else statusChip.style.background = 'rgba(34,197,94,.2)';
       item.appendChild(skillName);
       item.appendChild(barWrap);
@@ -1201,9 +1201,9 @@ function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
               if (lvl === 1) return 33;
               if (lvl === 2) return 66;
               if (lvl === 3) return 100;
-              if (s.status === 'in_pipeline') return 15;
-              if (s.status === 'in_development') return 50;
-              if (s.status === 'proficiency') return 100;
+              if (s.status === 'planned') return 15;
+              if (s.status === 'developing') return 50;
+              if (s.status === 'mastered') return 100;
               return 0;
             }),
             areaStyle: { opacity: 0.15, color: '#a855f7' },
@@ -1263,7 +1263,7 @@ async function openBulkAssignModal() {
   const statusLabel = createElement('label', { className: 'form-label' });
   statusLabel.textContent = 'Initial status';
   const statusSelect = createElement('select', { className: 'form-select' });
-  [{ value: 'in_pipeline', label: 'In Pipeline' }, { value: 'in_development', label: 'In Development' }].forEach(({ value, label }) => {
+  [{ value: 'planned', label: 'Planned' }, { value: 'developing', label: 'Developing' }].forEach(({ value, label }) => {
     const opt = createElement('option', { value });
     opt.textContent = label;
     statusSelect.appendChild(opt);
@@ -1306,7 +1306,7 @@ async function openBulkAssignModal() {
         return;
       }
       const skillName = skillSelect.options[skillSelect.selectedIndex]?.textContent || 'Skill';
-      const status = statusSelect.value || 'in_pipeline';
+      const status = statusSelect.value || 'planned';
       const notes = notesInput.value.trim() || null;
 
       try {
@@ -1467,7 +1467,7 @@ function formatActivityTitle(raw, skillName) {
 }
 
 function isStagnant(cell) {
-  if (cell.status === 'not_in_plan' || cell.status === 'proficiency') return false;
+  if (cell.status === 'not_in_plan' || cell.status === 'mastered') return false;
   const updated = cell.last_updated_at || cell.last_training_at;
   if (!updated) return false;
   const diff = Date.now() - new Date(updated).getTime();

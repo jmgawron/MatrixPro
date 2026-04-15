@@ -30,7 +30,11 @@ def org_tree(
             id=d.id,
             name=d.name,
             is_technical=d.is_technical,
-            teams=[TeamNode(id=t.id, name=t.name, shift=t.shift) for t in d.teams],
+            icon=d.icon,
+            teams=[
+                TeamNode(id=t.id, name=t.name, shift=t.shift, icon=t.icon)
+                for t in d.teams
+            ],
         )
         for d in domains
     ]
@@ -52,7 +56,10 @@ def cert_tree(
         CertDomainNode(
             id=cd.id,
             name=cd.name,
-            certificates=[CertNode(id=c.id, name=c.name) for c in cd.certificates],
+            icon=cd.icon,
+            certificates=[
+                CertNode(id=c.id, name=c.name, icon=c.icon) for c in cd.certificates
+            ],
         )
         for cd in cert_domains
     ]

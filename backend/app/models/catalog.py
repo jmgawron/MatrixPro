@@ -39,6 +39,7 @@ class CertificationDomain(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
+    icon = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     certificates = relationship("Certificate", back_populates="certification_domain")
@@ -53,6 +54,7 @@ class Certificate(Base):
     certification_domain_id = Column(
         Integer, ForeignKey("certification_domains.id"), nullable=False
     )
+    icon = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     certification_domain = relationship(

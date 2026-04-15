@@ -56,6 +56,7 @@ class SkillLevelContentResponse(BaseModel):
 class CertificateInfo(BaseModel):
     id: int
     name: str
+    icon: str | None = None
 
     model_config = {"from_attributes": True}
 

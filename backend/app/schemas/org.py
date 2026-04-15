@@ -8,12 +8,14 @@ from app.models.plan import PlanSkillStatus
 class DomainCreate(BaseModel):
     name: str
     is_technical: bool = True
+    icon: str | None = None
 
 
 class DomainResponse(BaseModel):
     id: int
     name: str
     is_technical: bool
+    icon: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -23,6 +25,7 @@ class TeamCreate(BaseModel):
     name: str
     domain_id: int
     shift: int
+    icon: str | None = None
 
 
 class TeamResponse(BaseModel):
@@ -31,6 +34,7 @@ class TeamResponse(BaseModel):
     domain_id: int
     domain_name: str | None = None
     shift: int
+    icon: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

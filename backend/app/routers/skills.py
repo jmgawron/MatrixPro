@@ -68,7 +68,9 @@ def _to_skill_response(skill: Skill) -> SkillResponse:
             for st in skill.skill_teams
         ],
         certificates=[
-            CertificateInfo(id=sc.certificate.id, name=sc.certificate.name)
+            CertificateInfo(
+                id=sc.certificate.id, name=sc.certificate.name, icon=sc.certificate.icon
+            )
             for sc in skill.skill_certificates
         ],
     )

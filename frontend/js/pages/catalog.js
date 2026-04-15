@@ -273,7 +273,6 @@ function buildToolbar() {
     if (menuOpen) closeSortMenu(); else openSortMenu();
   });
   sortWrap.appendChild(sortBtn);
-  leftGroup.appendChild(sortWrap);
 
   // Shift filter toggles (org tab only)
   const shiftFiltersEl = createElement('div', { className: 'cat-shift-filters' });
@@ -318,6 +317,7 @@ function buildToolbar() {
   });
   tagWrap.appendChild(tagInput);
   leftGroup.appendChild(tagWrap);
+  leftGroup.appendChild(sortWrap);
 
   // Archived toggle (admin and manager only)
   if (canEdit) {
@@ -405,7 +405,6 @@ function renderOrgTree(domains, treeEl) {
     if (!teams.length) return;
 
     const domainItem = buildTreeItem(domain.name, 'domain', 0, true);
-    domainItem.classList.add('expanded');
     if (_selectedFilter.type === 'domain_id' && String(_selectedFilter.id) === String(domain.id)) {
       domainItem.classList.add('active');
     }
@@ -437,14 +436,13 @@ function renderOrgTree(domains, treeEl) {
 function renderCertTree(certDomains, treeEl) {
   certDomains.forEach(certDomain => {
     const cdItem = buildTreeItem(certDomain.name, 'cert-domain', 0, true);
-    cdItem.classList.add('expanded');
     addToggleListener(cdItem);
 
     const childrenEl = createElement('div', { className: 'tree-item-children' });
 
     const certs = Array.isArray(certDomain.certificates) ? certDomain.certificates : [];
     certs.forEach(cert => {
-      const certItem = buildTreeItem(cert.name, 'cert', 1, false, '🏆');
+      const certItem = buildTreeItem(cert.name, 'cert', 1, false);
       if (_selectedFilter.type === 'cert_id' && String(_selectedFilter.id) === String(cert.id)) {
         certItem.classList.add('active');
       }
@@ -466,7 +464,6 @@ function renderNonTechnicalTree(domains, treeEl) {
     const teams = Array.isArray(domain.teams) ? domain.teams : [];
 
     const domainItem = buildTreeItem(domain.name, 'domain', 0, teams.length > 0);
-    domainItem.classList.add('expanded');
     if (_selectedFilter.type === 'domain_id' && String(_selectedFilter.id) === String(domain.id)) {
       domainItem.classList.add('active');
     }
@@ -506,19 +503,19 @@ function buildTreeItem(label, type, indent, hasToggle, iconText) {
   const iconEl = createElement('span', { className: 'tree-item-icon' });
   iconEl.setAttribute('aria-hidden', 'true');
   if (iconText) {
-    iconEl.textContent = iconText;
+    iconEl.innerHTML = iconText;
   } else if (type === 'all') {
-    iconEl.textContent = '✦';
+    iconEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`;
   } else if (type === 'domain') {
-    iconEl.textContent = '📁';
+    iconEl.innerHTML = getSkillIconSVG('fabric', 16) || `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
   } else if (type === 'team') {
-    iconEl.textContent = '👥';
+    iconEl.innerHTML = getSkillIconSVG('users', 16) || `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
   } else if (type === 'cert-domain') {
-    iconEl.textContent = '🎓';
+    iconEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>`;
   } else if (type === 'cert') {
-    iconEl.textContent = '🏆';
+    iconEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>`;
   } else {
-    iconEl.textContent = '•';
+    iconEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/></svg>`;
   }
 
   const labelEl = createElement('span', { className: 'tree-item-label' });
@@ -1501,7 +1498,7 @@ async function openSkillModal(existingSkill) {
         });
       });
 
-      _formDataCache = { teams, certificates, orgTree: Array.isArray(orgTree) ? orgTree : [] };
+      _formDataCache = { teams, certificates, orgTree: Array.isArray(orgTree) ? orgTree : [], certTree: Array.isArray(certTree) ? certTree : [] };
     } catch (err) {
       showToast('Failed to load form data', 'error');
       return;
@@ -1513,6 +1510,7 @@ async function openSkillModal(existingSkill) {
   showModal({
     title: isEdit ? 'Edit Skill' : 'Create Skill',
     body: formEl,
+    modalClass: 'modal-skill-edit',
     confirmText: isEdit ? 'Save Changes' : 'Create Skill',
     cancelText: 'Cancel',
     onConfirm: async () => {
@@ -1544,8 +1542,10 @@ async function openSkillModal(existingSkill) {
 
 function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   const form = createElement('div', { className: 'catalog-form' });
+  const columns = createElement('div', { className: 'skill-edit-columns' });
 
-  // Name
+  const leftCol = createElement('div', { className: 'skill-edit-col' });
+
   const nameGroup = buildFormGroup('Name', 'skill-name', 'input', {
     type: 'text',
     placeholder: 'e.g. Wi-Fi 6 Configuration',
@@ -1553,20 +1553,19 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   }, true);
   const nameInput = nameGroup.querySelector('#skill-name');
   if (nameInput) nameInput.value = skill?.name || '';
-  form.appendChild(nameGroup);
+  leftCol.appendChild(nameGroup);
 
-  // Description
   const descGroup = buildFormGroup('Description', 'skill-desc', 'textarea', {
     placeholder: 'Describe what this skill covers...',
   }, false);
   const descTextarea = descGroup.querySelector('#skill-desc');
   if (descTextarea) descTextarea.textContent = skill?.description || '';
-  form.appendChild(descGroup);
+  leftCol.appendChild(descGroup);
 
-  // Icon picker
-  form.appendChild(buildIconPicker(skill?.icon || null));
+  leftCol.appendChild(buildIconPicker(skill?.icon || null));
 
-  // Teams — hierarchical tree (Shift → Domain → Team)
+  const rightCol = createElement('div', { className: 'skill-edit-col' });
+
   const existingTeamIds = new Set(
     Array.isArray(skill?.teams)
       ? skill.teams.map(t => Number(t.id))
@@ -1580,46 +1579,34 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
 
   const orgTree = formData.orgTree || [];
   teamsGroupEl.appendChild(buildTeamTree(orgTree, existingTeamIds, isAdmin, isManager, user));
-  form.appendChild(teamsGroupEl);
+  rightCol.appendChild(teamsGroupEl);
 
-  // Certificates
-  const existingCertIds = Array.isArray(skill?.certificates)
-    ? skill.certificates.map(c => String(c.id))
-    : [];
+  const existingCertIds = new Set(Array.isArray(skill?.certificates) ? skill.certificates.map(c => Number(c.id)) : []);
 
   const certsGroupEl = createElement('div', { className: 'form-group' });
   const certsLabel = createElement('div', { className: 'form-label' });
   certsLabel.textContent = 'Certificates';
-  const certsGrid = createElement('div', { className: 'catalog-teams-grid' });
-
-  formData.certificates.forEach(cert => {
-    const checkLabel = createElement('label', { className: 'catalog-check-label' });
-    const check = createElement('input', { type: 'checkbox', value: cert.id });
-    check.className = 'skill-cert-check';
-    check.checked = existingCertIds.includes(String(cert.id));
-    checkLabel.appendChild(check);
-    const certName = cert.domain ? `${cert.name} (${cert.domain})` : cert.name;
-    checkLabel.appendChild(document.createTextNode(certName));
-    certsGrid.appendChild(checkLabel);
-  });
-
   certsGroupEl.appendChild(certsLabel);
-  certsGroupEl.appendChild(certsGrid);
-  form.appendChild(certsGroupEl);
 
-  // Tags
+  const certTree = formData.certTree || [];
+  certsGroupEl.appendChild(buildCertTree(certTree, existingCertIds));
+  rightCol.appendChild(certsGroupEl);
+
   const tagsGroup = buildFormGroup('Tags', 'skill-tags', 'input', {
     type: 'text',
     placeholder: 'e.g. routing, bgp, advanced (comma-separated)',
   }, false);
   const tagsInput = tagsGroup.querySelector('#skill-tags');
   if (tagsInput) tagsInput.value = Array.isArray(skill?.tags) ? skill.tags.map(t => t.name || t).join(', ') : '';
-  form.appendChild(tagsGroup);
+  rightCol.appendChild(tagsGroup);
 
   const tagHint = createElement('div', { className: 'form-hint catalog-form-hint' });
   tagHint.textContent = 'Separate multiple tags with commas';
-  form.appendChild(tagHint);
+  rightCol.appendChild(tagHint);
 
+  columns.appendChild(leftCol);
+  columns.appendChild(rightCol);
+  form.appendChild(columns);
   return form;
 }
 
@@ -1756,6 +1743,48 @@ function buildTeamTree(orgTree, existingTeamIds, isAdmin, isManager, user) {
       const isOpen = chevron.classList.contains('open');
       chevron.classList.toggle('open', !isOpen);
       shiftChildren.classList.toggle('collapsed', isOpen);
+    });
+  });
+
+  return treeEl;
+}
+
+function buildCertTree(certTree, existingCertIds) {
+  const treeEl = createElement('div', { className: 'skill-team-tree' });
+
+  (Array.isArray(certTree) ? certTree : []).forEach(domain => {
+    if (!Array.isArray(domain.certificates) || !domain.certificates.length) return;
+
+    const domainNode = createElement('div', { className: 'cert-tree-domain' });
+
+    const toggle = createElement('div', { className: 'cert-tree-toggle' });
+    const chevron = createElement('span', { className: 'tree-chevron open' });
+    chevron.textContent = '\u25B6';
+    toggle.appendChild(chevron);
+    toggle.appendChild(document.createTextNode(domain.name));
+    domainNode.appendChild(toggle);
+
+    const childrenEl = createElement('div', { className: 'cert-tree-children' });
+    const certsEl = createElement('div', { className: 'cert-tree-certs' });
+
+    domain.certificates.forEach(cert => {
+      const lbl = createElement('label');
+      const check = createElement('input', { type: 'checkbox', value: cert.id });
+      check.className = 'skill-cert-check';
+      check.checked = existingCertIds.has(Number(cert.id));
+      lbl.appendChild(check);
+      lbl.appendChild(document.createTextNode(cert.name));
+      certsEl.appendChild(lbl);
+    });
+
+    childrenEl.appendChild(certsEl);
+    domainNode.appendChild(childrenEl);
+    treeEl.appendChild(domainNode);
+
+    toggle.addEventListener('click', () => {
+      const isOpen = chevron.classList.contains('open');
+      chevron.classList.toggle('open', !isOpen);
+      childrenEl.classList.toggle('collapsed', isOpen);
     });
   });
 

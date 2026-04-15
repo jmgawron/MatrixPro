@@ -35,7 +35,9 @@ def create_cert_domain(
     db: Session = Depends(get_db),
     current_user: User = require_role(UserRole.admin),
 ):
-    cd = CertificationDomain(name=data.name, description=data.description)
+    cd = CertificationDomain(
+        name=data.name, description=data.description, icon=data.icon
+    )
     db.add(cd)
     db.commit()
     db.refresh(cd)
@@ -64,6 +66,8 @@ def update_cert_domain(
         cd.name = data.name
     if data.description is not None:
         cd.description = data.description
+    if data.icon is not None:
+        cd.icon = data.icon
 
     db.commit()
     db.refresh(cd)
@@ -130,6 +134,7 @@ def create_certificate(
         name=data.name,
         description=data.description,
         certification_domain_id=data.certification_domain_id,
+        icon=data.icon,
     )
     db.add(cert)
     db.commit()
@@ -152,6 +157,8 @@ def update_certificate(
         cert.name = data.name
     if data.description is not None:
         cert.description = data.description
+    if data.icon is not None:
+        cert.icon = data.icon
     if data.certification_domain_id is not None:
         cd = (
             db.query(CertificationDomain)

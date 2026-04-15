@@ -8,7 +8,7 @@ function removeModal() {
   _activeModal = null;
 }
 
-export function showModal({ title, body, confirmText = 'Confirm', cancelText = 'Cancel', onConfirm, onCancel, danger = false, actions }) {
+export function showModal({ title, body, confirmText = 'Confirm', cancelText = 'Cancel', onConfirm, onCancel, danger = false, actions, modalClass }) {
   if (_activeModal) removeModal();
 
   const useActions = Array.isArray(actions);
@@ -21,6 +21,7 @@ export function showModal({ title, body, confirmText = 'Confirm', cancelText = '
 
   const modal = document.createElement('div');
   modal.className = 'modal';
+  if (modalClass) modal.classList.add(modalClass);
   modal.setAttribute('role', 'dialog');
   modal.setAttribute('aria-modal', 'true');
   modal.setAttribute('aria-label', title);

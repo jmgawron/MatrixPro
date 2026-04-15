@@ -4,6 +4,74 @@ import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
 import { renderAvatarThumbnail, AVATAR_CATALOG } from '../components/avatars.js';
 import { showSkeleton } from '../components/skeleton.js';
+import { SKILL_ICONS, getSkillIconSVG, ICON_CATEGORIES } from '../components/icons.js';
+
+function buildAdminIconPicker(selectedIcon) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'form-group';
+  wrapper.innerHTML = '<label>Icon</label>';
+
+  const picker = document.createElement('div');
+  picker.className = 'skill-icon-picker';
+
+  const searchInput = document.createElement('input');
+  searchInput.className = 'icon-picker-search';
+  searchInput.type = 'text';
+  searchInput.placeholder = 'Search icons...';
+  picker.appendChild(searchInput);
+
+  const categoriesContainer = document.createElement('div');
+  categoriesContainer.className = 'icon-picker-categories';
+
+  let currentIcon = selectedIcon || null;
+
+  function renderIcons(filter) {
+    categoriesContainer.innerHTML = '';
+    const lf = (filter || '').toLowerCase();
+    Object.entries(ICON_CATEGORIES).forEach(([catName, iconKeys]) => {
+      const filtered = lf ? iconKeys.filter(k => k.toLowerCase().includes(lf)) : iconKeys;
+      if (!filtered.length) return;
+
+      const catLabel = document.createElement('div');
+      catLabel.className = 'icon-picker-category-label';
+      catLabel.textContent = catName;
+      categoriesContainer.appendChild(catLabel);
+
+      const grid = document.createElement('div');
+      grid.className = 'icon-picker-grid';
+      filtered.forEach(key => {
+        const opt = document.createElement('div');
+        opt.className = 'skill-icon-option';
+        if (key === currentIcon) opt.classList.add('selected');
+        opt.dataset.icon = key;
+        opt.title = key;
+        opt.innerHTML = getSkillIconSVG(key, 22);
+        opt.addEventListener('click', () => {
+          picker.querySelectorAll('.skill-icon-option.selected').forEach(el => el.classList.remove('selected'));
+          opt.classList.add('selected');
+          currentIcon = key;
+          hiddenInput.value = key;
+        });
+        grid.appendChild(opt);
+      });
+      categoriesContainer.appendChild(grid);
+    });
+  }
+
+  renderIcons('');
+  searchInput.addEventListener('input', () => renderIcons(searchInput.value));
+
+  picker.appendChild(categoriesContainer);
+  wrapper.appendChild(picker);
+
+  const hiddenInput = document.createElement('input');
+  hiddenInput.type = 'hidden';
+  hiddenInput.id = 'modalIconValue';
+  hiddenInput.value = selectedIcon || '';
+  wrapper.appendChild(hiddenInput);
+
+  return wrapper;
+}
 
 const ADMIN_TABS = [
   { id: 'users', label: 'Users', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
@@ -538,6 +606,7 @@ async function openTeamModal(content, existingTeam, domains) {
       </select>
     </div>
   `;
+  body.appendChild(buildAdminIconPicker(isEdit ? existingTeam.icon : null));
 
   const result = await showModal({
     title: isEdit ? 'Edit Team' : 'Add Team',
@@ -553,6 +622,7 @@ async function openTeamModal(content, existingTeam, domains) {
   const name = body.querySelector('#modalTeamName').value.trim();
   const domainId = parseInt(body.querySelector('#modalTeamDomain').value);
   const shift = parseInt(body.querySelector('#modalTeamShift').value);
+  const icon = body.querySelector('#modalIconValue').value || null;
 
   if (!name || !domainId || !shift) {
     showToast({ message: 'Name, domain, and shift are required', type: 'error' });
@@ -561,10 +631,10 @@ async function openTeamModal(content, existingTeam, domains) {
 
   try {
     if (isEdit) {
-      await api.put(`/api/teams/${existingTeam.id}`, { name, domain_id: domainId, shift });
+      await api.put(`/api/teams/${existingTeam.id}`, { name, domain_id: domainId, shift, icon });
       showToast({ message: 'Team updated', type: 'success' });
     } else {
-      await api.post('/api/teams/', { name, domain_id: domainId, shift });
+      await api.post('/api/teams/', { name, domain_id: domainId, shift, icon });
       showToast({ message: 'Team created', type: 'success' });
     }
     renderTeamsTab(content);
@@ -734,6 +804,7 @@ async function openDomainModal(content, existingDomain) {
       </label>
     </div>
   `;
+  body.appendChild(buildAdminIconPicker(isEdit ? existingDomain.icon : null));
 
   const result = await showModal({
     title: isEdit ? 'Edit Domain' : 'Add Domain',
@@ -748,6 +819,7 @@ async function openDomainModal(content, existingDomain) {
 
   const name = body.querySelector('#modalDomainName').value.trim();
   const isTechnical = body.querySelector('#modalDomainTechnical').checked;
+  const icon = body.querySelector('#modalIconValue').value || null;
 
   if (!name) {
     showToast({ message: 'Name is required', type: 'error' });
@@ -756,10 +828,10 @@ async function openDomainModal(content, existingDomain) {
 
   try {
     if (isEdit) {
-      await api.put(`/api/domains/${existingDomain.id}`, { name, is_technical: isTechnical });
+      await api.put(`/api/domains/${existingDomain.id}`, { name, is_technical: isTechnical, icon });
       showToast({ message: 'Domain updated', type: 'success' });
     } else {
-      await api.post('/api/domains/', { name, is_technical: isTechnical });
+      await api.post('/api/domains/', { name, is_technical: isTechnical, icon });
       showToast({ message: 'Domain created', type: 'success' });
     }
     renderDomainsTab(content);
@@ -1032,6 +1104,7 @@ async function openCertDomainModal(content, existing) {
       <textarea id="modalCDDesc" rows="3">${isEdit && existing.description ? escHtml(existing.description) : ''}</textarea>
     </div>
   `;
+  body.appendChild(buildAdminIconPicker(isEdit ? existing.icon : null));
 
   const result = await showModal({
     title: isEdit ? 'Edit Certification Domain' : 'Add Certification Domain',
@@ -1046,6 +1119,7 @@ async function openCertDomainModal(content, existing) {
 
   const name = body.querySelector('#modalCDName').value.trim();
   const description = body.querySelector('#modalCDDesc').value.trim() || null;
+  const icon = body.querySelector('#modalIconValue').value || null;
 
   if (!name) {
     showToast({ message: 'Name is required', type: 'error' });
@@ -1054,10 +1128,10 @@ async function openCertDomainModal(content, existing) {
 
   try {
     if (isEdit) {
-      await api.put(`/api/certification-domains/${existing.id}`, { name, description });
+      await api.put(`/api/certification-domains/${existing.id}`, { name, description, icon });
       showToast({ message: 'Certification domain updated', type: 'success' });
     } else {
-      await api.post('/api/certification-domains/', { name, description });
+      await api.post('/api/certification-domains/', { name, description, icon });
       showToast({ message: 'Certification domain created', type: 'success' });
     }
     renderCertificationsTab(content);
@@ -1088,6 +1162,7 @@ async function openCertModal(content, existing, certDomains) {
       </select>
     </div>
   `;
+  body.appendChild(buildAdminIconPicker(isEdit ? existing.icon : null));
 
   const result = await showModal({
     title: isEdit ? 'Edit Certificate' : 'Add Certificate',
@@ -1103,6 +1178,7 @@ async function openCertModal(content, existing, certDomains) {
   const name = body.querySelector('#modalCertName').value.trim();
   const description = body.querySelector('#modalCertDesc').value.trim() || null;
   const certDomainId = parseInt(body.querySelector('#modalCertDomain').value);
+  const icon = body.querySelector('#modalIconValue').value || null;
 
   if (!name || !certDomainId) {
     showToast({ message: 'Name and certification domain are required', type: 'error' });
@@ -1111,10 +1187,10 @@ async function openCertModal(content, existing, certDomains) {
 
   try {
     if (isEdit) {
-      await api.put(`/api/certificates/${existing.id}`, { name, description, certification_domain_id: certDomainId });
+      await api.put(`/api/certificates/${existing.id}`, { name, description, certification_domain_id: certDomainId, icon });
       showToast({ message: 'Certificate updated', type: 'success' });
     } else {
-      await api.post('/api/certificates/', { name, description, certification_domain_id: certDomainId });
+      await api.post('/api/certificates/', { name, description, certification_domain_id: certDomainId, icon });
       showToast({ message: 'Certificate created', type: 'success' });
     }
     renderCertificationsTab(content);

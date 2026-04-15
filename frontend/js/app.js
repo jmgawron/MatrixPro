@@ -1,17 +1,17 @@
 import { Router } from './router.js';
 import { Store } from './state.js';
 import { api } from './api.js';
-import { initNav } from './components/nav.js?v=6';
+import { initNav } from './components/nav.js?v=7';
 import { initThemeToggle } from './components/theme.js';
 
-import { mountHome } from './pages/home.js?v=6';
+import { mountHome } from './pages/home.js?v=7';
 import { mountLogin } from './pages/login.js';
 import { mountMyPlan } from './pages/my-plan.js';
 import { mountMyTeam } from './pages/my-team.js';
-import { mountCatalog } from './pages/catalog.js?v=6';
+import { mountCatalog } from './pages/catalog.js?v=7';
 import { mountSkillExplorer } from './pages/skill-explorer.js';
 import { mountSettings } from './pages/settings.js';
-import { mountAdmin } from './pages/admin.js?v=6';
+import { mountAdmin } from './pages/admin.js?v=7';
 
 const routes = {
   '/': { mount: mountHome, title: 'Home', minRole: null },

@@ -1038,9 +1038,12 @@ body {
 /* Legacy triage names */
 .triage-blocking  { background: rgba(239, 68, 68, .12);   color: #f87171;  border-color: rgba(239, 68, 68, .25); }
 .triage-degraded  { background: rgba(245, 158, 11, .12);  color: #fbbf24;  border-color: rgba(245, 158, 11, .25); }
-.triage-signal    { background: rgba(6, 182, 212, .12);   color: #22d3ee;  border-color: rgba(6, 182, 212, .25); }
-.triage-feedback  { background: rgba(168, 85, 247, .12);  color: #c084fc;  border-color: rgba(168, 85, 247, .25); }
+.triage-signal    { background: rgba(156, 163, 175, .12);  color: #9ca3af;  border-color: rgba(156, 163, 175, .25); }
+.triage-feedback  { background: rgba(59, 130, 246, .12);   color: #60a5fa;  border-color: rgba(59, 130, 246, .25); }
 .triage-language  { background: rgba(34, 197, 94, .12);   color: #4ade80;  border-color: rgba(34, 197, 94, .25); }
+
+[data-theme="light"] .triage-signal   { background: rgba(107, 114, 128, .1); color: #4b5563; border-color: rgba(107, 114, 128, .2); }
+[data-theme="light"] .triage-feedback { background: rgba(59, 130, 246, .08); color: #2563eb; border-color: rgba(59, 130, 246, .15); }
 
 
 /* ──────────────────────────────────────────────────────────
@@ -1400,6 +1403,13 @@ tbody tr:hover td {
 
 .modal-wide {
   max-width: 720px;
+}
+
+.modal-skill-edit {
+  max-width: 960px;
+}
+.modal-skill-edit .modal-body {
+  overflow-y: auto;
 }
 
 .modal-header {
@@ -3068,7 +3078,7 @@ textarea.is-error:focus {
   flex-direction: column;
   gap: 8px;
   overflow-y: auto;
-  max-height: 45vh;
+  max-height: 400px;
   padding: 16px 0 4px;
 }
 
@@ -5523,19 +5533,20 @@ textarea.is-error:focus {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  background: rgba(156, 163, 175, .15);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #fff;
+  color: #9ca3af;
 }
 .tool-card-icon svg {
   width: 22px;
   height: 22px;
 }
 [data-theme="light"] .tool-card-icon {
-  background: linear-gradient(135deg, #0891b2, #2563eb);
+  background: rgba(107, 114, 128, .12);
+  color: #6b7280;
 }
 
 .tool-card-header-left {
@@ -5700,6 +5711,75 @@ textarea.is-error:focus {
   transition: max-height 0.2s ease;
 }
 .team-tree-children.collapsed {
+  max-height: 0 !important;
+}
+
+/* Two-column skill edit form */
+.skill-edit-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.skill-edit-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Cert tree — mirrors team tree pattern */
+.cert-tree-domain {
+  margin-bottom: 4px;
+}
+.cert-tree-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.cert-tree-toggle:hover {
+  background: var(--bg-elevated);
+}
+.cert-tree-toggle .tree-chevron {
+  display: inline-block;
+  width: 14px;
+  text-align: center;
+  transition: transform 0.15s;
+  font-size: 11px;
+}
+.cert-tree-toggle .tree-chevron.open {
+  transform: rotate(90deg);
+}
+.cert-tree-certs {
+  padding-left: 20px;
+}
+.cert-tree-certs label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.cert-tree-certs label:hover {
+  color: var(--text-primary);
+}
+.cert-tree-certs label input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+.cert-tree-children {
+  overflow: hidden;
+  transition: max-height 0.2s ease;
+}
+.cert-tree-children.collapsed {
   max-height: 0 !important;
 }
 
@@ -6604,9 +6684,11 @@ textarea.is-error:focus {
 }
 
 .meta-badge--cert {
-  background: rgba(245, 158, 11, .12);
-  color: #fbbf24;
+  background: rgba(96, 165, 250, .12);
+  color: #93bbfc;
 }
+
+[data-theme="light"] .meta-badge--cert { background: rgba(59, 130, 246, .1); color: #2563eb; }
 
 .meta-badge--clickable {
   cursor: pointer;

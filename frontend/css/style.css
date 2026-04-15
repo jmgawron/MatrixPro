@@ -6968,3 +6968,24 @@ textarea.is-error:focus {
     max-height: 260px;
   }
 }
+
+/* ─── My Team Tab Bodies (R46) ─────────────────────────────────────────────── */
+
+.mt-overview-body,
+.mt-matrix-body,
+.mt-reporting-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* My Team header stats row override — match My Plan header spacing */
+.mp-header #mt-stats-row .stat-block {
+  text-align: center;
+}
+.mp-header #mt-stats-row .stat-block-value {
+  font-size: 22px;
+}
+.mp-header #mt-stats-row .stat-block-label {
+  font-size: 11px;
+}

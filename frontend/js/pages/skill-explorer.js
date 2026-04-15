@@ -94,10 +94,11 @@ async function runComparison(teamAId, teamBId) {
 
 function buildPageShell(container) {
   const wrapper = createElement('div', {
-    className: 'page-shell',
+    className: 'mp-wrapper',
   });
 
   const header = createElement('div', { className: 'mp-header' });
+  const headerText = createElement('div', { className: 'mp-header-text' });
   const title = createElement('h1', { className: 'mp-title' });
   title.appendChild(document.createTextNode('Skill '));
   const gradientSpan = createElement('span', { className: 'mp-title-gradient' });
@@ -105,16 +106,20 @@ function buildPageShell(container) {
   title.appendChild(gradientSpan);
   const subtitle = createElement('p', { className: 'mp-subtitle' });
   subtitle.textContent = 'Search engineers by skill and compare teams';
-  header.appendChild(title);
-  header.appendChild(subtitle);
+  headerText.appendChild(title);
+  headerText.appendChild(subtitle);
+  header.appendChild(headerText);
   wrapper.appendChild(header);
 
-  // ── Main scroll area ──────────────────────────────────────────────────────
   const main = createElement('div', {
     className: 'page-body--col',
   });
 
-  main.appendChild(buildSearchSection());
+  const user = Store.get('user');
+  if (user?.role === 'manager' || user?.role === 'admin') {
+    main.appendChild(buildSearchSection());
+  }
+
   main.appendChild(buildComparisonSection());
 
   wrapper.appendChild(main);

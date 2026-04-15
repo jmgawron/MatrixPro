@@ -43,6 +43,7 @@ class TeamResponse(BaseModel):
 class MatrixSkillInfo(BaseModel):
     id: int
     name: str
+    icon: str | None = None
 
 
 class MatrixCellInfo(BaseModel):

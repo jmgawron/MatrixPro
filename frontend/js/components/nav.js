@@ -23,7 +23,12 @@ function canAccess(item, userRole) {
 }
 
 function buildNavLinks(userRole, isLoggedIn) {
-  const visible = NAV_ITEMS.filter(item => canAccess(item, userRole));
+  const visible = NAV_ITEMS.filter(item => {
+    if (!canAccess(item, userRole)) return false;
+    // Hide "My Plan" for managers — they use My Team instead
+    if (item.href === '/my-plan' && userRole === 'manager') return false;
+    return true;
+  });
   return visible.map(item => {
     const li = document.createElement('li');
     const a = document.createElement('a');
@@ -111,7 +116,11 @@ function renderNav() {
   navLinks.appendChild(buildAuthItem(isLoggedIn, user));
 
   const currentPath = Router.current();
-  const allLinks = NAV_ITEMS.filter(item => canAccess(item, userRole));
+  const allLinks = NAV_ITEMS.filter(item => {
+    if (!canAccess(item, userRole)) return false;
+    if (item.href === '/my-plan' && userRole === 'manager') return false;
+    return true;
+  });
   allLinks.forEach(item => {
     const a = document.createElement('a');
     a.href = `#${item.href}`;

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
@@ -190,7 +191,9 @@ def get_team_matrix(
             )
             training_log_map = {row[0]: row[1] for row in max_logs if row[1]}
 
-    skill_infos = [MatrixSkillInfo(id=s.id, name=s.name) for s in all_skills]
+    skill_infos = [
+        MatrixSkillInfo(id=s.id, name=s.name, icon=s.icon) for s in all_skills
+    ]
     engineer_rows = []
     for eng in engineers:
         cells: dict[str, MatrixCellInfo] = {}
@@ -501,6 +504,138 @@ def get_team_activity(
         items=items,
         total=len(items),
     )
+
+
+@router.get("/change-logs")
+def get_team_change_logs(
+    team_id: int | None = Query(default=None),
+    engineer_id: int | None = Query(default=None),
+    from_date: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
+    to_date: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    team, engineers = _resolve_team_and_engineers(current_user, db, team_id)
+
+    if engineer_id is not None:
+        engineers = [e for e in engineers if e.id == engineer_id]
+        if not engineers:
+            raise HTTPException(
+                status_code=404, detail="Engineer not found on this team"
+            )
+
+    parsed_from = None
+    parsed_to = None
+    if from_date:
+        try:
+            parsed_from = datetime.fromisoformat(from_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid from_date format")
+    if to_date:
+        try:
+            parsed_to = datetime.fromisoformat(to_date + "T23:59:59")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid to_date format")
+
+    engineer_ids = [e.id for e in engineers]
+    engineer_names = {e.id: e.name for e in engineers}
+
+    all_entries: list[dict] = []
+
+    plans = (
+        db.query(DevelopmentPlan)
+        .filter(DevelopmentPlan.engineer_id.in_(engineer_ids))
+        .all()
+    )
+    plan_id_to_eng = {dp.id: dp.engineer_id for dp in plans}
+
+    all_plan_skill_ids: list[int] = []
+    ps_to_eng: dict[int, int] = {}
+    for plan in plans:
+        ps_rows = db.query(PlanSkill.id).filter(PlanSkill.plan_id == plan.id).all()
+        for (ps_id,) in ps_rows:
+            all_plan_skill_ids.append(ps_id)
+            ps_to_eng[ps_id] = plan_id_to_eng[plan.id]
+
+    if all_plan_skill_ids:
+        ps_skill_names: dict[int, str] = {}
+        ps_rows2 = (
+            db.query(PlanSkill.id, Skill.name)
+            .join(Skill, PlanSkill.skill_id == Skill.id)
+            .filter(PlanSkill.id.in_(all_plan_skill_ids))
+            .all()
+        )
+        for ps_id, s_name in ps_rows2:
+            ps_skill_names[ps_id] = s_name
+
+        audit_query = db.query(AuditLog).filter(
+            AuditLog.entity_type == "plan_skill",
+            AuditLog.entity_id.in_(all_plan_skill_ids),
+        )
+        if parsed_from:
+            audit_query = audit_query.filter(AuditLog.changed_at >= parsed_from)
+        if parsed_to:
+            audit_query = audit_query.filter(AuditLog.changed_at <= parsed_to)
+
+        for log in audit_query.order_by(AuditLog.changed_at.desc()).all():
+            eng_id = ps_to_eng.get(log.entity_id)
+            all_entries.append(
+                {
+                    "type": "audit",
+                    "date": log.changed_at.isoformat() if log.changed_at else None,
+                    "field": log.field,
+                    "old_value": log.old_value,
+                    "new_value": log.new_value,
+                    "changed_by": log.changed_by,
+                    "engineer_id": eng_id,
+                    "engineer_name": engineer_names.get(eng_id, "Unknown")
+                    if eng_id
+                    else "Unknown",
+                    "skill_name": ps_skill_names.get(log.entity_id, "Unknown"),
+                }
+            )
+
+        training_query = db.query(PlanSkillTrainingLog).filter(
+            PlanSkillTrainingLog.plan_skill_id.in_(all_plan_skill_ids)
+        )
+        if parsed_from:
+            training_query = training_query.filter(
+                PlanSkillTrainingLog.completed_at >= parsed_from
+            )
+        if parsed_to:
+            training_query = training_query.filter(
+                PlanSkillTrainingLog.completed_at <= parsed_to
+            )
+
+        for tlog in training_query.order_by(
+            PlanSkillTrainingLog.completed_at.desc()
+        ).all():
+            eng_id = ps_to_eng.get(tlog.plan_skill_id)
+            all_entries.append(
+                {
+                    "type": "training",
+                    "date": tlog.completed_at.isoformat()
+                    if tlog.completed_at
+                    else None,
+                    "title": tlog.title,
+                    "training_type": tlog.type.value if tlog.type else None,
+                    "notes": tlog.notes,
+                    "engineer_id": eng_id,
+                    "engineer_name": engineer_names.get(eng_id, "Unknown")
+                    if eng_id
+                    else "Unknown",
+                    "skill_name": ps_skill_names.get(tlog.plan_skill_id, "Unknown"),
+                }
+            )
+
+    all_entries.sort(key=lambda e: e.get("date") or "", reverse=True)
+
+    return {
+        "team_id": team.id,
+        "team_name": team.name,
+        "entries": all_entries,
+        "total": len(all_entries),
+    }
 
 
 @router.get("/{team_id}", response_model=TeamResponse)

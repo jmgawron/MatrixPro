@@ -3,7 +3,8 @@ import { Store } from '../state.js';
 import { showSkeleton } from '../components/skeleton.js';
 import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
-import { createElement } from '../utils/dom.js';
+import { el } from '../utils/dom.js';
+import { getSkillIconSVG } from '../components/icons.js';
 
 // ─── Module state ─────────────────────────────────────────────────────────────
 
@@ -27,12 +28,20 @@ let _drawerOverlay = null;
 let _tabPanels = {};
 let _tabButtons = {};
 let _tabLoaded = {};
-let _activeTab = 'summary';
+let _activeTab = 'overview';
 let _matrixBodyEl = null;
-let _summaryBodyEl = null;
-let _analysisBodyEl = null;
+let _overviewBodyEl = null;
+let _reportingBodyEl = null;
 let _bulkBarEl = null;
 let _bulkCountEl = null;
+let _statsRowEl = null;
+
+// ─── Reporting tab state ──────────────────────────────────────────────────────
+
+let _changeLogsData = null;
+let _reportFromDate = '';
+let _reportToDate = '';
+let _reportEngineerId = '';
 
 // ─── Mouse tracking for tooltip ───────────────────────────────────────────────
 
@@ -63,12 +72,17 @@ export function mountMyTeam(container, params) {
   _tabPanels = {};
   _tabButtons = {};
   _tabLoaded = {};
-  _activeTab = Store.get('myTeamTab') || 'summary';
+  _activeTab = Store.get('myTeamTab') || 'overview';
   _matrixBodyEl = null;
-  _summaryBodyEl = null;
-  _analysisBodyEl = null;
+  _overviewBodyEl = null;
+  _reportingBodyEl = null;
   _bulkBarEl = null;
   _bulkCountEl = null;
+  _statsRowEl = null;
+  _changeLogsData = null;
+  _reportFromDate = '';
+  _reportToDate = '';
+  _reportEngineerId = '';
 
   buildTooltip();
   buildDrawerElements();
@@ -78,7 +92,7 @@ export function mountMyTeam(container, params) {
   if (user?.role === 'admin') {
     loadAdminTeamSelector();
   } else {
-    loadAllData(null);
+    loadManagerTeam();
   }
 
   _resizeHandler = () => {
@@ -110,14 +124,37 @@ export function mountMyTeam(container, params) {
   };
 }
 
+// ─── Manager team auto-detect ─────────────────────────────────────────────────
+
+async function loadManagerTeam() {
+  try {
+    const teams = await api.get('/api/teams/');
+    const user = Store.get('user');
+    if (!teams || teams.length === 0) {
+      if (_overviewBodyEl) renderEmptyState(_overviewBodyEl);
+      return;
+    }
+    // Manager with team_id — find matching team
+    let targetTeam = null;
+    if (user?.team_id) {
+      targetTeam = teams.find(t => t.id === user.team_id);
+    }
+    if (!targetTeam) targetTeam = teams[0];
+    loadAllData(targetTeam.id);
+  } catch (err) {
+    showToast(err.message || 'Failed to load teams', 'error');
+    if (_overviewBodyEl) renderErrorState(_overviewBodyEl, err.message, () => loadManagerTeam());
+  }
+}
+
 // ─── Data loading ─────────────────────────────────────────────────────────────
 
 async function loadAllData(teamId) {
   _teamId = teamId;
 
-  if (_summaryBodyEl) showSkeleton(_summaryBodyEl, 'cards');
+  if (_overviewBodyEl) showSkeleton(_overviewBodyEl, 'cards');
   if (_matrixBodyEl) showSkeleton(_matrixBodyEl, 'table');
-  if (_analysisBodyEl) showSkeleton(_analysisBodyEl, 'list');
+  if (_reportingBodyEl) showSkeleton(_reportingBodyEl, 'list');
 
   const matrixUrl = teamId ? `/api/teams/matrix?team_id=${teamId}` : '/api/teams/matrix';
   const statsUrl = teamId ? `/api/teams/stats?team_id=${teamId}` : '/api/teams/stats';
@@ -136,41 +173,39 @@ async function loadAllData(teamId) {
     _visibleSkillIds = null;
     _tabLoaded = {};
 
+    updateHeaderStats();
     renderActiveTab();
   } catch (err) {
     const msg = err.message || 'Failed to load team data';
     showToast(msg, 'error');
-    if (_summaryBodyEl) renderErrorState(_summaryBodyEl, msg, () => loadAllData(teamId));
+    if (_overviewBodyEl) renderErrorState(_overviewBodyEl, msg, () => loadAllData(teamId));
     if (_matrixBodyEl) renderErrorState(_matrixBodyEl, msg, () => loadAllData(teamId));
-    if (_analysisBodyEl) renderErrorState(_analysisBodyEl, msg, () => loadAllData(teamId));
+    if (_reportingBodyEl) renderErrorState(_reportingBodyEl, msg, () => loadAllData(teamId));
   }
 }
 
 async function loadAdminTeamSelector() {
   try {
     const teams = await api.get('/api/teams/');
-    if (!_summaryBodyEl) return;
+    if (!_statsRowEl) return;
 
-    const selectorWrap = createElement('div', {
-      style: 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:64px 24px;',
-    });
+    _statsRowEl.innerHTML = '';
 
-    const label = createElement('p', {
-      style: 'font-size:15px;color:var(--text-secondary);',
-    });
-    label.textContent = 'Select a team to view its management dashboard:';
-
-    const select = createElement('select', {
+    const selectorBlock = el('div', { className: 'stat-block' });
+    selectorBlock.style.minWidth = '200px';
+    const selectLabel = el('div', { className: 'stat-block-label' });
+    selectLabel.textContent = 'Select Team';
+    const select = el('select', {
       className: 'form-select',
-      style: 'width:auto;min-width:260px;font-size:14px;',
+      style: 'width:auto;min-width:200px;font-size:13px;margin-top:4px;',
     });
 
-    const placeholder = createElement('option', { value: '' });
+    const placeholder = el('option', { value: '' });
     placeholder.textContent = '— Choose a team —';
     select.appendChild(placeholder);
 
     teams.forEach(t => {
-      const opt = createElement('option', { value: String(t.id) });
+      const opt = el('option', { value: String(t.id) });
       opt.textContent = t.name;
       select.appendChild(opt);
     });
@@ -180,65 +215,96 @@ async function loadAdminTeamSelector() {
       if (tid) loadAllData(Number(tid));
     });
 
-    selectorWrap.appendChild(label);
-    selectorWrap.appendChild(select);
-
-    if (_summaryBodyEl) {
-      _summaryBodyEl.innerHTML = '';
-      _summaryBodyEl.appendChild(selectorWrap);
-    }
-    if (_matrixBodyEl) {
-      _matrixBodyEl.innerHTML = '';
-      _matrixBodyEl.appendChild(selectorWrap.cloneNode(true));
-      const clonedSelect = _matrixBodyEl.querySelector('select');
-      if (clonedSelect) {
-        clonedSelect.addEventListener('change', () => {
-          const tid = clonedSelect.value;
-          if (tid) loadAllData(Number(tid));
-        });
-      }
-    }
-    if (_analysisBodyEl) {
-      _analysisBodyEl.innerHTML = '';
-    }
+    selectorBlock.appendChild(selectLabel);
+    selectorBlock.appendChild(select);
+    _statsRowEl.appendChild(selectorBlock);
   } catch (err) {
     showToast(err.message || 'Failed to load teams', 'error');
   }
 }
 
+// ─── Header stats ─────────────────────────────────────────────────────────────
+
+function updateHeaderStats() {
+  if (!_statsRowEl || !_matrixData) return;
+
+  const user = Store.get('user');
+  const isAdmin = user?.role === 'admin';
+
+  // For admin, keep the selector and append stats; for manager, replace entirely
+  if (isAdmin) {
+    // Remove existing stat blocks except the first one (team selector)
+    const children = Array.from(_statsRowEl.children);
+    children.forEach((child, i) => {
+      if (i > 0) child.remove();
+    });
+  } else {
+    _statsRowEl.innerHTML = '';
+  }
+
+  const engineers = Array.isArray(_matrixData.engineers) ? _matrixData.engineers : [];
+  const skills = Array.isArray(_matrixData.skills) ? _matrixData.skills : [];
+
+  const stats = [
+    { value: _matrixData.team_name || 'Team', label: 'Team Name', isText: true },
+    { value: engineers.length, label: 'Engineers', isText: false },
+    { value: skills.length, label: 'Team Skills', isText: false },
+  ];
+
+  // For admin, skip team name since we have the selector
+  const displayStats = isAdmin ? stats.slice(1) : stats;
+
+  displayStats.forEach(({ value, label, isText }) => {
+    const block = el('div', { className: 'stat-block' });
+    const valEl = el('div', { className: 'stat-block-value' });
+    valEl.textContent = String(value);
+    if (isText) valEl.style.fontSize = '16px';
+    const labelEl = el('div', { className: 'stat-block-label' });
+    labelEl.textContent = label;
+    block.appendChild(valEl);
+    block.appendChild(labelEl);
+    _statsRowEl.appendChild(block);
+  });
+}
+
 // ─── Page shell ───────────────────────────────────────────────────────────────
 
 function buildPageShell(container) {
-  const wrapper = createElement('div', { className: 'mp-wrapper' });
+  const wrapper = el('div', { className: 'mp-wrapper' });
 
-  const header = createElement('div', { className: 'mp-header' });
-  const headerText = createElement('div', { className: 'mp-header-text' });
-  const title = createElement('h1', { className: 'mp-title' });
+  // Hero header
+  const header = el('div', { className: 'mp-header' });
+  const headerText = el('div', { className: 'mp-header-text' });
+  const title = el('h1', { className: 'mp-title' });
   title.appendChild(document.createTextNode('My Team '));
-  const gradientSpan = createElement('span', { className: 'mp-title-gradient' });
+  const gradientSpan = el('span', { className: 'mp-title-gradient' });
   gradientSpan.textContent = 'Command Center';
   title.appendChild(gradientSpan);
-  const subtitle = createElement('p', { className: 'mp-subtitle' });
+  const subtitle = el('p', { className: 'mp-subtitle' });
   subtitle.textContent = 'Team analytics, skills matrix, and development tracking';
   headerText.appendChild(title);
   headerText.appendChild(subtitle);
   header.appendChild(headerText);
+
+  _statsRowEl = el('div', { className: 'stats-row', id: 'mt-stats-row' });
+  header.appendChild(_statsRowEl);
   wrapper.appendChild(header);
 
-  const tabBar = createElement('div', {
+  // Tab bar
+  const tabBar = el('div', {
     className: 'skill-detail-tabs',
     role: 'tablist',
     'aria-label': 'Team management tabs',
   });
 
   const tabDefs = [
-    { name: 'summary', label: 'Summary' },
+    { name: 'overview', label: 'Overview' },
     { name: 'matrix', label: 'Matrix' },
-    { name: 'analysis', label: 'Analysis' },
+    { name: 'reporting', label: 'Reporting' },
   ];
 
   tabDefs.forEach(({ name, label }) => {
-    const btn = createElement('button', {
+    const btn = el('button', {
       className: 'skill-detail-tab' + (name === _activeTab ? ' active' : ''),
       role: 'tab',
       'aria-selected': String(name === _activeTab),
@@ -271,16 +337,18 @@ function buildPageShell(container) {
 
   wrapper.appendChild(tabBar);
 
-  const summaryPanel = createElement('div', {
+  // Overview panel
+  const overviewPanel = el('div', {
     className: 'skill-detail-tab-panel',
     role: 'tabpanel',
-    style: _activeTab === 'summary' ? 'display:block' : 'display:none',
+    style: _activeTab === 'overview' ? 'display:block' : 'display:none',
   });
-  _summaryBodyEl = createElement('div', { className: 'mt-summary-body' });
-  summaryPanel.appendChild(_summaryBodyEl);
-  _tabPanels['summary'] = summaryPanel;
+  _overviewBodyEl = el('div', { className: 'mt-overview-body' });
+  overviewPanel.appendChild(_overviewBodyEl);
+  _tabPanels['overview'] = overviewPanel;
 
-  const matrixPanel = createElement('div', {
+  // Matrix panel
+  const matrixPanel = el('div', {
     className: 'skill-detail-tab-panel',
     role: 'tabpanel',
     style: _activeTab === 'matrix' ? 'display:block' : 'display:none',
@@ -289,22 +357,25 @@ function buildPageShell(container) {
   matrixPanel.appendChild(matrixControls);
   _bulkBarEl = buildBulkBar();
   matrixPanel.appendChild(_bulkBarEl);
-  _matrixBodyEl = createElement('div', { className: 'mt-matrix-body' });
+  _matrixBodyEl = el('div', { className: 'mt-matrix-body' });
   matrixPanel.appendChild(_matrixBodyEl);
   _tabPanels['matrix'] = matrixPanel;
 
-  const analysisPanel = createElement('div', {
+  // Reporting panel
+  const reportingPanel = el('div', {
     className: 'skill-detail-tab-panel',
     role: 'tabpanel',
-    style: _activeTab === 'analysis' ? 'display:block' : 'display:none',
+    style: _activeTab === 'reporting' ? 'display:block' : 'display:none',
   });
-  _analysisBodyEl = createElement('div', { className: 'mt-analysis-body' });
-  analysisPanel.appendChild(_analysisBodyEl);
-  _tabPanels['analysis'] = analysisPanel;
+  const reportingControls = buildReportingControls();
+  reportingPanel.appendChild(reportingControls);
+  _reportingBodyEl = el('div', { className: 'mt-reporting-body' });
+  reportingPanel.appendChild(_reportingBodyEl);
+  _tabPanels['reporting'] = reportingPanel;
 
-  wrapper.appendChild(summaryPanel);
+  wrapper.appendChild(overviewPanel);
   wrapper.appendChild(matrixPanel);
-  wrapper.appendChild(analysisPanel);
+  wrapper.appendChild(reportingPanel);
 
   container.appendChild(wrapper);
 }
@@ -336,25 +407,26 @@ function renderActiveTab() {
 }
 
 function renderTab(tabName) {
-  if (tabName === 'summary') {
-    renderSummaryTab();
-    _tabLoaded['summary'] = true;
+  if (tabName === 'overview') {
+    renderOverviewTab();
+    _tabLoaded['overview'] = true;
   } else if (tabName === 'matrix') {
     renderMatrixTab();
     _tabLoaded['matrix'] = true;
-  } else if (tabName === 'analysis') {
-    renderAnalysisTab();
-    _tabLoaded['analysis'] = true;
+  } else if (tabName === 'reporting') {
+    renderReportingTab();
+    _tabLoaded['reporting'] = true;
   }
 }
 
-// ─── Summary tab ─────────────────────────────────────────────────────────────
+// ─── Overview tab ─────────────────────────────────────────────────────────────
 
-function renderSummaryTab() {
-  if (!_summaryBodyEl) return;
-  _summaryBodyEl.innerHTML = '';
+function renderOverviewTab() {
+  if (!_overviewBodyEl) return;
+  _overviewBodyEl.innerHTML = '';
 
-  const kpiGrid = createElement('div', { className: 'mt-kpi-grid' });
+  // KPI cards
+  const kpiGrid = el('div', { className: 'mt-kpi-grid' });
 
   const coveragePct = _statsData?.coverage_pct ?? 0;
   const criticalGaps = _statsData?.critical_gaps ?? 0;
@@ -364,19 +436,19 @@ function renderSummaryTab() {
   const totalSkills = _statsData?.total_skills ?? (_matrixData?.skills?.length ?? 0);
 
   const kpiDefs = [
-    { label: 'Team Coverage', value: coveragePct, suffix: '%', sub: `${totalEngineers} engineers · ${totalSkills} skills`, variant: 'accent' },
+    { label: 'Team Coverage', value: coveragePct, suffix: '%', sub: `${totalEngineers} engineers \u00b7 ${totalSkills} skills`, variant: 'accent' },
     { label: 'Critical Gaps', value: criticalGaps, suffix: '', sub: 'Skills below 30% coverage', variant: 'danger' },
     { label: 'Active Developments', value: activeDev, suffix: '', sub: 'Skills in progress', variant: 'warning' },
     { label: '30-day Completions', value: completions30d, suffix: '', sub: 'Achieved proficiency', variant: 'success' },
   ];
 
   kpiDefs.forEach(({ label, value, suffix, sub, variant }) => {
-    const card = createElement('div', { className: `mt-kpi-card mt-kpi-card--${variant}` });
-    const labelEl = createElement('div', { className: 'mt-kpi-label' });
+    const card = el('div', { className: `mt-kpi-card mt-kpi-card--${variant}` });
+    const labelEl = el('div', { className: 'mt-kpi-label' });
     labelEl.textContent = label;
-    const valueEl = createElement('div', { className: 'mt-kpi-value' });
-    valueEl.textContent = '0' + suffix;
-    const subEl = createElement('div', { className: 'mt-kpi-sub' });
+    const valueEl = el('div', { className: 'mt-kpi-value' });
+    valueEl.textContent = '0' + (suffix || '');
+    const subEl = el('div', { className: 'mt-kpi-sub' });
     subEl.textContent = sub;
     card.appendChild(labelEl);
     card.appendChild(valueEl);
@@ -385,48 +457,91 @@ function renderSummaryTab() {
     animateCountUp(valueEl, value, suffix);
   });
 
-  _summaryBodyEl.appendChild(kpiGrid);
+  _overviewBodyEl.appendChild(kpiGrid);
 
-  const dashCols = createElement('div', { className: 'mt-dash-cols' });
+  // Dashboard columns: radar chart + activity feed
+  const dashCols = el('div', { className: 'mt-dash-cols' });
 
-  const radarCard = createElement('div', { className: 'mt-dash-card' });
+  // Radar chart card
+  const radarCard = el('div', { className: 'mt-dash-card' });
   radarCard.style.flex = '3';
-  const radarHeader = createElement('div', { className: 'mt-dash-card-header' });
+  const radarHeader = el('div', { className: 'mt-dash-card-header' });
   radarHeader.textContent = 'Team Skill Radar';
-  const radarBody = createElement('div', { className: 'mt-dash-card-body' });
-  const radarChartEl = createElement('div', { style: 'height:400px;' });
+  const radarBody = el('div', { className: 'mt-dash-card-body' });
+  const radarChartEl = el('div', { style: 'height:400px;' });
   radarBody.appendChild(radarChartEl);
   radarCard.appendChild(radarHeader);
   radarCard.appendChild(radarBody);
   dashCols.appendChild(radarCard);
 
-  const activityCard = createElement('div', { className: 'mt-dash-card' });
+  // Activity feed card
+  const activityCard = el('div', { className: 'mt-dash-card' });
   activityCard.style.flex = '2';
-  const activityHeader = createElement('div', { className: 'mt-dash-card-header' });
-  const activityTitle = createElement('span');
+  const activityHeader = el('div', { className: 'mt-dash-card-header' });
+  const activityTitle = el('span');
   activityTitle.textContent = 'Recent Activity';
   const activityItems = Array.isArray(_activityData?.items) ? _activityData.items : (Array.isArray(_activityData) ? _activityData : []);
-  const activityBadge = createElement('span', {
+  const activityBadge = el('span', {
     style: 'margin-left:8px;background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:9999px;font-size:11px;padding:1px 8px;color:var(--text-muted);',
   });
   activityBadge.textContent = String(activityItems.length);
   activityHeader.appendChild(activityTitle);
   activityHeader.appendChild(activityBadge);
-  const activityBody = createElement('div', { className: 'mt-dash-card-body', style: 'max-height:340px;overflow-y:auto;' });
+  const activityBody = el('div', { className: 'mt-dash-card-body', style: 'max-height:340px;overflow-y:auto;' });
   renderActivityFeed(activityBody, activityItems);
   activityCard.appendChild(activityHeader);
   activityCard.appendChild(activityBody);
   dashCols.appendChild(activityCard);
 
-  _summaryBodyEl.appendChild(dashCols);
+  _overviewBodyEl.appendChild(dashCols);
 
+  // Skill coverage analysis card
+  const perSkillStats = _statsData?.per_skill_stats;
+  const gapStats = Array.isArray(perSkillStats) && perSkillStats.length > 0
+    ? perSkillStats
+    : buildFallbackPerSkillStats();
+
+  if (gapStats.length > 0) {
+    const sorted = [...gapStats].sort((a, b) => a.coverage_pct - b.coverage_pct);
+
+    const gapCard = el('div', { className: 'mt-dash-card', style: 'margin-top:16px;' });
+    const gapHeader = el('div', { className: 'mt-dash-card-header' });
+    gapHeader.textContent = 'Skill Coverage Analysis';
+    const gapBody = el('div', { className: 'mt-dash-card-body' });
+
+    const gapList = el('div', { className: 'mt-gap-list' });
+    sorted.forEach(s => {
+      const pct = s.coverage_pct ?? 0;
+      const color = pct < 30 ? 'var(--danger)' : pct < 60 ? 'var(--warning)' : 'var(--success)';
+
+      const row = el('div', { className: 'mt-gap-row' });
+      const name = el('div', { className: 'mt-gap-name' });
+      name.textContent = s.skill_name;
+      const barWrap = el('div', { className: 'mt-gap-bar-wrap' });
+      const barFill = el('div', { className: 'mt-gap-bar-fill', style: `width:${pct}%;background:${color};` });
+      barWrap.appendChild(barFill);
+      const pctEl = el('div', { className: 'mt-gap-pct' });
+      pctEl.textContent = `${pct}%`;
+
+      row.appendChild(name);
+      row.appendChild(barWrap);
+      row.appendChild(pctEl);
+      gapList.appendChild(row);
+    });
+
+    gapBody.appendChild(gapList);
+    gapCard.appendChild(gapHeader);
+    gapCard.appendChild(gapBody);
+    _overviewBodyEl.appendChild(gapCard);
+  }
+
+  // Render radar chart
   requestAnimationFrame(() => {
-    const perSkillStats = _statsData?.per_skill_stats;
-    if (Array.isArray(perSkillStats) && perSkillStats.length > 0) {
-      renderRadarChart(radarChartEl, perSkillStats);
-    } else if (_matrixData?.skills?.length > 0) {
-      const fallbackStats = buildFallbackPerSkillStats();
-      if (fallbackStats.length > 0) renderRadarChart(radarChartEl, fallbackStats);
+    const stats = Array.isArray(perSkillStats) && perSkillStats.length > 0
+      ? perSkillStats
+      : buildFallbackPerSkillStats();
+    if (stats.length > 0) {
+      renderRadarChart(radarChartEl, stats);
     }
   });
 }
@@ -446,9 +561,9 @@ function buildFallbackPerSkillStats() {
   });
 }
 
-function renderRadarChart(el, perSkillStats) {
+function renderRadarChart(container, perSkillStats) {
   if (typeof echarts === 'undefined') return;
-  const chart = echarts.init(el, 'dark');
+  const chart = echarts.init(container, 'dark');
   const option = {
     backgroundColor: 'transparent',
     radar: {
@@ -479,22 +594,22 @@ function renderRadarChart(el, perSkillStats) {
 function renderActivityFeed(container, items) {
   container.innerHTML = '';
   if (!items || items.length === 0) {
-    const empty = createElement('div', { className: 'empty-state empty-state--compact' });
+    const empty = el('div', { className: 'empty-state empty-state--compact' });
     empty.textContent = 'No recent activity';
     container.appendChild(empty);
     return;
   }
 
   items.forEach(item => {
-    const row = createElement('div', { className: 'mt-activity-item' });
-    const avatar = createElement('div', { className: 'mt-activity-avatar' });
+    const row = el('div', { className: 'mt-activity-item' });
+    const avatar = el('div', { className: 'mt-activity-avatar' });
     avatar.textContent = getInitials(item.actor_name || item.engineer_name || '?');
-    const body = createElement('div', { className: 'mt-activity-body' });
-    const text = createElement('div', { className: 'mt-activity-text' });
+    const body = el('div', { className: 'mt-activity-body' });
+    const text = el('div', { className: 'mt-activity-text' });
     const actorName = item.actor_name || item.engineer_name || 'Unknown';
     const desc = formatActivityTitle(item.title || item.description || '', item.skill_name);
     text.innerHTML = `<strong>${escapeHtml(actorName)}</strong> ${desc}`;
-    const time = createElement('div', { className: 'mt-activity-time' });
+    const time = el('div', { className: 'mt-activity-time' });
     time.textContent = relativeTime(item.occurred_at);
     body.appendChild(text);
     body.appendChild(time);
@@ -507,9 +622,9 @@ function renderActivityFeed(container, items) {
 // ─── Matrix controls ──────────────────────────────────────────────────────────
 
 function buildMatrixControls() {
-  const controls = createElement('div', { className: 'mt-matrix-controls' });
+  const controls = el('div', { className: 'mt-matrix-controls' });
 
-  const searchInput = createElement('input', {
+  const searchInput = el('input', {
     className: 'mt-matrix-search form-input',
     type: 'text',
     placeholder: 'Search engineers...',
@@ -523,8 +638,8 @@ function buildMatrixControls() {
     }, 200);
   });
 
-  const skillFilter = createElement('select', { className: 'form-select', style: 'width:auto;max-width:280px;font-size:13px;' });
-  const filterAll = createElement('option', { value: '' });
+  const skillFilter = el('select', { className: 'form-select', style: 'width:auto;max-width:280px;font-size:13px;' });
+  const filterAll = el('option', { value: '' });
   filterAll.textContent = 'All skills';
   skillFilter.appendChild(filterAll);
   skillFilter.id = 'mt-skill-filter';
@@ -535,7 +650,7 @@ function buildMatrixControls() {
     if (_tabLoaded['matrix']) renderMatrixTable();
   });
 
-  const bulkBtn = createElement('button', { className: 'btn btn-secondary btn-sm' });
+  const bulkBtn = el('button', { className: 'btn btn-secondary btn-sm' });
   bulkBtn.textContent = 'Bulk Assign';
   bulkBtn.addEventListener('click', () => {
     _bulkMode = !_bulkMode;
@@ -545,7 +660,7 @@ function buildMatrixControls() {
     if (_tabLoaded['matrix']) renderMatrixTable();
   });
 
-  const csvBtn = createElement('button', { className: 'matrix-csv-btn' });
+  const csvBtn = el('button', { className: 'matrix-csv-btn' });
   const csvSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   csvSvg.setAttribute('width', '14');
   csvSvg.setAttribute('height', '14');
@@ -575,12 +690,12 @@ function buildMatrixControls() {
 }
 
 function buildBulkBar() {
-  const bar = createElement('div', { className: 'mt-bulk-bar', style: 'display:none;' });
+  const bar = el('div', { className: 'mt-bulk-bar', style: 'display:none;' });
 
-  _bulkCountEl = createElement('span', { style: 'color:var(--text-secondary);font-size:14px;' });
+  _bulkCountEl = el('span', { style: 'color:var(--text-secondary);font-size:14px;' });
   _bulkCountEl.textContent = '0 selected';
 
-  const assignBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
+  const assignBtn = el('button', { className: 'btn btn-primary btn-sm' });
   assignBtn.textContent = 'Assign Skill';
   assignBtn.addEventListener('click', () => {
     if (_selectedEngIds.size === 0) {
@@ -590,7 +705,7 @@ function buildBulkBar() {
     openBulkAssignModal();
   });
 
-  const cancelBtn = createElement('button', { className: 'btn btn-secondary btn-sm' });
+  const cancelBtn = el('button', { className: 'btn btn-secondary btn-sm' });
   cancelBtn.textContent = 'Cancel';
   cancelBtn.addEventListener('click', () => {
     _bulkMode = false;
@@ -622,7 +737,7 @@ function populateSkillFilter() {
   while (filterSelect.options.length > 1) filterSelect.remove(1);
   const skills = Array.isArray(_matrixData.skills) ? _matrixData.skills : [];
   skills.forEach(skill => {
-    const opt = createElement('option', { value: String(skill.id) });
+    const opt = el('option', { value: String(skill.id) });
     opt.textContent = skill.name;
     filterSelect.appendChild(opt);
   });
@@ -649,15 +764,16 @@ function renderMatrixTable() {
   }
 
   if (skills.length === 0) {
-    const noSkills = createElement('div', { className: 'empty-state empty-state--inline' });
+    const noSkills = el('div', { className: 'empty-state empty-state--inline' });
     noSkills.textContent = 'No skills match the current filter.';
     _matrixBodyEl.appendChild(noSkills);
     return;
   }
 
-  const scrollWrap = createElement('div', { className: 'matrix-scroll' });
-  const table = createElement('table', { className: 'matrix-table' });
+  const scrollWrap = el('div', { className: 'matrix-scroll' });
+  const table = el('table', { className: 'matrix-table' });
 
+  // Colgroup
   const colgroup = document.createElement('colgroup');
   const nameCol = document.createElement('col');
   nameCol.style.width = '180px';
@@ -667,31 +783,41 @@ function renderMatrixTable() {
     checkCol.style.width = '36px';
     colgroup.appendChild(checkCol);
   }
-  const skillColCount = skills.length;
   skills.forEach(() => {
     const col = document.createElement('col');
-    col.style.width = `${Math.floor((100 - 15) / skillColCount)}%`;
+    col.style.width = `${Math.floor((100 - 15) / skills.length)}%`;
     colgroup.appendChild(col);
   });
   table.appendChild(colgroup);
 
-  const thead = createElement('thead');
-  const headerRow = createElement('tr');
+  // Header
+  const thead = el('thead');
+  const headerRow = el('tr');
 
-  const cornerTh = createElement('th', { className: 'matrix-th-corner' });
+  const cornerTh = el('th', { className: 'matrix-th-corner' });
   cornerTh.textContent = 'Engineer';
   headerRow.appendChild(cornerTh);
 
   if (_bulkMode) {
-    const checkTh = createElement('th', { className: 'matrix-th-corner', style: 'width:36px;' });
-    checkTh.textContent = '✓';
+    const checkTh = el('th', { className: 'matrix-th-corner', style: 'width:36px;' });
+    checkTh.textContent = '\u2713';
     headerRow.appendChild(checkTh);
   }
 
   skills.forEach(skill => {
-    const th = createElement('th', { className: 'matrix-th-skill' });
-    const nameWrap = createElement('div', { className: 'matrix-th-name' });
-    nameWrap.textContent = skill.name;
+    const th = el('th', { className: 'matrix-th-skill' });
+    const nameWrap = el('div', { className: 'matrix-th-name' });
+
+    // Show skill icon if available
+    if (skill.icon) {
+      const iconSvg = getSkillIconSVG(skill.icon, 14);
+      if (iconSvg) {
+        const iconSpan = el('span', { style: 'margin-right:4px;display:inline-flex;vertical-align:middle;opacity:0.7;' });
+        iconSpan.innerHTML = iconSvg;
+        nameWrap.appendChild(iconSpan);
+      }
+    }
+    nameWrap.appendChild(document.createTextNode(skill.name));
     th.appendChild(nameWrap);
     headerRow.appendChild(th);
   });
@@ -699,19 +825,20 @@ function renderMatrixTable() {
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
-  const tbody = createElement('tbody');
+  // Body
+  const tbody = el('tbody');
 
   engineers.forEach((engineer) => {
-    const tr = createElement('tr', { className: 'matrix-row' });
+    const tr = el('tr', { className: 'matrix-row' });
 
     tr.addEventListener('mouseenter', () => { tr.style.background = 'rgba(59,130,246,.06)'; });
     tr.addEventListener('mouseleave', () => { tr.style.background = ''; });
 
-    const nameTd = createElement('td', { className: 'matrix-td-name' });
-    const nameSpan = createElement('span', { className: 'matrix-engineer-name' });
+    const nameTd = el('td', { className: 'matrix-td-name' });
+    const nameSpan = el('span', { className: 'matrix-engineer-name' });
     nameSpan.textContent = engineer.name || `Engineer ${engineer.id}`;
 
-    const drillIcon = createElement('span', { className: 'matrix-drill-icon' });
+    const drillIcon = el('span', { className: 'matrix-drill-icon' });
     const drillSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     drillSvg.setAttribute('width', '11');
     drillSvg.setAttribute('height', '11');
@@ -738,11 +865,11 @@ function renderMatrixTable() {
     tr.appendChild(nameTd);
 
     if (_bulkMode) {
-      const checkTd = createElement('td', {
+      const checkTd = el('td', {
         className: 'matrix-cell',
         style: 'background:var(--bg-elevated);border:1px solid var(--border-soft);cursor:pointer;',
       });
-      const checkbox = createElement('input', { type: 'checkbox' });
+      const checkbox = el('input', { type: 'checkbox' });
       checkbox.checked = _selectedEngIds.has(engineer.id);
       checkbox.addEventListener('change', () => {
         if (checkbox.checked) {
@@ -780,13 +907,13 @@ function buildMatrixCell(cell, engineer, skill) {
   const { bg, border, icon } = getCellStyle(cell);
   const stagnant = isStagnant(cell);
 
-  const td = createElement('td', {
+  const td = el('td', {
     className: 'matrix-cell' + (stagnant ? ' matrix-cell--stagnant' : ''),
     style: `background:${bg};border:1px solid ${border};`,
   });
 
   if (icon) {
-    const iconEl = createElement('span', { className: 'matrix-cell-icon' });
+    const iconEl = el('span', { className: 'matrix-cell-icon' });
     iconEl.innerHTML = icon;
     td.appendChild(iconEl);
   }
@@ -809,7 +936,7 @@ function getCellStyle(cell) {
   const clockSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
 
   if (status === 'not_in_plan') {
-    return { bg: 'var(--bg-elevated)', border: 'var(--border-soft)', icon: '<span style="color:var(--text-muted);font-size:16px;opacity:.4">—</span>' };
+    return { bg: 'var(--bg-elevated)', border: 'var(--border-soft)', icon: '<span style="color:var(--text-muted);font-size:16px;opacity:.4">\u2014</span>' };
   }
 
   if (status === 'planned') {
@@ -846,16 +973,16 @@ function buildTooltipContent(cell, engineer, skill) {
   const statusLabel = statusLabels[cell.status] || cell.status;
   let levelPart = '';
   if ((cell.status === 'developing' || cell.status === 'mastered') && cell.proficiency_level) {
-    levelPart = ` · ${levelLabels[cell.proficiency_level] || `L${cell.proficiency_level}`}`;
+    levelPart = ` \u00b7 ${levelLabels[cell.proficiency_level] || `L${cell.proficiency_level}`}`;
   }
-  const stagnantPart = isStagnant(cell) ? ' · Stagnant (90+ days)' : '';
-  return `${engineer.name} — ${skill.name}\n${statusLabel}${levelPart}${stagnantPart}`;
+  const stagnantPart = isStagnant(cell) ? ' \u00b7 Stagnant (90+ days)' : '';
+  return `${engineer.name} \u2014 ${skill.name}\n${statusLabel}${levelPart}${stagnantPart}`;
 }
 
 // ─── Legend ───────────────────────────────────────────────────────────────────
 
 function buildLegend() {
-  const legend = createElement('div', { className: 'matrix-legend' });
+  const legend = el('div', { className: 'matrix-legend' });
   const items = [
     { label: 'Not in Plan', bg: 'var(--bg-elevated)', border: 'var(--border-soft)', text: 'var(--text-muted)' },
     { label: 'Planned', bg: 'rgba(245,158,11,.18)', border: 'rgba(245,158,11,.5)', text: 'var(--text-secondary)' },
@@ -864,7 +991,7 @@ function buildLegend() {
     { label: 'Experience', bg: 'rgba(34,197,94,.75)', border: 'rgba(34,197,94,.8)', text: '#fff' },
   ];
   items.forEach(({ label, bg, border, text }) => {
-    const chip = createElement('div', {
+    const chip = el('div', {
       className: 'matrix-legend-chip',
       style: `background:${bg};border:1px solid ${border};color:${text};`,
     });
@@ -877,7 +1004,7 @@ function buildLegend() {
 // ─── Summary row ──────────────────────────────────────────────────────────────
 
 function buildSummaryRow(engineers, skills) {
-  const wrap = createElement('div', { className: 'matrix-summary' });
+  const wrap = el('div', { className: 'matrix-summary' });
   let covered = 0;
   let inDev = 0;
   let proficient = 0;
@@ -905,8 +1032,8 @@ function buildSummaryRow(engineers, skills) {
   ];
 
   stats.forEach(({ label, value }) => {
-    const pill = createElement('div', { className: 'stat-pill' });
-    const strong = createElement('strong');
+    const pill = el('div', { className: 'stat-pill' });
+    const strong = el('strong');
     strong.textContent = value;
     pill.appendChild(strong);
     pill.appendChild(document.createTextNode(` ${label}`));
@@ -916,100 +1043,233 @@ function buildSummaryRow(engineers, skills) {
   return wrap;
 }
 
-// ─── Analysis tab ─────────────────────────────────────────────────────────────
+// ─── Reporting tab ────────────────────────────────────────────────────────────
 
-function renderAnalysisTab() {
-  if (!_analysisBodyEl) return;
-  _analysisBodyEl.innerHTML = '';
+function buildReportingControls() {
+  const controls = el('div', { className: 'mt-matrix-controls' });
 
-  const perSkillStats = _statsData?.per_skill_stats;
-  const stats = Array.isArray(perSkillStats) && perSkillStats.length > 0
-    ? perSkillStats
-    : buildFallbackPerSkillStats();
+  // Default date range: last 30 days
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  _reportFromDate = thirtyDaysAgo.toISOString().split('T')[0];
+  _reportToDate = now.toISOString().split('T')[0];
 
-  const sorted = [...stats].sort((a, b) => a.coverage_pct - b.coverage_pct);
+  const fromLabel = el('label', { className: 'form-label', style: 'font-size:12px;color:var(--text-muted);margin-right:4px;white-space:nowrap;align-self:center;' });
+  fromLabel.textContent = 'From';
+  const fromInput = el('input', {
+    className: 'form-input',
+    type: 'date',
+    value: _reportFromDate,
+    style: 'width:auto;font-size:13px;',
+  });
+  fromInput.addEventListener('change', () => { _reportFromDate = fromInput.value; });
 
-  const gapCard = createElement('div', { className: 'mt-dash-card' });
-  const gapHeader = createElement('div', { className: 'mt-dash-card-header' });
-  gapHeader.textContent = 'Skill Coverage Analysis';
-  const gapBody = createElement('div', { className: 'mt-dash-card-body' });
+  const toLabel = el('label', { className: 'form-label', style: 'font-size:12px;color:var(--text-muted);margin-right:4px;white-space:nowrap;align-self:center;' });
+  toLabel.textContent = 'To';
+  const toInput = el('input', {
+    className: 'form-input',
+    type: 'date',
+    value: _reportToDate,
+    style: 'width:auto;font-size:13px;',
+  });
+  toInput.addEventListener('change', () => { _reportToDate = toInput.value; });
 
-  if (sorted.length === 0) {
-    const empty = createElement('div', { className: 'empty-state empty-state--compact' });
-    empty.textContent = 'No skill data available';
-    gapBody.appendChild(empty);
-  } else {
-    const gapList = createElement('div', { className: 'mt-gap-list' });
+  const engineerSelect = el('select', {
+    className: 'form-select',
+    style: 'width:auto;max-width:220px;font-size:13px;',
+    id: 'mt-report-engineer',
+  });
+  const allOption = el('option', { value: '' });
+  allOption.textContent = 'All Engineers';
+  engineerSelect.appendChild(allOption);
+  engineerSelect.addEventListener('change', () => { _reportEngineerId = engineerSelect.value; });
 
-    sorted.forEach(s => {
-      const pct = s.coverage_pct ?? 0;
-      const color = pct < 30 ? 'var(--danger)' : pct < 60 ? 'var(--warning)' : 'var(--success)';
+  const applyBtn = el('button', { className: 'btn btn-primary btn-sm' });
+  applyBtn.textContent = 'Apply';
+  applyBtn.addEventListener('click', () => fetchChangeLogs());
 
-      const row = createElement('div', { className: 'mt-gap-row' });
-      const name = createElement('div', { className: 'mt-gap-name' });
-      name.textContent = s.skill_name;
-      const barWrap = createElement('div', { className: 'mt-gap-bar-wrap' });
-      const barFill = createElement('div', { className: 'mt-gap-bar-fill', style: `width:${pct}%;background:${color};` });
-      barWrap.appendChild(barFill);
-      const pctEl = createElement('div', { className: 'mt-gap-pct' });
-      pctEl.textContent = `${pct}%`;
+  controls.appendChild(fromLabel);
+  controls.appendChild(fromInput);
+  controls.appendChild(toLabel);
+  controls.appendChild(toInput);
+  controls.appendChild(engineerSelect);
+  controls.appendChild(applyBtn);
 
-      row.appendChild(name);
-      row.appendChild(barWrap);
-      row.appendChild(pctEl);
-      gapList.appendChild(row);
-    });
+  return controls;
+}
 
-    gapBody.appendChild(gapList);
-  }
+function renderReportingTab() {
+  if (!_reportingBodyEl) return;
 
-  gapCard.appendChild(gapHeader);
-  gapCard.appendChild(gapBody);
-  _analysisBodyEl.appendChild(gapCard);
+  // Populate engineer selector
+  populateReportingEngineers();
 
-  if (sorted.length > 0) {
-    const chartCard = createElement('div', { className: 'mt-dash-card', style: 'margin-top:16px;' });
-    const chartHeader = createElement('div', { className: 'mt-dash-card-header' });
-    chartHeader.textContent = 'Coverage Distribution';
-    const chartBody = createElement('div', { className: 'mt-dash-card-body' });
-    const chartEl = createElement('div', { style: 'height:300px;' });
-    chartBody.appendChild(chartEl);
-    chartCard.appendChild(chartHeader);
-    chartCard.appendChild(chartBody);
-    _analysisBodyEl.appendChild(chartCard);
+  // Auto-fetch last 30 days
+  fetchChangeLogs();
+}
 
-    requestAnimationFrame(() => renderCoverageChart(chartEl, sorted));
+function populateReportingEngineers() {
+  const select = document.getElementById('mt-report-engineer');
+  if (!select || !_matrixData) return;
+  while (select.options.length > 1) select.remove(1);
+  const engineers = Array.isArray(_matrixData.engineers) ? _matrixData.engineers : [];
+  engineers.forEach(eng => {
+    const opt = el('option', { value: String(eng.id) });
+    opt.textContent = eng.name || `Engineer ${eng.id}`;
+    select.appendChild(opt);
+  });
+}
+
+async function fetchChangeLogs() {
+  if (!_reportingBodyEl || !_teamId) return;
+  showSkeleton(_reportingBodyEl, 'list');
+
+  let url = `/api/teams/change-logs?team_id=${_teamId}`;
+  if (_reportFromDate) url += `&from_date=${_reportFromDate}`;
+  if (_reportToDate) url += `&to_date=${_reportToDate}`;
+  if (_reportEngineerId) url += `&engineer_id=${_reportEngineerId}`;
+
+  try {
+    const data = await api.get(url);
+    _changeLogsData = data;
+    renderChangeLogs(data);
+  } catch (err) {
+    _reportingBodyEl.innerHTML = '';
+    renderErrorState(_reportingBodyEl, err.message || 'Failed to load change logs', () => fetchChangeLogs());
   }
 }
 
-function renderCoverageChart(el, sorted) {
-  if (typeof echarts === 'undefined') return;
-  const chart = echarts.init(el, 'dark');
-  const colors = sorted.map(s => s.coverage_pct < 30 ? '#ef4444' : s.coverage_pct < 60 ? '#f59e0b' : '#22c55e');
-  const option = {
-    backgroundColor: 'transparent',
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-    xAxis: { type: 'value', max: 100, axisLabel: { formatter: (v) => `${v}%`, color: 'var(--text-muted)' }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } } },
-    yAxis: {
-      type: 'category',
-      data: sorted.map(s => s.skill_name.length > 20 ? s.skill_name.slice(0, 18) + '…' : s.skill_name),
-      axisLabel: { color: 'var(--text-muted)', fontSize: 11 },
-    },
-    series: [{
-      type: 'bar',
-      data: sorted.map((s, i) => ({ value: s.coverage_pct, itemStyle: { color: colors[i] } })),
-      barMaxWidth: 24,
-    }],
-    tooltip: {
-      trigger: 'axis',
-      formatter: (params) => {
-        const p = params[0];
-        return `${p.name}: ${p.value}%`;
-      },
-    },
-  };
-  chart.setOption(option);
-  _charts.push(chart);
+function renderChangeLogs(data) {
+  if (!_reportingBodyEl) return;
+  _reportingBodyEl.innerHTML = '';
+
+  const entries = Array.isArray(data?.entries) ? data.entries : [];
+
+  if (entries.length === 0) {
+    const empty = el('div', { className: 'empty-state empty-state--compact' });
+    empty.textContent = 'No changes found for the selected period.';
+    _reportingBodyEl.appendChild(empty);
+    return;
+  }
+
+  // Summary bar
+  const summaryBar = el('div', { className: 'matrix-summary', style: 'margin-bottom:16px;' });
+  const totalPill = el('div', { className: 'stat-pill' });
+  const totalStrong = el('strong');
+  totalStrong.textContent = String(entries.length);
+  totalPill.appendChild(totalStrong);
+  totalPill.appendChild(document.createTextNode(' Total Changes'));
+  summaryBar.appendChild(totalPill);
+
+  const auditCount = entries.filter(e => e.type === 'audit_log').length;
+  const trainingCount = entries.filter(e => e.type === 'training_log').length;
+  if (auditCount > 0) {
+    const auditPill = el('div', { className: 'stat-pill' });
+    const auditStrong = el('strong');
+    auditStrong.textContent = String(auditCount);
+    auditPill.appendChild(auditStrong);
+    auditPill.appendChild(document.createTextNode(' Audit'));
+    summaryBar.appendChild(auditPill);
+  }
+  if (trainingCount > 0) {
+    const trainPill = el('div', { className: 'stat-pill' });
+    const trainStrong = el('strong');
+    trainStrong.textContent = String(trainingCount);
+    trainPill.appendChild(trainStrong);
+    trainPill.appendChild(document.createTextNode(' Training'));
+    summaryBar.appendChild(trainPill);
+  }
+  _reportingBodyEl.appendChild(summaryBar);
+
+  // Group by skill_name
+  const groups = {};
+  entries.forEach(entry => {
+    const key = entry.skill_name || 'General';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(entry);
+  });
+
+  // Render each group as a collapsible card
+  Object.entries(groups).forEach(([skillName, groupEntries]) => {
+    const card = el('div', { className: 'mt-dash-card', style: 'margin-bottom:12px;' });
+
+    const cardHeader = el('div', { className: 'mt-dash-card-header', style: 'cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;' });
+    const headerLeft = el('div', { style: 'display:flex;align-items:center;gap:8px;' });
+    const chevronSpan = el('span', { style: 'display:inline-flex;transition:transform 0.2s;' });
+    chevronSpan.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    const nameSpan = el('span');
+    nameSpan.textContent = skillName;
+    headerLeft.appendChild(chevronSpan);
+    headerLeft.appendChild(nameSpan);
+
+    const countBadge = el('span', {
+      style: 'background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:9999px;font-size:11px;padding:1px 8px;color:var(--text-muted);',
+    });
+    countBadge.textContent = String(groupEntries.length);
+
+    cardHeader.appendChild(headerLeft);
+    cardHeader.appendChild(countBadge);
+
+    const cardBody = el('div', { className: 'mt-dash-card-body' });
+
+    let collapsed = false;
+    cardHeader.addEventListener('click', () => {
+      collapsed = !collapsed;
+      cardBody.style.display = collapsed ? 'none' : 'block';
+      chevronSpan.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+    });
+
+    // Render entries
+    groupEntries.forEach(entry => {
+      const item = el('div', { className: 'mt-activity-item' });
+
+      const avatar = el('div', { className: 'mt-activity-avatar' });
+      if (entry.type === 'training_log') {
+        avatar.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
+        avatar.style.background = 'rgba(59,130,246,.15)';
+        avatar.style.color = 'var(--accent)';
+      } else {
+        avatar.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+        avatar.style.background = 'rgba(245,158,11,.15)';
+        avatar.style.color = 'var(--warning)';
+      }
+
+      const body = el('div', { className: 'mt-activity-body' });
+      const text = el('div', { className: 'mt-activity-text' });
+
+      const engineerName = entry.engineer_name || entry.changed_by || 'Unknown';
+
+      if (entry.type === 'training_log') {
+        const title = entry.title || 'Training completed';
+        const notes = entry.notes ? ` \u2014 ${entry.notes}` : '';
+        text.innerHTML = `<strong>${escapeHtml(engineerName)}</strong> ${escapeHtml(title)}${escapeHtml(notes)}`;
+      } else {
+        // Audit log
+        const field = entry.field || '';
+        const oldVal = entry.old_value || '\u2014';
+        const newVal = entry.new_value || '\u2014';
+        const changedBy = entry.changed_by || engineerName;
+        if (field) {
+          text.innerHTML = `<strong>${escapeHtml(changedBy)}</strong> changed <em>${escapeHtml(field)}</em>: ${escapeHtml(oldVal)} \u2192 ${escapeHtml(newVal)}`;
+        } else {
+          text.innerHTML = `<strong>${escapeHtml(changedBy)}</strong> made a change`;
+        }
+      }
+
+      const time = el('div', { className: 'mt-activity-time' });
+      time.textContent = relativeTime(entry.date);
+
+      body.appendChild(text);
+      body.appendChild(time);
+      item.appendChild(avatar);
+      item.appendChild(body);
+      cardBody.appendChild(item);
+    });
+
+    card.appendChild(cardHeader);
+    card.appendChild(cardBody);
+    _reportingBodyEl.appendChild(card);
+  });
 }
 
 // ─── Engineer drawer ──────────────────────────────────────────────────────────
@@ -1018,20 +1278,20 @@ function buildDrawerElements() {
   const modalRoot = document.getElementById('modalRoot');
   if (!modalRoot) return;
 
-  const overlay = createElement('div', { className: 'drawer-overlay' });
-  const drawer = createElement('div', { className: 'drawer' });
+  const overlay = el('div', { className: 'drawer-overlay' });
+  const drawer = el('div', { className: 'drawer' });
 
-  const drawerHeader = createElement('div', { className: 'drawer-header' });
-  const drawerTitle = createElement('h3', { style: 'margin:0;font-size:16px;font-weight:600;color:var(--text-primary);' });
+  const drawerHeader = el('div', { className: 'drawer-header' });
+  const drawerTitle = el('h3', { style: 'margin:0;font-size:16px;font-weight:600;color:var(--text-primary);' });
   drawerTitle.textContent = 'Engineer Profile';
-  const drawerClose = createElement('button', { className: 'drawer-close', 'aria-label': 'Close drawer' });
+  const drawerClose = el('button', { className: 'drawer-close', 'aria-label': 'Close drawer' });
   drawerClose.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   drawerClose.addEventListener('click', closeDrawer);
   drawerHeader.appendChild(drawerTitle);
   drawerHeader.appendChild(drawerClose);
   drawer.appendChild(drawerHeader);
 
-  const drawerBody = createElement('div', { className: 'drawer-body' });
+  const drawerBody = el('div', { className: 'drawer-body' });
   drawer.dataset.bodyRef = 'true';
   drawer.appendChild(drawerBody);
 
@@ -1065,9 +1325,9 @@ async function openDrawer(engineerId, engineerName) {
     renderDrawerContent(drawerBody, engineerId, engineerName, plan);
   } catch (err) {
     drawerBody.innerHTML = '';
-    const errEl = createElement('div', { className: 'empty-state empty-state--compact' });
+    const errEl = el('div', { className: 'empty-state empty-state--compact' });
     errEl.textContent = err.message || 'Failed to load engineer profile';
-    const retryBtn = createElement('button', { className: 'btn btn-secondary btn-sm', style: 'margin-top:12px;' });
+    const retryBtn = el('button', { className: 'btn btn-secondary btn-sm', style: 'margin-top:12px;' });
     retryBtn.textContent = 'Retry';
     retryBtn.addEventListener('click', () => openDrawer(engineerId, engineerName));
     drawerBody.appendChild(errEl);
@@ -1076,20 +1336,21 @@ async function openDrawer(engineerId, engineerName) {
 }
 
 function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
-  const engHeader = createElement('div', { className: 'drawer-eng-header' });
-  const avatar = createElement('div', { className: 'drawer-eng-avatar' });
+  // Engineer header
+  const engHeader = el('div', { className: 'drawer-eng-header' });
+  const avatar = el('div', { className: 'drawer-eng-avatar' });
   avatar.textContent = getInitials(engineerName);
   avatar.style.background = 'linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%)';
-  const meta = createElement('div', { className: 'drawer-eng-meta' });
-  const nameEl = createElement('div', { className: 'drawer-eng-name' });
+  const meta = el('div', { className: 'drawer-eng-meta' });
+  const nameEl = el('div', { className: 'drawer-eng-name' });
   nameEl.textContent = engineerName;
-  const roleEl = createElement('div', { className: 'drawer-eng-role' });
+  const roleEl = el('div', { className: 'drawer-eng-role' });
   roleEl.textContent = 'Engineer';
-  const viewLink = createElement('a', {
+  const viewLink = el('a', {
     href: `#/my-plan/${engineerId}`,
     style: 'font-size:13px;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-top:6px;',
   });
-  viewLink.textContent = 'View Full Plan →';
+  viewLink.textContent = 'View Full Plan \u2192';
   viewLink.addEventListener('click', closeDrawer);
   meta.appendChild(nameEl);
   meta.appendChild(roleEl);
@@ -1098,27 +1359,28 @@ function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
   engHeader.appendChild(meta);
   drawerBody.appendChild(engHeader);
 
+  // Skills progress
   const skills = Array.isArray(plan.skills) ? plan.skills : [];
 
-  const progressSection = createElement('div', { className: 'drawer-section' });
-  const progressTitle = createElement('div', { className: 'drawer-section-title' });
+  const progressSection = el('div', { className: 'drawer-section' });
+  const progressTitle = el('div', { className: 'drawer-section-title' });
   progressTitle.textContent = 'Skills Progress';
   progressSection.appendChild(progressTitle);
 
   if (skills.length === 0) {
-    const empty = createElement('div', { className: 'empty-state empty-state--compact' });
+    const empty = el('div', { className: 'empty-state empty-state--compact' });
     empty.textContent = 'No skills in plan yet';
     progressSection.appendChild(empty);
   } else {
     skills.forEach(planSkill => {
-      const item = createElement('div', { className: 'drawer-progress-item' });
-      const skillName = createElement('div', { className: 'drawer-progress-name' });
+      const item = el('div', { className: 'drawer-progress-item' });
+      const skillName = el('div', { className: 'drawer-progress-name' });
       skillName.textContent = planSkill.skill_name || 'Unknown';
-      const barWrap = createElement('div', { className: 'drawer-progress-bar' });
+      const barWrap = el('div', { className: 'drawer-progress-bar' });
       const statusPct = planSkill.status === 'planned' ? 25 : planSkill.status === 'developing' ? 60 : 100;
-      const barFill = createElement('div', { className: 'drawer-progress-fill', style: `width:${statusPct}%;` });
+      const barFill = el('div', { className: 'drawer-progress-fill', style: `width:${statusPct}%;` });
       barWrap.appendChild(barFill);
-      const statusChip = createElement('span', { className: 'drawer-progress-status triage-chip' });
+      const statusChip = el('span', { className: 'drawer-progress-status triage-chip' });
       statusChip.textContent = planSkill.status === 'planned' ? 'Planned' : planSkill.status === 'developing' ? 'Developing' : 'Mastered';
       if (planSkill.status === 'planned') statusChip.style.background = 'rgba(245,158,11,.2)';
       else if (planSkill.status === 'developing') statusChip.style.background = 'rgba(59,130,246,.2)';
@@ -1132,6 +1394,7 @@ function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
 
   drawerBody.appendChild(progressSection);
 
+  // Recent training timeline
   const allLogs = [];
   skills.forEach(planSkill => {
     const logs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
@@ -1141,22 +1404,22 @@ function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
   allLogs.sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime());
   const recentLogs = allLogs.slice(0, 5);
 
-  const timelineSection = createElement('div', { className: 'drawer-section' });
-  const timelineTitle = createElement('div', { className: 'drawer-section-title' });
+  const timelineSection = el('div', { className: 'drawer-section' });
+  const timelineTitle = el('div', { className: 'drawer-section-title' });
   timelineTitle.textContent = 'Recent Training';
   timelineSection.appendChild(timelineTitle);
 
   if (recentLogs.length === 0) {
-    const empty = createElement('div', { className: 'empty-state empty-state--compact' });
+    const empty = el('div', { className: 'empty-state empty-state--compact' });
     empty.textContent = 'No training logs yet';
     timelineSection.appendChild(empty);
   } else {
     recentLogs.forEach(log => {
-      const item = createElement('div', { className: 'drawer-timeline-item' });
-      const dot = createElement('div', { className: 'drawer-timeline-dot' });
-      const textEl = createElement('div', { className: 'drawer-timeline-text' });
-      textEl.textContent = `${log.skill_name} — ${log.description || 'Training completed'}`;
-      const dateEl = createElement('div', { className: 'drawer-timeline-date' });
+      const item = el('div', { className: 'drawer-timeline-item' });
+      const dot = el('div', { className: 'drawer-timeline-dot' });
+      const textEl = el('div', { className: 'drawer-timeline-text' });
+      textEl.textContent = `${log.skill_name} \u2014 ${log.description || 'Training completed'}`;
+      const dateEl = el('div', { className: 'drawer-timeline-date' });
       dateEl.textContent = relativeTime(log.completed_at);
       item.appendChild(dot);
       item.appendChild(textEl);
@@ -1167,12 +1430,13 @@ function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
 
   drawerBody.appendChild(timelineSection);
 
+  // Skill distribution radar
   if (skills.length > 0) {
-    const radarSection = createElement('div', { className: 'drawer-section' });
-    const radarTitle = createElement('div', { className: 'drawer-section-title' });
+    const radarSection = el('div', { className: 'drawer-section' });
+    const radarTitle = el('div', { className: 'drawer-section-title' });
     radarTitle.textContent = 'Skill Distribution';
     radarSection.appendChild(radarTitle);
-    const radarEl = createElement('div', { style: 'height:220px;' });
+    const radarEl = el('div', { style: 'height:220px;' });
     radarSection.appendChild(radarEl);
     drawerBody.appendChild(radarSection);
 
@@ -1185,7 +1449,7 @@ function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
         backgroundColor: 'transparent',
         radar: {
           indicator: skillsWithLevel.map(s => ({
-            name: (s.skill_name || '').length > 12 ? (s.skill_name || '').slice(0, 10) + '…' : (s.skill_name || 'Skill'),
+            name: (s.skill_name || '').length > 12 ? (s.skill_name || '').slice(0, 10) + '\u2026' : (s.skill_name || 'Skill'),
             max: 100,
           })),
           splitArea: { areaStyle: { color: ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.04)'] } },
@@ -1242,36 +1506,36 @@ async function openBulkAssignModal() {
 
   const activeSkills = Array.isArray(catalogSkills) ? catalogSkills.filter(s => !s.is_archived) : [];
 
-  const bodyEl = createElement('div');
+  const bodyEl = el('div');
 
-  const skillGroup = createElement('div', { className: 'form-group' });
-  const skillLabel = createElement('label', { className: 'form-label' });
+  const skillGroup = el('div', { className: 'form-group' });
+  const skillLabel = el('label', { className: 'form-label' });
   skillLabel.textContent = 'Skill to assign';
-  const skillSelect = createElement('select', { className: 'form-select' });
-  const skillPlaceholder = createElement('option', { value: '' });
-  skillPlaceholder.textContent = '— Select a skill —';
+  const skillSelect = el('select', { className: 'form-select' });
+  const skillPlaceholder = el('option', { value: '' });
+  skillPlaceholder.textContent = '\u2014 Select a skill \u2014';
   skillSelect.appendChild(skillPlaceholder);
   activeSkills.forEach(s => {
-    const opt = createElement('option', { value: String(s.id) });
+    const opt = el('option', { value: String(s.id) });
     opt.textContent = s.name;
     skillSelect.appendChild(opt);
   });
   skillGroup.appendChild(skillLabel);
   skillGroup.appendChild(skillSelect);
 
-  const statusGroup = createElement('div', { className: 'form-group' });
-  const statusLabel = createElement('label', { className: 'form-label' });
+  const statusGroup = el('div', { className: 'form-group' });
+  const statusLabel = el('label', { className: 'form-label' });
   statusLabel.textContent = 'Initial status';
-  const statusSelect = createElement('select', { className: 'form-select' });
+  const statusSelect = el('select', { className: 'form-select' });
   [{ value: 'planned', label: 'Planned' }, { value: 'developing', label: 'Developing' }].forEach(({ value, label }) => {
-    const opt = createElement('option', { value });
+    const opt = el('option', { value });
     opt.textContent = label;
     statusSelect.appendChild(opt);
   });
   statusGroup.appendChild(statusLabel);
   statusGroup.appendChild(statusSelect);
 
-  const summaryEl = createElement('div', {
+  const summaryEl = el('div', {
     style: 'font-size:13px;color:var(--text-secondary);margin-bottom:12px;padding:10px 12px;background:var(--bg-elevated);border-radius:var(--radius-sm);border:1px solid var(--border-soft);',
   });
   const updateSummary = () => {
@@ -1282,10 +1546,10 @@ async function openBulkAssignModal() {
   skillSelect.addEventListener('change', updateSummary);
   updateSummary();
 
-  const notesGroup = createElement('div', { className: 'form-group' });
-  const notesLabel = createElement('label', { className: 'form-label' });
+  const notesGroup = el('div', { className: 'form-group' });
+  const notesLabel = el('label', { className: 'form-label' });
   notesLabel.textContent = 'Notes (optional)';
-  const notesInput = createElement('textarea', { className: 'form-input', rows: '2', placeholder: 'Optional notes...' });
+  const notesInput = el('textarea', { className: 'form-input', rows: '2', placeholder: 'Optional notes...' });
   notesGroup.appendChild(notesLabel);
   notesGroup.appendChild(notesInput);
 
@@ -1356,12 +1620,12 @@ function hideTooltip() {
 // ─── Empty / error states ─────────────────────────────────────────────────────
 
 function renderEmptyState(container) {
-  const state = createElement('div', { className: 'empty-state' });
-  const icon = createElement('div', { className: 'empty-state-icon' });
+  const state = el('div', { className: 'empty-state' });
+  const icon = el('div', { className: 'empty-state-icon' });
   icon.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
-  const title = createElement('h3');
+  const title = el('h3');
   title.textContent = 'No Direct Reports';
-  const desc = createElement('p');
+  const desc = el('p');
   desc.textContent = "You don't have any engineers reporting to you yet.";
   state.appendChild(icon);
   state.appendChild(title);
@@ -1371,18 +1635,18 @@ function renderEmptyState(container) {
 
 function renderErrorState(container, msg, retryFn) {
   container.innerHTML = '';
-  const state = createElement('div', { className: 'empty-state empty-state--error' });
-  const icon = createElement('div', { className: 'empty-state-icon' });
+  const state = el('div', { className: 'empty-state empty-state--error' });
+  const icon = el('div', { className: 'empty-state-icon' });
   icon.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-  const title = createElement('div', { className: 'empty-state-title' });
+  const title = el('div', { className: 'empty-state-title' });
   title.textContent = 'Failed to load team data';
-  const descEl = createElement('div', { className: 'empty-state-desc' });
+  const descEl = el('div', { className: 'empty-state-desc' });
   descEl.textContent = msg || 'Please try refreshing.';
   state.appendChild(icon);
   state.appendChild(title);
   state.appendChild(descEl);
   if (typeof retryFn === 'function') {
-    const retryBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
+    const retryBtn = el('button', { className: 'btn btn-primary btn-sm' });
     retryBtn.textContent = 'Retry';
     retryBtn.addEventListener('click', retryFn);
     state.appendChild(retryBtn);
@@ -1392,10 +1656,10 @@ function renderErrorState(container, msg, retryFn) {
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
-function animateCountUp(el, target, suffix) {
+function animateCountUp(target, value, suffix) {
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (prefersReduced || target === 0) {
-    el.textContent = String(target) + (suffix || '');
+  if (prefersReduced || value === 0) {
+    target.textContent = String(value) + (suffix || '');
     return;
   }
   const duration = 800;
@@ -1403,9 +1667,9 @@ function animateCountUp(el, target, suffix) {
   function tick(now) {
     const elapsed = Math.min(now - start, duration);
     const progress = 1 - Math.pow(1 - elapsed / duration, 3);
-    el.textContent = String(Math.round(target * progress)) + (suffix || '');
+    target.textContent = String(Math.round(value * progress)) + (suffix || '');
     if (elapsed < duration) requestAnimationFrame(tick);
-    else el.textContent = String(target) + (suffix || '');
+    else target.textContent = String(value) + (suffix || '');
   }
   requestAnimationFrame(tick);
 }

@@ -404,12 +404,13 @@ function renderOrgTree(domains, treeEl) {
       .filter(t => _activeShifts.has(t.shift));
     if (!teams.length) return;
 
-    const domainItem = buildTreeItem(domain.name, 'domain', 0, true);
+    const domainItem = buildTreeItem(domain.name, 'domain', 0, true, domain.icon ? getSkillIconSVG(domain.icon, 16) : null);
     if (_selectedFilter.type === 'domain_id' && String(_selectedFilter.id) === String(domain.id)) {
       domainItem.classList.add('active');
     }
     domainItem.addEventListener('click', (e) => {
       e.stopPropagation();
+      domainItem.classList.toggle('expanded');
       selectFilter({ type: 'domain_id', id: domain.id, label: domain.name }, domainItem, treeEl);
     });
     addToggleListener(domainItem);
@@ -417,7 +418,7 @@ function renderOrgTree(domains, treeEl) {
     const childrenEl = createElement('div', { className: 'tree-item-children' });
 
     teams.forEach(team => {
-      const teamItem = buildTreeItem(team.name, 'team', 1, false);
+      const teamItem = buildTreeItem(team.name, 'team', 1, false, team.icon ? getSkillIconSVG(team.icon, 16) : null);
       if (_selectedFilter.type === 'team_id' && String(_selectedFilter.id) === String(team.id)) {
         teamItem.classList.add('active');
       }
@@ -435,14 +436,18 @@ function renderOrgTree(domains, treeEl) {
 
 function renderCertTree(certDomains, treeEl) {
   certDomains.forEach(certDomain => {
-    const cdItem = buildTreeItem(certDomain.name, 'cert-domain', 0, true);
+    const cdItem = buildTreeItem(certDomain.name, 'cert-domain', 0, true, certDomain.icon ? getSkillIconSVG(certDomain.icon, 16) : null);
+    cdItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cdItem.classList.toggle('expanded');
+    });
     addToggleListener(cdItem);
 
     const childrenEl = createElement('div', { className: 'tree-item-children' });
 
     const certs = Array.isArray(certDomain.certificates) ? certDomain.certificates : [];
     certs.forEach(cert => {
-      const certItem = buildTreeItem(cert.name, 'cert', 1, false);
+      const certItem = buildTreeItem(cert.name, 'cert', 1, false, cert.icon ? getSkillIconSVG(cert.icon, 16) : null);
       if (_selectedFilter.type === 'cert_id' && String(_selectedFilter.id) === String(cert.id)) {
         certItem.classList.add('active');
       }
@@ -463,12 +468,13 @@ function renderNonTechnicalTree(domains, treeEl) {
   nonTechDomains.forEach(domain => {
     const teams = Array.isArray(domain.teams) ? domain.teams : [];
 
-    const domainItem = buildTreeItem(domain.name, 'domain', 0, teams.length > 0);
+    const domainItem = buildTreeItem(domain.name, 'domain', 0, teams.length > 0, domain.icon ? getSkillIconSVG(domain.icon, 16) : null);
     if (_selectedFilter.type === 'domain_id' && String(_selectedFilter.id) === String(domain.id)) {
       domainItem.classList.add('active');
     }
     domainItem.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (teams.length > 0) domainItem.classList.toggle('expanded');
       selectFilter({ type: 'domain_id', id: domain.id, label: domain.name }, domainItem, treeEl);
     });
     if (teams.length > 0) addToggleListener(domainItem);
@@ -476,7 +482,7 @@ function renderNonTechnicalTree(domains, treeEl) {
     if (teams.length > 0) {
       const childrenEl = createElement('div', { className: 'tree-item-children' });
       teams.forEach(team => {
-        const teamItem = buildTreeItem(team.name, 'team', 1, false);
+        const teamItem = buildTreeItem(team.name, 'team', 1, false, team.icon ? getSkillIconSVG(team.icon, 16) : null);
         if (_selectedFilter.type === 'team_id' && String(_selectedFilter.id) === String(team.id)) {
           teamItem.classList.add('active');
         }
@@ -527,6 +533,7 @@ function buildTreeItem(label, type, indent, hasToggle, iconText) {
   if (hasToggle) {
     const toggleEl = createElement('span', { className: 'tree-item-toggle' });
     toggleEl.setAttribute('aria-hidden', 'true');
+    toggleEl.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
     item.appendChild(toggleEl);
   }
 

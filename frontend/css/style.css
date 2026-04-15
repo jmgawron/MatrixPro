@@ -1039,11 +1039,11 @@ body {
 .triage-blocking  { background: rgba(239, 68, 68, .12);   color: #f87171;  border-color: rgba(239, 68, 68, .25); }
 .triage-degraded  { background: rgba(245, 158, 11, .12);  color: #fbbf24;  border-color: rgba(245, 158, 11, .25); }
 .triage-signal    { background: rgba(156, 163, 175, .12);  color: #9ca3af;  border-color: rgba(156, 163, 175, .25); }
-.triage-feedback  { background: rgba(59, 130, 246, .12);   color: #60a5fa;  border-color: rgba(59, 130, 246, .25); }
+.triage-feedback  { background: rgba(96, 165, 250, .10);   color: #93bbfd;  border-color: rgba(96, 165, 250, .20); }
 .triage-language  { background: rgba(34, 197, 94, .12);   color: #4ade80;  border-color: rgba(34, 197, 94, .25); }
 
 [data-theme="light"] .triage-signal   { background: rgba(107, 114, 128, .1); color: #4b5563; border-color: rgba(107, 114, 128, .2); }
-[data-theme="light"] .triage-feedback { background: rgba(59, 130, 246, .08); color: #2563eb; border-color: rgba(59, 130, 246, .15); }
+[data-theme="light"] .triage-feedback { background: rgba(96, 165, 250, .08); color: #3b82f6; border-color: rgba(96, 165, 250, .15); }
 
 
 /* ──────────────────────────────────────────────────────────
@@ -1406,10 +1406,11 @@ tbody tr:hover td {
 }
 
 .modal-skill-edit {
-  max-width: 960px;
+  max-width: 1100px;
 }
 .modal-skill-edit .modal-body {
   overflow-y: auto;
+  max-height: calc(85vh - 130px);
 }
 
 .modal-header {
@@ -1918,6 +1919,18 @@ textarea.is-error:focus {
   font-size: 10px;
   color: var(--text-muted);
   transition: transform var(--transition);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+.tree-item-toggle:hover {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
 }
 
 .tree-item.expanded > .tree-item-toggle {
@@ -5483,13 +5496,14 @@ textarea.is-error:focus {
   flex-direction: column;
   gap: 0;
   padding: 20px 24px;
-  overflow: hidden;
+  overflow-y: auto;
+  max-height: calc(85vh - 130px);
 }
 
 /* Tab panels wrapper */
 .skill-detail-panels {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
@@ -5533,20 +5547,20 @@ textarea.is-error:focus {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: rgba(156, 163, 175, .15);
+  background: rgba(59, 130, 246, .15);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #9ca3af;
+  color: #3b82f6;
 }
 .tool-card-icon svg {
   width: 22px;
   height: 22px;
 }
 [data-theme="light"] .tool-card-icon {
-  background: rgba(107, 114, 128, .12);
-  color: #6b7280;
+  background: rgba(37, 99, 235, .10);
+  color: #2563eb;
 }
 
 .tool-card-header-left {
@@ -5563,6 +5577,11 @@ textarea.is-error:focus {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.icon-picker-categories {
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .icon-picker-category-label {
@@ -5623,7 +5642,7 @@ textarea.is-error:focus {
 /* ─── Hierarchical team tree (modal) ──────────────────────────────────────── */
 
 .skill-team-tree {
-  max-height: 260px;
+  max-height: 320px;
   overflow-y: auto;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -5689,11 +5708,12 @@ textarea.is-error:focus {
 .team-tree-teams label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 6px;
+  gap: 8px;
+  padding: 3px 6px;
   font-size: 13px;
   color: var(--text-secondary);
   cursor: pointer;
+  white-space: nowrap;
 }
 .team-tree-teams label:hover {
   color: var(--text-primary);
@@ -5763,11 +5783,12 @@ textarea.is-error:focus {
 .cert-tree-certs label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 6px;
+  gap: 8px;
+  padding: 3px 6px;
   font-size: 13px;
   color: var(--text-secondary);
   cursor: pointer;
+  white-space: nowrap;
 }
 .cert-tree-certs label:hover {
   color: var(--text-primary);

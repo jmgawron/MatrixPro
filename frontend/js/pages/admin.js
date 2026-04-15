@@ -70,6 +70,13 @@ function buildAdminIconPicker(selectedIcon) {
   hiddenInput.value = selectedIcon || '';
   wrapper.appendChild(hiddenInput);
 
+  if (selectedIcon) {
+    requestAnimationFrame(() => {
+      const sel = picker.querySelector('.skill-icon-option.selected');
+      if (sel) sel.scrollIntoView({ block: 'center', behavior: 'instant' });
+    });
+  }
+
   return wrapper;
 }
 

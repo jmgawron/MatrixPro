@@ -56,7 +56,9 @@ install_system_deps() {
                 sudo apt-get update -qq
                 sudo apt-get install -y -qq \
                     python3 python3-venv python3-pip python3-dev \
-                    libpango1.0-dev libcairo2-dev libffi-dev libgdk-pixbuf2.0-dev \
+                    libpango1.0-dev libcairo2-dev libffi-dev \
+                    libgdk-pixbuf-2.0-dev || sudo apt-get install -y -qq libgdk-pixbuf-xlib-2.0-dev || true
+                sudo apt-get install -y -qq \
                     libxml2-dev libxslt1-dev shared-mime-info \
                     curl
                 ;;

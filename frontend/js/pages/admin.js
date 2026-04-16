@@ -85,6 +85,7 @@ const ADMIN_TABS = [
   { id: 'teams', label: 'Teams', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>' },
   { id: 'domains', label: 'Domains', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' },
   { id: 'certifications', label: 'Certifications', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' },
+  { id: 'feedback', label: 'Feedback', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' },
 ];
 
 let currentTab = 'users';
@@ -103,7 +104,7 @@ function renderAdminShell(container) {
     <div class="admin-page">
       <div class="mp-header">
         <h1 class="mp-title">Admin <span class="mp-title-gradient">Panel</span></h1>
-        <p class="mp-subtitle">Manage users, teams, domains, and certifications</p>
+        <p class="mp-subtitle">Manage users, teams, domains, certifications, and feedback</p>
       </div>
       <div class="admin-layout">
         <aside class="admin-sidebar" id="adminSidebar"></aside>
@@ -143,6 +144,7 @@ function switchTab(container, tabId) {
   else if (tabId === 'teams') renderTeamsTab(content);
   else if (tabId === 'domains') renderDomainsTab(content);
   else if (tabId === 'certifications') renderCertificationsTab(content);
+  else if (tabId === 'feedback') renderFeedbackTab(content);
 }
 
 
@@ -1204,6 +1206,222 @@ async function openCertModal(content, existing, certDomains) {
   } catch (err) {
     showToast({ message: err.message || 'Operation failed', type: 'error' });
   }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// FEEDBACK TAB
+// ═══════════════════════════════════════════════════════════
+
+const FEEDBACK_TYPE_LABELS = {
+  bug: 'Bug',
+  enhancement: 'Enhancement',
+  missing: 'Missing Functionality',
+  question: 'Question',
+  other: 'Other',
+};
+
+const FEEDBACK_TYPE_COLORS = {
+  bug: 'var(--danger)',
+  enhancement: 'var(--primary)',
+  missing: 'var(--warning)',
+  question: 'var(--info, #3b82f6)',
+  other: 'var(--text-secondary)',
+};
+
+async function renderFeedbackTab(content) {
+  try {
+    const items = await api.get('/api/feedback/');
+    renderFeedbackTable(content, items);
+  } catch (err) {
+    content.innerHTML = `<p class="admin-error">Failed to load feedback: ${escHtml(err.message)}</p>`;
+  }
+}
+
+function renderFeedbackTable(content, items) {
+  content.innerHTML = `
+    <div class="admin-tab-header">
+      <h2>Feedback <span class="admin-count">${items.length}</span></h2>
+      <div class="admin-tab-actions">
+        <input type="text" class="search-input search-input--sm" id="feedbackSearch" placeholder="Search feedback...">
+      </div>
+    </div>
+    <div class="admin-table-wrap">
+      <table class="admin-table" id="feedbackTable">
+        <thead>
+          <tr>
+            <th class="sortable" data-sort="date">Date</th>
+            <th class="sortable" data-sort="type">Type</th>
+            <th class="sortable" data-sort="user">User</th>
+            <th class="sortable" data-sort="module">Module</th>
+            <th>Message</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="feedbackBody"></tbody>
+      </table>
+    </div>
+  `;
+
+  let searchTerm = '';
+  let sortField = 'date';
+  let sortDir = -1;
+
+  function renderRows() {
+    const filtered = items.filter(fb => {
+      if (!searchTerm) return true;
+      const s = searchTerm.toLowerCase();
+      return (
+        fb.user_name.toLowerCase().includes(s) ||
+        fb.user_email.toLowerCase().includes(s) ||
+        fb.message.toLowerCase().includes(s) ||
+        fb.source_module.toLowerCase().includes(s) ||
+        (FEEDBACK_TYPE_LABELS[fb.feedback_type] || fb.feedback_type).toLowerCase().includes(s)
+      );
+    });
+
+    filtered.sort((a, b) => {
+      let va, vb;
+      if (sortField === 'date') {
+        va = new Date(a.created_at).getTime();
+        vb = new Date(b.created_at).getTime();
+      } else if (sortField === 'type') {
+        va = a.feedback_type; vb = b.feedback_type;
+      } else if (sortField === 'user') {
+        va = a.user_name.toLowerCase(); vb = b.user_name.toLowerCase();
+      } else if (sortField === 'module') {
+        va = a.source_module.toLowerCase(); vb = b.source_module.toLowerCase();
+      }
+      if (va < vb) return -sortDir;
+      if (va > vb) return sortDir;
+      return 0;
+    });
+
+    const tbody = content.querySelector('#feedbackBody');
+    tbody.innerHTML = filtered.map(fb => {
+      const date = new Date(fb.created_at);
+      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const typeLabel = FEEDBACK_TYPE_LABELS[fb.feedback_type] || fb.feedback_type;
+      const typeColor = FEEDBACK_TYPE_COLORS[fb.feedback_type] || 'var(--text-secondary)';
+      const truncated = fb.message.length > 80 ? escHtml(fb.message.slice(0, 80)) + '…' : escHtml(fb.message);
+
+      return `
+        <tr>
+          <td>
+            <div style="white-space:nowrap">${dateStr}</div>
+            <div class="text-muted" style="font-size:12px">${timeStr}</div>
+          </td>
+          <td><span class="feedback-type-badge" style="--fb-color:${typeColor}">${typeLabel}</span></td>
+          <td>
+            <div>${escHtml(fb.user_name)}</div>
+            <div class="text-muted" style="font-size:12px">${escHtml(fb.user_email)}</div>
+          </td>
+          <td>${escHtml(fb.source_module)}</td>
+          <td class="feedback-message-cell">${truncated}</td>
+          <td class="admin-actions-cell">
+            <button class="admin-action-btn view-btn" data-id="${fb.id}" title="View">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button class="admin-action-btn delete-btn" data-id="${fb.id}" title="Delete">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    content.querySelectorAll('#feedbackTable th.sortable').forEach(th => {
+      th.classList.toggle('sort-asc', th.dataset.sort === sortField && sortDir === 1);
+      th.classList.toggle('sort-desc', th.dataset.sort === sortField && sortDir === -1);
+    });
+  }
+
+  renderRows();
+
+  content.querySelector('#feedbackSearch').addEventListener('input', e => {
+    searchTerm = e.target.value;
+    renderRows();
+  });
+
+  content.querySelector('#feedbackTable thead').addEventListener('click', e => {
+    const th = e.target.closest('th.sortable');
+    if (!th) return;
+    const field = th.dataset.sort;
+    if (sortField === field) sortDir *= -1;
+    else { sortField = field; sortDir = 1; }
+    renderRows();
+  });
+
+  content.querySelector('#feedbackBody').addEventListener('click', async e => {
+    const viewBtn = e.target.closest('.view-btn');
+    const deleteBtn = e.target.closest('.delete-btn');
+
+    if (viewBtn) {
+      const fbId = parseInt(viewBtn.dataset.id);
+      const fb = items.find(f => f.id === fbId);
+      if (!fb) return;
+
+      const date = new Date(fb.created_at);
+      const dateStr = date.toLocaleString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+      const typeLabel = FEEDBACK_TYPE_LABELS[fb.feedback_type] || fb.feedback_type;
+      const typeColor = FEEDBACK_TYPE_COLORS[fb.feedback_type] || 'var(--text-secondary)';
+
+      const viewBody = document.createElement('div');
+      viewBody.className = 'feedback-detail';
+      viewBody.innerHTML = `
+        <div class="feedback-detail-meta">
+          <div class="feedback-detail-row">
+            <span class="feedback-detail-label">From</span>
+            <span>${escHtml(fb.user_name)} (${escHtml(fb.user_email)})</span>
+          </div>
+          <div class="feedback-detail-row">
+            <span class="feedback-detail-label">Date</span>
+            <span>${dateStr}</span>
+          </div>
+          <div class="feedback-detail-row">
+            <span class="feedback-detail-label">Type</span>
+            <span class="feedback-type-badge" style="--fb-color:${typeColor}">${typeLabel}</span>
+          </div>
+          <div class="feedback-detail-row">
+            <span class="feedback-detail-label">Module</span>
+            <span>${escHtml(fb.source_module)}</span>
+          </div>
+        </div>
+        <div class="feedback-detail-message">${escHtml(fb.message)}</div>
+      `;
+
+      await showModal({
+        title: 'Feedback Detail',
+        body: viewBody,
+        modalClass: 'feedback-detail-modal',
+        actions: [
+          { label: 'Close', className: 'btn btn-secondary' },
+        ],
+      });
+    }
+
+    if (deleteBtn) {
+      const fbId = parseInt(deleteBtn.dataset.id);
+      const fb = items.find(f => f.id === fbId);
+      if (!fb) return;
+      const confirmed = await showConfirm({
+        title: 'Delete Feedback',
+        message: `Are you sure you want to delete this feedback from <strong>${escHtml(fb.user_name)}</strong>?`,
+      });
+      if (!confirmed) return;
+      try {
+        await api.del(`/api/feedback/${fbId}`);
+        showToast({ message: 'Feedback deleted', type: 'success' });
+        renderFeedbackTab(content);
+      } catch (err) {
+        showToast({ message: err.message || 'Failed to delete feedback', type: 'error' });
+      }
+    }
+  });
 }
 
 

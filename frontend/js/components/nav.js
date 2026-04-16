@@ -62,12 +62,12 @@ function buildAuthItem(isLoggedIn, user) {
     const settingsLink = document.createElement('a');
     settingsLink.href = '#/settings';
     settingsLink.className = 'nav-dropdown-item';
-    settingsLink.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2m-9-11h2m18 0h2m-3.3-6.7-1.4 1.4M6.7 17.3l-1.4 1.4m0-13.4 1.4 1.4m10.6 10.6 1.4 1.4"/></svg> Settings`;
+    settingsLink.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2m-9-11h2m18 0h2m-3.3-6.7-1.4 1.4M6.7 17.3l-1.4 1.4m0-13.4 1.4 1.4m10.6 10.6 1.4 1.4"/></svg><span>Settings</span>`;
     settingsLink.addEventListener('click', () => { menu.classList.remove('open'); });
 
     const logoutBtn = document.createElement('button');
     logoutBtn.className = 'nav-dropdown-item nav-dropdown-logout';
-    logoutBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Logout`;
+    logoutBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Logout</span>`;
     logoutBtn.addEventListener('click', () => {
       localStorage.removeItem('matrixpro_token');
       Store.set('user', null);
@@ -101,6 +101,7 @@ function closeAllDropdowns() {
 
 function renderNav() {
   const navLinks = document.getElementById('navLinks');
+  const navActions = document.querySelector('.nav-actions');
   const mobileMenu = document.getElementById('mobileMenu');
   if (!navLinks) return;
 
@@ -113,7 +114,13 @@ function renderNav() {
 
   const items = buildNavLinks(userRole, isLoggedIn);
   items.forEach(li => navLinks.appendChild(li));
-  navLinks.appendChild(buildAuthItem(isLoggedIn, user));
+
+  const existingAuth = navActions?.querySelector('.nav-auth');
+  if (existingAuth) existingAuth.remove();
+  if (navActions && isLoggedIn) {
+    const authItem = buildAuthItem(isLoggedIn, user);
+    navActions.appendChild(authItem);
+  }
 
   const currentPath = Router.current();
   const allLinks = NAV_ITEMS.filter(item => {

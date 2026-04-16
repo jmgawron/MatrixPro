@@ -26,3 +26,4 @@ from app.models.plan import (  # noqa: F401
     HiddenCatalogContent,
 )
 from app.models.audit import AuditLog  # noqa: F401
+from app.models.feedback import Feedback, FeedbackType  # noqa: F401

@@ -13,6 +13,7 @@ from app.routers import (
     domains,
     catalog,
     certification,
+    feedback,
 )
 
 app = FastAPI(title="MatrixPro API", version="0.1.0")
@@ -34,6 +35,7 @@ app.include_router(export.router)
 app.include_router(domains.router)
 app.include_router(catalog.router)
 app.include_router(certification.router)
+app.include_router(feedback.router)
 
 
 @app.on_event("startup")

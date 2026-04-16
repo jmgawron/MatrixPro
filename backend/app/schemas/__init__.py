@@ -21,3 +21,4 @@ from app.schemas.plan import (  # noqa: F401
     TrainingLogCreate,
     TrainingLogResponse,
 )
+from app.schemas.feedback import FeedbackCreate, FeedbackResponse  # noqa: F401

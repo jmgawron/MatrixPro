@@ -329,7 +329,7 @@ body {
   align-items: center;
   justify-content: space-between;
   height: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
   margin-inline: auto;
   padding-inline: 24px;
   gap: 16px;
@@ -382,8 +382,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: 8px;
-  padding-left: 12px;
+  margin-left: 4px;
+  padding-left: 8px;
   border-left: 1px solid var(--border-soft);
 }
 
@@ -473,6 +473,7 @@ body {
   cursor: pointer;
   transition: background var(--transition);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .nav-dropdown-item:hover {
@@ -6628,6 +6629,11 @@ textarea.is-error:focus {
   }
 }
 
+.mp-wrapper > .page-body--col {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .mp-wrapper > .skill-detail-tabs {
   margin: 0;
   padding: 0;
@@ -6988,4 +6994,267 @@ textarea.is-error:focus {
 }
 .mp-header #mt-stats-row .stat-block-label {
   font-size: 11px;
+}
+
+/* ── Home Page: 3E Philosophy Section ──────────────────────────────────────── */
+
+.home-3e-section {
+  width: 100%;
+  max-width: 1100px;
+  padding: 0 0 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.home-3e-heading {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.home-3e-heading-accent {
+  background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.home-3e-subheading {
+  font-size: 15px;
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 560px;
+  line-height: 1.5;
+  margin-bottom: 36px;
+}
+
+.home-3e-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+.home-3e-card {
+  background: var(--home-card-bg);
+  border: 1px solid var(--home-card-border);
+  border-radius: 12px;
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.home-3e-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 174, 239, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 174, 239, 0.1);
+}
+
+.home-3e-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.home-3e-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00AEEF;
+}
+
+.home-3e-icon svg {
+  stroke: #00AEEF;
+}
+
+.home-3e-card-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.home-3e-card-tagline {
+  font-size: 14px;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.home-3e-card-desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-3e-card {
+    transition: none;
+  }
+  .home-3e-card:hover {
+    transform: none;
+  }
+}
+
+[data-theme="light"] .home-3e-card:hover {
+  box-shadow: 0 8px 32px rgba(0, 114, 255, 0.08);
+  border-color: rgba(0, 114, 255, 0.25);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEEDBACK — Nav Button, Modal, Admin Table, Detail View
+   ═══════════════════════════════════════════════════════════ */
+
+/* Nav feedback button — mirrors .theme-toggle */
+.nav-feedback-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition), background var(--transition);
+  padding: 0;
+}
+
+.nav-feedback-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.nav-feedback-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Feedback modal sizing */
+.feedback-modal .modal-body {
+  min-width: 420px;
+}
+
+/* Meta info header in feedback modal */
+.feedback-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  margin-bottom: 16px;
+}
+
+.feedback-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.feedback-meta-row svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* Feedback type badge — color via inline --fb-color */
+.feedback-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--fb-color) 15%, transparent);
+  color: var(--fb-color);
+  border: 1px solid color-mix(in srgb, var(--fb-color) 25%, transparent);
+  white-space: nowrap;
+}
+
+/* Truncated message cell in admin table */
+.feedback-message-cell {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* Feedback detail modal */
+.feedback-detail-modal .modal-body {
+  min-width: 480px;
+}
+
+.feedback-detail-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  margin-bottom: 16px;
+}
+
+.feedback-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.feedback-detail-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.feedback-detail-row > span:not(.feedback-detail-label) {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.feedback-detail-message {
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Light theme overrides */
+[data-theme="light"] .feedback-meta {
+  background: var(--bg-card);
+}
+
+[data-theme="light"] .feedback-detail-meta,
+[data-theme="light"] .feedback-detail-message {
+  background: var(--bg-card);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .nav-feedback-btn {
+    transition: none;
+  }
 }

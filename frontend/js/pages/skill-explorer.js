@@ -19,7 +19,7 @@ let _teamBSkillsEl = null;
 let _teamANameEl = null;
 let _teamBNameEl = null;
 let _searchQuery = '';
-let _filterStatus = '';
+let _activeStatuses = new Set(['planned', 'developing', 'mastered']);
 
 // ─── Entry point ─────────────────────────────────────────────────────────────
 
@@ -29,7 +29,7 @@ export function mountSkillExplorer(container, params) {
 
   _teamsData = [];
   _searchQuery = '';
-  _filterStatus = '';
+  _activeStatuses = new Set(['planned', 'developing', 'mastered']);
   _searchResultsEl = null;
   _compareBodyEl = null;
   _circleEl = null;
@@ -65,7 +65,9 @@ async function runSearch() {
 
   const params = [];
   if (_searchQuery) params.push(`q=${encodeURIComponent(_searchQuery)}`);
-  if (_filterStatus) params.push(`status=${encodeURIComponent(_filterStatus)}`);
+  if (_activeStatuses.size > 0 && _activeStatuses.size < 3) {
+    params.push(`status=${[..._activeStatuses].join(',')}`);
+  }
   const qs = params.length ? `?${params.join('&')}` : '';
 
   try {
@@ -177,28 +179,32 @@ function buildSearchSection() {
   searchWrap.appendChild(searchInput);
   controls.appendChild(searchWrap);
 
-  // Status filter
-  const statusSelect = createElement('select', {
-    id: 'explorer-status-filter',
-    className: 'explorer-status-select',
-  });
-
-  const statusOptions = [
-    { value: '', label: 'All Statuses' },
+  // Status filter toggles
+  const statusFilters = createElement('div', { className: 'cat-shift-filters' });
+  const statuses = [
     { value: 'planned', label: 'Planned' },
     { value: 'developing', label: 'Developing' },
     { value: 'mastered', label: 'Mastered' },
   ];
-  statusOptions.forEach(({ value, label }) => {
-    const opt = createElement('option', { value });
-    opt.textContent = label;
-    statusSelect.appendChild(opt);
+  statuses.forEach(({ value, label }) => {
+    const btn = createElement('button', { className: 'cat-shift-btn active' });
+    btn.textContent = label;
+    btn.dataset.status = value;
+    btn.addEventListener('click', () => {
+      if (_activeStatuses.has(value)) {
+        if (_activeStatuses.size > 1) {
+          _activeStatuses.delete(value);
+          btn.classList.remove('active');
+        }
+      } else {
+        _activeStatuses.add(value);
+        btn.classList.add('active');
+      }
+      runSearch();
+    });
+    statusFilters.appendChild(btn);
   });
-  statusSelect.addEventListener('change', () => {
-    _filterStatus = statusSelect.value;
-    runSearch();
-  });
-  controls.appendChild(statusSelect);
+  controls.appendChild(statusFilters);
 
   // Search button
   const searchBtn = createElement('button', {

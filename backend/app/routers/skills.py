@@ -207,7 +207,11 @@ def explorer_search(
         query = query.filter(User.team_id == team_id)
 
     if status is not None:
-        query = query.filter(PlanSkill.status == status)
+        status_list = [s.strip() for s in status.split(",") if s.strip()]
+        if len(status_list) == 1:
+            query = query.filter(PlanSkill.status == status_list[0])
+        elif status_list:
+            query = query.filter(PlanSkill.status.in_(status_list))
 
     query = query.order_by(Skill.name, User.name)
     rows = query.all()

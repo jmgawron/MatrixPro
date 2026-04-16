@@ -48,55 +48,22 @@ function h(tag, attrs, ...children) {
   return el;
 }
 
-// ─── Shift toggle state ───────────────────────────────────────────────────────
+// ─── Stats state ──────────────────────────────────────────────────────────────
 
-let _homeActiveShifts = new Set([1, 2, 3, 4]);
 let _homeValueEls = {};
 
-function buildShiftToggles() {
-  const row = h('div', { className: 'home-shift-filters' });
-  for (let i = 1; i <= 4; i++) {
-    const btn = h('button', { className: 'cat-shift-btn active' });
-    btn.textContent = `Shift ${i}`;
-    btn.dataset.shift = String(i);
-    btn.addEventListener('click', () => {
-      if (_homeActiveShifts.has(i)) {
-        if (_homeActiveShifts.size > 1) {
-          _homeActiveShifts.delete(i);
-          btn.classList.remove('active');
-        }
-      } else {
-        _homeActiveShifts.add(i);
-        btn.classList.add('active');
-      }
-      fetchStats();
-    });
-    row.appendChild(btn);
-  }
-  return row;
-}
-
 async function fetchStats() {
-  const shiftsParam = [..._homeActiveShifts].sort().join(',');
   try {
-    const r = await fetch(`${API_BASE}/api/stats?shifts=${shiftsParam}`);
+    const r = await fetch(`${API_BASE}/api/stats`);
     if (!r.ok) return;
     const data = await r.json();
-    const defs = [
-      { key: 'total_engineers' },
-      { key: 'total_teams' },
-      { key: 'total_skills' },
-    ];
-    defs.forEach(({ key }) => {
+    ['total_engineers', 'total_teams', 'total_skills'].forEach((key) => {
       const el = _homeValueEls[key];
       if (el) {
-        const val = typeof data[key] === 'number' ? data[key] : 0;
-        animateCountUp(el, val);
+        animateCountUp(el, typeof data[key] === 'number' ? data[key] : 0);
       }
     });
-  } catch {
-    // non-critical
-  }
+  } catch { /* non-critical */ }
 }
 
 // ─── Stats row (ide.cisco.com style — inline in hero) ─────────────────────────
@@ -135,12 +102,78 @@ function buildStatsRow() {
   return wrapper;
 }
 
+// ─── 3E Philosophy Section ────────────────────────────────────────────────────
+
+const EDUCATION_ICON = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
+const EXPOSURE_ICON = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
+const EXPERIENCE_ICON = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+
+const THREE_E_CARDS = [
+  {
+    title: 'Education',
+    tagline: 'Build your foundation through structured learning.',
+    desc: 'Focus on completing courses, training programs, and reading materials to understand core concepts. This stage is about absorbing knowledge, learning terminology, and developing a strong theoretical foundation.',
+    icon: EDUCATION_ICON,
+  },
+  {
+    title: 'Exposure',
+    tagline: 'Turn knowledge into hands-on practice.',
+    desc: 'Apply what you\'ve learned through labs, simulations, shadowing, or small real-world tasks. This stage helps you build confidence, experiment, and identify gaps in your understanding.',
+    icon: EXPOSURE_ICON,
+  },
+  {
+    title: 'Experience',
+    tagline: 'Demonstrate mastery and create impact.',
+    desc: 'At this stage, you have developed both theoretical and practical expertise. You apply skills across different scenarios, solve complex problems, and share knowledge with others. This is where you refine expertise, mentor others, and drive meaningful outcomes.',
+    icon: EXPERIENCE_ICON,
+  },
+];
+
+function build3ESection() {
+  const section = h('div', { className: 'home-3e-section' });
+
+  const sectionTitle = h('h2', { className: 'home-3e-heading' });
+  sectionTitle.appendChild(document.createTextNode('The '));
+  sectionTitle.appendChild(h('span', { className: 'home-3e-heading-accent', textContent: '3E' }));
+  sectionTitle.appendChild(document.createTextNode(' Model'));
+
+  const sectionSub = h('p', {
+    className: 'home-3e-subheading',
+    textContent: 'Education · Exposure · Experience — the philosophy behind every skill development plan.',
+  });
+
+  section.appendChild(sectionTitle);
+  section.appendChild(sectionSub);
+
+  const grid = h('div', { className: 'home-3e-grid' });
+
+  THREE_E_CARDS.forEach(({ title, tagline, desc, icon }) => {
+    const card = h('div', { className: 'home-3e-card' });
+
+    const cardHeader = h('div', { className: 'home-3e-card-header' });
+    const iconWrap = h('div', { className: 'home-3e-icon' });
+    iconWrap.innerHTML = icon;
+    const titleEl = h('h3', { className: 'home-3e-card-title', textContent: title });
+    cardHeader.appendChild(iconWrap);
+    cardHeader.appendChild(titleEl);
+
+    const taglineEl = h('p', { className: 'home-3e-card-tagline', textContent: tagline });
+    const descEl = h('p', { className: 'home-3e-card-desc', textContent: desc });
+
+    card.appendChild(cardHeader);
+    card.appendChild(taglineEl);
+    card.appendChild(descEl);
+    grid.appendChild(card);
+  });
+
+  section.appendChild(grid);
+  return section;
+}
+
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
 export function mountHome(container) {
   container.innerHTML = '';
-
-  _homeActiveShifts = new Set([1, 2, 3, 4]);
 
   const user = Store.get('user');
 
@@ -167,26 +200,10 @@ export function mountHome(container) {
     style: 'position:relative;z-index:1;width:100%;display:flex;flex-direction:column;align-items:center;padding:0 24px;',
   });
 
-  // ── Announcement pill ──
-  const pill = h('div', {
-    style: [
-      'display:inline-flex;align-items:center;gap:8px;',
-      'margin-top:72px;margin-bottom:28px;',
-      'padding:6px 18px;',
-      'border-radius:9999px;',
-      'background:var(--home-pill-bg);',
-      'border:1px solid var(--home-pill-border);',
-      'font-size:13px;font-weight:500;color:var(--text-secondary);',
-    ].join(''),
-  });
-  const pillDot = h('span', {
-    style: 'width:6px;height:6px;border-radius:50%;background:#00AEEF;flex-shrink:0;',
-  });
-  pill.appendChild(pillDot);
-  pill.appendChild(document.createTextNode('Skill Development Platform'));
-  content.appendChild(pill);
-
   // ── Title with gradient ──
+  const titleSpacer = h('div', { style: 'margin-top:72px;' });
+  content.appendChild(titleSpacer);
+
   const title = h('h1', {
     style: [
       'font-size:clamp(36px, 5vw, 56px);font-weight:800;',
@@ -195,7 +212,7 @@ export function mountHome(container) {
       'color:var(--text-primary);',
     ].join(''),
   });
-  title.appendChild(document.createTextNode('Skill Development'));
+  title.appendChild(document.createTextNode('Skill Development Platform'));
   title.appendChild(h('br'));
   const gradientSpan = h('span', {
     style: [
@@ -221,13 +238,8 @@ export function mountHome(container) {
 
   // ── Stats row ──
   const stats = buildStatsRow();
-  stats.style.marginBottom = '16px';
+  stats.style.marginBottom = '40px';
   content.appendChild(stats);
-
-  // ── Shift toggles ──
-  const shiftRow = buildShiftToggles();
-  shiftRow.style.marginBottom = '40px';
-  content.appendChild(shiftRow);
 
   // ── CTA buttons ──
   const ctaRow = h('div', {
@@ -312,6 +324,8 @@ export function mountHome(container) {
     ctaRow.appendChild(signInBtn);
   }
   content.appendChild(ctaRow);
+
+  content.appendChild(build3ESection());
 
   page.appendChild(content);
   container.appendChild(page);

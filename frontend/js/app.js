@@ -3,6 +3,7 @@ import { Store } from './state.js';
 import { api } from './api.js';
 import { initNav } from './components/nav.js?v=7';
 import { initThemeToggle } from './components/theme.js';
+import { initFeedbackButton } from './components/feedback.js';
 
 import { mountHome } from './pages/home.js?v=7';
 import { mountLogin } from './pages/login.js';
@@ -27,6 +28,7 @@ const routes = {
 
 async function init() {
   initThemeToggle();
+  initFeedbackButton();
 
   const token = localStorage.getItem('matrixpro_token');
   if (token) {

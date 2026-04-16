@@ -60,34 +60,56 @@ MatrixPro is a corporate web application that helps TAC Engineers and their mana
 
 ## Quick Start
 
-### Docker (recommended)
+### Automated Setup (macOS & Linux)
+
+```bash
+git clone https://github.com/jmgawron/MatrixPro.git
+cd MatrixPro
+./setup.sh       # Installs dependencies, creates venv, seeds database
+./start.sh       # Starts backend + frontend, opens browser
+```
+
+`setup.sh` detects your OS and installs system packages automatically:
+- **macOS** — via Homebrew (`python@3.11`, `pango`, `cairo`, etc.)
+- **Debian/Ubuntu** — via apt
+- **Fedora/RHEL** — via dnf
+- **Arch** — via pacman
+
+It also generates a random `JWT_SECRET` in `.env` and seeds the database with demo data.
+
+`start.sh` launches both servers in the foreground and opens **http://localhost:3000** in your browser. Press `Ctrl+C` to stop. Ports are configurable via environment variables:
+
+```bash
+MATRIXPRO_BACKEND_PORT=9000 MATRIXPRO_FRONTEND_PORT=4000 ./start.sh
+```
+
+### Docker
 
 ```bash
 cp .env.example .env
-# Edit .env — set a strong JWT_SECRET
-
 docker compose up --build
 ```
 
 The app will be available at **http://localhost** (nginx serves the frontend and proxies `/api` to the backend).
 
-### Local Development
+### Manual Setup
 
 ```bash
-# Backend
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-python -m app.seed          # Creates DB + seed data
+python -m app.seed
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# Frontend (separate terminal)
+# In a separate terminal:
 cd frontend
 python3 -m http.server 3000
 ```
 
 Backend API: **http://localhost:8000** | Frontend: **http://localhost:3000**
+
+> **Note (PDF export):** WeasyPrint requires system-level libraries (`pango`, `cairo`). The setup script installs these automatically. In Docker, they're included in the image. Without them, PDF export will return a 500 error — all other features work fine.
 
 ---
 
@@ -175,6 +197,8 @@ MatrixPro/
 │       ├── api.js               # Fetch wrapper with JWT
 │       ├── components/          # Reusable UI components
 │       └── pages/               # Page modules
+├── setup.sh                     # One-command environment setup
+├── start.sh                     # Launch app + open browser
 ├── docker-compose.yml
 ├── nginx.conf
 └── .env.example

@@ -17,4 +17,6 @@ build/
 htmlcov/
 .coverage
 .sisyphus/
+.pids/
+.logs/
 .DS_Store

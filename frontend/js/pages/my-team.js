@@ -564,13 +564,13 @@ function buildFallbackPerSkillStats() {
 
 function _getChartColors() {
   const cs = getComputedStyle(document.documentElement);
-  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const isLight = document.body.getAttribute('data-theme') === 'light';
   return {
     textMuted: cs.getPropertyValue('--text-muted').trim() || (isLight ? '#64748b' : '#8aa0bd'),
-    gridColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)',
+    gridColor: isLight ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.12)',
     splitColors: isLight
-      ? ['rgba(0,0,0,0.02)', 'rgba(0,0,0,0.04)']
-      : ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.04)'],
+      ? ['rgba(59,130,246,0.03)', 'rgba(59,130,246,0.07)']
+      : ['rgba(59,130,246,0.04)', 'rgba(59,130,246,0.08)'],
     theme: isLight ? undefined : 'dark',
   };
 }
@@ -582,13 +582,15 @@ function renderRadarChart(container, perSkillStats) {
   const option = {
     backgroundColor: 'transparent',
     radar: {
+      shape: 'polygon',
+      splitNumber: 4,
       indicator: perSkillStats.map(s => ({
         name: s.skill_name.length > 15 ? s.skill_name.slice(0, 12) + '...' : s.skill_name,
         max: 100,
       })),
       splitArea: { areaStyle: { color: cc.splitColors } },
-      axisLine: { lineStyle: { color: cc.gridColor } },
-      splitLine: { lineStyle: { color: cc.gridColor } },
+      axisLine: { lineStyle: { color: cc.gridColor, width: 1 } },
+      splitLine: { lineStyle: { color: cc.gridColor, width: 1 } },
       name: { textStyle: { color: cc.textMuted, fontSize: 11 } },
     },
     series: [{
@@ -1509,13 +1511,15 @@ function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
       const option = {
         backgroundColor: 'transparent',
         radar: {
+          shape: 'polygon',
+          splitNumber: 4,
           indicator: skillsWithLevel.map(s => ({
             name: (s.skill_name || '').length > 12 ? (s.skill_name || '').slice(0, 10) + '\u2026' : (s.skill_name || 'Skill'),
             max: 100,
           })),
           splitArea: { areaStyle: { color: cc.splitColors } },
-          axisLine: { lineStyle: { color: cc.gridColor } },
-          splitLine: { lineStyle: { color: cc.gridColor } },
+          axisLine: { lineStyle: { color: cc.gridColor, width: 1 } },
+          splitLine: { lineStyle: { color: cc.gridColor, width: 1 } },
           name: { textStyle: { color: cc.textMuted, fontSize: 10 } },
         },
         series: [{

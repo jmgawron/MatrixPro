@@ -5,6 +5,7 @@ import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
 import { el } from '../utils/dom.js';
 import { getSkillIconSVG } from '../components/icons.js';
+import { AVATAR_CATALOG } from '../components/avatars.js';
 
 // ─── Module state ─────────────────────────────────────────────────────────────
 
@@ -561,9 +562,23 @@ function buildFallbackPerSkillStats() {
   });
 }
 
+function _getChartColors() {
+  const cs = getComputedStyle(document.documentElement);
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  return {
+    textMuted: cs.getPropertyValue('--text-muted').trim() || (isLight ? '#64748b' : '#8aa0bd'),
+    gridColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)',
+    splitColors: isLight
+      ? ['rgba(0,0,0,0.02)', 'rgba(0,0,0,0.04)']
+      : ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.04)'],
+    theme: isLight ? undefined : 'dark',
+  };
+}
+
 function renderRadarChart(container, perSkillStats) {
   if (typeof echarts === 'undefined') return;
-  const chart = echarts.init(container, 'dark');
+  const cc = _getChartColors();
+  const chart = echarts.init(container, cc.theme);
   const option = {
     backgroundColor: 'transparent',
     radar: {
@@ -571,10 +586,10 @@ function renderRadarChart(container, perSkillStats) {
         name: s.skill_name.length > 15 ? s.skill_name.slice(0, 12) + '...' : s.skill_name,
         max: 100,
       })),
-      splitArea: { areaStyle: { color: ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.04)'] } },
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-      name: { textStyle: { color: 'var(--text-muted)', fontSize: 11 } },
+      splitArea: { areaStyle: { color: cc.splitColors } },
+      axisLine: { lineStyle: { color: cc.gridColor } },
+      splitLine: { lineStyle: { color: cc.gridColor } },
+      name: { textStyle: { color: cc.textMuted, fontSize: 11 } },
     },
     series: [{
       type: 'radar',
@@ -591,6 +606,24 @@ function renderRadarChart(container, perSkillStats) {
   _charts.push(chart);
 }
 
+function _getActivityBadge(item) {
+  const raw = (item.title || item.description || '').toLowerCase();
+  if (raw.startsWith('completed:')) {
+    const val = raw.slice('completed:'.length).trim();
+    if (val === 'false') return { label: 'Uncompleted', cls: 'mt-badge--warning' };
+    return { label: 'Completed', cls: 'mt-badge--success' };
+  }
+  if (raw.includes('completed a training')) return { label: 'Completed', cls: 'mt-badge--success' };
+  if (raw.includes('uncompleted')) return { label: 'Uncompleted', cls: 'mt-badge--warning' };
+  if (raw.includes('added to plan') || raw.startsWith('training_log:')) return { label: 'Added', cls: 'mt-badge--info' };
+  if (raw.includes('removed')) return { label: 'Removed', cls: 'mt-badge--danger' };
+  if (raw.startsWith('status:')) return { label: 'Moved', cls: 'mt-badge--accent' };
+  if (raw.startsWith('proficiency_level:')) return { label: 'Level Up', cls: 'mt-badge--accent' };
+  if (item.type === 'training_log') return { label: 'Training', cls: 'mt-badge--info' };
+  if (item.type === 'audit') return { label: 'Updated', cls: 'mt-badge--muted' };
+  return null;
+}
+
 function renderActivityFeed(container, items) {
   container.innerHTML = '';
   if (!items || items.length === 0) {
@@ -603,16 +636,29 @@ function renderActivityFeed(container, items) {
   items.forEach(item => {
     const row = el('div', { className: 'mt-activity-item' });
     const avatar = el('div', { className: 'mt-activity-avatar' });
-    avatar.textContent = getInitials(item.actor_name || item.engineer_name || '?');
+    const avatarEntry = item.actor_avatar ? AVATAR_CATALOG.find(a => a.id === item.actor_avatar) : null;
+    if (avatarEntry) {
+      avatar.innerHTML = avatarEntry.svg;
+    } else {
+      avatar.textContent = getInitials(item.actor_name || item.engineer_name || '?');
+    }
     const body = el('div', { className: 'mt-activity-body' });
     const text = el('div', { className: 'mt-activity-text' });
     const actorName = item.actor_name || item.engineer_name || 'Unknown';
     const desc = formatActivityTitle(item.title || item.description || '', item.skill_name);
     text.innerHTML = `<strong>${escapeHtml(actorName)}</strong> ${desc}`;
-    const time = el('div', { className: 'mt-activity-time' });
+    const meta = el('div', { className: 'mt-activity-meta' });
+    const badge = _getActivityBadge(item);
+    if (badge) {
+      const badgeEl = el('span', { className: `mt-activity-badge ${badge.cls}` });
+      badgeEl.textContent = badge.label;
+      meta.appendChild(badgeEl);
+    }
+    const time = el('span', { className: 'mt-activity-time' });
     time.textContent = relativeTime(item.occurred_at);
+    meta.appendChild(time);
     body.appendChild(text);
-    body.appendChild(time);
+    body.appendChild(meta);
     row.appendChild(avatar);
     row.appendChild(body);
     container.appendChild(row);
@@ -682,9 +728,9 @@ function buildMatrixControls() {
 
   controls.appendChild(searchInput);
   controls.appendChild(skillFilter);
-  controls.appendChild(bulkBtn);
   controls.appendChild(csvBtn);
   controls.appendChild(legend);
+  controls.appendChild(bulkBtn);
 
   return controls;
 }
@@ -807,6 +853,8 @@ function renderMatrixTable() {
   skills.forEach(skill => {
     const th = el('th', { className: 'matrix-th-skill' });
     const nameWrap = el('div', { className: 'matrix-th-name' });
+
+    th.title = skill.name;
 
     // Show skill icon if available
     if (skill.icon) {
@@ -932,31 +980,36 @@ function buildMatrixCell(cell, engineer, skill) {
 
 function getCellStyle(cell) {
   const { status, proficiency_level } = cell;
-  const checkSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-  const clockSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+
+  const plannedSvg = '<span style="color:var(--text-muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>';
+  const eduSvg = '<span style="color:#22c55e"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>';
+  const expSvg = '<span style="color:#06b6d4"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>';
+  const expriSvg = '<span style="color:#a855f7"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>';
+  const masteredSvg = '<span style="color:#eab308"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span>';
 
   if (status === 'not_in_plan') {
     return { bg: 'var(--bg-elevated)', border: 'var(--border-soft)', icon: '<span style="color:var(--text-muted);font-size:16px;opacity:.4">\u2014</span>' };
   }
 
   if (status === 'planned') {
-    return { bg: 'rgba(245,158,11,.18)', border: 'rgba(245,158,11,.4)', icon: clockSvg };
+    return { bg: 'rgba(156,163,175,.15)', border: 'rgba(156,163,175,.35)', icon: plannedSvg };
   }
 
-  if (status === 'developing' || status === 'mastered') {
-    const level = proficiency_level;
-    const showCheck = status === 'mastered';
-    const devIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
-    if (level === 1) {
-      return { bg: 'rgba(34,197,94,.18)', border: 'rgba(34,197,94,.35)', icon: showCheck ? checkSvg : devIcon };
+  if (status === 'mastered') {
+    return { bg: 'rgba(234,179,8,.15)', border: 'rgba(234,179,8,.45)', icon: masteredSvg };
+  }
+
+  if (status === 'developing') {
+    if (proficiency_level === 1) {
+      return { bg: 'rgba(34,197,94,.15)', border: 'rgba(34,197,94,.35)', icon: eduSvg };
     }
-    if (level === 2) {
-      return { bg: 'rgba(34,197,94,.42)', border: 'rgba(34,197,94,.55)', icon: showCheck ? checkSvg : devIcon };
+    if (proficiency_level === 2) {
+      return { bg: 'rgba(6,182,212,.15)', border: 'rgba(6,182,212,.35)', icon: expSvg };
     }
-    if (level === 3) {
-      return { bg: 'rgba(34,197,94,.75)', border: 'rgba(34,197,94,.85)', icon: showCheck ? checkSvg : devIcon };
+    if (proficiency_level === 3) {
+      return { bg: 'rgba(168,85,247,.15)', border: 'rgba(168,85,247,.35)', icon: expriSvg };
     }
-    return { bg: 'rgba(245,158,11,.18)', border: 'rgba(245,158,11,.4)', icon: clockSvg };
+    return { bg: 'rgba(156,163,175,.15)', border: 'rgba(156,163,175,.35)', icon: plannedSvg };
   }
 
   return { bg: 'var(--bg-elevated)', border: 'var(--border-soft)', icon: null };
@@ -985,17 +1038,24 @@ function buildLegend() {
   const legend = el('div', { className: 'matrix-legend' });
   const items = [
     { label: 'Not in Plan', bg: 'var(--bg-elevated)', border: 'var(--border-soft)', text: 'var(--text-muted)' },
-    { label: 'Planned', bg: 'rgba(245,158,11,.18)', border: 'rgba(245,158,11,.5)', text: 'var(--text-secondary)' },
-    { label: 'Education', bg: 'rgba(34,197,94,.18)', border: 'rgba(34,197,94,.4)', text: 'var(--text-secondary)' },
-    { label: 'Exposure', bg: 'rgba(34,197,94,.42)', border: 'rgba(34,197,94,.6)', text: 'var(--text-secondary)' },
-    { label: 'Experience', bg: 'rgba(34,197,94,.75)', border: 'rgba(34,197,94,.8)', text: '#fff' },
+    { label: 'Planned', bg: 'rgba(156,163,175,.15)', border: 'rgba(156,163,175,.35)', text: 'var(--text-secondary)' },
+    { label: 'Education', bg: 'rgba(34,197,94,.15)', border: 'rgba(34,197,94,.35)', text: 'var(--text-secondary)' },
+    { label: 'Exposure', bg: 'rgba(6,182,212,.15)', border: 'rgba(6,182,212,.35)', text: 'var(--text-secondary)' },
+    { label: 'Experience', bg: 'rgba(168,85,247,.15)', border: 'rgba(168,85,247,.35)', text: 'var(--text-secondary)' },
+    { label: 'Mastered', bg: 'rgba(234,179,8,.15)', border: 'rgba(234,179,8,.45)', text: 'var(--text-secondary)' },
+    { label: 'Stagnant', bg: 'transparent', customBorder: '2px dashed rgba(239,68,68,.5)', text: 'var(--text-secondary)' }
   ];
-  items.forEach(({ label, bg, border, text }) => {
+  items.forEach(({ label, bg, border, text, customBorder }) => {
     const chip = el('div', {
       className: 'matrix-legend-chip',
-      style: `background:${bg};border:1px solid ${border};color:${text};`,
+      style: `color:${text};`,
     });
-    chip.textContent = label;
+    const swatch = el('span', {
+      className: 'matrix-legend-swatch',
+      style: `background:${bg};` + (customBorder ? `border:${customBorder};` : `border:1px solid ${border};`)
+    });
+    chip.appendChild(swatch);
+    chip.appendChild(document.createTextNode(label));
     legend.appendChild(chip);
   });
   return legend;
@@ -1444,7 +1504,8 @@ function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
       if (typeof echarts === 'undefined') return;
       const skillsWithLevel = skills.filter(s => s.proficiency_level || s.status !== 'not_in_plan');
       if (skillsWithLevel.length === 0) return;
-      const chart = echarts.init(radarEl, 'dark');
+      const cc = _getChartColors();
+      const chart = echarts.init(radarEl, cc.theme);
       const option = {
         backgroundColor: 'transparent',
         radar: {
@@ -1452,10 +1513,10 @@ function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
             name: (s.skill_name || '').length > 12 ? (s.skill_name || '').slice(0, 10) + '\u2026' : (s.skill_name || 'Skill'),
             max: 100,
           })),
-          splitArea: { areaStyle: { color: ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.04)'] } },
-          axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-          name: { textStyle: { color: 'var(--text-muted)', fontSize: 10 } },
+          splitArea: { areaStyle: { color: cc.splitColors } },
+          axisLine: { lineStyle: { color: cc.gridColor } },
+          splitLine: { lineStyle: { color: cc.gridColor } },
+          name: { textStyle: { color: cc.textMuted, fontSize: 10 } },
         },
         series: [{
           type: 'radar',
@@ -1718,9 +1779,10 @@ function formatActivityTitle(raw, skillName) {
     return `${escapeHtml(msg)}${skill}`;
   }
   if (lower.startsWith('completed:')) {
-    const val = raw.slice('completed:'.length).trim();
-    if (val.toLowerCase() === 'true') return `completed a training${skill}`;
-    return `completed ${escapeHtml(val)}`;
+    const val = raw.slice('completed:'.length).trim().toLowerCase();
+    if (val === 'true') return `completed a training${skill}`;
+    if (val === 'false') return `uncompleted a training${skill}`;
+    return `completed ${escapeHtml(raw.slice('completed:'.length).trim())}${skill}`;
   }
 
   if (raw.includes('Moved from') || raw.includes('Added to plan')) {

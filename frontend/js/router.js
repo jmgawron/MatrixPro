@@ -95,6 +95,18 @@ function navigate() {
     return;
   }
 
+  if (route.excludeRoles && route.excludeRoles.includes(userRole)) {
+    _container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+        <h2>Access Denied</h2>
+        <p>You don't have permission to view this page.</p>
+        <a href="#/" class="btn btn-primary">Go Home</a>
+      </div>
+    `;
+    return;
+  }
+
   document.title = route.title ? `${route.title} — MatrixPro` : 'MatrixPro';
 
   const cleanup = route.mount(_container, params);

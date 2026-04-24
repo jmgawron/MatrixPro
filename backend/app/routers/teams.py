@@ -405,6 +405,7 @@ def get_team_activity(
     team, engineers = _resolve_team_and_engineers(current_user, db, team_id)
     engineer_ids = [e.id for e in engineers]
     engineer_names = {e.id: e.name for e in engineers}
+    engineer_avatars = {e.id: e.avatar for e in engineers}
 
     if not engineer_ids:
         return TeamActivityResponse(team_id=team.id, items=[], total=0)
@@ -459,6 +460,7 @@ def get_team_activity(
                 id=log.id,
                 type="training_log",
                 actor_name=engineer_names.get(eng_id, "Unknown"),
+                actor_avatar=engineer_avatars.get(eng_id),
                 target_engineer_name=engineer_names.get(eng_id),
                 skill_name=skill_names.get(ps.skill_id),
                 title=log.title,
@@ -489,6 +491,7 @@ def get_team_activity(
                 id=al.id + 1_000_000,
                 type="audit",
                 actor_name=actor_name,
+                actor_avatar=engineer_avatars.get(al.changed_by),
                 target_engineer_name=actor_name,
                 skill_name=None,
                 title=title,

@@ -247,6 +247,15 @@ export function mountHome(container) {
   });
 
   if (user) {
+    let ctaHref = '#/my-plan';
+    let ctaLabel = 'Go to My Plan';
+    if (user.role === 'admin') {
+      ctaHref = '#/admin';
+      ctaLabel = 'Go to Admin Panel';
+    } else if (user.role === 'manager') {
+      ctaHref = '#/my-team';
+      ctaLabel = 'Go to My Team';
+    }
     const primaryBtn = h('a', {
       style: [
         'display:inline-flex;align-items:center;gap:8px;',
@@ -257,8 +266,8 @@ export function mountHome(container) {
         'transition:transform 0.15s, box-shadow 0.15s;',
         'border:none;',
       ].join(''),
-      href: '#/my-plan',
-      textContent: 'Go to My Plan',
+      href: ctaHref,
+      textContent: ctaLabel,
     });
     const arrow = h('span', { style: 'display:inline-flex;align-items:center;' });
     arrow.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';

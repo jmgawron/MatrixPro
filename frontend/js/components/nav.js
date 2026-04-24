@@ -6,8 +6,8 @@ const ROLE_RANK = { engineer: 1, manager: 2, admin: 3 };
 
 const NAV_ITEMS = [
   { label: 'Home', href: '/', minRole: null },
-  { label: 'My Plan', href: '/my-plan', minRole: 'engineer' },
-  { label: 'My Team', href: '/my-team', minRole: 'manager' },
+  { label: 'My Plan', href: '/my-plan', minRole: 'engineer', excludeRoles: ['manager', 'admin'] },
+  { label: 'My Team', href: '/my-team', minRole: 'manager', excludeRoles: ['admin'] },
   { label: 'Catalog', href: '/catalog', minRole: 'engineer' },
   { label: 'Skill Explorer', href: '/skill-explorer', minRole: 'engineer' },
   { label: 'Admin', href: '/admin', minRole: 'admin' },
@@ -25,8 +25,7 @@ function canAccess(item, userRole) {
 function buildNavLinks(userRole, isLoggedIn) {
   const visible = NAV_ITEMS.filter(item => {
     if (!canAccess(item, userRole)) return false;
-    // Hide "My Plan" for managers — they use My Team instead
-    if (item.href === '/my-plan' && userRole === 'manager') return false;
+    if (item.excludeRoles && item.excludeRoles.includes(userRole)) return false;
     return true;
   });
   return visible.map(item => {
@@ -125,7 +124,7 @@ function renderNav() {
   const currentPath = Router.current();
   const allLinks = NAV_ITEMS.filter(item => {
     if (!canAccess(item, userRole)) return false;
-    if (item.href === '/my-plan' && userRole === 'manager') return false;
+    if (item.excludeRoles && item.excludeRoles.includes(userRole)) return false;
     return true;
   });
   allLinks.forEach(item => {

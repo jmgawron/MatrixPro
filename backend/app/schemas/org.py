@@ -117,6 +117,7 @@ class ActivityItem(BaseModel):
     id: int
     type: str
     actor_name: str
+    actor_avatar: str | None = None
     target_engineer_name: str | None = None
     skill_name: str | None = None
     title: str

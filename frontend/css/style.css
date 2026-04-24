@@ -161,6 +161,8 @@ hr {
   --home-pill-border:  rgba(0, 114, 255, 0.15);
 }
 
+[data-theme="light"] .mp-modal-status-btn[data-status="planned"].active { color: #000; }
+
 
 /* ──────────────────────────────────────────────────────────
    §7.1b SCROLLBAR STYLING (Global)
@@ -3581,6 +3583,32 @@ textarea.is-error:focus {
     max-height: 400px;
     overflow-y: auto;
   }
+}
+
+.mp-modal-status-selector { display: flex; gap: 6px; }
+.mp-modal-status-btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-soft); background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s; }
+.mp-modal-status-btn:hover { border-color: var(--text-muted); }
+.mp-modal-status-btn.active { color: #fff; }
+.mp-modal-status-btn[data-status="developing"].active { background: var(--accent); border-color: var(--accent); }
+.mp-modal-status-btn[data-status="planned"].active { background: var(--warning); border-color: var(--warning); color: #000; }
+.mp-modal-status-btn[data-status="mastered"].active { background: var(--success); border-color: var(--success); }
+.mp-modal-status-btn .mp-icon { font-size: 14px; }
+
+.mp-modal-prof-selector { display: flex; gap: 6px; }
+.mp-modal-prof-btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-soft); background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s; }
+.mp-modal-prof-btn:hover { border-color: var(--text-muted); }
+.mp-modal-prof-btn.active { color: #fff; }
+.mp-modal-prof-btn[data-level="1"].active { background: var(--success); border-color: var(--success); }
+.mp-modal-prof-btn[data-level="2"].active { background: var(--info); border-color: var(--info); }
+.mp-modal-prof-btn[data-level="3"].active { background: #a78bfa; border-color: #a78bfa; }
+.mp-modal-prof-btn[data-level=""].active { background: var(--bg-elevated); border-color: var(--border-soft); color: var(--text-secondary); }
+
+.mp-modal-log-col { flex: 0 0 260px; display: flex; flex-direction: column; overflow-y: auto; max-height: 100%; border-left: 1px solid var(--border-soft); padding-left: 16px; }
+.mp-modal-log-col .mp-modal-log-section { border-top: none; }
+.mp-modal-log-col .mp-edit-log-list { max-height: none; }
+
+@media (max-width: 900px) {
+  .mp-modal-log-col { flex: 1 1 100%; border-left: none; border-top: 1px solid var(--border-soft); padding-left: 0; padding-top: 12px; max-height: 200px; }
 }
 
 /* ─── Responsive: stack columns on narrow viewports ───────────────────────── */

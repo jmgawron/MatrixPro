@@ -710,38 +710,83 @@ function openEditSkillModal(planSkill) {
   const statusGroup = el('div', { className: 'form-group' });
   const statusLabel = el('label', { className: 'form-label' });
   statusLabel.textContent = 'Status';
-  const statusSelect = el('select', { className: 'form-select' });
-  [
-    { value: 'planned', label: 'Planned' },
-    { value: 'developing', label: 'Developing' },
-    { value: 'mastered', label: 'Mastered' },
-  ].forEach(({ value, label }) => {
-    const opt = el('option', { value });
-    opt.textContent = label;
-    if (planSkill.status === value) opt.selected = true;
-    statusSelect.appendChild(opt);
+  const statusSelector = el('div', { className: 'mp-modal-status-selector' });
+  let currentStatus = planSkill.status;
+
+  const statusOptions = [
+    { value: 'planned', label: 'Planned', icon: SVG_ICONS.layers },
+    { value: 'developing', label: 'Developing', icon: SVG_ICONS.wrench },
+    { value: 'mastered', label: 'Mastered', icon: SVG_ICONS.shield },
+  ];
+
+  statusOptions.forEach(({ value, label, icon }) => {
+    const btn = el('button', { className: 'mp-modal-status-btn', 'data-status': value });
+    if (currentStatus === value) btn.classList.add('active');
+    
+    const iconSpan = el('span', { className: 'mp-icon' });
+    iconSpan.innerHTML = icon;
+    btn.appendChild(iconSpan);
+    
+    const textSpan = el('span');
+    textSpan.textContent = label;
+    btn.appendChild(textSpan);
+    
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      currentStatus = value;
+      statusSelector.querySelectorAll('.mp-modal-status-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.status === value);
+      });
+    });
+    
+    statusSelector.appendChild(btn);
   });
+  
   statusGroup.appendChild(statusLabel);
-  statusGroup.appendChild(statusSelect);
+  statusGroup.appendChild(statusSelector);
   formCol.appendChild(statusGroup);
 
   const levelGroup = el('div', { className: 'form-group' });
   const levelLabel = el('label', { className: 'form-label' });
   levelLabel.textContent = 'Proficiency Level';
-  const levelSelect = el('select', { className: 'form-select' });
-  [
-    { value: '', label: '— Not set —' },
-    { value: '1', label: 'Education' },
-    { value: '2', label: 'Exposure' },
-    { value: '3', label: 'Experience' },
-  ].forEach(({ value, label }) => {
-    const opt = el('option', { value });
-    opt.textContent = label;
-    if (String(planSkill.proficiency_level ?? '') === value) opt.selected = true;
-    levelSelect.appendChild(opt);
+  const levelSelector = el('div', { className: 'mp-modal-prof-selector' });
+  let currentLevel = String(planSkill.proficiency_level ?? '');
+
+  const levelOptions = [
+    { value: '', label: '—', icon: null },
+    { value: '1', label: 'Education', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
+    { value: '2', label: 'Exposure', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
+    { value: '3', label: 'Experience', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
+  ];
+
+  levelOptions.forEach(({ value, label, icon }) => {
+    const btn = el('button', { className: 'mp-modal-prof-btn', 'data-level': value });
+    if (currentLevel === value) btn.classList.add('active');
+    
+    if (icon) {
+      const iconSpan = el('span', { className: 'mp-icon' });
+      iconSpan.innerHTML = icon;
+      btn.appendChild(iconSpan);
+    }
+    
+    const textSpan = el('span');
+    textSpan.textContent = label;
+    btn.appendChild(textSpan);
+    
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      currentLevel = value;
+      levelSelector.querySelectorAll('.mp-modal-prof-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.level === value);
+      });
+      refreshContent();
+    });
+    
+    levelSelector.appendChild(btn);
   });
+
   levelGroup.appendChild(levelLabel);
-  levelGroup.appendChild(levelSelect);
+  levelGroup.appendChild(levelSelector);
   formCol.appendChild(levelGroup);
 
   const notesGroup = el('div', { className: 'form-group' });
@@ -774,9 +819,9 @@ function openEditSkillModal(planSkill) {
   const contentCol = el('div', { className: 'mp-modal-content-col' });
 
   const LEVEL_CONFIG = [
-    { key: 'education', level: 1, label: 'Education', chipClass: 'chip-education' },
-    { key: 'exposure', level: 2, label: 'Exposure', chipClass: 'chip-exposure' },
-    { key: 'experience', level: 3, label: 'Experience', chipClass: 'chip-experience' },
+    { key: 'education', level: 1, label: 'Education', chipClass: 'chip-education', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
+    { key: 'exposure', level: 2, label: 'Exposure', chipClass: 'chip-exposure', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
+    { key: 'experience', level: 3, label: 'Experience', chipClass: 'chip-experience', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
   ];
 
   const LEVEL_MAP = { 1: 'education', 2: 'exposure', 3: 'experience' };
@@ -811,13 +856,19 @@ function openEditSkillModal(planSkill) {
   const tabPanels = {};
   const tabPanelsWrap = el('div', { className: 'mp-modal-tab-panels-wrap' });
 
-  LEVEL_CONFIG.forEach(({ key, label }) => {
+  LEVEL_CONFIG.forEach(({ key, label, icon }) => {
     const tabBtn = el('button', { className: 'skill-detail-tab', 'data-tab': key, role: 'tab', 'aria-selected': 'false', 'aria-controls': `mp-panel-${key}` });
+    
+    const iconSpan = el('span', { className: 'skill-detail-tab-icon' });
+    iconSpan.innerHTML = icon;
+    tabBtn.appendChild(iconSpan);
+
     const tabLabel = el('span');
     tabLabel.textContent = label;
     const tabCount = el('span', { className: 'skill-detail-tab-count' });
     tabCount.textContent = '0';
     const tabProgress = el('span', { className: 'mp-tab-progress-indicator' });
+    
     tabBtn.appendChild(tabLabel);
     tabBtn.appendChild(tabCount);
     tabBtn.appendChild(tabProgress);
@@ -832,23 +883,23 @@ function openEditSkillModal(planSkill) {
   contentCol.appendChild(tabBar);
   contentCol.appendChild(tabPanelsWrap);
   topRow.appendChild(contentCol);
-  body.appendChild(topRow);
 
+  const logCol = el('div', { className: 'mp-modal-log-col' });
   const logSection = el('div', { className: 'mp-modal-log-section' });
-  const logToggle = el('button', { className: 'mp-modal-log-toggle' });
-  const logToggleIcon = el('span', { className: 'mp-modal-log-toggle-icon' });
+  const logToggle = el('div', { className: 'mp-modal-log-toggle', style: 'cursor: default' });
   const logToggleText = el('span');
   logToggleText.textContent = 'Training Log';
   const logToggleCount = el('span', { className: 'mp-modal-log-count' });
   const logs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
   logToggleCount.textContent = String(logs.length);
-  logToggle.appendChild(logToggleIcon);
   logToggle.appendChild(logToggleText);
   logToggle.appendChild(logToggleCount);
   logSection.appendChild(logToggle);
 
   const logBody = el('div', { className: 'mp-modal-log-body' });
   const logListEl = el('div', { className: 'mp-edit-log-list' });
+
+  let visibleLogCount = 5;
 
   function renderLogList() {
     logListEl.innerHTML = '';
@@ -859,13 +910,19 @@ function openEditSkillModal(planSkill) {
       emptyLog.textContent = 'No training log entries yet.';
       logListEl.appendChild(emptyLog);
     } else {
-      currentLogs.slice().reverse().slice(0, 10).forEach(log => {
+      const reversedLogs = currentLogs.slice().reverse();
+      reversedLogs.slice(0, visibleLogCount).forEach(log => {
         logListEl.appendChild(buildTrainingLogEntry(log));
       });
-      if (currentLogs.length > 10) {
-        const moreEl = el('div', { className: 'mp-log-more' });
-        moreEl.textContent = `… and ${currentLogs.length - 10} more`;
-        logListEl.appendChild(moreEl);
+      if (currentLogs.length > visibleLogCount) {
+        const remaining = currentLogs.length - visibleLogCount;
+        const moreBtn = el('button', { className: 'btn btn-secondary btn-sm mp-log-more' });
+        moreBtn.textContent = `Show more (${remaining} remaining)`;
+        moreBtn.addEventListener('click', () => {
+          visibleLogCount += 5;
+          renderLogList();
+        });
+        logListEl.appendChild(moreBtn);
       }
     }
   }
@@ -873,13 +930,11 @@ function openEditSkillModal(planSkill) {
 
   logBody.appendChild(logListEl);
   logSection.appendChild(logBody);
-  body.appendChild(logSection);
+  logSection.classList.add('expanded');
+  logCol.appendChild(logSection);
+  topRow.appendChild(logCol);
 
-  let logExpanded = false;
-  logToggle.addEventListener('click', () => {
-    logExpanded = !logExpanded;
-    logSection.classList.toggle('expanded', logExpanded);
-  });
+  body.appendChild(topRow);
 
   modal.appendChild(body);
 
@@ -1150,7 +1205,7 @@ function openEditSkillModal(planSkill) {
       if (skeletonEl.parentNode) skeletonEl.remove();
       allContentItems = (Array.isArray(data.items) ? data.items : [])
         .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3].includes(item.level));
-      const profLevel = parseInt(levelSelect.value, 10) || null;
+      const profLevel = parseInt(currentLevel, 10) || null;
 
       const groups = { education: [], exposure: [], experience: [] };
       allContentItems.forEach(item => {
@@ -1191,16 +1246,12 @@ function openEditSkillModal(planSkill) {
 
   refreshContent();
 
-  levelSelect.addEventListener('change', () => {
-    refreshContent();
-  });
-
   const initialStatus = planSkill.status;
   const initialLevel = String(planSkill.proficiency_level ?? '');
   const initialNotes = planSkill.notes || '';
 
   function isDirty() {
-    return statusSelect.value !== initialStatus || levelSelect.value !== initialLevel || notesTextarea.value !== initialNotes;
+    return currentStatus !== initialStatus || currentLevel !== initialLevel || notesTextarea.value !== initialNotes;
   }
 
   function closeModal() {
@@ -1211,8 +1262,8 @@ function openEditSkillModal(planSkill) {
   }
 
   async function doSave() {
-    const newStatus = statusSelect.value;
-    const newLevel = levelSelect.value ? Number(levelSelect.value) : null;
+    const newStatus = currentStatus;
+    const newLevel = currentLevel ? Number(currentLevel) : null;
     const newNotes = notesTextarea.value.trim();
 
     saveBtn.disabled = true;
@@ -1254,7 +1305,7 @@ function openEditSkillModal(planSkill) {
       const focused = document.activeElement;
       const currentTab = focused?.dataset?.tab;
       const visibleKeys = LEVEL_CONFIG.filter(({ level }) => {
-        const pl = parseInt(levelSelect.value, 10) || null;
+        const pl = parseInt(currentLevel, 10) || null;
         return !pl || level <= pl;
       }).map(l => l.key);
       if (currentTab && visibleKeys.includes(currentTab)) {
@@ -1552,34 +1603,44 @@ function openUserContentEditor(opts, onSaved) {
 }
 
 function buildTrainingLogEntry(log) {
-  const entry = el('div', {
-    className: 'mp-log-entry',
-  });
+  const entry = el('div', { className: 'mt-activity-item' });
 
-  const topRow = el('div', { className: 'mp-log-entry-header' });
+  const bodyEl = el('div', { className: 'mt-activity-body' });
 
-  const typeChip = el('span', { className: 'triage-chip triage-signal chip-sm' });
-  typeChip.textContent = log.type || 'entry';
-
-  const titleEl = el('span', { className: 'mp-log-entry-title' });
+  const textEl = el('div', { className: 'mt-activity-text' });
+  
+  const titleEl = el('strong');
   titleEl.textContent = log.title || 'Untitled';
+  textEl.appendChild(titleEl);
 
-  topRow.appendChild(typeChip);
-  topRow.appendChild(titleEl);
+  const typeBadge = el('span', { className: 'triage-chip triage-signal chip-sm' });
+  typeBadge.style.cssText = 'font-size: 11px; margin-left: 6px; padding: 2px 6px;';
+  typeBadge.textContent = log.type || 'entry';
+  textEl.appendChild(typeBadge);
 
+  bodyEl.appendChild(textEl);
+
+  const metaEl = el('div', { className: 'mt-activity-meta' });
+  
   if (log.completed_at) {
-    const dateEl = el('span', { className: 'mp-log-entry-date' });
-    dateEl.textContent = formatDate(log.completed_at);
-    topRow.appendChild(dateEl);
+    const timeEl = el('span', { className: 'mt-activity-time' });
+    timeEl.textContent = formatDate(log.completed_at);
+    metaEl.appendChild(timeEl);
   }
-
-  entry.appendChild(topRow);
 
   if (log.notes) {
-    const notesEl = el('div', { className: 'mp-log-entry-notes' });
+    if (log.completed_at) {
+      const sep = el('span');
+      sep.textContent = ' • ';
+      metaEl.appendChild(sep);
+    }
+    const notesEl = el('span');
     notesEl.textContent = log.notes;
-    entry.appendChild(notesEl);
+    metaEl.appendChild(notesEl);
   }
+
+  bodyEl.appendChild(metaEl);
+  entry.appendChild(bodyEl);
 
   return entry;
 }

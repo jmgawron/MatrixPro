@@ -41,12 +41,12 @@ def run():
     try:
         # ── Domains ──────────────────────────────────────────────────────────
         print("Seeding domains...")
-        wireless = Domain(name="Wireless", is_technical=True)
-        security = Domain(name="Security", is_technical=True)
-        switching = Domain(name="Switching & Routing", is_technical=True)
-        collab = Domain(name="Collaboration", is_technical=True)
-        dc = Domain(name="Data Center", is_technical=True)
-        soft_skills = Domain(name="Soft Skills", is_technical=False)
+        wireless = Domain(name="Wireless", is_technical=True, icon="wifi")
+        security = Domain(name="Security", is_technical=True, icon="shield-lock")
+        switching = Domain(name="Switching & Routing", is_technical=True, icon="route")
+        collab = Domain(name="Collaboration", is_technical=True, icon="server-phone")
+        dc = Domain(name="Data Center", is_technical=True, icon="datacenter")
+        soft_skills = Domain(name="Soft Skills", is_technical=False, icon="users")
         db.add_all([wireless, security, switching, collab, dc, soft_skills])
         db.flush()
 

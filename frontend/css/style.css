@@ -6062,6 +6062,171 @@ textarea.is-error:focus {
   color: var(--text-primary);
 }
 
+/* ─── My Plan Sidebar Action Buttons & Quick Filters ───────────────────────── */
+
+.mp-sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn--sidebar {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 8px;
+  border-radius: var(--radius-md, 8px);
+  box-shadow: none;
+}
+
+.mp-filters-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 4px 0;
+}
+
+.mp-filters-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.mp-filters-clear {
+  font-size: 11px;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.mp-filters-clear:hover {
+  text-decoration: underline;
+}
+
+.mp-quick-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mp-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mp-filter-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.mp-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mp-filter-chip {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: var(--transition, all 0.2s ease);
+}
+
+.mp-filter-chip:hover {
+  border-color: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+.mp-filter-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.mp-3e-filters {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.mp-3e-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md, 8px);
+  padding: 6px 4px;
+  cursor: pointer;
+  transition: var(--transition, all 0.2s ease);
+  opacity: 0.6;
+}
+
+.mp-3e-btn:hover {
+  background: var(--bg-card);
+  opacity: 0.8;
+}
+
+.mp-3e-btn.active {
+  background: var(--bg-card);
+  border-color: var(--border-soft);
+  opacity: 1;
+}
+
+.mp-3e-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+}
+
+.mp-3e-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.mp-3e-btn.active.filter-education .mp-3e-icon {
+  background: rgba(34, 197, 94, .12);
+  color: #4ade80;
+}
+.mp-3e-btn.active.filter-exposure .mp-3e-icon {
+  background: rgba(6, 182, 212, .12);
+  color: #22d3ee;
+}
+.mp-3e-btn.active.filter-experience .mp-3e-icon {
+  background: rgba(168, 85, 247, .12);
+  color: #c084fc;
+}
+
+[data-theme="light"] .mp-3e-btn.active.filter-education .mp-3e-icon {
+  background: rgba(22, 163, 74, .1);
+  color: #16a34a;
+}
+[data-theme="light"] .mp-3e-btn.active.filter-exposure .mp-3e-icon {
+  background: rgba(8, 145, 178, .1);
+  color: #0891b2;
+}
+[data-theme="light"] .mp-3e-btn.active.filter-experience .mp-3e-icon {
+  background: rgba(147, 51, 234, .1);
+  color: #9333ea;
+}
+
 .mp-plan-content {
   background: var(--bg-card);
   border: 1px solid var(--border-soft);

@@ -37,6 +37,11 @@ class PlanSkillUpdate(BaseModel):
     notes: str | None = None
 
 
+class PlanSkillDomainInfo(BaseModel):
+    id: int
+    name: str
+
+
 class PlanSkillResponse(BaseModel):
     id: int
     plan_id: int
@@ -51,6 +56,8 @@ class PlanSkillResponse(BaseModel):
     added_at: datetime
     updated_at: datetime | None = None
     training_logs: list[TrainingLogResponse] = []
+    domains: list[PlanSkillDomainInfo] = []
+    content_types: list[str] = []
 
     model_config = {"from_attributes": True}
 

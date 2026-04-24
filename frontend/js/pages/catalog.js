@@ -462,9 +462,13 @@ function renderOrgTree(domains, treeEl) {
 function renderCertTree(certDomains, treeEl) {
   certDomains.forEach(certDomain => {
     const cdItem = buildTreeItem(certDomain.name, 'cert-domain', 0, true, certDomain.icon ? getSkillIconSVG(certDomain.icon, 16) : null);
+    if (_selectedFilter.type === 'cert_domain_id' && String(_selectedFilter.id) === String(certDomain.id)) {
+      cdItem.classList.add('active');
+    }
     cdItem.addEventListener('click', (e) => {
       e.stopPropagation();
       cdItem.classList.toggle('expanded');
+      selectFilter({ type: 'cert_domain_id', id: certDomain.id, label: certDomain.name }, cdItem, treeEl);
     });
     addToggleListener(cdItem);
 
@@ -639,13 +643,12 @@ function applyClientFilters(skills) {
     });
   }
 
-  // For non-technical tab with "All Skills": scope to teams under non-technical domains only
-  if (_activeTab === 'non-technical' && _selectedFilter.type === 'all') {
+  // For non-technical tab: scope to non-technical skills only
+  if (_activeTab === 'non-technical') {
     const nonTechTeamIds = getNonTechnicalTeamIds();
     if (nonTechTeamIds) {
       result = result.filter(skill => {
         const teams = Array.isArray(skill.teams) ? skill.teams : [];
-        // Show skills that have at least one non-technical team, or no teams at all (unassigned)
         return teams.length === 0 || teams.some(t => nonTechTeamIds.has(t.id));
       });
     }
@@ -658,6 +661,23 @@ function applyClientFilters(skills) {
       result = result.filter(skill => {
         const teams = Array.isArray(skill.teams) ? skill.teams : [];
         return teams.some(t => techTeamIds.has(t.id));
+      });
+    }
+  }
+
+  if (_activeTab === 'cert' && _selectedFilter.type === 'all') {
+    result = result.filter(skill => {
+      const certs = Array.isArray(skill.certificates) ? skill.certificates : [];
+      return certs.length > 0;
+    });
+  }
+
+  if (_activeTab === 'cert' && _selectedFilter.type === 'cert_domain_id') {
+    const certIds = getCertIdsForDomain(_selectedFilter.id);
+    if (certIds) {
+      result = result.filter(skill => {
+        const certs = Array.isArray(skill.certificates) ? skill.certificates : [];
+        return certs.some(c => certIds.has(c.id));
       });
     }
   }
@@ -691,6 +711,17 @@ function getTechnicalTeamIds() {
       if (_activeShifts.has(t.shift)) ids.add(t.id);
     });
   });
+  return ids;
+}
+
+function getCertIdsForDomain(certDomainId) {
+  const treeData = _treeCache['cert'];
+  if (!Array.isArray(treeData)) return null;
+  const ids = new Set();
+  const domain = treeData.find(cd => String(cd.id) === String(certDomainId));
+  if (domain) {
+    (Array.isArray(domain.certificates) ? domain.certificates : []).forEach(c => ids.add(c.id));
+  }
   return ids;
 }
 

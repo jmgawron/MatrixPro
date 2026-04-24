@@ -14,6 +14,8 @@ let _sectionGridEls = {};
 let _allCatalogSkills = [];
 let _searchQuery = '';
 let _currentSection = 'developing';
+let _activeDomainFilters = new Set();
+let _active3EFilters = new Set();
 
 const SVG_ICONS = {
   wrench: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
@@ -61,6 +63,8 @@ export function mountMyPlan(container, params) {
   _allCatalogSkills = [];
   _searchQuery = '';
   _currentSection = 'developing';
+  _activeDomainFilters.clear();
+  _active3EFilters.clear();
 
   const user = Store.get('user');
   _engineerId = params?.id ? Number(params.id) : user?.id;
@@ -172,21 +176,41 @@ function buildPageShell(container, params) {
   const sep = el('hr', { className: 'mp-plan-sidebar-sep' });
   sidebar.appendChild(sep);
 
-  const addBtn = el('button', { className: 'mp-plan-nav-btn mp-plan-nav-btn--action' });
-  addBtn.appendChild(svgIcon('search', '16px'));
-  const addLabel = el('span', { className: 'mp-plan-nav-label' });
-  addLabel.textContent = '+ Add Skill';
-  addBtn.appendChild(addLabel);
-  addBtn.addEventListener('click', showAddSkillMenu);
-  sidebar.appendChild(addBtn);
+  const actionContainer = el('div', { className: 'mp-sidebar-actions' });
 
-  const reportBtn = el('button', { className: 'mp-plan-nav-btn mp-plan-nav-btn--action' });
-  reportBtn.appendChild(svgIcon('fileText', '16px'));
-  const reportLabel = el('span', { className: 'mp-plan-nav-label' });
-  reportLabel.textContent = 'Reporting';
-  reportBtn.appendChild(reportLabel);
+  const addBtn = el('button', { className: 'btn btn-primary btn--sidebar' });
+  addBtn.innerHTML = SVG_ICONS.search + '<span>Add Skill</span>';
+  addBtn.addEventListener('click', showAddSkillMenu);
+  actionContainer.appendChild(addBtn);
+
+  const reportBtn = el('button', { className: 'btn btn-secondary btn--sidebar' });
+  reportBtn.innerHTML = SVG_ICONS.fileText + '<span>Reporting</span>';
   reportBtn.addEventListener('click', openReportingModal);
-  sidebar.appendChild(reportBtn);
+  actionContainer.appendChild(reportBtn);
+
+  sidebar.appendChild(actionContainer);
+
+  const sep2 = el('hr', { className: 'mp-plan-sidebar-sep' });
+  sidebar.appendChild(sep2);
+
+  const quickFiltersHeader = el('div', { className: 'mp-filters-header' });
+  const quickFiltersTitle = el('span', { className: 'mp-filters-title' });
+  quickFiltersTitle.textContent = 'Quick Filters';
+  const quickFiltersClear = el('a', { className: 'mp-filters-clear', id: 'mp-filters-clear' });
+  quickFiltersClear.textContent = 'Clear';
+  quickFiltersClear.style.display = 'none';
+  quickFiltersClear.addEventListener('click', (e) => {
+    e.preventDefault();
+    _activeDomainFilters.clear();
+    _active3EFilters.clear();
+    renderSections();
+  });
+  quickFiltersHeader.appendChild(quickFiltersTitle);
+  quickFiltersHeader.appendChild(quickFiltersClear);
+  sidebar.appendChild(quickFiltersHeader);
+
+  const filtersContainer = el('div', { className: 'mp-quick-filters', id: 'mp-quick-filters' });
+  sidebar.appendChild(filtersContainer);
 
   planLayout.appendChild(sidebar);
 
@@ -257,13 +281,41 @@ function buildPageShell(container, params) {
   container.appendChild(wrapper);
 }
 
+function _applyFilters(skills) {
+  let filtered = _searchQuery
+    ? skills.filter(s => (s.skill_name || '').toLowerCase().includes(_searchQuery))
+    : skills;
+
+  if (_activeDomainFilters.size > 0) {
+    filtered = filtered.filter(s => {
+      if (!s.domains || !Array.isArray(s.domains)) return false;
+      return s.domains.some(d => _activeDomainFilters.has(d.id));
+    });
+  }
+
+  if (_active3EFilters.size > 0) {
+    filtered = filtered.filter(s => {
+      const types = s.content_types || [];
+      const hasEducation = types.some(t => ['course', 'certification', 'reading'].includes(t));
+      const hasExposure = types.some(t => ['link'].includes(t));
+      const hasExperience = types.some(t => ['action'].includes(t));
+      
+      if (_active3EFilters.has('education') && hasEducation) return true;
+      if (_active3EFilters.has('exposure') && hasExposure) return true;
+      if (_active3EFilters.has('experience') && hasExperience) return true;
+      
+      return false;
+    });
+  }
+
+  return filtered;
+}
+
 function renderActiveSection() {
   if (!_planData) return;
 
   const skills = Array.isArray(_planData.skills) ? _planData.skills : [];
-  const filtered = _searchQuery
-    ? skills.filter(s => (s.skill_name || '').toLowerCase().includes(_searchQuery))
-    : skills;
+  const filtered = _applyFilters(skills);
 
   const contentTitle = document.getElementById('mp-content-title');
   const contentCount = document.getElementById('mp-content-count');
@@ -290,7 +342,7 @@ function renderActiveSection() {
 
   if (activeSkills.length === 0) {
     const empty = el('div', { className: 'empty-state empty-state--inline' });
-    empty.textContent = _searchQuery
+    empty.textContent = _searchQuery || _activeDomainFilters.size > 0 || _active3EFilters.size > 0
       ? 'No matching skills in this section.'
       : 'No skills yet — browse the catalog to get started!';
     grid.appendChild(empty);
@@ -304,6 +356,105 @@ function renderActiveSection() {
   });
 }
 
+function renderQuickFilters() {
+  const container = document.getElementById('mp-quick-filters');
+  const clearBtn = document.getElementById('mp-filters-clear');
+  if (!container) return;
+
+  if (_activeDomainFilters.size > 0 || _active3EFilters.size > 0) {
+    if (clearBtn) clearBtn.style.display = '';
+  } else {
+    if (clearBtn) clearBtn.style.display = 'none';
+  }
+
+  container.innerHTML = '';
+
+  const skills = Array.isArray(_planData?.skills) ? _planData.skills : [];
+  const domainsMap = new Map();
+  skills.forEach(s => {
+    if (s.domains && Array.isArray(s.domains)) {
+      s.domains.forEach(d => domainsMap.set(d.id, d.name));
+    }
+  });
+
+  if (domainsMap.size > 0) {
+    const domainWrap = el('div', { className: 'mp-filter-group' });
+    const domainTitle = el('div', { className: 'mp-filter-label' });
+    domainTitle.textContent = 'Domains';
+    domainWrap.appendChild(domainTitle);
+    
+    const chipContainer = el('div', { className: 'mp-filter-chips' });
+    const sortedDomains = Array.from(domainsMap.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+    
+    sortedDomains.forEach(([id, name]) => {
+      const chip = el('button', { className: 'mp-filter-chip' });
+      if (_activeDomainFilters.has(id)) chip.classList.add('active');
+      chip.textContent = name;
+      chip.addEventListener('click', () => {
+        if (_activeDomainFilters.has(id)) {
+          _activeDomainFilters.delete(id);
+        } else {
+          _activeDomainFilters.add(id);
+        }
+        renderSections();
+      });
+      chipContainer.appendChild(chip);
+    });
+    
+    domainWrap.appendChild(chipContainer);
+    container.appendChild(domainWrap);
+  }
+
+  const eWrap = el('div', { className: 'mp-filter-group' });
+  const eTitle = el('div', { className: 'mp-filter-label' });
+  eTitle.textContent = '3E Framework';
+  eWrap.appendChild(eTitle);
+  
+  const eContainer = el('div', { className: 'mp-3e-filters' });
+  
+  const eTypes = [
+    {
+      id: 'education', label: 'Education', class: 'filter-education',
+      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
+    },
+    {
+      id: 'exposure', label: 'Exposure', class: 'filter-exposure',
+      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>'
+    },
+    {
+      id: 'experience', label: 'Experience', class: 'filter-experience',
+      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+    }
+  ];
+  
+  eTypes.forEach(t => {
+    const btn = el('button', { className: `mp-3e-btn ${t.class}` });
+    if (_active3EFilters.has(t.id)) btn.classList.add('active');
+    
+    const iconWrap = el('div', { className: 'mp-3e-icon' });
+    iconWrap.innerHTML = t.svg;
+    
+    const label = el('span', { className: 'mp-3e-label' });
+    label.textContent = t.label;
+    
+    btn.appendChild(iconWrap);
+    btn.appendChild(label);
+    
+    btn.addEventListener('click', () => {
+      if (_active3EFilters.has(t.id)) {
+        _active3EFilters.delete(t.id);
+      } else {
+        _active3EFilters.add(t.id);
+      }
+      renderSections();
+    });
+    
+    eContainer.appendChild(btn);
+  });
+  
+  eWrap.appendChild(eContainer);
+  container.appendChild(eWrap);
+}
 
 function renderSections() {
   if (!_planData) return;
@@ -313,11 +464,10 @@ function renderSections() {
     bannerLabel.textContent = `Viewing ${_planData.engineer_name}'s plan`;
   }
 
-  const skills = Array.isArray(_planData.skills) ? _planData.skills : [];
+  renderQuickFilters();
 
-  const filtered = _searchQuery
-    ? skills.filter(s => (s.skill_name || '').toLowerCase().includes(_searchQuery))
-    : skills;
+  const skills = Array.isArray(_planData.skills) ? _planData.skills : [];
+  const filtered = _applyFilters(skills);
 
   const groups = {
     developing: filtered.filter(s => s.status === 'developing'),

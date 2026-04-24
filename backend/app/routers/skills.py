@@ -98,6 +98,7 @@ def _check_manager_team_access(current_user: User, team_ids: list[int], db: Sess
 def list_skills(
     search: Optional[str] = Query(None),
     team_id: Optional[int] = Query(None),
+    domain_id: Optional[int] = Query(None),
     include_archived: bool = Query(False),
     cert_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
@@ -115,6 +116,19 @@ def list_skills(
         query = query.join(SkillTeam, Skill.id == SkillTeam.skill_id).filter(
             SkillTeam.team_id == team_id
         )
+
+    if domain_id is not None:
+        domain = db.query(Domain).filter(Domain.id == domain_id).first()
+        if domain and not domain.is_technical:
+            # Non-technical domains: return skills with no team assignments
+            assigned_skill_ids = db.query(SkillTeam.skill_id).distinct()
+            query = query.filter(Skill.id.notin_(assigned_skill_ids))
+        else:
+            query = (
+                query.join(SkillTeam, Skill.id == SkillTeam.skill_id)
+                .join(Team, SkillTeam.team_id == Team.id)
+                .filter(Team.domain_id == domain_id)
+            )
 
     if cert_id is not None:
         query = query.join(

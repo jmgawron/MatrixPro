@@ -17,7 +17,8 @@ from app.models.plan import (
     UserContentOverride,
     UserLevelContent,
 )
-from app.models.skill import Skill, SkillLevelContent
+from app.models.org import Team
+from app.models.skill import Skill, SkillLevelContent, SkillTeam
 from app.models.user import User, UserRole
 from app.schemas.org import BulkAssignRequest, BulkAssignResponse, BulkAssignResultItem
 from app.schemas.plan import (
@@ -31,6 +32,7 @@ from app.schemas.plan import (
     PlanResponse,
     PlanSkillContentResponse,
     PlanSkillCreate,
+    PlanSkillDomainInfo,
     PlanSkillResponse,
     PlanSkillUpdate,
     TrainingLogCreate,
@@ -88,7 +90,14 @@ def _eager_load_plan(db: Session, plan_id: int) -> Optional[DevelopmentPlan]:
         db.query(DevelopmentPlan)
         .options(
             selectinload(DevelopmentPlan.engineer),
-            selectinload(DevelopmentPlan.skills).selectinload(PlanSkill.skill),
+            selectinload(DevelopmentPlan.skills)
+            .selectinload(PlanSkill.skill)
+            .selectinload(Skill.skill_teams)
+            .selectinload(SkillTeam.team)
+            .selectinload(Team.domain),
+            selectinload(DevelopmentPlan.skills)
+            .selectinload(PlanSkill.skill)
+            .selectinload(Skill.level_content),
             selectinload(DevelopmentPlan.skills).selectinload(PlanSkill.training_log),
         )
         .filter(DevelopmentPlan.id == plan_id)
@@ -99,6 +108,14 @@ def _eager_load_plan(db: Session, plan_id: int) -> Optional[DevelopmentPlan]:
 def _to_plan_response(plan: DevelopmentPlan) -> PlanResponse:
     skill_responses = []
     for ps in plan.skills:
+        seen_domains = {}
+        for st in ps.skill.skill_teams or []:
+            d = st.team.domain
+            if d and d.id not in seen_domains:
+                seen_domains[d.id] = PlanSkillDomainInfo(id=d.id, name=d.name)
+
+        content_types = list({lc.type.value for lc in (ps.skill.level_content or [])})
+
         skill_responses.append(
             PlanSkillResponse(
                 id=ps.id,
@@ -116,6 +133,8 @@ def _to_plan_response(plan: DevelopmentPlan) -> PlanResponse:
                 training_logs=[
                     TrainingLogResponse.model_validate(log) for log in ps.training_log
                 ],
+                domains=list(seen_domains.values()),
+                content_types=content_types,
             )
         )
     return PlanResponse(

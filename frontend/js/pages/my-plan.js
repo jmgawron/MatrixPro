@@ -753,7 +753,6 @@ function openEditSkillModal(planSkill) {
   let currentLevel = String(planSkill.proficiency_level ?? '');
 
   const levelOptions = [
-    { value: '', label: '—', icon: null },
     { value: '1', label: 'Education', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
     { value: '2', label: 'Exposure', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
     { value: '3', label: 'Experience', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
@@ -775,10 +774,15 @@ function openEditSkillModal(planSkill) {
     
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      currentLevel = value;
-      levelSelector.querySelectorAll('.mp-modal-prof-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.level === value);
-      });
+      if (currentLevel === value) {
+        currentLevel = '';
+        btn.classList.remove('active');
+      } else {
+        currentLevel = value;
+        levelSelector.querySelectorAll('.mp-modal-prof-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.level === value);
+        });
+      }
       refreshContent();
     });
     
@@ -846,8 +850,21 @@ function openEditSkillModal(planSkill) {
     }
   });
 
+  const logToggleBtn = el('button', { className: 'mp-modal-log-toggle-btn', title: 'Toggle Training Log' });
+  logToggleBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+  const logToggleBtnCount = el('span');
+  const initialLogs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
+  logToggleBtnCount.textContent = String(initialLogs.length);
+  logToggleBtn.appendChild(logToggleBtnCount);
+
+  logToggleBtn.addEventListener('click', () => {
+    logCol.classList.toggle('mp-modal-log-col--hidden');
+    logToggleBtn.classList.toggle('active');
+  });
+
   const contentTitleRow = el('div', { className: 'mp-modal-content-title-row' });
   contentTitleRow.appendChild(contentTitle);
+  contentTitleRow.appendChild(logToggleBtn);
   contentTitleRow.appendChild(resyncBtn);
   contentCol.appendChild(contentTitleRow);
 
@@ -884,7 +901,7 @@ function openEditSkillModal(planSkill) {
   contentCol.appendChild(tabPanelsWrap);
   topRow.appendChild(contentCol);
 
-  const logCol = el('div', { className: 'mp-modal-log-col' });
+  const logCol = el('div', { className: 'mp-modal-log-col mp-modal-log-col--hidden' });
   const logSection = el('div', { className: 'mp-modal-log-section' });
   const logToggle = el('div', { className: 'mp-modal-log-toggle', style: 'cursor: default' });
   const logToggleText = el('span');
@@ -905,6 +922,7 @@ function openEditSkillModal(planSkill) {
     logListEl.innerHTML = '';
     const currentLogs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
     logToggleCount.textContent = String(currentLogs.length);
+    logToggleBtnCount.textContent = String(currentLogs.length);
     if (currentLogs.length === 0) {
       const emptyLog = el('div', { className: 'empty-state empty-state--compact' });
       emptyLog.textContent = 'No training log entries yet.';

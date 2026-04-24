@@ -3283,6 +3283,7 @@ textarea.is-error:focus {
 
 .mp-plan-modal {
   max-width: 1200px;
+  height: calc(100vh - 64px);
 }
 
 .mp-plan-modal .modal-body {
@@ -3604,8 +3605,22 @@ textarea.is-error:focus {
 .mp-modal-prof-btn[data-level=""].active { background: var(--bg-elevated); border-color: var(--border-soft); color: var(--text-secondary); }
 
 .mp-modal-log-col { flex: 0 0 260px; display: flex; flex-direction: column; overflow-y: auto; max-height: 100%; border-left: 1px solid var(--border-soft); padding-left: 16px; }
+.mp-modal-log-col.mp-modal-log-col--hidden { display: none; }
 .mp-modal-log-col .mp-modal-log-section { border-top: none; }
 .mp-modal-log-col .mp-edit-log-list { max-height: none; }
+
+.mp-modal-log-toggle-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--border-soft); background: transparent;
+  color: var(--text-muted); cursor: pointer; font-size: 11px;
+  transition: all 0.2s;
+}
+.mp-modal-log-toggle-btn:hover { border-color: var(--text-muted); }
+.mp-modal-log-toggle-btn.active {
+  background: var(--bg-elevated); color: var(--text-primary); border-color: var(--accent);
+}
+.mp-modal-log-toggle-btn span { font-weight: 600; }
 
 @media (max-width: 900px) {
   .mp-modal-log-col { flex: 1 1 100%; border-left: none; border-top: 1px solid var(--border-soft); padding-left: 0; padding-top: 12px; max-height: 200px; }

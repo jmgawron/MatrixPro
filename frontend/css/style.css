@@ -3282,7 +3282,7 @@ textarea.is-error:focus {
 /* ─── Enhanced Plan Skill Modal (two-column layout) ───────────────────────── */
 
 .mp-plan-modal {
-  max-width: 960px;
+  max-width: 1200px;
 }
 
 .mp-plan-modal .modal-body {

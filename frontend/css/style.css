@@ -2964,7 +2964,7 @@ textarea.is-error:focus {
 /* ─── Skill Detail Modal ──────────────────────────────────────────────────── */
 
 .skill-detail-modal {
-  max-width: 800px;
+  max-width: 960px;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -3014,31 +3014,46 @@ textarea.is-error:focus {
 .skill-detail-tabs {
   display: flex;
   gap: 0;
-  border-bottom: 1px solid var(--border-soft);
-  margin: 0 -24px;
+  border-bottom: 2px solid var(--border-soft);
+  margin: 16px -24px 0;
   padding: 0 24px;
   flex-shrink: 0;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
 .skill-detail-tab {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 20px;
-  font-size: 14px;
+  padding: 14px 24px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
   border: none;
   background: none;
   border-bottom: 3px solid transparent;
-  margin-bottom: -1px;
-  transition: color var(--transition), border-color var(--transition);
+  margin-bottom: -2px;
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
   white-space: nowrap;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
 }
 
 .skill-detail-tab:hover {
   color: var(--text-primary);
+  background: rgba(255,255,255,0.03);
+}
+
+.skill-detail-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.5;
+  transition: opacity var(--transition);
+}
+
+.skill-detail-tab.active .skill-detail-tab-icon {
+  opacity: 1;
 }
 
 .skill-detail-tab.active[data-tab="education"] {
@@ -3090,10 +3105,10 @@ textarea.is-error:focus {
 .skill-detail-tab-panel {
   display: none;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   overflow-y: auto;
-  max-height: 400px;
-  padding: 16px 0 4px;
+  max-height: 50vh;
+  padding: 20px 0 4px;
 }
 
 .skill-detail-tab-panel.active {
@@ -3258,7 +3273,7 @@ textarea.is-error:focus {
 
   .skill-detail-tab {
     padding: 10px 14px;
-    font-size: 13px;
+    font-size: 14px;
   }
 }
 
@@ -5514,7 +5529,7 @@ textarea.is-error:focus {
   gap: 0;
   padding: 20px 24px;
   overflow-y: auto;
-  max-height: calc(85vh - 130px);
+  max-height: calc(88vh - 80px);
 }
 
 /* Tab panels wrapper */
@@ -5575,9 +5590,16 @@ textarea.is-error:focus {
   width: 22px;
   height: 22px;
 }
+[data-theme="light"] .skill-detail-tab:hover {
+  background: rgba(0,0,0,0.03);
+}
+
+[data-theme="light"] .skill-detail-tabs {
+  background: var(--bg-card);
+}
+
 [data-theme="light"] .tool-card-icon {
-  background: rgba(37, 99, 235, .10);
-  color: #2563eb;
+  border-right-color: var(--border-soft);
 }
 
 .tool-card-header-left {

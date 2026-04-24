@@ -1005,9 +1005,9 @@ function showSkillDetailModal(skill) {
   // ── Education/Exposure/Experience tabs ───────────────────────────────────
 
   const LEVEL_CONFIG = [
-    { key: 'education', label: 'Education', chipClass: 'chip-education' },
-    { key: 'exposure', label: 'Exposure', chipClass: 'chip-exposure' },
-    { key: 'experience', label: 'Experience', chipClass: 'chip-experience' },
+    { key: 'education', label: 'Education', chipClass: 'chip-education', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
+    { key: 'exposure', label: 'Exposure', chipClass: 'chip-exposure', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
+    { key: 'experience', label: 'Experience', chipClass: 'chip-experience', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
   ];
 
   const tabBar = createElement('div', { className: 'skill-detail-tabs', role: 'tablist' });
@@ -1017,8 +1017,11 @@ function showSkillDetailModal(skill) {
   const tabButtons = {};
   const tabPanels = {};
 
-  LEVEL_CONFIG.forEach(({ key, label }) => {
+  LEVEL_CONFIG.forEach(({ key, label, icon }) => {
     const tabBtn = createElement('button', { className: 'skill-detail-tab', 'data-tab': key, role: 'tab', 'aria-selected': 'false', 'aria-controls': `panel-${key}` });
+    const iconSpan = createElement('span', { className: 'skill-detail-tab-icon' });
+    iconSpan.innerHTML = icon;
+    tabBtn.appendChild(iconSpan);
     const tabLabel = createElement('span');
     tabLabel.textContent = label;
     const tabCount = createElement('span', { className: 'skill-detail-tab-count' });

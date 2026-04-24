@@ -9,7 +9,7 @@ import { mountHome } from './pages/home.js?v=8';
 import { mountLogin } from './pages/login.js';
 import { mountMyPlan } from './pages/my-plan.js?v=8';
 import { mountMyTeam } from './pages/my-team.js?v=8';
-import { mountCatalog } from './pages/catalog.js?v=7';
+import { mountCatalog } from './pages/catalog.js?v=8';
 import { mountSkillExplorer } from './pages/skill-explorer.js';
 import { mountSettings } from './pages/settings.js';
 import { mountAdmin } from './pages/admin.js?v=7';

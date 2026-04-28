@@ -2848,25 +2848,10 @@ textarea.is-error:focus {
 
 /* Card body: notes */
 
-/* Progress row between body and footer */
-.mp-card-progress-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 16px 2px;
-}
-
-.mp-card-progress-label {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
+/* Progress gauge (inline in badge row) */
 .mp-card-progress-gauge {
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .mp-card-progress-gauge svg {

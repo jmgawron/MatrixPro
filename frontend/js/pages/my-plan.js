@@ -595,9 +595,11 @@ function buildCard(planSkill, status, iconClass) {
 
   const badgeWrap = el('div', { className: 'mp-card-badge' });
   const profLabel = el('span', { className: 'mp-card-prof-label' });
-  profLabel.textContent = 'Skill Proficiency';
+  profLabel.textContent = 'Proficiency';
   badgeWrap.appendChild(profLabel);
   badgeWrap.appendChild(buildProficiencyBadge(planSkill.proficiency_level));
+  const gaugeWrap = buildProgressGauge(null);
+  badgeWrap.appendChild(gaugeWrap);
   info.appendChild(badgeWrap);
   top.appendChild(info);
 
@@ -614,14 +616,6 @@ function buildCard(planSkill, status, iconClass) {
   body.textContent = planSkill.notes || 'No notes added';
   card.appendChild(body);
 
-  const progressRow = el('div', { className: 'mp-card-progress-row' });
-  const progressLabel = el('span', { className: 'mp-card-progress-label' });
-  progressLabel.textContent = 'Overall Progress';
-  progressRow.appendChild(progressLabel);
-  const gaugeWrap = buildProgressGauge(null);
-  progressRow.appendChild(gaugeWrap);
-  card.appendChild(progressRow);
-  
   card._gaugeEl = gaugeWrap;
 
   const footer = el('div', { className: 'mp-card-footer' });
@@ -722,8 +716,8 @@ function buildProgressGauge(percent) {
   wrap.setAttribute('aria-valuemin', '0');
   wrap.setAttribute('aria-valuemax', '100');
   
-  const size = 28;
-  const radius = 13;
+  const size = 34;
+  const radius = 14;
   
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', size);
@@ -754,7 +748,7 @@ function buildProgressGauge(percent) {
   text.setAttribute('y', '16');
   text.setAttribute('text-anchor', 'middle');
   text.setAttribute('dominant-baseline', 'central');
-  text.setAttribute('font-size', '8px');
+  text.setAttribute('font-size', '9px');
   text.setAttribute('font-weight', '700');
   text.setAttribute('fill', 'currentColor');
   
@@ -768,7 +762,7 @@ function buildProgressGauge(percent) {
 }
 
 function updateGaugeElements(wrap, percent, progressCircle, text) {
-  const radius = 13;
+  const radius = 14;
   const circumference = 2 * Math.PI * radius;
   
   if (percent === null || percent === undefined) {

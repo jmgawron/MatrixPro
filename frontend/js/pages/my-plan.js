@@ -299,6 +299,7 @@ function _applyFilters(skills) {
   if (_active3EFilters.size > 0) {
     filtered = filtered.filter(s => {
       const types = s.content_types || [];
+      if (types.length === 0) return true;
       const hasEducation = types.some(t => ['course', 'certification', 'reading'].includes(t));
       const hasExposure = types.some(t => ['link'].includes(t));
       const hasExperience = types.some(t => ['action'].includes(t));

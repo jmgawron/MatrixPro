@@ -349,6 +349,17 @@ def create_own_skill(
 
     plan = _get_or_create_plan(db, engineer_id)
 
+    if data.proficiency_level is not None and data.proficiency_level not in (
+        1,
+        2,
+        3,
+        4,
+        5,
+    ):
+        raise HTTPException(
+            status_code=400, detail="Proficiency level must be between 1 and 5"
+        )
+
     plan_skill = PlanSkill(
         plan_id=plan.id,
         skill_id=skill.id,
@@ -468,6 +479,17 @@ def add_skill_to_plan(
     if existing:
         raise HTTPException(status_code=409, detail="Skill already in plan")
 
+    if data.proficiency_level is not None and data.proficiency_level not in (
+        1,
+        2,
+        3,
+        4,
+        5,
+    ):
+        raise HTTPException(
+            status_code=400, detail="Proficiency level must be between 1 and 5"
+        )
+
     plan_skill = PlanSkill(
         plan_id=plan.id,
         skill_id=data.skill_id,
@@ -539,6 +561,10 @@ def update_plan_skill(
         data.proficiency_level is not None
         and data.proficiency_level != plan_skill.proficiency_level
     ):
+        if data.proficiency_level not in (1, 2, 3, 4, 5):
+            raise HTTPException(
+                status_code=400, detail="Proficiency level must be between 1 and 5"
+            )
         _audit_log(
             db,
             entity_type="plan_skill",
@@ -989,8 +1015,8 @@ def create_user_content(
     if plan_skill is None:
         raise HTTPException(status_code=404, detail="Plan skill not found")
 
-    if data.level not in (1, 2, 3):
-        raise HTTPException(status_code=400, detail="Level must be 1, 2, or 3")
+    if data.level not in (1, 2, 3, 4, 5):
+        raise HTTPException(status_code=400, detail="Level must be between 1 and 5")
 
     if not data.title or not data.title.strip():
         raise HTTPException(status_code=400, detail="Title is required")

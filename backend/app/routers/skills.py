@@ -468,8 +468,8 @@ def add_skill_content(
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    if data.level not in (1, 2, 3):
-        raise HTTPException(status_code=400, detail="Level must be 1, 2, or 3")
+    if data.level not in (1, 2, 3, 4, 5):
+        raise HTTPException(status_code=400, detail="Level must be between 1 and 5")
 
     if data.position is not None:
         position = data.position
@@ -572,8 +572,8 @@ def update_skill_content(
         raise HTTPException(status_code=404, detail="Content item not found")
 
     if data.level is not None:
-        if data.level not in (1, 2, 3):
-            raise HTTPException(status_code=400, detail="Level must be 1, 2, or 3")
+        if data.level not in (1, 2, 3, 4, 5):
+            raise HTTPException(status_code=400, detail="Level must be between 1 and 5")
         content.level = data.level
 
     if data.type is not None:

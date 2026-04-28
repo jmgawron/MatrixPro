@@ -1011,6 +1011,12 @@ function getCellStyle(cell) {
     if (proficiency_level === 3) {
       return { bg: 'rgba(168,85,247,.15)', border: 'rgba(168,85,247,.35)', icon: expriSvg };
     }
+    if (proficiency_level === 4) {
+      return { bg: 'rgba(168,85,247,.25)', border: 'rgba(168,85,247,.5)', icon: expriSvg };
+    }
+    if (proficiency_level === 5) {
+      return { bg: 'rgba(234,179,8,.15)', border: 'rgba(234,179,8,.45)', icon: masteredSvg };
+    }
     return { bg: 'rgba(156,163,175,.15)', border: 'rgba(156,163,175,.35)', icon: plannedSvg };
   }
 
@@ -1024,7 +1030,7 @@ function buildTooltipContent(cell, engineer, skill) {
     developing: 'Developing',
     mastered: 'Mastered',
   };
-  const levelLabels = { 1: 'Education', 2: 'Exposure', 3: 'Experience' };
+  const levelLabels = { 1: 'Beginner', 2: 'Working Knowledge', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert' };
   const statusLabel = statusLabels[cell.status] || cell.status;
   let levelPart = '';
   if ((cell.status === 'developing' || cell.status === 'mastered') && cell.proficiency_level) {
@@ -1044,6 +1050,8 @@ function buildLegend() {
     { label: 'Education', bg: 'rgba(34,197,94,.15)', border: 'rgba(34,197,94,.35)', text: 'var(--text-secondary)' },
     { label: 'Exposure', bg: 'rgba(6,182,212,.15)', border: 'rgba(6,182,212,.35)', text: 'var(--text-secondary)' },
     { label: 'Experience', bg: 'rgba(168,85,247,.15)', border: 'rgba(168,85,247,.35)', text: 'var(--text-secondary)' },
+    { label: 'Advanced', bg: 'rgba(168,85,247,.25)', border: 'rgba(168,85,247,.5)', text: 'var(--text-secondary)' },
+    { label: 'Expert', bg: 'rgba(234,179,8,.15)', border: 'rgba(234,179,8,.45)', text: 'var(--text-secondary)' },
     { label: 'Mastered', bg: 'rgba(234,179,8,.15)', border: 'rgba(234,179,8,.45)', text: 'var(--text-secondary)' },
     { label: 'Stagnant', bg: 'transparent', customBorder: '2px dashed rgba(239,68,68,.5)', text: 'var(--text-secondary)' }
   ];

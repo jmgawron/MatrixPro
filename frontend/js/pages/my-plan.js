@@ -16,6 +16,7 @@ let _searchQuery = '';
 let _currentSection = 'developing';
 let _activeDomainFilters = new Set();
 let _active3EFilters = new Set();
+let _activeProficiencyFilters = new Set();
 
 const SVG_ICONS = {
   wrench: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
@@ -65,6 +66,7 @@ export function mountMyPlan(container, params) {
   _currentSection = 'developing';
   _activeDomainFilters.clear();
   _active3EFilters.clear();
+  _activeProficiencyFilters.clear();
 
   const user = Store.get('user');
   _engineerId = params?.id ? Number(params.id) : user?.id;
@@ -203,6 +205,7 @@ function buildPageShell(container, params) {
     e.preventDefault();
     _activeDomainFilters.clear();
     _active3EFilters.clear();
+    _activeProficiencyFilters.clear();
     renderSections();
   });
   quickFiltersHeader.appendChild(quickFiltersTitle);
@@ -308,6 +311,10 @@ function _applyFilters(skills) {
     });
   }
 
+  if (_activeProficiencyFilters.size > 0) {
+    filtered = filtered.filter(s => _activeProficiencyFilters.has(s.proficiency_level));
+  }
+
   return filtered;
 }
 
@@ -342,7 +349,7 @@ function renderActiveSection() {
 
   if (activeSkills.length === 0) {
     const empty = el('div', { className: 'empty-state empty-state--inline' });
-    empty.textContent = _searchQuery || _activeDomainFilters.size > 0 || _active3EFilters.size > 0
+    empty.textContent = _searchQuery || _activeDomainFilters.size > 0 || _active3EFilters.size > 0 || _activeProficiencyFilters.size > 0
       ? 'No matching skills in this section.'
       : 'No skills yet — browse the catalog to get started!';
     grid.appendChild(empty);
@@ -361,7 +368,7 @@ function renderQuickFilters() {
   const clearBtn = document.getElementById('mp-filters-clear');
   if (!container) return;
 
-  if (_activeDomainFilters.size > 0 || _active3EFilters.size > 0) {
+  if (_activeDomainFilters.size > 0 || _active3EFilters.size > 0 || _activeProficiencyFilters.size > 0) {
     if (clearBtn) clearBtn.style.display = '';
   } else {
     if (clearBtn) clearBtn.style.display = 'none';
@@ -454,6 +461,30 @@ function renderQuickFilters() {
   
   eWrap.appendChild(eContainer);
   container.appendChild(eWrap);
+
+  const profWrap = el('div', { className: 'mp-filter-group' });
+  const profTitle = el('div', { className: 'mp-filter-label' });
+  profTitle.textContent = 'Proficiency Level';
+  profWrap.appendChild(profTitle);
+  
+  const profChips = el('div', { className: 'mp-filter-chips' });
+  [1, 2, 3, 4, 5].forEach(lvl => {
+    const chip = el('button', { className: 'mp-filter-chip mp-prof-filter-chip' });
+    if (_activeProficiencyFilters.has(lvl)) chip.classList.add('active');
+    chip.textContent = `L${lvl}`;
+    chip.addEventListener('click', () => {
+      if (_activeProficiencyFilters.has(lvl)) {
+        _activeProficiencyFilters.delete(lvl);
+      } else {
+        _activeProficiencyFilters.add(lvl);
+      }
+      renderSections();
+    });
+    profChips.appendChild(chip);
+  });
+  
+  profWrap.appendChild(profChips);
+  container.appendChild(profWrap);
 }
 
 function renderSections() {
@@ -614,14 +645,28 @@ function buildCard(planSkill, status, iconClass) {
 }
 
 function buildProficiencyBadge(level) {
-  const config = {
-    1: { cls: 'chip-education', label: 'Education' },
-    2: { cls: 'chip-exposure', label: 'Exposure' },
-    3: { cls: 'chip-experience', label: 'Experience' },
+  if (!level || level < 1 || level > 5) {
+    const badge = el('span', { className: 'triage-chip chip-pipeline' });
+    badge.textContent = '—';
+    badge.style.fontSize = '11px';
+    badge.style.padding = '2px 8px';
+    return badge;
+  }
+
+  const mapping = {
+    1: { label: 'Beginner', bg: 'rgba(148,163,184,.15)', text: '#94a3b8', border: 'rgba(148,163,184,.3)' },
+    2: { label: 'Working', bg: 'rgba(34,197,94,.15)', text: '#4ade80', border: 'rgba(34,197,94,.3)' },
+    3: { label: 'Intermediate', bg: 'rgba(6,182,212,.15)', text: '#22d3ee', border: 'rgba(6,182,212,.3)' },
+    4: { label: 'Advanced', bg: 'rgba(168,85,247,.15)', text: '#c084fc', border: 'rgba(168,85,247,.3)' },
+    5: { label: 'Expert', bg: 'rgba(234,179,8,.15)', text: '#eab308', border: 'rgba(234,179,8,.3)' }
   };
-  const c = config[level];
-  const badge = el('span', { className: c ? `triage-chip ${c.cls}` : 'triage-chip chip-pipeline' });
-  badge.textContent = c ? c.label : '—';
+  const m = mapping[level];
+  const badge = el('span', { className: 'triage-chip mp-prof-badge' });
+  badge.textContent = `L${level}`;
+  badge.title = m.label;
+  badge.style.background = m.bg;
+  badge.style.color = m.text;
+  badge.style.border = `1px solid ${m.border}`;
   badge.style.fontSize = '11px';
   badge.style.padding = '2px 8px';
   return badge;
@@ -748,7 +793,7 @@ function openEditSkillModal(planSkill) {
 
   const levelGroup = el('div', { className: 'form-group' });
   const levelLabel = el('label', { className: 'form-label' });
-  levelLabel.textContent = 'Proficiency Level';
+  levelLabel.textContent = 'Focus Area';
   const levelSelector = el('div', { className: 'mp-modal-prof-selector' });
   let currentLevel = String(planSkill.proficiency_level ?? '');
 
@@ -792,6 +837,43 @@ function openEditSkillModal(planSkill) {
   levelGroup.appendChild(levelLabel);
   levelGroup.appendChild(levelSelector);
   formCol.appendChild(levelGroup);
+
+  const profLevelGroup = el('div', { className: 'form-group' });
+  const profLevelLabel = el('label', { className: 'form-label' });
+  profLevelLabel.textContent = 'Skill Proficiency Level';
+  const profLevelSelector = el('div', { className: 'mp-modal-proflevel-selector' });
+  let currentProfLevel = String(planSkill.proficiency_level ?? '');
+
+  const profLevelOptions = [
+    { value: '1', label: '1', tooltip: 'Beginner' },
+    { value: '2', label: '2', tooltip: 'Working Knowledge' },
+    { value: '3', label: '3', tooltip: 'Intermediate' },
+    { value: '4', label: '4', tooltip: 'Advanced' },
+    { value: '5', label: '5', tooltip: 'Expert' },
+  ];
+
+  profLevelOptions.forEach(({ value, label, tooltip }) => {
+    const btn = el('button', { className: 'mp-proflevel-btn', 'data-level': value, title: `${label} — ${tooltip}` });
+    if (currentProfLevel === value) btn.classList.add('active');
+    btn.textContent = label;
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (currentProfLevel === value) {
+        currentProfLevel = '';
+        btn.classList.remove('active');
+      } else {
+        currentProfLevel = value;
+        profLevelSelector.querySelectorAll('.mp-proflevel-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.level === value);
+        });
+      }
+    });
+    profLevelSelector.appendChild(btn);
+  });
+
+  profLevelGroup.appendChild(profLevelLabel);
+  profLevelGroup.appendChild(profLevelSelector);
+  formCol.appendChild(profLevelGroup);
 
   const notesGroup = el('div', { className: 'form-group' });
   const notesLabel = el('label', { className: 'form-label' });
@@ -1222,7 +1304,7 @@ function openEditSkillModal(planSkill) {
     api.get(`/api/plans/${_engineerId}/skills/${planSkill.id}/content`).then(data => {
       if (skeletonEl.parentNode) skeletonEl.remove();
       allContentItems = (Array.isArray(data.items) ? data.items : [])
-        .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3].includes(item.level));
+        .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3, 4, 5].includes(item.level));
       const profLevel = parseInt(currentLevel, 10) || null;
 
       const groups = { education: [], exposure: [], experience: [] };
@@ -1266,10 +1348,11 @@ function openEditSkillModal(planSkill) {
 
   const initialStatus = planSkill.status;
   const initialLevel = String(planSkill.proficiency_level ?? '');
+  const initialProfLevel = String(planSkill.proficiency_level ?? '');
   const initialNotes = planSkill.notes || '';
 
   function isDirty() {
-    return currentStatus !== initialStatus || currentLevel !== initialLevel || notesTextarea.value !== initialNotes;
+    return currentStatus !== initialStatus || currentLevel !== initialLevel || currentProfLevel !== initialProfLevel || notesTextarea.value !== initialNotes;
   }
 
   function closeModal() {
@@ -1281,7 +1364,7 @@ function openEditSkillModal(planSkill) {
 
   async function doSave() {
     const newStatus = currentStatus;
-    const newLevel = currentLevel ? Number(currentLevel) : null;
+    const newLevel = currentProfLevel ? Number(currentProfLevel) : null;
     const newNotes = notesTextarea.value.trim();
 
     saveBtn.disabled = true;
@@ -1459,7 +1542,7 @@ function openUserContentEditor(opts, onSaved) {
   const { mode, item, planSkill, levelKey, level } = opts;
   const isEdit = mode === 'edit';
   const levelNum = isEdit ? item.level : level;
-  const levelLabel = { 1: 'Education', 2: 'Exposure', 3: 'Experience' }[levelNum] || 'Content';
+  const levelLabel = { 1: 'Education', 2: 'Exposure', 3: 'Experience', 4: 'Practice', 5: 'Mastery' }[levelNum] || 'Content';
 
   const root = document.getElementById('modalRoot');
   if (!root) return;
@@ -1808,13 +1891,15 @@ function openOwnSkillModal() {
 
   const profGroup = el('div', { className: 'form-group' });
   const profLabel = el('label', { className: 'form-label' });
-  profLabel.textContent = 'Proficiency Level';
+  profLabel.textContent = 'Skill Proficiency Level';
   const profSelect = el('select', { className: 'form-select' });
   [
     { value: '', label: 'Not set' },
-    { value: '1', label: 'Education' },
-    { value: '2', label: 'Exposure' },
-    { value: '3', label: 'Experience' },
+    { value: '1', label: '1 — Beginner' },
+    { value: '2', label: '2 — Working Knowledge' },
+    { value: '3', label: '3 — Intermediate' },
+    { value: '4', label: '4 — Advanced' },
+    { value: '5', label: '5 — Expert' },
   ].forEach(({ value, label }) => {
     const opt = el('option', { value });
     opt.textContent = label;

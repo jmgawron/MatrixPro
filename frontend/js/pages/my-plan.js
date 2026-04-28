@@ -625,6 +625,32 @@ function buildCard(planSkill, status, iconClass) {
   logItem.appendChild(svgIcon('pencil', '12px'));
   logItem.appendChild(document.createTextNode(` ${logCount} log${logCount !== 1 ? 's' : ''}`));
   footer.appendChild(logItem);
+
+  const types = Array.isArray(planSkill.content_types) ? planSkill.content_types : [];
+  const hasEducation = types.some(t => ['course', 'certification', 'reading'].includes(t));
+  const hasExposure = types.some(t => ['link'].includes(t));
+  const hasExperience = types.some(t => ['action'].includes(t));
+
+  if (hasEducation || hasExposure || hasExperience) {
+    const indicators = el('span', { className: 'mp-card-3e-indicators' });
+    if (hasEducation) {
+      const dot = el('span', { className: 'mp-card-3e-dot mp-card-3e-dot--edu', title: 'Education' });
+      dot.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
+      indicators.appendChild(dot);
+    }
+    if (hasExposure) {
+      const dot = el('span', { className: 'mp-card-3e-dot mp-card-3e-dot--exp', title: 'Exposure' });
+      dot.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
+      indicators.appendChild(dot);
+    }
+    if (hasExperience) {
+      const dot = el('span', { className: 'mp-card-3e-dot mp-card-3e-dot--xp', title: 'Experience' });
+      dot.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+      indicators.appendChild(dot);
+    }
+    footer.appendChild(indicators);
+  }
+
   card.appendChild(footer);
 
   card.addEventListener('dragstart', (e) => {

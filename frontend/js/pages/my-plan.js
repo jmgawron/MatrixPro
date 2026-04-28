@@ -471,7 +471,7 @@ function renderQuickFilters() {
   [1, 2, 3, 4, 5].forEach(lvl => {
     const chip = el('button', { className: 'mp-filter-chip mp-prof-filter-chip' });
     if (_activeProficiencyFilters.has(lvl)) chip.classList.add('active');
-    chip.textContent = `L${lvl}`;
+    chip.textContent = `${lvl}`;
     chip.addEventListener('click', () => {
       if (_activeProficiencyFilters.has(lvl)) {
         _activeProficiencyFilters.delete(lvl);
@@ -591,6 +591,9 @@ function buildCard(planSkill, status, iconClass) {
   info.appendChild(nameEl);
 
   const badgeWrap = el('div', { className: 'mp-card-badge' });
+  const profLabel = el('span', { className: 'mp-card-prof-label' });
+  profLabel.textContent = 'Skill Proficiency';
+  badgeWrap.appendChild(profLabel);
   badgeWrap.appendChild(buildProficiencyBadge(planSkill.proficiency_level));
   info.appendChild(badgeWrap);
   top.appendChild(info);
@@ -662,7 +665,7 @@ function buildProficiencyBadge(level) {
   };
   const m = mapping[level];
   const badge = el('span', { className: 'triage-chip mp-prof-badge' });
-  badge.textContent = `L${level}`;
+  badge.textContent = `${level}`;
   badge.title = m.label;
   badge.style.background = m.bg;
   badge.style.color = m.text;

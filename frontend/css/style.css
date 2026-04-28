@@ -2816,6 +2816,15 @@ textarea.is-error:focus {
 
 .mp-card-badge {
   margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mp-card-prof-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .mp-card-actions {

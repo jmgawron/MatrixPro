@@ -298,17 +298,8 @@ function _applyFilters(skills) {
 
   if (_active3EFilters.size > 0) {
     filtered = filtered.filter(s => {
-      const types = s.content_types || [];
-      if (types.length === 0) return true;
-      const hasEducation = types.some(t => ['course', 'certification', 'reading'].includes(t));
-      const hasExposure = types.some(t => ['link'].includes(t));
-      const hasExperience = types.some(t => ['action'].includes(t));
-      
-      if (_active3EFilters.has('education') && hasEducation) return true;
-      if (_active3EFilters.has('exposure') && hasExposure) return true;
-      if (_active3EFilters.has('experience') && hasExperience) return true;
-      
-      return false;
+      if (!s.focus_area) return true;
+      return _active3EFilters.has(s.focus_area);
     });
   }
 
@@ -626,24 +617,19 @@ function buildCard(planSkill, status, iconClass) {
   logItem.appendChild(document.createTextNode(` ${logCount} log${logCount !== 1 ? 's' : ''}`));
   footer.appendChild(logItem);
 
-  const types = Array.isArray(planSkill.content_types) ? planSkill.content_types : [];
-  const hasEducation = types.some(t => ['course', 'certification', 'reading'].includes(t));
-  const hasExposure = types.some(t => ['link'].includes(t));
-  const hasExperience = types.some(t => ['action'].includes(t));
+  const focusArea = planSkill.focus_area || '';
 
-  if (hasEducation || hasExposure || hasExperience) {
+  if (focusArea) {
     const indicators = el('span', { className: 'mp-card-3e-indicators' });
-    if (hasEducation) {
+    if (focusArea === 'education') {
       const dot = el('span', { className: 'mp-card-3e-dot mp-card-3e-dot--edu', title: 'Education' });
       dot.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
       indicators.appendChild(dot);
-    }
-    if (hasExposure) {
+    } else if (focusArea === 'exposure') {
       const dot = el('span', { className: 'mp-card-3e-dot mp-card-3e-dot--exp', title: 'Exposure' });
       dot.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
       indicators.appendChild(dot);
-    }
-    if (hasExperience) {
+    } else if (focusArea === 'experience') {
       const dot = el('span', { className: 'mp-card-3e-dot mp-card-3e-dot--xp', title: 'Experience' });
       dot.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
       indicators.appendChild(dot);
@@ -825,12 +811,12 @@ function openEditSkillModal(planSkill) {
   const levelLabel = el('label', { className: 'form-label' });
   levelLabel.textContent = 'Focus Area';
   const levelSelector = el('div', { className: 'mp-modal-prof-selector' });
-  let currentLevel = String(planSkill.proficiency_level ?? '');
+  let currentLevel = planSkill.focus_area || '';
 
   const levelOptions = [
-    { value: '1', label: 'Education', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
-    { value: '2', label: 'Exposure', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
-    { value: '3', label: 'Experience', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
+    { value: 'education', label: 'Education', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
+    { value: 'exposure', label: 'Exposure', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
+    { value: 'experience', label: 'Experience', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
   ];
 
   levelOptions.forEach(({ value, label, icon }) => {
@@ -1335,7 +1321,7 @@ function openEditSkillModal(planSkill) {
       if (skeletonEl.parentNode) skeletonEl.remove();
       allContentItems = (Array.isArray(data.items) ? data.items : [])
         .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3, 4, 5].includes(item.level));
-      const profLevel = parseInt(currentLevel, 10) || null;
+      const focusLevelNum = { education: 1, exposure: 2, experience: 3 }[currentLevel] || null;
 
       const groups = { education: [], exposure: [], experience: [] };
       allContentItems.forEach(item => {
@@ -1344,7 +1330,7 @@ function openEditSkillModal(planSkill) {
       });
 
       LEVEL_CONFIG.forEach(({ key, level }) => {
-        const isVisible = !profLevel || level <= profLevel;
+        const isVisible = !focusLevelNum || level <= focusLevelNum;
         tabButtons[key].style.display = isVisible ? '' : 'none';
         tabPanels[key].style.display = isVisible ? '' : 'none';
         if (isVisible) {
@@ -1352,7 +1338,7 @@ function openEditSkillModal(planSkill) {
         }
       });
 
-      const visibleTabs = LEVEL_CONFIG.filter(({ level }) => !profLevel || level <= profLevel);
+      const visibleTabs = LEVEL_CONFIG.filter(({ level }) => !focusLevelNum || level <= focusLevelNum);
       const firstWithContent = visibleTabs.find(({ key }) => groups[key].length > 0);
       activateTab(firstWithContent ? firstWithContent.key : (visibleTabs[0]?.key || 'education'));
 
@@ -1377,7 +1363,7 @@ function openEditSkillModal(planSkill) {
   refreshContent();
 
   const initialStatus = planSkill.status;
-  const initialLevel = String(planSkill.proficiency_level ?? '');
+  const initialLevel = planSkill.focus_area || '';
   const initialProfLevel = String(planSkill.proficiency_level ?? '');
   const initialNotes = planSkill.notes || '';
 
@@ -1404,6 +1390,7 @@ function openEditSkillModal(planSkill) {
       await api.put(`/api/plans/${_engineerId}/skills/${planSkill.id}`, {
         status: newStatus,
         proficiency_level: newLevel,
+        focus_area: currentLevel || '',
         notes: newNotes || null,
       });
       showToast('Skill updated', 'success');
@@ -1436,8 +1423,8 @@ function openEditSkillModal(planSkill) {
       const focused = document.activeElement;
       const currentTab = focused?.dataset?.tab;
       const visibleKeys = LEVEL_CONFIG.filter(({ level }) => {
-        const pl = parseInt(currentLevel, 10) || null;
-        return !pl || level <= pl;
+        const fl = { education: 1, exposure: 2, experience: 3 }[currentLevel] || null;
+        return !fl || level <= fl;
       }).map(l => l.key);
       if (currentTab && visibleKeys.includes(currentTab)) {
         const idx = visibleKeys.indexOf(currentTab);

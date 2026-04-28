@@ -28,12 +28,14 @@ class PlanSkillCreate(BaseModel):
     skill_id: int
     status: PlanSkillStatus = PlanSkillStatus.planned
     proficiency_level: int | None = None
+    focus_area: str | None = None
     notes: str | None = None
 
 
 class PlanSkillUpdate(BaseModel):
     status: PlanSkillStatus | None = None
     proficiency_level: int | None = None
+    focus_area: str | None = None
     notes: str | None = None
 
 
@@ -51,6 +53,7 @@ class PlanSkillResponse(BaseModel):
     is_custom: bool = False
     status: PlanSkillStatus
     proficiency_level: int | None = None
+    focus_area: str | None = None
     notes: str | None = None
     skill_version_at_add: int
     added_at: datetime

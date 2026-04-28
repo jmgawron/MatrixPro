@@ -45,6 +45,7 @@ class PlanSkill(Base):
         Enum(PlanSkillStatus), nullable=False, default=PlanSkillStatus.planned
     )
     proficiency_level = Column(Integer, nullable=True)
+    focus_area = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
     skill_version_at_add = Column(Integer, nullable=False, default=1)
     added_at = Column(DateTime, default=datetime.utcnow)

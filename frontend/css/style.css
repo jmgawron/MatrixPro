@@ -3647,9 +3647,9 @@ textarea.is-error:focus {
 .mp-modal-prof-btn { display: flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-soft); background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 12px; transition: all 0.2s; white-space: nowrap; }
 .mp-modal-prof-btn:hover { border-color: var(--text-muted); }
 .mp-modal-prof-btn.active { color: #fff; }
-.mp-modal-prof-btn[data-level="1"].active { background: var(--success); border-color: var(--success); }
-.mp-modal-prof-btn[data-level="2"].active { background: var(--info); border-color: var(--info); }
-.mp-modal-prof-btn[data-level="3"].active { background: #a78bfa; border-color: #a78bfa; }
+.mp-modal-prof-btn[data-level="education"].active { background: var(--success); border-color: var(--success); }
+.mp-modal-prof-btn[data-level="exposure"].active { background: var(--info); border-color: var(--info); }
+.mp-modal-prof-btn[data-level="experience"].active { background: #a78bfa; border-color: #a78bfa; }
 .mp-modal-prof-btn[data-level=""].active { background: var(--bg-elevated); border-color: var(--border-soft); color: var(--text-secondary); }
 
 .mp-modal-proflevel-selector { display: flex; gap: 6px; flex-wrap: wrap; }

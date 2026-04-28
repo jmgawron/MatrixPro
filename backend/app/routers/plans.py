@@ -126,6 +126,7 @@ def _to_plan_response(plan: DevelopmentPlan) -> PlanResponse:
                 is_custom=ps.skill.is_custom,
                 status=ps.status,
                 proficiency_level=ps.proficiency_level,
+                focus_area=ps.focus_area,
                 notes=ps.notes,
                 skill_version_at_add=ps.skill_version_at_add,
                 added_at=ps.added_at,
@@ -577,6 +578,25 @@ def update_plan_skill(
             changed_by=current_user.id,
         )
         plan_skill.proficiency_level = data.proficiency_level
+        updated = True
+
+    if data.focus_area is not None and data.focus_area != plan_skill.focus_area:
+        valid_areas = ("education", "exposure", "experience", "")
+        if data.focus_area not in valid_areas:
+            raise HTTPException(
+                status_code=400,
+                detail="Focus area must be education, exposure, or experience",
+            )
+        _audit_log(
+            db,
+            entity_type="plan_skill",
+            entity_id=plan_skill.id,
+            field="focus_area",
+            old_value=plan_skill.focus_area,
+            new_value=data.focus_area or None,
+            changed_by=current_user.id,
+        )
+        plan_skill.focus_area = data.focus_area or None
         updated = True
 
     if data.notes is not None and data.notes != plan_skill.notes:

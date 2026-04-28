@@ -6257,19 +6257,20 @@ textarea.is-error:focus {
 .mp-3e-filters {
   display: flex;
   justify-content: space-between;
-  gap: 6px;
+  gap: 4px;
 }
 
 .mp-3e-btn {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius-md, 8px);
-  padding: 6px 4px;
+  padding: 6px 2px;
   cursor: pointer;
   transition: var(--transition, all 0.2s ease);
   opacity: 0.6;
@@ -6290,14 +6291,19 @@ textarea.is-error:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   color: var(--text-secondary);
 }
 
+.mp-3e-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
 .mp-3e-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 500;
   color: var(--text-secondary);
 }

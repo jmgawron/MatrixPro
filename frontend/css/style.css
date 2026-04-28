@@ -2847,6 +2847,54 @@ textarea.is-error:focus {
 }
 
 /* Card body: notes */
+
+/* Progress row between body and footer */
+.mp-card-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px 2px;
+}
+
+.mp-card-progress-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.mp-card-progress-gauge {
+  flex-shrink: 0;
+}
+
+.mp-card-progress-gauge svg {
+  display: block;
+}
+
+.mp-card-progress-gauge text {
+  fill: var(--text-secondary);
+  font-family: inherit;
+}
+
+/* Bottom progress bar */
+.mp-card-progress-bar-wrap {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
+  overflow: hidden;
+  margin-top: auto;
+}
+
+.mp-card-progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 0 0 var(--radius-lg, 12px) var(--radius-lg, 12px);
+  background: linear-gradient(90deg, var(--info, #3b82f6), var(--success, #22c55e));
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .mp-card-body {
   font-size: 12px;
   color: var(--text-secondary);

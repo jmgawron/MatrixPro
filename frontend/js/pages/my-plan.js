@@ -353,6 +353,17 @@ function renderActiveSection() {
     const card = buildCard(planSkill, _currentSection, sectionDef?.iconClass || 'mp-card-icon--dev');
     grid.appendChild(card);
   });
+
+  // Fetch progress for all skill cards
+  document.querySelectorAll('.mp-card[data-plan-skill-id]').forEach(card => {
+    const psId = card.dataset.planSkillId;
+    api.get(`/api/plans/${_engineerId}/skills/${psId}/content`).then(data => {
+      const total = data.total_items || 0;
+      const completed = data.completed_items || 0;
+      const pct = total > 0 ? Math.round((completed / total) * 100) : null;
+      updateCardGauge(card, pct, completed, total);
+    }).catch(() => {});
+  });
 }
 
 function renderQuickFilters() {
@@ -603,6 +614,16 @@ function buildCard(planSkill, status, iconClass) {
   body.textContent = planSkill.notes || 'No notes added';
   card.appendChild(body);
 
+  const progressRow = el('div', { className: 'mp-card-progress-row' });
+  const progressLabel = el('span', { className: 'mp-card-progress-label' });
+  progressLabel.textContent = 'Overall Progress';
+  progressRow.appendChild(progressLabel);
+  const gaugeWrap = buildProgressGauge(null);
+  progressRow.appendChild(gaugeWrap);
+  card.appendChild(progressRow);
+  
+  card._gaugeEl = gaugeWrap;
+
   const footer = el('div', { className: 'mp-card-footer' });
   const dateStr = formatDate(planSkill.updated_at || planSkill.added_at);
   if (dateStr) {
@@ -638,6 +659,13 @@ function buildCard(planSkill, status, iconClass) {
   }
 
   card.appendChild(footer);
+
+  const barWrap = el('div', { className: 'mp-card-progress-bar-wrap' });
+  const bar = el('div', { className: 'mp-card-progress-bar' });
+  barWrap.appendChild(bar);
+  card.appendChild(barWrap);
+  
+  card._barEl = bar;
 
   card.addEventListener('dragstart', (e) => {
     _draggingPlanSkillId = planSkill.id;
@@ -686,6 +714,97 @@ function buildProficiencyBadge(level) {
   badge.style.fontSize = '11px';
   badge.style.padding = '2px 8px';
   return badge;
+}
+
+function buildProgressGauge(percent) {
+  const wrap = el('div', { className: 'mp-card-progress-gauge' });
+  wrap.setAttribute('role', 'progressbar');
+  wrap.setAttribute('aria-valuemin', '0');
+  wrap.setAttribute('aria-valuemax', '100');
+  
+  const size = 28;
+  const radius = 13;
+  
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', size);
+  svg.setAttribute('height', size);
+  svg.setAttribute('viewBox', '0 0 32 32');
+  
+  const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  bgCircle.setAttribute('cx', '16');
+  bgCircle.setAttribute('cy', '16');
+  bgCircle.setAttribute('r', radius);
+  bgCircle.setAttribute('fill', 'none');
+  bgCircle.setAttribute('stroke', 'rgba(255,255,255,0.08)');
+  bgCircle.setAttribute('stroke-width', '2.5');
+  
+  const progressCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  progressCircle.setAttribute('cx', '16');
+  progressCircle.setAttribute('cy', '16');
+  progressCircle.setAttribute('r', radius);
+  progressCircle.setAttribute('fill', 'none');
+  progressCircle.setAttribute('stroke-width', '2.5');
+  progressCircle.setAttribute('stroke-linecap', 'round');
+  progressCircle.style.transform = 'rotate(-90deg)';
+  progressCircle.style.transformOrigin = '50% 50%';
+  progressCircle.style.transition = 'stroke-dasharray 0.5s ease, stroke 0.5s ease';
+  
+  const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  text.setAttribute('x', '16');
+  text.setAttribute('y', '16');
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('dominant-baseline', 'central');
+  text.setAttribute('font-size', '8px');
+  text.setAttribute('font-weight', '700');
+  text.setAttribute('fill', 'currentColor');
+  
+  svg.appendChild(bgCircle);
+  svg.appendChild(progressCircle);
+  svg.appendChild(text);
+  wrap.appendChild(svg);
+  
+  updateGaugeElements(wrap, percent, progressCircle, text);
+  return wrap;
+}
+
+function updateGaugeElements(wrap, percent, progressCircle, text) {
+  const radius = 13;
+  const circumference = 2 * Math.PI * radius;
+  
+  if (percent === null || percent === undefined) {
+    progressCircle.setAttribute('stroke-dasharray', `0 ${circumference}`);
+    progressCircle.setAttribute('stroke', 'transparent');
+    text.textContent = '—';
+    wrap.removeAttribute('aria-valuenow');
+  } else {
+    const dash = (percent / 100) * circumference;
+    progressCircle.setAttribute('stroke-dasharray', `${dash} ${circumference}`);
+    
+    let color = '#94a3b8';
+    if (percent >= 100) color = '#4ade80';
+    else if (percent >= 67) color = '#22d3ee';
+    else if (percent >= 34) color = '#3b82f6';
+    
+    progressCircle.setAttribute('stroke', color);
+    text.textContent = `${Math.round(percent)}%`;
+    wrap.setAttribute('aria-valuenow', Math.round(percent));
+  }
+}
+
+function updateCardGauge(card, percent, completed, total) {
+  if (!card._gaugeEl || !card._barEl) return;
+  const svg = card._gaugeEl.querySelector('svg');
+  if (!svg) return;
+  const progressCircle = svg.querySelector('circle:nth-child(2)');
+  const text = svg.querySelector('text');
+  
+  updateGaugeElements(card._gaugeEl, percent, progressCircle, text);
+  
+  if (percent === null || percent === undefined) {
+    card._barEl.style.width = '0%';
+  } else {
+    card._barEl.style.width = `${Math.round(percent)}%`;
+  }
 }
 
 function showCardActionsMenu(e, planSkill, currentStatus) {

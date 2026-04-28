@@ -20,3 +20,7 @@ htmlcov/
 .pids/
 .logs/
 .DS_Store
+
+# Tool/temp artifacts
+.playwright-mcp/
+tmp/

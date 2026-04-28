@@ -464,7 +464,7 @@ function renderQuickFilters() {
 
   const profWrap = el('div', { className: 'mp-filter-group' });
   const profTitle = el('div', { className: 'mp-filter-label' });
-  profTitle.textContent = 'Proficiency Level';
+  profTitle.textContent = 'Proficiency';
   profWrap.appendChild(profTitle);
   
   const profChips = el('div', { className: 'mp-filter-chips' });

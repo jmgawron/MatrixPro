@@ -846,7 +846,7 @@ body {
 
 /* Tool Card */
 .tool-card {
-  background: var(--bg-card);
+  background: var(--bg-card-gradient);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   padding: 16px;
@@ -860,7 +860,7 @@ body {
 .tool-card:hover {
   transform: translateY(-2px);
   border-color: rgba(59, 130, 246, .55);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--card-hover-glow);
 }
 
 .tool-card:hover .card-admin-actions {
@@ -887,7 +887,7 @@ body {
 
 .tool-card-desc {
   font-size: 14px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
@@ -1900,23 +1900,25 @@ textarea.is-error:focus {
   font-size: 14px;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  transition: background var(--transition), color var(--transition), border-left-color var(--transition);
   display: flex;
   align-items: center;
   gap: 8px;
-  border-left: 2px solid transparent;
+  border-left: 3px solid transparent;
   flex-wrap: wrap;
 }
 
 .tree-item:hover {
   background: var(--bg-elevated);
   color: var(--text-primary);
+  border-left-color: rgba(59, 130, 246, 0.3);
 }
 
 .tree-item.active {
   background: var(--accent-soft);
   color: var(--accent);
   border-left-color: var(--accent);
+  font-weight: 600;
 }
 
 .tree-item-icon {
@@ -7084,6 +7086,7 @@ textarea.is-error:focus {
   background: var(--bg-panel);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
 
 .catalog-tab {
@@ -7094,7 +7097,7 @@ textarea.is-error:focus {
   cursor: pointer;
   border: none;
   background: none;
-  border-bottom: 3px solid transparent;
+  border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   transition: color var(--transition), border-color var(--transition);
   white-space: nowrap;
@@ -7107,6 +7110,7 @@ textarea.is-error:focus {
 .catalog-tab.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
+  font-weight: 700;
 }
 
 .tool-card-meta-row {
@@ -7121,6 +7125,7 @@ textarea.is-error:focus {
   align-items: center;
   padding: 2px 8px;
   border-radius: 999px;
+  border: 1px solid transparent;
   font-size: 11px;
   font-weight: 600;
   background: var(--bg-elevated);
@@ -7129,15 +7134,17 @@ textarea.is-error:focus {
 
 .meta-badge--org {
   background: rgba(99, 102, 241, .12);
+  border-color: rgba(99, 102, 241, .25);
   color: #818cf8;
 }
 
 .meta-badge--cert {
   background: rgba(96, 165, 250, .12);
+  border-color: rgba(96, 165, 250, .25);
   color: #93bbfc;
 }
 
-[data-theme="light"] .meta-badge--cert { background: rgba(59, 130, 246, .1); color: #2563eb; }
+[data-theme="light"] .meta-badge--cert { background: rgba(59, 130, 246, .1); border-color: rgba(59, 130, 246, .25); color: #2563eb; }
 
 .meta-badge--clickable {
   cursor: pointer;
@@ -7185,7 +7192,7 @@ textarea.is-error:focus {
 
 .catalog-assignments-panel {
   margin-top: 24px;
-  background: var(--bg-card);
+  background: var(--bg-card-gradient);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-lg);
   padding: 24px;
@@ -7276,7 +7283,7 @@ textarea.is-error:focus {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 12px;
+  padding: 6px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-soft);
   background: transparent;
@@ -7335,7 +7342,7 @@ textarea.is-error:focus {
 }
 
 .cat-shift-btn {
-  padding: 4px 12px;
+  padding: 6px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-soft);
   background: transparent;
@@ -7349,6 +7356,7 @@ textarea.is-error:focus {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
 }
 
 .cat-shift-btn:hover:not(.active) {
@@ -7379,6 +7387,10 @@ textarea.is-error:focus {
   flex-shrink: 0;
   overflow-y: auto;
   max-height: calc(100vh - 340px);
+  background: var(--sidebar-gradient);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 8px 0;
 }
 
 .cat-skills-panel {

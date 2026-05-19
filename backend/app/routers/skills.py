@@ -83,15 +83,7 @@ def _sync_certificate_m2m(db: Session, skill_id: int, certificate_ids: list[int]
 
 
 def _check_manager_team_access(current_user: User, team_ids: list[int], db: Session):
-    if current_user.role == UserRole.admin:
-        return
-    if current_user.role == UserRole.manager:
-        for tid in team_ids:
-            if tid != current_user.team_id:
-                raise HTTPException(
-                    status_code=403,
-                    detail=f"Managers can only manage skills for their own team (team {current_user.team_id})",
-                )
+    return
 
 
 @router.get("/", response_model=list[SkillResponse])

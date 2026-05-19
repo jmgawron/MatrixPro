@@ -1158,12 +1158,28 @@ function buildReportingControls() {
   applyBtn.textContent = 'Apply';
   applyBtn.addEventListener('click', () => fetchChangeLogs());
 
+  const spacer = el('div', { style: 'flex:1 1 auto;' });
+
+  const analyzeBtn = el('button', {
+    className: 'btn btn-primary btn-sm mt-analyze-btn',
+    id: 'mt-analyze-btn',
+    title: 'Generate an AI-powered progress report for the selected scope',
+  });
+  analyzeBtn.innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;vertical-align:middle;">' +
+    '<path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/>' +
+    '<path d="M19 14l.8 2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-1z"/>' +
+    '</svg>Analyze Progress';
+  analyzeBtn.addEventListener('click', () => runAnalyzeProgress(analyzeBtn));
+
   controls.appendChild(fromLabel);
   controls.appendChild(fromInput);
   controls.appendChild(toLabel);
   controls.appendChild(toInput);
   controls.appendChild(engineerSelect);
   controls.appendChild(applyBtn);
+  controls.appendChild(spacer);
+  controls.appendChild(analyzeBtn);
 
   return controls;
 }
@@ -1206,6 +1222,236 @@ async function fetchChangeLogs() {
   } catch (err) {
     _reportingBodyEl.innerHTML = '';
     renderErrorState(_reportingBodyEl, err.message || 'Failed to load change logs', () => fetchChangeLogs());
+  }
+}
+
+// ─── AI Progress Analysis ─────────────────────────────────────────────────────
+
+function renderMarkdownToHtml(md) {
+  if (!md) return '';
+  const escape = (s) => String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  const inline = (s) => escape(s)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+  const lines = md.replace(/\r\n/g, '\n').split('\n');
+  const out = [];
+  let inUl = false;
+  let inOl = false;
+  let paraBuf = [];
+
+  const flushPara = () => {
+    if (paraBuf.length) {
+      out.push(`<p>${inline(paraBuf.join(' '))}</p>`);
+      paraBuf = [];
+    }
+  };
+  const closeLists = () => {
+    if (inUl) { out.push('</ul>'); inUl = false; }
+    if (inOl) { out.push('</ol>'); inOl = false; }
+  };
+
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, '');
+    if (!line.trim()) { flushPara(); closeLists(); continue; }
+
+    const h = /^(#{1,6})\s+(.+)$/.exec(line);
+    if (h) {
+      flushPara(); closeLists();
+      const level = Math.min(h[1].length, 6);
+      out.push(`<h${level}>${inline(h[2])}</h${level}>`);
+      continue;
+    }
+
+    const ol = /^\s*\d+\.\s+(.+)$/.exec(line);
+    if (ol) {
+      flushPara();
+      if (inUl) { out.push('</ul>'); inUl = false; }
+      if (!inOl) { out.push('<ol>'); inOl = true; }
+      out.push(`<li>${inline(ol[1])}</li>`);
+      continue;
+    }
+
+    const ul = /^\s*[-*+]\s+(.+)$/.exec(line);
+    if (ul) {
+      flushPara();
+      if (inOl) { out.push('</ol>'); inOl = false; }
+      if (!inUl) { out.push('<ul>'); inUl = true; }
+      out.push(`<li>${inline(ul[1])}</li>`);
+      continue;
+    }
+
+    if (/^---+$/.test(line.trim())) {
+      flushPara(); closeLists();
+      out.push('<hr>');
+      continue;
+    }
+
+    closeLists();
+    paraBuf.push(line);
+  }
+  flushPara(); closeLists();
+  return out.join('\n');
+}
+
+async function runAnalyzeProgress(triggerBtn) {
+  if (triggerBtn && triggerBtn.disabled) return;
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.dataset.originalLabel = triggerBtn.innerHTML;
+    triggerBtn.innerHTML =
+      '<span class="mt-analyze-spinner" aria-hidden="true"></span>Analyzing…';
+  }
+
+  const restoreBtn = () => {
+    if (triggerBtn && triggerBtn.dataset.originalLabel) {
+      triggerBtn.innerHTML = triggerBtn.dataset.originalLabel;
+      delete triggerBtn.dataset.originalLabel;
+      triggerBtn.disabled = false;
+    }
+  };
+
+  const payload = {
+    team_id: _teamId,
+    engineer_id: _reportEngineerId ? Number(_reportEngineerId) : null,
+    from_date: _reportFromDate || null,
+    to_date: _reportToDate || null,
+  };
+
+  let loadingBody = el('div', { className: 'mt-analyze-loading' });
+  loadingBody.innerHTML =
+    '<div class="mt-analyze-loading-spinner" aria-hidden="true"></div>' +
+    '<h4>Generating progress report…</h4>' +
+    '<p class="mt-analyze-loading-status">Collecting plan data and change history.</p>' +
+    '<p class="mt-analyze-loading-hint">This usually takes 10-40 seconds.</p>';
+
+  showModal({
+    title: 'AI Progress Analysis',
+    body: loadingBody,
+    actions: [{ label: 'Cancel', value: 'cancel', className: 'btn btn-secondary' }],
+    modalClass: 'mt-analyze-modal',
+  });
+
+  const statusEl = loadingBody.querySelector('.mt-analyze-loading-status');
+  const statusMessages = [
+    'Collecting plan data and change history…',
+    'Summarizing skill backlog…',
+    'Asking the LLM to draft the report…',
+    'Polishing the markdown output…',
+  ];
+  let statusIdx = 0;
+  const statusTimer = setInterval(() => {
+    statusIdx = (statusIdx + 1) % statusMessages.length;
+    if (statusEl) statusEl.textContent = statusMessages[statusIdx];
+  }, 4000);
+
+  try {
+    const result = await api.post('/api/reporting/analyze', payload);
+    clearInterval(statusTimer);
+    renderAnalyzeResult(result);
+  } catch (err) {
+    clearInterval(statusTimer);
+    renderAnalyzeError(err.message || 'Failed to generate report');
+  } finally {
+    restoreBtn();
+  }
+}
+
+function renderAnalyzeError(message) {
+  const body = el('div', { className: 'mt-analyze-error' });
+  body.innerHTML =
+    '<div class="mt-analyze-error-icon" aria-hidden="true">⚠</div>' +
+    `<h4>Unable to generate report</h4><p>${escapeHtml(message)}</p>`;
+  showModal({
+    title: 'AI Progress Analysis',
+    body,
+    actions: [{ label: 'Close', value: 'close', className: 'btn btn-secondary' }],
+    modalClass: 'mt-analyze-modal',
+  });
+}
+
+function renderAnalyzeResult(result) {
+  const wrap = el('div', { className: 'mt-analyze-result' });
+
+  const targetName = result?.target_name || 'Team';
+  const period = [];
+  if (result?.from_date) period.push(`from ${result.from_date}`);
+  if (result?.to_date) period.push(`to ${result.to_date}`);
+  const periodText = period.length ? period.join(' ') : 'No date range applied';
+
+  const generatedAt = result?.generated_at
+    ? new Date(result.generated_at).toLocaleString()
+    : '—';
+  const generatedBy = result?.generated_by || '—';
+
+  const header = el('div', { className: 'mt-analyze-result-header' });
+  header.innerHTML =
+    `<div class="mt-analyze-result-title">${escapeHtml(targetName)}</div>` +
+    `<div class="mt-analyze-result-meta">${escapeHtml(periodText)} • Generated ${escapeHtml(generatedAt)} • By ${escapeHtml(generatedBy)}</div>`;
+
+  const content = el('div', { className: 'mt-analyze-result-content markdown-body' });
+  content.innerHTML = renderMarkdownToHtml(result?.markdown || '');
+
+  wrap.appendChild(header);
+  wrap.appendChild(content);
+
+  let exporting = false;
+
+  showModal({
+    title: 'AI Progress Analysis',
+    body: wrap,
+    actions: [
+      { label: 'Close', value: 'close', className: 'btn btn-secondary' },
+      { label: 'Export to PDF', value: 'pdf', className: 'btn btn-primary mt-analyze-pdf-btn' },
+    ],
+    modalClass: 'mt-analyze-modal mt-analyze-modal--result',
+  }).then(async (choice) => {
+    if (choice !== 'pdf' || exporting) return;
+    exporting = true;
+    await exportAnalyzeToPdf(result);
+  });
+}
+
+async function exportAnalyzeToPdf(result) {
+  try {
+    const token = localStorage.getItem('matrixpro_token');
+    const body = {
+      markdown: result.markdown,
+      target_name: result.target_name,
+      from_date: result.from_date,
+      to_date: result.to_date,
+      generated_at: result.generated_at,
+      generated_by: result.generated_by,
+    };
+    const res = await fetch(`${API_BASE}/api/reporting/analyze/pdf`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `PDF export failed (${res.status})`);
+    }
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const safeName = (result.target_name || 'report').replace(/\s+/g, '_');
+    a.download = `progress-analysis-${safeName}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    showToast({ message: 'PDF downloaded', type: 'success' });
+  } catch (err) {
+    showToast({ message: err.message || 'PDF export failed', type: 'error' });
   }
 }
 

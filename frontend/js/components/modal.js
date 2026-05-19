@@ -21,7 +21,9 @@ export function showModal({ title, body, confirmText = 'Confirm', cancelText = '
 
   const modal = document.createElement('div');
   modal.className = 'modal';
-  if (modalClass) modal.classList.add(modalClass);
+  if (modalClass) {
+    String(modalClass).split(/\s+/).filter(Boolean).forEach(cls => modal.classList.add(cls));
+  }
   modal.setAttribute('role', 'dialog');
   modal.setAttribute('aria-modal', 'true');
   modal.setAttribute('aria-label', title);

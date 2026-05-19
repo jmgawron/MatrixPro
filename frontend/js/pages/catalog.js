@@ -5,6 +5,7 @@ import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
 import { createElement } from '../utils/dom.js';
 import { getSkillIconSVG, SKILL_ICONS, ICON_CATEGORIES } from '../components/icons.js';
+import { createComboboxMulti } from '../components/combobox-multi.js';
 
 // ─── Module-level page state ─────────────────────────────────────────────────
 
@@ -1635,10 +1636,12 @@ async function openSkillModal(existingSkill) {
 }
 
 function buildSkillForm(skill, formData, isAdmin, isManager, user) {
-  const form = createElement('div', { className: 'catalog-form' });
-  const columns = createElement('div', { className: 'skill-edit-columns' });
+  const form = createElement('div', { className: 'catalog-form skill-edit-form' });
 
-  const leftCol = createElement('div', { className: 'skill-edit-col' });
+  /* ─── Row 1: Name + Desc + Tags + Icon ───────────────────────────────────── */
+  const topSection = createElement('div', { className: 'skill-edit-top-section' });
+
+  const leftCol = createElement('div', { className: 'skill-edit-left-col' });
 
   const nameGroup = buildFormGroup('Name', 'skill-name', 'input', {
     type: 'text',
@@ -1647,44 +1650,18 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   }, true);
   const nameInput = nameGroup.querySelector('#skill-name');
   if (nameInput) nameInput.value = skill?.name || '';
+  nameGroup.classList.add('skill-edit-cell', 'skill-edit-cell--name');
   leftCol.appendChild(nameGroup);
+
+  const metaRow = createElement('div', { className: 'skill-edit-row--meta' });
 
   const descGroup = buildFormGroup('Description', 'skill-desc', 'textarea', {
     placeholder: 'Describe what this skill covers...',
   }, false);
   const descTextarea = descGroup.querySelector('#skill-desc');
   if (descTextarea) descTextarea.textContent = skill?.description || '';
-  leftCol.appendChild(descGroup);
-
-  leftCol.appendChild(buildIconPicker(skill?.icon || null));
-
-  const rightCol = createElement('div', { className: 'skill-edit-col' });
-
-  const existingTeamIds = new Set(
-    Array.isArray(skill?.teams)
-      ? skill.teams.map(t => Number(t.id))
-      : (Array.isArray(skill?.team_ids) ? skill.team_ids.map(Number) : [])
-  );
-
-  const teamsGroupEl = createElement('div', { className: 'form-group' });
-  const teamsLabel = createElement('div', { className: 'form-label' });
-  teamsLabel.textContent = 'Teams';
-  teamsGroupEl.appendChild(teamsLabel);
-
-  const orgTree = formData.orgTree || [];
-  teamsGroupEl.appendChild(buildTeamTree(orgTree, existingTeamIds, isAdmin, isManager, user));
-  rightCol.appendChild(teamsGroupEl);
-
-  const existingCertIds = new Set(Array.isArray(skill?.certificates) ? skill.certificates.map(c => Number(c.id)) : []);
-
-  const certsGroupEl = createElement('div', { className: 'form-group' });
-  const certsLabel = createElement('div', { className: 'form-label' });
-  certsLabel.textContent = 'Certificates';
-  certsGroupEl.appendChild(certsLabel);
-
-  const certTree = formData.certTree || [];
-  certsGroupEl.appendChild(buildCertTree(certTree, existingCertIds));
-  rightCol.appendChild(certsGroupEl);
+  descGroup.classList.add('skill-edit-cell', 'skill-edit-cell--desc');
+  metaRow.appendChild(descGroup);
 
   const tagsGroup = buildFormGroup('Tags', 'skill-tags', 'input', {
     type: 'text',
@@ -1692,16 +1669,174 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   }, false);
   const tagsInput = tagsGroup.querySelector('#skill-tags');
   if (tagsInput) tagsInput.value = Array.isArray(skill?.tags) ? skill.tags.map(t => t.name || t).join(', ') : '';
-  rightCol.appendChild(tagsGroup);
-
   const tagHint = createElement('div', { className: 'form-hint catalog-form-hint' });
   tagHint.textContent = 'Separate multiple tags with commas';
-  rightCol.appendChild(tagHint);
+  tagsGroup.appendChild(tagHint);
+  tagsGroup.classList.add('skill-edit-cell', 'skill-edit-cell--tags');
+  metaRow.appendChild(tagsGroup);
 
-  columns.appendChild(leftCol);
-  columns.appendChild(rightCol);
-  form.appendChild(columns);
+  leftCol.appendChild(metaRow);
+
+  const rightCol = createElement('div', { className: 'skill-edit-right-col skill-edit-cell--icon' });
+  rightCol.appendChild(buildIconPicker(skill?.icon || null));
+
+  topSection.appendChild(leftCol);
+  topSection.appendChild(rightCol);
+  form.appendChild(topSection);
+
+  /* ─── Row 4: Teams + Certificates side-by-side ───────────────────────────── */
+  const existingTeamIds = new Set(
+    Array.isArray(skill?.teams)
+      ? skill.teams.map(t => Number(t.id))
+      : (Array.isArray(skill?.team_ids) ? skill.team_ids.map(Number) : [])
+  );
+  const existingCertIds = new Set(
+    Array.isArray(skill?.certificates) ? skill.certificates.map(c => Number(c.id)) : []
+  );
+
+  const assocRow = createElement('div', { className: 'skill-edit-row skill-edit-row--assoc' });
+
+  /* Teams panel */
+  const teamsPanel = createElement('div', { className: 'skill-assoc-section' });
+  const teamsHeader = createElement('div', { className: 'skill-assoc-section__header' });
+  const teamsLabel = createElement('div', { className: 'skill-assoc-section__label' });
+  teamsLabel.textContent = 'Teams';
+  const teamsBadge = createElement('span', { className: 'skill-assoc-section__badge' });
+  teamsHeader.appendChild(teamsLabel);
+  teamsHeader.appendChild(teamsBadge);
+  teamsPanel.appendChild(teamsHeader);
+
+  const teamOptionsAll = buildTeamOptions(formData.orgTree || []);
+  
+  // Shift filter toggles
+  const shiftToggleGroup = createElement('div', { className: 'skill-shift-filter', role: 'group', 'aria-label': 'Filter by shift' });
+  const activeShifts = new Set([1, 2, 3, 4]);
+  
+  // Teams with _shift === 0 ("No Shift") are ALWAYS shown regardless of toggle state
+  [1, 2, 3, 4].forEach(s => {
+    const btn = createElement('button', { type: 'button', className: 'skill-shift-filter__btn is-active' });
+    btn.textContent = `Shift ${s}`;
+    btn.addEventListener('click', () => {
+      if (activeShifts.has(s)) {
+        activeShifts.delete(s);
+        btn.classList.remove('is-active');
+      } else {
+        activeShifts.add(s);
+        btn.classList.add('is-active');
+      }
+      rebuildTeamCombo();
+    });
+    shiftToggleGroup.appendChild(btn);
+  });
+  teamsPanel.appendChild(shiftToggleGroup);
+
+  function rebuildTeamCombo() {
+    const currentSelected = form._teamCombo ? form._teamCombo.getSelected() : Array.from(existingTeamIds);
+    const selectedSet = new Set(currentSelected);
+    
+    // Filter options: match active shifts, OR _shift === 0 (always shown), OR currently selected
+    const filteredOptions = teamOptionsAll.filter(o => 
+      o._shift === 0 || activeShifts.has(o._shift) || selectedSet.has(o.id)
+    );
+    
+    const newCombo = createComboboxMulti({
+      options: filteredOptions,
+      selectedValues: currentSelected,
+      placeholder: 'Search and add teams…',
+      emptyText: 'No teams match',
+      onChange: (vals) => { teamsBadge.textContent = String(vals.length); },
+      onOpen: () => scrollAssocIntoView(teamsPanel),
+    });
+    
+    if (form._teamCombo) {
+      teamsPanel.replaceChild(newCombo.element, form._teamCombo.element);
+      form._teamCombo.destroy();
+    } else {
+      teamsPanel.appendChild(newCombo.element);
+    }
+    form._teamCombo = newCombo;
+    teamsBadge.textContent = String(newCombo.getSelected().length);
+  }
+  
+  rebuildTeamCombo();
+
+  /* Certificates panel */
+  const certsPanel = createElement('div', { className: 'skill-assoc-section' });
+  const certsHeader = createElement('div', { className: 'skill-assoc-section__header' });
+  const certsLabel = createElement('div', { className: 'skill-assoc-section__label' });
+  certsLabel.textContent = 'Certificates';
+  const certsBadge = createElement('span', { className: 'skill-assoc-section__badge' });
+  certsHeader.appendChild(certsLabel);
+  certsHeader.appendChild(certsBadge);
+  certsPanel.appendChild(certsHeader);
+
+  const certOptions = (formData.certTree || []).flatMap(cd =>
+    (Array.isArray(cd.certificates) ? cd.certificates : []).map(c => ({
+      id: Number(c.id),
+      label: c.name,
+      group: cd.name,
+    }))
+  );
+  const certCombo = createComboboxMulti({
+    options: certOptions,
+    selectedValues: Array.from(existingCertIds),
+    placeholder: 'Search and add certificates…',
+    emptyText: 'No certificates match',
+    onChange: (vals) => { certsBadge.textContent = String(vals.length); },
+    onOpen: () => scrollAssocIntoView(certsPanel),
+  });
+  certsPanel.appendChild(certCombo.element);
+  certsBadge.textContent = String(certCombo.getSelected().length);
+  form._certCombo = certCombo;
+
+  assocRow.appendChild(teamsPanel);
+  assocRow.appendChild(certsPanel);
+  form.appendChild(assocRow);
+
   return form;
+}
+
+function scrollAssocIntoView(panel) {
+  if (!panel) return;
+  let scroller = panel.parentElement;
+  while (scroller && scroller !== document.body) {
+    const cs = getComputedStyle(scroller);
+    if (/(auto|scroll)/.test(cs.overflowY) && scroller.scrollHeight > scroller.clientHeight) break;
+    scroller = scroller.parentElement;
+  }
+  if (!scroller || scroller === document.body) return;
+  requestAnimationFrame(() => {
+    const panelRect = panel.getBoundingClientRect();
+    const scrollerRect = scroller.getBoundingClientRect();
+    const delta = panelRect.bottom - scrollerRect.bottom + 16;
+    if (delta > 0) {
+      scroller.scrollTo({ top: scroller.scrollTop + delta, behavior: 'smooth' });
+    }
+  });
+}
+
+function buildTeamOptions(orgTree) {
+  const rows = [];
+  (Array.isArray(orgTree) ? orgTree : []).forEach(domain => {
+    if (!Array.isArray(domain.teams)) return;
+    domain.teams.forEach(team => {
+      const shift = Number.isFinite(team.shift) ? team.shift : 0;
+      const shiftLabel = shift === 0 ? 'No Shift' : `Shift ${shift}`;
+      rows.push({
+        id: Number(team.id),
+        label: team.name,
+        group: `${shiftLabel} · ${domain.name}`,
+        _shift: shift,
+        _domain: domain.name,
+      });
+    });
+  });
+  rows.sort((a, b) => {
+    if (a._shift !== b._shift) return a._shift - b._shift;
+    if (a._domain !== b._domain) return a._domain.localeCompare(b._domain);
+    return a.label.localeCompare(b.label);
+  });
+  return rows.map(r => ({ id: r.id, label: r.label, group: r.group, _shift: r._shift }));
 }
 
 
@@ -1761,130 +1896,6 @@ function buildIconPicker(selectedIcon) {
 }
 
 
-function buildTeamTree(orgTree, existingTeamIds, isAdmin, isManager, user) {
-  const treeEl = createElement('div', { className: 'skill-team-tree' });
-
-  const shiftMap = new Map();
-  orgTree.forEach(domain => {
-    if (!domain.teams || !domain.teams.length) return;
-    domain.teams.forEach(team => {
-      const shift = team.shift || 0;
-      if (!shiftMap.has(shift)) shiftMap.set(shift, []);
-      shiftMap.get(shift).push({ domain: domain.name, domainId: domain.id, team });
-    });
-  });
-
-  const sortedShifts = Array.from(shiftMap.keys()).sort((a, b) => a - b);
-
-  sortedShifts.forEach(shift => {
-    const shiftItems = shiftMap.get(shift);
-    const shiftNode = createElement('div', { className: 'team-tree-shift' });
-
-    const shiftLabel = shift === 0 ? 'No Shift' : `Shift ${shift}`;
-    const shiftToggle = createElement('div', { className: 'team-tree-toggle' });
-    const chevron = createElement('span', { className: 'tree-chevron open' });
-    chevron.textContent = '\u25B6';
-    shiftToggle.appendChild(chevron);
-    shiftToggle.appendChild(document.createTextNode(shiftLabel));
-    shiftNode.appendChild(shiftToggle);
-
-    const shiftChildren = createElement('div', { className: 'team-tree-children' });
-
-    const domainGroups = new Map();
-    shiftItems.forEach(item => {
-      if (!domainGroups.has(item.domainId)) {
-        domainGroups.set(item.domainId, { name: item.domain, teams: [] });
-      }
-      domainGroups.get(item.domainId).teams.push(item.team);
-    });
-
-    domainGroups.forEach((dg) => {
-      const domainNode = createElement('div', { className: 'team-tree-domain' });
-      const domainLabel = createElement('div', { className: 'team-tree-domain-label' });
-      domainLabel.textContent = dg.name;
-      domainNode.appendChild(domainLabel);
-
-      const teamsContainer = createElement('div', { className: 'team-tree-teams' });
-
-      dg.teams.forEach(team => {
-        const lbl = createElement('label');
-        const check = createElement('input', { type: 'checkbox', value: team.id });
-        check.className = 'skill-team-check';
-        check.checked = existingTeamIds.has(Number(team.id));
-
-        if (isManager && !isAdmin) {
-          if (Number(team.id) === Number(user?.team_id)) {
-            check.checked = true;
-            check.disabled = true;
-          } else {
-            check.disabled = true;
-          }
-        }
-
-        lbl.appendChild(check);
-        lbl.appendChild(document.createTextNode(team.name));
-        teamsContainer.appendChild(lbl);
-      });
-
-      domainNode.appendChild(teamsContainer);
-      shiftChildren.appendChild(domainNode);
-    });
-
-    shiftNode.appendChild(shiftChildren);
-    treeEl.appendChild(shiftNode);
-
-    shiftToggle.addEventListener('click', () => {
-      const isOpen = chevron.classList.contains('open');
-      chevron.classList.toggle('open', !isOpen);
-      shiftChildren.classList.toggle('collapsed', isOpen);
-    });
-  });
-
-  return treeEl;
-}
-
-function buildCertTree(certTree, existingCertIds) {
-  const treeEl = createElement('div', { className: 'skill-team-tree' });
-
-  (Array.isArray(certTree) ? certTree : []).forEach(domain => {
-    if (!Array.isArray(domain.certificates) || !domain.certificates.length) return;
-
-    const domainNode = createElement('div', { className: 'cert-tree-domain' });
-
-    const toggle = createElement('div', { className: 'cert-tree-toggle' });
-    const chevron = createElement('span', { className: 'tree-chevron open' });
-    chevron.textContent = '\u25B6';
-    toggle.appendChild(chevron);
-    toggle.appendChild(document.createTextNode(domain.name));
-    domainNode.appendChild(toggle);
-
-    const childrenEl = createElement('div', { className: 'cert-tree-children' });
-    const certsEl = createElement('div', { className: 'cert-tree-certs' });
-
-    domain.certificates.forEach(cert => {
-      const lbl = createElement('label');
-      const check = createElement('input', { type: 'checkbox', value: cert.id });
-      check.className = 'skill-cert-check';
-      check.checked = existingCertIds.has(Number(cert.id));
-      lbl.appendChild(check);
-      lbl.appendChild(document.createTextNode(cert.name));
-      certsEl.appendChild(lbl);
-    });
-
-    childrenEl.appendChild(certsEl);
-    domainNode.appendChild(childrenEl);
-    treeEl.appendChild(domainNode);
-
-    toggle.addEventListener('click', () => {
-      const isOpen = chevron.classList.contains('open');
-      chevron.classList.toggle('open', !isOpen);
-      childrenEl.classList.toggle('collapsed', isOpen);
-    });
-  });
-
-  return treeEl;
-}
-
 function buildFormGroup(labelText, inputId, inputTag, attrs, required) {
   const group = createElement('div', { className: 'form-group' });
   const label = createElement('label', { className: required ? 'form-label required' : 'form-label', htmlFor: inputId });
@@ -1913,11 +1924,12 @@ function readSkillForm(formEl) {
   const selectedIconEl = formEl.querySelector('.skill-icon-option.selected');
   const icon = selectedIconEl ? selectedIconEl.dataset.icon : null;
 
-  const teamChecks = formEl.querySelectorAll('.skill-team-check:checked');
-  const team_ids = Array.from(teamChecks).map(c => Number(c.value));
-
-  const certChecks = formEl.querySelectorAll('.skill-cert-check:checked');
-  const certificate_ids = Array.from(certChecks).map(c => Number(c.value));
+  const team_ids = formEl._teamCombo
+    ? formEl._teamCombo.getSelected().map(Number).filter(Number.isFinite)
+    : [];
+  const certificate_ids = formEl._certCombo
+    ? formEl._certCombo.getSelected().map(Number).filter(Number.isFinite)
+    : [];
 
   const tagsRaw = formEl.querySelector('#skill-tags')?.value.trim() || '';
   const tag_names = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];

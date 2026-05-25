@@ -86,6 +86,25 @@ def _check_plan_access(current_user: User, engineer_id: int, db: Session) -> Use
     raise HTTPException(status_code=403, detail="Access denied")
 
 
+def _require_owner(current_user: User, engineer_id: int, db: Session) -> User:
+    """Decision 2C: user-content mutations are owner-only. Admin retained for ops.
+
+    Managers cannot create/edit/delete/toggle a report's personalized items even
+    when they can view the report's plan.
+    """
+    engineer = db.query(User).filter(User.id == engineer_id).first()
+    if engineer is None:
+        raise HTTPException(status_code=404, detail="Engineer not found")
+    if current_user.role == UserRole.admin:
+        return engineer
+    if current_user.id == engineer_id:
+        return engineer
+    raise HTTPException(
+        status_code=403,
+        detail="Only the owner can modify personalized content",
+    )
+
+
 def _eager_load_plan(db: Session, plan_id: int) -> Optional[DevelopmentPlan]:
     return (
         db.query(DevelopmentPlan)
@@ -820,15 +839,18 @@ def get_plan_skill_content(
             )
         )
 
-    user_items = (
-        db.query(UserLevelContent)
-        .filter(
-            UserLevelContent.user_id == engineer_id,
-            UserLevelContent.plan_skill_id == plan_skill_id,
-        )
-        .order_by(UserLevelContent.level, UserLevelContent.position)
-        .all()
+    user_items_q = db.query(UserLevelContent).filter(
+        UserLevelContent.user_id == engineer_id,
+        UserLevelContent.plan_skill_id == plan_skill_id,
     )
+    if (
+        current_user.id != engineer_id
+        and current_user.role != UserRole.admin
+    ):
+        user_items_q = user_items_q.filter(UserLevelContent.is_private == False)  # noqa: E712
+    user_items = user_items_q.order_by(
+        UserLevelContent.level, UserLevelContent.position
+    ).all()
 
     for ui in user_items:
         if ui.completed:
@@ -841,6 +863,8 @@ def get_plan_skill_content(
                 type=ui.type,
                 title=ui.title,
                 description=ui.description,
+                description_format=ui.description_format,
+                is_private=ui.is_private,
                 url=ui.url,
                 position=ui.position,
                 completed=ui.completed,
@@ -1043,7 +1067,7 @@ def create_user_content(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _check_plan_access(current_user, engineer_id, db)
+    _require_owner(current_user, engineer_id, db)
     plan = _get_or_create_plan(db, engineer_id)
 
     plan_skill = (
@@ -1055,8 +1079,11 @@ def create_user_content(
     if plan_skill is None:
         raise HTTPException(status_code=404, detail="Plan skill not found")
 
-    if data.level not in (1, 2, 3, 4, 5):
-        raise HTTPException(status_code=400, detail="Level must be between 1 and 5")
+    if data.level not in (1, 2, 3):
+        raise HTTPException(
+            status_code=400,
+            detail="Level must be 1 (Education), 2 (Exposure), or 3 (Experience)",
+        )
 
     if not data.title or not data.title.strip():
         raise HTTPException(status_code=400, detail="Title is required")
@@ -1081,6 +1108,8 @@ def create_user_content(
         type=data.type,
         title=data.title.strip(),
         description=data.description,
+        description_format=data.description_format or "markdown",
+        is_private=bool(data.is_private),
         url=data.url,
         position=next_pos,
     )
@@ -1122,7 +1151,7 @@ def update_user_content(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _check_plan_access(current_user, engineer_id, db)
+    _require_owner(current_user, engineer_id, db)
     plan = _get_or_create_plan(db, engineer_id)
 
     plan_skill = (
@@ -1151,6 +1180,10 @@ def update_user_content(
         item.title = data.title.strip()
     if data.description is not None:
         item.description = data.description
+    if data.description_format is not None:
+        item.description_format = data.description_format
+    if data.is_private is not None:
+        item.is_private = bool(data.is_private)
     if data.url is not None:
         item.url = data.url
     if data.type is not None:
@@ -1184,7 +1217,7 @@ def delete_user_content(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _check_plan_access(current_user, engineer_id, db)
+    _require_owner(current_user, engineer_id, db)
     plan = _get_or_create_plan(db, engineer_id)
 
     plan_skill = (
@@ -1242,7 +1275,7 @@ def toggle_user_content_completion(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _check_plan_access(current_user, engineer_id, db)
+    _require_owner(current_user, engineer_id, db)
     plan = _get_or_create_plan(db, engineer_id)
 
     plan_skill = (

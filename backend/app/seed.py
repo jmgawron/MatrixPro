@@ -46,6 +46,22 @@ def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
 
 
+AVATAR_CATALOG_IDS = [
+    "avatar_astronaut", "avatar_ninja", "avatar_pirate", "avatar_wizard",
+    "avatar_scientist", "avatar_detective", "avatar_chef", "avatar_pilot",
+    "avatar_viking", "avatar_samurai", "avatar_cowboy", "avatar_knight",
+    "avatar_robot", "avatar_alien", "avatar_vampire", "avatar_crown",
+    "avatar_star", "avatar_shield", "avatar_bolt", "avatar_flame",
+    "avatar_diamond", "avatar_rocket", "avatar_globe", "avatar_atom",
+    "avatar_compass", "avatar_anchor", "avatar_leaf", "avatar_wolf",
+    "avatar_phoenix", "avatar_dragon",
+]
+
+
+def pick_avatar(idx: int) -> str:
+    return AVATAR_CATALOG_IDS[idx % len(AVATAR_CATALOG_IDS)]
+
+
 DOMAIN_DEFS = [
     ("ENT",   "Enterprise Networking",      True,  "route"),
     ("DC",    "Data Center Networking",     True,  "datacenter"),
@@ -968,7 +984,7 @@ def _seed_lansw_shift2(db) -> None:
             password_hash=pwd,
             role=role_map[role_str],
             team_id=shift2_id,
-            avatar=f"avatar-{(idx % 8) + 1}",
+            avatar=pick_avatar(idx + 1),
         )
         db.add(u)
         db.flush()
@@ -1297,7 +1313,7 @@ def run():
         admin = User(
             name="Alex", surname="Admin",
             email="admin@matrixpro.com",
-            password_hash=pwd, role=UserRole.admin, avatar="avatar-1",
+            password_hash=pwd, role=UserRole.admin, avatar=pick_avatar(0),
         )
         db.add(admin)
         db.flush()
@@ -1339,7 +1355,7 @@ def run():
                 password_hash=pwd,
                 role=UserRole.manager,
                 team_id=shift1.id,
-                avatar=f"avatar-{(idx % 8) + 1}",
+                avatar=pick_avatar(idx + 10),
             )
             db.add(mgr)
             db.flush()
@@ -1352,7 +1368,7 @@ def run():
                 role=UserRole.engineer,
                 team_id=shift1.id,
                 manager_id=mgr.id,
-                avatar=f"avatar-{((idx + 3) % 8) + 1}",
+                avatar=pick_avatar(idx + 20),
             )
             db.add(eng)
             db.flush()

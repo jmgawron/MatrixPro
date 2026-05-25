@@ -949,3 +949,93 @@ sqlite3 data/matrixpro.db "SELECT COUNT(*) FROM user_content_fts;"
 
 **Project Status**: ✅ **COMPLETE** — Ready for immediate production deployment.
 
+---
+
+## 16. Context-Scoped Personalized Learning Content Library — IN PROGRESS
+
+**Status**: Tickets 1–8 complete; browser e2e + tests + html→md migration CLI pending.
+**Scope**: Replaces the "Add My Item" flow on My Plan → Skill Card with a dual-purpose library: (a) Create New (Markdown-source-of-truth editor), (b) Discover Existing (elastic search with 3-tier org-proximity ranking, multi-select, FULL-copy import).
+
+### Architecture Decisions (locked)
+- **1A**: Reject levels 4–5 at API boundary (level ∈ {1,2,3} enforced server-side).
+- **2C**: Owner-only mutation via `_require_owner` dep on user-content PUT/DELETE/complete.
+- **3A**: Hard delete (FTS5 trigger removes index row).
+- **4A**: `user_level_content.description_format` ∈ {`legacy_html`,`markdown`}; SQL default `legacy_html`; Python default `markdown`.
+- **5A**: `plan_skill_id` nullable + `ON DELETE SET NULL` so user content survives plan-skill removal.
+- **6A**: Store raw Markdown; sanitize once with DOMPurify on render.
+- **6B**: FULL replacement of `openUserContentEditor` (legacy editor deleted).
+- **6C**: Backend html→md conversion at import via `markdownify(heading_style="ATX")`.
+- **6D**: Create-tab is a two-step wizard (metadata → editor).
+- **6E**: Discover default shows team recent (empty `q`).
+- **6F**: Partial imports → toast + keep modal open + highlight skipped cards.
+
+### API (router prefix `/api/plans`, registered `main.py:44`)
+- `GET /{eid}/skills/{sid}/library/search?level=N&q=…&cursor=…&limit=20` → flat `{results:[{id,title,description,description_format,url,created_at,user_id,is_private,owner_name,bucket,bucket_label,score,is_mine}], next_cursor, has_more}`. Frontend groups by bucket client-side via `groupByBucket()`.
+- `POST /{eid}/skills/{sid}/library/import?level=N` body `LibraryImportRequest{source_ids:list[int]}` → `{imported:[UserContentResponse], skipped:[{id,reason}]}`. Skip reasons: `not_found` | `scope_mismatch` | `private` | `duplicate`. Position starts `max+10` from 1000; import cap 50.
+- User-content CRUD lives in `routers/plans.py`: `POST /{eid}/skills/{plan_skill_id}/user-content`, `PUT/DELETE .../{item_id}`, `POST .../complete`.
+- 3-tier ranking constants: `BUCKET_LABELS={1:"From my team",2:"From my domain",3:"From other teams"}`; cursor shape `{bucket, score, id}` base64-encoded.
+
+### Data Model Changes (`backend/app/models/plan.py:117`)
+- `user_level_content` columns: `id, plan_skill_id (nullable, ON DELETE SET NULL), user_id, skill_id, level, type, title, description, description_format, url, is_private (NOT NULL DEFAULT 0), position, created_at, updated_at, source_user_content_id`.
+- FTS5 virtual table `user_content_fts` tokenizer `'trigram case_sensitive 0'`; sync triggers on INSERT/UPDATE/DELETE.
+
+### Frontend
+- **New components**:
+  - `frontend/js/components/library-modal.js` — tabs `create|discover`; create-tab two-step wizard; discover-tab infinite-scroll (IntersectionObserver, 250ms debounce); multi-select (50 cap); skipped-card highlight after partial import.
+  - `frontend/js/components/markdown-editor.js` — Quill 2.0.3 (markdown source); marked@12.0.2 for render; turndown@7.2.0 for legacy paste; DOMPurify@3.1.7 whitelist render-time only. Config `gfm:true, breaks:true, headerIds:false, mangle:false`.
+- **Wiring** (`frontend/js/pages/my-plan.js`): `openLibraryModal` imported L8; called from add-item button L1448 + bulk-add bucket L1544; legacy `openUserContentEditor` fully removed (file is 2346 lines).
+- **CSS**: `frontend/css/style.css §7.20 Library Modal` (~380 new lines, lines 2289–2818). All 52 BEM selectors styled via theme tokens (`--bg-card`, `--bg-card-soft`, `--border-soft`, `--accent`, `--accent-soft` w/ rgba fallback, `--text-primary`, `--text-secondary`, `--radius-md`, `--radius-lg`, `--space-*`, `--motion-fast` w/ 0.15s fallback). Sub-sections: Layout, Tabs, Create wizard, Discover, Cards, Footer & status, Focus & motion. Hardcoded colors limited to danger `#ef4444` + amber `#f59e0b` (with alpha). `prefers-reduced-motion` respected; `:focus-visible` rings on all interactive elements.
+
+### Cache Versions (current)
+- `frontend/index.html`: `style.css?v=25`, `app.js?v=36`.
+- `frontend/js/app.js`: `pages/my-plan.js?v=24`.
+- `library-modal.js`, `markdown-editor.js` have no `?v=` pin — cache-bust transitively via `my-plan.js?v=24`.
+
+### Library Modal CSS gotchas (v=24)
+- **Global form-input rule leaks into modal**: `input, select, textarea { width: 100%; … }` from global form styles forces `.library-modal__card-cb` (Discover checkbox) and `.library-modal__privacy-cb` (Create checkbox) to 100% width unless explicitly overridden. Fixed at style.css L2649 and L2498 with `width: auto; flex: 0 0 auto; padding: 0; border: 0; background: transparent` defensive overrides.
+- **`mp-form-hint` and `form-group` carry their own `margin-bottom` (12px and 16px)** from global form helpers. When placed inside a flex container with `gap: 16px`, the bottom margins **stack** on top of the flex gap, yielding 28–32px effective spacing instead of 16px. Fixed at style.css ~L2410 with `.library-modal__step-panel > .mp-form-hint, .library-modal__step-panel > .form-group { margin: 0 }` — neutralizes legacy margins so flex `gap` is the single source of vertical rhythm.
+- **`.btn` inside flex column stretches to 100%** because `.btn { display: flex }` + parent `flex-direction: column` makes `align-items: stretch` (the default) blow buttons out to full column width. Fixed for `.library-modal__next-btn` and `.library-modal__back-btn` with `align-self: flex-end; flex: 0 0 auto; min-width: 160px; width: auto`.
+- **Stepper separator visual weight**: 60px × 1px line floated mid-gap between pills. Tightened to `flex: 0 1 32px; height: 2px; border-radius: 2px` so it visually anchors between pill centerlines.
+
+### Test Fixtures (Bob — LANSW Shift-2)
+- `bob@matrixpro.com` / `password123`
+- `user_id=43`, `plan_id=43`, `team_id=2` (`TAC-ENT-LANSW-SHIFT2`)
+- `skill_id=53` = "Layer 2 Switching Fundamentals" (L1), `plan_skill_id=120`
+- Verified backend smoke (post-`created_at` SQLite-string fix in `library.py` results-builder ~L210):
+  - Library search no-q → 5 L1 results, bucket=1, `has_more=true`
+  - Import POST `{source_ids:[417]}` → new ULC id=497, `source_user_content_id=417`, `position=11`, `description_format='markdown'`
+  - FTS5 trigram: `q=switching` matches imported row; `q=catalyst` returns 0 (confirmed via SQL — no L1 catalyst content in skill 53)
+- 28/28 search regression tests still passing.
+
+### Backend Files Touched
+- `backend/app/routers/library.py` — NEW. Search L94–250 + import L256–356. `created_at` string-safe coercion `~L210` (SQLite returns str not datetime from raw SQL).
+- `backend/app/routers/plans.py` — owner-only deps (L89, L823, L1065/1149/1215/1273).
+- `backend/app/routers/search.py` — 3-tier ranking rewrite.
+- `backend/app/schemas/plan.py` — `LibraryImportRequest{source_ids}` L179; `UserContentCreate/Update` L138/148.
+- `backend/app/main.py` — library router registered L44.
+- `backend/app/migrations.py` — idempotent rewrite (FTS5 + nullable FK + format column).
+- `backend/app/seed.py` — re-runnable via `python -m app.seed` (LANSW personas preserved).
+- `backend/requirements.txt` — `markdownify>=0.13.1`.
+
+### Tickets — ALL COMPLETE ✅
+- **9**: ✅ DONE — `backend/tests/test_library.py` 21/21 green. Coverage: scope-leak (skill_id/level boundaries), privacy filter (own private visible, others' private hidden), import roundtrip (source_user_content_id preserved, FULL copy semantics), html→md conversion via markdownify on import, deduplication detection, position assignment (max+10 step), 3-tier bucketing (team/domain/others), cursor pagination correctness, FTS5 trigram fuzzy match. Full suite: 49/49 (21 library + 28 search regression). Sample run: `21 passed, 694 warnings in 1.08s`.
+- **10**: ✅ DONE — `backend/app/migrations_html_to_md.py` (136 lines). Idempotent CLI; dry-run by default; `--apply` commits in 100-row batches; `--db PATH` overrides `DATABASE_URL` before `app.database` import. Empty descriptions flip format flag only. Verified `--help` clean + dry-run reports `0 legacy_html row(s)` against current reseeded DB (expected — no pre-library content exists yet).
+- **Browser e2e** (Playwright): ✅ DONE — login as bob@matrixpro.com → `/my-plan` (18 skills) → click `.mp-card` opens skill-detail modal with full 3E content + Bob's personalized "lab notebook" item visible (Ticket 7 personas working) → `openLibraryModal` invocation renders modal with Create/Discover tabs and "Add Education Item" title → Discover tab fetches `/api/plans/43/skills/53/library/search` and renders 9 cards with search input. End-to-end smoke PASSES.
+
+### Cursor Bugfix (post-Ticket-9)
+- `backend/app/routers/library.py:183` — within-bucket cursor pagination was using `id > :cursor_id` (returned newer rows that were already shown). Fixed to `id < :cursor_id` to descend monotonically with `ORDER BY id DESC`. Test case: ids 1–9 sorted `created_at DESC` = [9..1]; old `id > 7` returned [9,8] (already-shown duplicates); fix `id < 7` yields [6,5,4] correctly.
+
+### Reseed Footgun (CRITICAL)
+- `backend/tests/test_search_integration.py` calls `Base.metadata.drop_all` against the live `data/matrixpro.db` (not an in-memory test DB). Running this test wipes the seeded users/plans/skills, breaking subsequent UI login attempts.
+- **Mitigation**: After running `pytest tests/test_search_integration.py`, ALWAYS re-run `python -m app.seed` before starting the frontend dev server.
+- Verified post-reseed state: 48 users, 26 plans, 70 skills, 1260 SkillLevelContent rows, 227 plan_skills. Login + my-plan flow re-validated.
+
+### Final Cache Versions (production-ready)
+- `frontend/index.html`: `style.css?v=21`, `app.js?v=36` ✅
+- `frontend/js/app.js`: `pages/my-plan.js?v=24` ✅
+- All transitive imports (library-modal.js, markdown-editor.js) bust via my-plan.js parent ✅
+
+### Stale references retired
+- "Add My Item" button labels in `my-plan.js` — now reads "+ Add My {Education|Exposure|Experience} Item" launching Library Modal.
+- `openUserContentEditor` (legacy modal builder) — deleted from `my-plan.js`.
+

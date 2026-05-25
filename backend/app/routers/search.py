@@ -1,15 +1,19 @@
 """
 Search endpoint for personal learning items with grouped pagination.
 
-Provides full-text search over user_level_content with:
-- FTS5 trigram tokenizer for fuzzy matching
-- Proximity-based grouping (engineer → team → domain → global)
-- Cursor-based pagination for infinite scroll
-- BM25 ranking with proximity boost
+FTS5 trigram fuzzy matching + 3-tier proximity bucketing:
+  1 = Same team (incl. requesting user's own items)
+  2 = Same domain (different team)
+  3 = Other (different domain)
+
+See AGENTS.md §16 (Decision 5A/6A) for rationale on:
+  - No `deleted_at` filter (hard delete + FTS DELETE trigger)
+  - Domain resolved via team_id → teams.domain_id (User has no domain_id)
+  - 3 tiers, not 4 (collapsed per user's grouping spec)
 """
 
 import logging
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -17,65 +21,48 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_current_user, require_manager_of
-from app.models.user import User
-from app.models.plan import UserLevelContent, PlanSkill
+from app.dependencies import get_current_user
+from app.models.user import User, UserRole
+from app.models.plan import PlanSkill
 from app.models.skill import Skill
-from app.models.org import Team
-from app.search_utils import SearchCursor, ProximityBucketer, BM25Ranker
+from app.search_utils import SearchCursor
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/plans", tags=["search"])
 
-# Bucket labels for UI
 BUCKET_LABELS = {
-    1: "Your items",
-    2: "Team items",
-    3: "Domain items",
-    4: "Global items"
+    1: "From my team",
+    2: "From my domain",
+    3: "From other teams",
 }
 
 
-class SearchResult:
-    """Represents a single search result with proximity metadata."""
-    
-    def __init__(
-        self,
-        id: int,
-        title: str,
-        description: Optional[str],
-        url: Optional[str],
-        bucket: int,
-        score: float,
-        created_at: datetime,
-        user_id: int,
-        is_user_content: bool = True
-    ):
-        self.id = id
-        self.title = title
-        self.description = description
-        self.url = url
-        self.bucket = bucket
-        self.bucket_label = BUCKET_LABELS.get(bucket, "Unknown")
-        self.score = score
-        self.created_at = created_at
-        self.user_id = user_id
-        self.is_user_content = is_user_content
-    
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "title": self.title,
-            "description": self.description,
-            "url": self.url,
-            "bucket": self.bucket,
-            "bucket_label": self.bucket_label,
-            "score": round(self.score, 2),
-            "created_at": self.created_at.isoformat(),
-            "user_id": self.user_id,
-            "is_user_content": self.is_user_content
-        }
+def _resolve_team_and_domain(db: Session, user_id: int) -> tuple[Optional[int], Optional[int]]:
+    row = db.execute(
+        text(
+            "SELECT u.team_id, t.domain_id "
+            "FROM users u LEFT JOIN teams t ON u.team_id = t.id "
+            "WHERE u.id = :uid"
+        ),
+        {"uid": user_id},
+    ).fetchone()
+    if not row:
+        return None, None
+    return row[0], row[1]
+
+
+def _check_access(current_user: User, engineer_id: int, db: Session) -> None:
+    if current_user.id == engineer_id:
+        return
+    if current_user.role == UserRole.admin:
+        return
+    engineer = db.query(User).filter(User.id == engineer_id).first()
+    if not engineer:
+        raise HTTPException(status_code=404, detail="Engineer not found")
+    if current_user.role == UserRole.manager and engineer.manager_id == current_user.id:
+        return
+    raise HTTPException(status_code=403, detail="Not authorized for this engineer")
 
 
 @router.get("/{engineer_id}/skills/{skill_id}/content/search")
@@ -87,258 +74,179 @@ async def search_content(
     cursor: Optional[str] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """
-    Search personal learning items with grouped pagination.
-    
-    Supports:
-    - Fuzzy text search via FTS5 trigram tokenizer
-    - Proximity-based grouping (same engineer → team → domain → global)
-    - Cursor-based pagination for infinite scroll
-    - BM25 ranking with proximity boost
-    
-    Query parameters:
-        q: Free-text search query (required, 1-200 chars)
-        level: 3E level (1=Education, 2=Exposure, 3=Experience)
-        cursor: Pagination cursor (base64-encoded JSON)
-        limit: Results per page (default 20, max 100)
-    
-    Response:
-        {
-            "results": [
-                {
-                    "id": 123,
-                    "title": "...",
-                    "description": "...",
-                    "bucket": 1,
-                    "bucket_label": "Your items",
-                    "score": 42.5,
-                    "created_at": "2026-05-25T10:30:00",
-                    "user_id": 5,
-                    "is_user_content": true
-                }
-            ],
-            "next_cursor": "eyJidWNrZXQiOjEsInNjb3JlIjo0Mi41LCJpZCI6MTIzfQ==",
-            "has_more": true,
-            "total_count": 156
-        }
-    """
-    
-    # Verify access: current user must be the engineer or a manager/admin
-    if current_user.id != engineer_id:
-        require_manager_of(engineer_id, current_user, db)
-    
-    # Get requesting user's org context for proximity bucketing
-    requesting_user = db.query(User).filter(User.id == current_user.id).first()
-    if not requesting_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Get target engineer's org context
-    target_engineer = db.query(User).filter(User.id == engineer_id).first()
-    if not target_engineer:
-        raise HTTPException(status_code=404, detail="Engineer not found")
-    
-    # Verify skill exists and engineer has it in their plan
+    _check_access(current_user, engineer_id, db)
+
     skill = db.query(Skill).filter(Skill.id == skill_id).first()
     if not skill:
         raise HTTPException(status_code=404, detail="Skill not found")
-    
-    plan_skill = db.query(PlanSkill).filter(
-        PlanSkill.plan_id == target_engineer.development_plan.id,
-        PlanSkill.skill_id == skill_id
-    ).first()
+
+    engineer = db.query(User).filter(User.id == engineer_id).first()
+    if not engineer or not engineer.development_plan:
+        raise HTTPException(status_code=404, detail="Engineer plan not found")
+
+    plan_skill = (
+        db.query(PlanSkill)
+        .filter(
+            PlanSkill.plan_id == engineer.development_plan.id,
+            PlanSkill.skill_id == skill_id,
+        )
+        .first()
+    )
     if not plan_skill:
         raise HTTPException(status_code=404, detail="Skill not in engineer's plan")
-    
-    # Decode cursor if provided
-    cursor_data = None
-    if cursor:
-        cursor_data = SearchCursor.decode(cursor)
-        if not cursor_data:
-            raise HTTPException(status_code=400, detail="Invalid cursor")
-    
-    # Build FTS5 search query with proximity bucketing
-    # This query:
-    # 1. Joins user_content_fts (FTS5 virtual table) with user_level_content
-    # 2. Filters by skill_id, level, and soft-delete status
-    # 3. Calculates proximity bucket based on org hierarchy
-    # 4. Applies BM25 ranking with proximity boost
-    # 5. Implements cursor-based pagination
-    
+
+    cursor_data = SearchCursor.decode(cursor) if cursor else None
+    if cursor and not cursor_data:
+        raise HTTPException(status_code=400, detail="Invalid cursor")
+
+    req_team_id, req_domain_id = _resolve_team_and_domain(db, current_user.id)
+
+    is_admin = current_user.role == UserRole.admin
+    privacy_filter = (
+        "AND (ulc.is_private = 0 OR ulc.user_id = :requesting_user_id)"
+        if not is_admin
+        else ""
+    )
+
     fts_query = f"""
     SELECT
         ulc.id,
         ulc.title,
         ulc.description,
+        ulc.description_format,
         ulc.url,
         ulc.created_at,
         ulc.user_id,
+        ulc.is_private,
         CASE
-            WHEN ulc.user_id = :requesting_user_id THEN 1
-            WHEN u_target.team_id = u_requesting.team_id THEN 2
-            WHEN u_target.domain_id = u_requesting.domain_id THEN 3
-            ELSE 4
+            WHEN :req_team_id IS NOT NULL AND u_owner.team_id = :req_team_id THEN 1
+            WHEN :req_domain_id IS NOT NULL AND t_owner.domain_id = :req_domain_id THEN 2
+            ELSE 3
         END AS bucket,
         fts.rank AS bm25_score
     FROM user_content_fts fts
     JOIN user_level_content ulc ON fts.rowid = ulc.id
-    JOIN users u_target ON ulc.user_id = u_target.id
-    JOIN users u_requesting ON u_requesting.id = :requesting_user_id
+    JOIN users u_owner ON ulc.user_id = u_owner.id
+    LEFT JOIN teams t_owner ON u_owner.team_id = t_owner.id
     WHERE
         ulc.skill_id = :skill_id
         AND ulc.level = :level
-        AND ulc.deleted_at IS NULL
+        {privacy_filter}
         AND fts.user_content_fts MATCH :search_query
     """
-    
-    # Add cursor-based pagination filter if provided
+
     if cursor_data:
-        fts_query += f"""
+        fts_query += """
         AND (
-            bucket > :cursor_bucket
-            OR (bucket = :cursor_bucket AND bm25_score < :cursor_score)
-            OR (bucket = :cursor_bucket AND bm25_score = :cursor_score AND ulc.id > :cursor_id)
+            (CASE
+                WHEN :req_team_id IS NOT NULL AND u_owner.team_id = :req_team_id THEN 1
+                WHEN :req_domain_id IS NOT NULL AND t_owner.domain_id = :req_domain_id THEN 2
+                ELSE 3
+            END) > :cursor_bucket
+            OR (
+                (CASE
+                    WHEN :req_team_id IS NOT NULL AND u_owner.team_id = :req_team_id THEN 1
+                    WHEN :req_domain_id IS NOT NULL AND t_owner.domain_id = :req_domain_id THEN 2
+                    ELSE 3
+                END) = :cursor_bucket
+                AND (fts.rank > :cursor_score OR (fts.rank = :cursor_score AND ulc.id > :cursor_id))
+            )
         )
         """
-    
+
     fts_query += """
-    ORDER BY bucket ASC, bm25_score DESC, ulc.id ASC
+    ORDER BY bucket ASC, fts.rank ASC, ulc.id ASC
     LIMIT :limit_plus_one
     """
-    
-    # Prepare query parameters
+
     params = {
         "requesting_user_id": current_user.id,
+        "req_team_id": req_team_id,
+        "req_domain_id": req_domain_id,
         "skill_id": skill_id,
         "level": level,
-        "search_query": q,  # FTS5 will handle fuzzy matching via trigram tokenizer
-        "limit_plus_one": limit + 1
+        "search_query": q,
+        "limit_plus_one": limit + 1,
     }
-    
     if cursor_data:
-        params.update({
-            "cursor_bucket": cursor_data["bucket"],
-            "cursor_score": cursor_data["score"],
-            "cursor_id": cursor_data["id"]
-        })
-    
-    # Execute FTS5 query
+        params.update(
+            {
+                "cursor_bucket": cursor_data["bucket"],
+                "cursor_score": cursor_data["score"],
+                "cursor_id": cursor_data["id"],
+            }
+        )
+
     try:
-        results = db.execute(text(fts_query), params).fetchall()
+        rows = db.execute(text(fts_query), params).fetchall()
     except Exception as e:
         logger.error(f"FTS5 search failed: {e}")
         raise HTTPException(status_code=500, detail="Search failed")
-    
-    # Parse results
-    search_results = []
-    has_more = False
-    
-    for row in results:
-        if len(search_results) >= limit:
-            has_more = True
-            break
-        
-        result = SearchResult(
-            id=row[0],
-            title=row[1],
-            description=row[2],
-            url=row[3],
-            created_at=row[4],
-            user_id=row[5],
-            bucket=row[6],
-            score=row[7],
-            is_user_content=True
+
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+
+    results = []
+    for r in rows:
+        created = r[5]
+        if isinstance(created, str):
+            try:
+                created = datetime.fromisoformat(created)
+            except ValueError:
+                created = None
+        results.append(
+            {
+                "id": r[0],
+                "title": r[1],
+                "description": r[2],
+                "description_format": r[3] or "markdown",
+                "url": r[4],
+                "created_at": created.isoformat() if isinstance(created, datetime) else None,
+                "user_id": r[6],
+                "is_private": bool(r[7]),
+                "bucket": r[8],
+                "bucket_label": BUCKET_LABELS.get(r[8], "Other"),
+                "score": float(r[9]) if r[9] is not None else 0.0,
+                "is_user_content": True,
+            }
         )
-        search_results.append(result)
-    
-    # Generate next cursor from last result
+
     next_cursor = None
-    if has_more and search_results:
-        last_result = search_results[-1]
+    if has_more and results:
+        last = results[-1]
         next_cursor = SearchCursor.encode(
-            bucket=last_result.bucket,
-            score=last_result.score,
-            content_id=last_result.id
+            bucket=last["bucket"],
+            score=last["score"],
+            content_id=last["id"],
         )
-    
-    # Get total count (for UI pagination info)
-    count_query = """
+
+    count_query = f"""
     SELECT COUNT(*)
     FROM user_content_fts fts
     JOIN user_level_content ulc ON fts.rowid = ulc.id
     WHERE
         ulc.skill_id = :skill_id
         AND ulc.level = :level
-        AND ulc.deleted_at IS NULL
+        {privacy_filter}
         AND fts.user_content_fts MATCH :search_query
     """
-    
     total_count = db.execute(
         text(count_query),
         {
             "skill_id": skill_id,
             "level": level,
-            "search_query": q
-        }
+            "search_query": q,
+            "requesting_user_id": current_user.id,
+        },
     ).scalar()
-    
+
     return {
-        "results": [r.to_dict() for r in search_results],
+        "results": results,
         "next_cursor": next_cursor,
         "has_more": has_more,
         "total_count": total_count,
         "query": q,
-        "level": level
+        "level": level,
     }
-
-
-@router.post("/{engineer_id}/skills/{skill_id}/content/search/sync")
-async def sync_fts_index(
-    engineer_id: int,
-    skill_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Manually trigger FTS5 index sync for a skill.
-    
-    This endpoint is useful for:
-    - Debugging search issues
-    - Forcing index rebuild after bulk operations
-    - Testing FTS5 consistency
-    
-    Requires admin or manager role.
-    """
-    
-    # Verify access
-    if current_user.role.value not in ["manager", "admin"]:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
-    
-    try:
-        # Rebuild FTS5 index for this skill
-        rebuild_query = """
-        DELETE FROM user_content_fts
-        WHERE rowid IN (
-            SELECT id FROM user_level_content
-            WHERE skill_id = :skill_id AND deleted_at IS NULL
-        );
-        
-        INSERT INTO user_content_fts(rowid, title, description)
-        SELECT id, title, description
-        FROM user_level_content
-        WHERE skill_id = :skill_id AND deleted_at IS NULL;
-        """
-        
-        db.execute(text(rebuild_query), {"skill_id": skill_id})
-        db.commit()
-        
-        logger.info(f"FTS5 index synced for skill {skill_id}")
-        
-        return {
-            "status": "success",
-            "message": f"FTS5 index synced for skill {skill_id}"
-        }
-    except Exception as e:
-        logger.error(f"FTS5 sync failed: {e}")
-        raise HTTPException(status_code=500, detail="Sync failed")

@@ -68,27 +68,66 @@ def get_token() -> str:
     return token
 
 
-def chat_completion(messages: Iterable[dict]) -> str:
-    """Send chat messages to BridgeIT and return the assistant text content."""
+def _post_chat(payload: dict, token: str) -> requests.Response:
+    """Single HTTP POST to the BridgeIT chat endpoint."""
+    return requests.post(
+        _CHAT_URL,
+        data=json.dumps(payload, ensure_ascii=False),
+        headers={
+            "Content-Type": "application/json",
+            "accept": "application/json",
+            "api-key": token,
+        },
+        timeout=_TIMEOUT,
+    )
+
+
+def chat_completion(
+    messages: Iterable[dict],
+    *,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
+    top_p: float | None = None,
+) -> str:
+    """Send chat messages to BridgeIT and return the assistant text content.
+
+    Sampling parameters (``temperature``/``max_tokens``/``top_p``) are forwarded
+    only when explicitly provided. If the upstream deployment rejects them with
+    a 4xx, we retry once without them so callers degrade gracefully instead of
+    failing hard.
+    """
     token = get_token()
-    payload = {
+    base_payload: dict = {
         "messages": list(messages),
         "user": json.dumps({"appkey": CIRCUIT_APPKEY}),
         "stop": ["<|im_end|>"],
     }
+    sampling: dict = {}
+    if temperature is not None:
+        sampling["temperature"] = temperature
+    if max_tokens is not None:
+        sampling["max_tokens"] = max_tokens
+    if top_p is not None:
+        sampling["top_p"] = top_p
+
+    payload = {**base_payload, **sampling}
+
     try:
-        resp = requests.post(
-            _CHAT_URL,
-            data=json.dumps(payload, ensure_ascii=False),
-            headers={
-                "Content-Type": "application/json",
-                "accept": "application/json",
-                "api-key": token,
-            },
-            timeout=_TIMEOUT,
-        )
+        resp = _post_chat(payload, token)
     except requests.RequestException as exc:
         raise LLMError(f"Chat request failed: {exc}") from exc
+
+    # Graceful fallback: some Cisco deployments reject sampling params with 4xx.
+    if resp.status_code == 400 and sampling:
+        logger.warning(
+            "LLM rejected sampling params (status 400). Retrying without them. "
+            "Body: %s",
+            resp.text[:200],
+        )
+        try:
+            resp = _post_chat(base_payload, token)
+        except requests.RequestException as exc:
+            raise LLMError(f"Chat retry failed: {exc}") from exc
 
     if resp.status_code != 200:
         raise LLMError(

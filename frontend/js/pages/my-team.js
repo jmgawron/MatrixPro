@@ -6,6 +6,147 @@ import { showModal, showConfirm } from '../components/modal.js';
 import { el } from '../utils/dom.js';
 import { getSkillIconSVG } from '../components/icons.js';
 import { AVATAR_CATALOG } from '../components/avatars.js';
+import {
+  getMatrixCellStyle,
+  isStalled,
+  MATRIX_LEGEND_ITEMS,
+  getLegendIcon,
+  STALLED_DAYS,
+} from '../components/matrix-style.js?v=2';
+
+// ─── Category chip icons (match My Plan filter style) ──────────────────────
+const CATEGORY_CHIP_SVG = {
+  seedling: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10"/><path d="M12 20v-8"/><path d="M12 12c0-4 3-7 8-7-1 5-4 7-8 7z"/><path d="M12 14c0-3-2-5-6-5 1 4 3 5 6 5z"/></svg>',
+  diamond: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12"/><path d="m15 3 3 6-6 12"/></svg>',
+  atom: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><ellipse cx="12" cy="12" rx="10" ry="4.5"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(120 12 12)"/></svg>',
+  sparkles: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 11l-5.5 2.5L12 19l-2.5-5.5L4 11l5.5-2.5L12 3z"/><path d="M19 17l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/><path d="M5 4l.7 1.5L7 6l-1.3.5L5 8l-.7-1.5L3 6l1.3-.5L5 4z"/></svg>',
+  layers: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+};
+const CATEGORY_CHIP_ICON_MAP = {
+  foundational: 'seedling',
+  core: 'diamond',
+  advanced: 'atom',
+  ai_future: 'sparkles',
+  'ai-future': 'sparkles',
+};
+function categoryChipIcon(slug, size) {
+  const name = CATEGORY_CHIP_ICON_MAP[slug] || 'layers';
+  const span = document.createElement('span');
+  span.className = 'mp-icon';
+  span.style.fontSize = size || '14px';
+  span.innerHTML = CATEGORY_CHIP_SVG[name] || CATEGORY_CHIP_SVG.layers;
+  return span;
+}
+
+// ─── Skill Category helpers (Phase 1: Overview/Matrix/Reporting integration) ──
+
+const CATEGORY_ORDER = ['foundational', 'core', 'advanced', 'ai_future'];
+const CATEGORY_LABEL_FALLBACK = {
+  foundational: 'Foundational',
+  core: 'Core',
+  advanced: 'Advanced',
+  ai_future: 'AI & Future Skills',
+};
+const CATEGORY_ACCENT = {
+  foundational: '#22c55e',
+  core: '#3b82f6',
+  advanced: '#a855f7',
+  ai_future: '#f59e0b',
+  uncategorized: '#94a3b8',
+};
+const UNCATEGORIZED_SLUG = 'uncategorized';
+const UNCATEGORIZED_LABEL = 'Uncategorized';
+
+function _normalizeCategorySlug(slug) {
+  if (!slug) return UNCATEGORIZED_SLUG;
+  return String(slug).replace(/-/g, '_').toLowerCase();
+}
+
+function _primaryCategory(item) {
+  const cats = Array.isArray(item?.categories) ? item.categories : [];
+  if (cats.length === 0) {
+    return { slug: UNCATEGORIZED_SLUG, name: UNCATEGORIZED_LABEL, sort_order: 99 };
+  }
+  const sorted = [...cats].sort((a, b) => {
+    const ao = typeof a.sort_order === 'number' ? a.sort_order : 99;
+    const bo = typeof b.sort_order === 'number' ? b.sort_order : 99;
+    return ao - bo;
+  });
+  const c = sorted[0];
+  return {
+    slug: _normalizeCategorySlug(c.slug),
+    name: c.name || CATEGORY_LABEL_FALLBACK[_normalizeCategorySlug(c.slug)] || UNCATEGORIZED_LABEL,
+    sort_order: typeof c.sort_order === 'number' ? c.sort_order : 99,
+  };
+}
+
+function _groupByCategory(items) {
+  const groups = new Map();
+  items.forEach(item => {
+    const cat = _primaryCategory(item);
+    if (!groups.has(cat.slug)) {
+      groups.set(cat.slug, { slug: cat.slug, name: cat.name, sort_order: cat.sort_order, items: [] });
+    }
+    groups.get(cat.slug).items.push(item);
+  });
+  const orderIndex = slug => {
+    const idx = CATEGORY_ORDER.indexOf(slug);
+    return idx === -1 ? 90 : idx;
+  };
+  return Array.from(groups.values()).sort((a, b) => orderIndex(a.slug) - orderIndex(b.slug));
+}
+
+function _computeAIReadiness(perSkillStats) {
+  if (!Array.isArray(perSkillStats) || perSkillStats.length === 0) {
+    return { pct: 0, ready: 0, total: 0 };
+  }
+  const aiSkills = perSkillStats.filter(s => {
+    const cats = s.categories || [];
+    return cats.some(c => _normalizeCategorySlug(c.slug) === 'ai_future');
+  });
+  if (aiSkills.length === 0) return { pct: 0, ready: 0, total: 0 };
+  const ready = aiSkills.filter(s => (s.avg_proficiency ?? 0) >= 3).length;
+  const pct = Math.round((ready / aiSkills.length) * 100);
+  return { pct, ready, total: aiSkills.length };
+}
+
+function _categoryCoverageSummary(perSkillStats) {
+  const groups = _groupByCategory(perSkillStats);
+  return groups.map(g => {
+    const items = g.items;
+    const avgCoverage = items.length
+      ? Math.round(items.reduce((acc, s) => acc + (s.coverage_pct ?? 0), 0) / items.length)
+      : 0;
+    return { slug: g.slug, name: g.name, count: items.length, avg_coverage_pct: avgCoverage };
+  });
+}
+
+function _strongestAndWeakestCategory(coverageSummary) {
+  if (!coverageSummary || coverageSummary.length === 0) {
+    return { strongest: null, weakest: null };
+  }
+  const sorted = [...coverageSummary].sort((a, b) => b.avg_coverage_pct - a.avg_coverage_pct);
+  return { strongest: sorted[0], weakest: sorted[sorted.length - 1] };
+}
+
+function _computePlanEngagement(perEngineerStats, totalEngineers) {
+  const total = Array.isArray(perEngineerStats) && perEngineerStats.length > 0
+    ? perEngineerStats.length
+    : (totalEngineers || 0);
+  if (total === 0) return { pct: 0, active: 0, total: 0 };
+  if (!Array.isArray(perEngineerStats) || perEngineerStats.length === 0) {
+    return { pct: 0, active: 0, total };
+  }
+  const cutoffMs = Date.now() - 14 * 24 * 60 * 60 * 1000;
+  const active = perEngineerStats.filter(e => {
+    const ts = e?.last_activity_at;
+    if (!ts) return false;
+    const parsed = Date.parse(ts);
+    return Number.isFinite(parsed) && parsed >= cutoffMs;
+  }).length;
+  const pct = Math.round((active / total) * 100);
+  return { pct, active, total };
+}
 
 // ─── Module state ─────────────────────────────────────────────────────────────
 
@@ -14,6 +155,10 @@ let _teamId = null;
 let _matrixData = null;
 let _statsData = null;
 let _activityData = null;
+let _activityHasMore = false;
+let _activityLoading = false;
+let _activityObserver = null;
+const ACTIVITY_PAGE_SIZE = 30;
 let _visibleSkillIds = null;
 let _searchQuery = '';
 let _bulkMode = false;
@@ -23,6 +168,7 @@ let _resizeHandler = null;
 let _tooltipEl = null;
 let _drawerEl = null;
 let _drawerOverlay = null;
+let _matrixActiveCategories = null;
 
 // ─── Tab panel element references ────────────────────────────────────────────
 
@@ -64,11 +210,15 @@ export function mountMyTeam(container, params) {
   _matrixData = null;
   _statsData = null;
   _activityData = null;
+  _activityHasMore = false;
+  _activityLoading = false;
+  if (_activityObserver) { try { _activityObserver.disconnect(); } catch (_) {} _activityObserver = null; }
   _visibleSkillIds = null;
   _searchQuery = '';
   _bulkMode = false;
   _selectedEngIds = new Set();
   _charts = [];
+  _matrixActiveCategories = null;
   _resizeHandler = null;
   _tabPanels = {};
   _tabButtons = {};
@@ -159,7 +309,9 @@ async function loadAllData(teamId) {
 
   const matrixUrl = teamId ? `/api/teams/matrix?team_id=${teamId}` : '/api/teams/matrix';
   const statsUrl = teamId ? `/api/teams/stats?team_id=${teamId}` : '/api/teams/stats';
-  const activityUrl = teamId ? `/api/teams/activity?team_id=${teamId}&limit=20` : '/api/teams/activity?limit=20';
+  const activityUrl = teamId
+    ? `/api/teams/activity?team_id=${teamId}&limit=${ACTIVITY_PAGE_SIZE}&offset=0`
+    : `/api/teams/activity?limit=${ACTIVITY_PAGE_SIZE}&offset=0`;
 
   try {
     const [matrix, stats, activity] = await Promise.all([
@@ -171,7 +323,12 @@ async function loadAllData(teamId) {
     _matrixData = matrix;
     _statsData = stats;
     _activityData = activity;
+    const _initialItems = Array.isArray(activity?.items) ? activity.items : [];
+    const _initialTotal = Number.isFinite(activity?.total) ? activity.total : _initialItems.length;
+    _activityHasMore = _initialItems.length < _initialTotal;
+    _activityLoading = false;
     _visibleSkillIds = null;
+    _matrixActiveCategories = null;
     _tabLoaded = {};
 
     updateHeaderStats();
@@ -426,8 +583,9 @@ function renderOverviewTab() {
   if (!_overviewBodyEl) return;
   _overviewBodyEl.innerHTML = '';
 
-  // KPI cards
-  const kpiGrid = el('div', { className: 'mt-kpi-grid' });
+  const perSkillStats = (Array.isArray(_statsData?.per_skill_stats) && _statsData.per_skill_stats.length > 0)
+    ? _statsData.per_skill_stats
+    : buildFallbackPerSkillStats();
 
   const coveragePct = _statsData?.coverage_pct ?? 0;
   const criticalGaps = _statsData?.critical_gaps ?? 0;
@@ -436,13 +594,18 @@ function renderOverviewTab() {
   const totalEngineers = _statsData?.total_engineers ?? (_matrixData?.engineers?.length ?? 0);
   const totalSkills = _statsData?.total_skills ?? (_matrixData?.skills?.length ?? 0);
 
+  const aiReadiness = _computeAIReadiness(perSkillStats);
+  const coverageSummary = _categoryCoverageSummary(perSkillStats);
+  const { strongest, weakest } = _strongestAndWeakestCategory(coverageSummary);
+  const engagement = _computePlanEngagement(_statsData?.per_engineer_stats, totalEngineers);
+
+  const kpiGrid = el('div', { className: 'mt-kpi-grid' });
   const kpiDefs = [
     { label: 'Team Coverage', value: coveragePct, suffix: '%', sub: `${totalEngineers} engineers \u00b7 ${totalSkills} skills`, variant: 'accent' },
     { label: 'Critical Gaps', value: criticalGaps, suffix: '', sub: 'Skills below 30% coverage', variant: 'danger' },
     { label: 'Active Developments', value: activeDev, suffix: '', sub: 'Skills in progress', variant: 'warning' },
     { label: '30-day Completions', value: completions30d, suffix: '', sub: 'Achieved proficiency', variant: 'success' },
   ];
-
   kpiDefs.forEach(({ label, value, suffix, sub, variant }) => {
     const card = el('div', { className: `mt-kpi-card mt-kpi-card--${variant}` });
     const labelEl = el('div', { className: 'mt-kpi-label' });
@@ -457,92 +620,114 @@ function renderOverviewTab() {
     kpiGrid.appendChild(card);
     animateCountUp(valueEl, value, suffix);
   });
-
   _overviewBodyEl.appendChild(kpiGrid);
 
-  // Dashboard columns: radar chart + activity feed
+  const catKpiGrid = el('div', { className: 'mt-kpi-grid mt-kpi-grid--category' });
+  const catKpiDefs = [
+    {
+      label: 'AI Readiness Score',
+      value: aiReadiness.pct,
+      suffix: '%',
+      sub: aiReadiness.total > 0
+        ? `${aiReadiness.ready} of ${aiReadiness.total} AI skills at L3+`
+        : 'No AI & Future skills mapped',
+      variant: 'ai-future',
+    },
+    {
+      label: 'Strongest Capability',
+      value: strongest ? strongest.avg_coverage_pct : 0,
+      suffix: '%',
+      sub: strongest ? `${strongest.name} \u00b7 ${strongest.count} skills` : 'No skills mapped',
+      variant: strongest ? strongest.slug : 'accent',
+    },
+    {
+      label: 'Highest Risk Area',
+      value: weakest ? weakest.avg_coverage_pct : 0,
+      suffix: '%',
+      sub: weakest ? `${weakest.name} \u00b7 ${weakest.count} skills` : 'No skills mapped',
+      variant: weakest ? weakest.slug : 'danger',
+    },
+    {
+      label: 'Plan Engagement',
+      value: engagement.pct,
+      suffix: '%',
+      sub: engagement.total > 0
+        ? `${engagement.active} of ${engagement.total} engineers active in last 14 days`
+        : 'No engineers in team',
+      variant: 'success',
+    },
+  ];
+  catKpiDefs.forEach(({ label, value, suffix, sub, variant }) => {
+    const card = el('div', { className: `mt-kpi-card mt-kpi-card--${variant}` });
+    const labelEl = el('div', { className: 'mt-kpi-label' });
+    labelEl.textContent = label;
+    const valueEl = el('div', { className: 'mt-kpi-value' });
+    valueEl.textContent = '0' + (suffix || '');
+    const subEl = el('div', { className: 'mt-kpi-sub' });
+    subEl.textContent = sub;
+    card.appendChild(labelEl);
+    card.appendChild(valueEl);
+    card.appendChild(subEl);
+    catKpiGrid.appendChild(card);
+    animateCountUp(valueEl, value, suffix);
+  });
+  _overviewBodyEl.appendChild(catKpiGrid);
+
   const dashCols = el('div', { className: 'mt-dash-cols' });
 
-  // Radar chart card
   const radarCard = el('div', { className: 'mt-dash-card' });
   radarCard.style.flex = '3';
   const radarHeader = el('div', { className: 'mt-dash-card-header' });
-  radarHeader.textContent = 'Team Skill Radar';
+  radarHeader.textContent = 'Coverage by Skill Category';
   const radarBody = el('div', { className: 'mt-dash-card-body' });
-  const radarChartEl = el('div', { style: 'height:400px;' });
-  radarBody.appendChild(radarChartEl);
+  const radarGridEl = el('div', { className: 'mt-radar-grid' });
+  radarBody.appendChild(radarGridEl);
   radarCard.appendChild(radarHeader);
   radarCard.appendChild(radarBody);
   dashCols.appendChild(radarCard);
 
-  // Activity feed card
   const activityCard = el('div', { className: 'mt-dash-card' });
   activityCard.style.flex = '2';
   const activityHeader = el('div', { className: 'mt-dash-card-header' });
   const activityTitle = el('span');
   activityTitle.textContent = 'Recent Activity';
   const activityItems = Array.isArray(_activityData?.items) ? _activityData.items : (Array.isArray(_activityData) ? _activityData : []);
+  const activityTotal = Number.isFinite(_activityData?.total) ? _activityData.total : activityItems.length;
   const activityBadge = el('span', {
+    className: 'mt-activity-badge-count',
     style: 'margin-left:8px;background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:9999px;font-size:11px;padding:1px 8px;color:var(--text-muted);',
   });
-  activityBadge.textContent = String(activityItems.length);
+  activityBadge.textContent = activityTotal > activityItems.length
+    ? `${activityItems.length} / ${activityTotal}`
+    : String(activityItems.length);
   activityHeader.appendChild(activityTitle);
   activityHeader.appendChild(activityBadge);
-  const activityBody = el('div', { className: 'mt-dash-card-body', style: 'max-height:340px;overflow-y:auto;' });
+  const activityBody = el('div', {
+    className: 'mt-dash-card-body mt-activity-scroll',
+    style: 'max-height:560px;min-height:340px;overflow-y:auto;',
+  });
   renderActivityFeed(activityBody, activityItems);
+  attachActivityLazyLoad(activityBody);
   activityCard.appendChild(activityHeader);
   activityCard.appendChild(activityBody);
   dashCols.appendChild(activityCard);
 
   _overviewBodyEl.appendChild(dashCols);
 
-  // Skill coverage analysis card
-  const perSkillStats = _statsData?.per_skill_stats;
-  const gapStats = Array.isArray(perSkillStats) && perSkillStats.length > 0
-    ? perSkillStats
-    : buildFallbackPerSkillStats();
-
-  if (gapStats.length > 0) {
-    const sorted = [...gapStats].sort((a, b) => a.coverage_pct - b.coverage_pct);
-
+  if (perSkillStats.length > 0) {
     const gapCard = el('div', { className: 'mt-dash-card', style: 'margin-top:16px;' });
     const gapHeader = el('div', { className: 'mt-dash-card-header' });
-    gapHeader.textContent = 'Skill Coverage Analysis';
+    gapHeader.textContent = 'Skill Coverage by Category';
     const gapBody = el('div', { className: 'mt-dash-card-body' });
-
-    const gapList = el('div', { className: 'mt-gap-list' });
-    sorted.forEach(s => {
-      const pct = s.coverage_pct ?? 0;
-      const color = pct < 30 ? 'var(--danger)' : pct < 60 ? 'var(--warning)' : 'var(--success)';
-
-      const row = el('div', { className: 'mt-gap-row' });
-      const name = el('div', { className: 'mt-gap-name' });
-      name.textContent = s.skill_name;
-      const barWrap = el('div', { className: 'mt-gap-bar-wrap' });
-      const barFill = el('div', { className: 'mt-gap-bar-fill', style: `width:${pct}%;background:${color};` });
-      barWrap.appendChild(barFill);
-      const pctEl = el('div', { className: 'mt-gap-pct' });
-      pctEl.textContent = `${pct}%`;
-
-      row.appendChild(name);
-      row.appendChild(barWrap);
-      row.appendChild(pctEl);
-      gapList.appendChild(row);
-    });
-
-    gapBody.appendChild(gapList);
+    renderCategoryCoverageSections(gapBody, perSkillStats);
     gapCard.appendChild(gapHeader);
     gapCard.appendChild(gapBody);
     _overviewBodyEl.appendChild(gapCard);
   }
 
-  // Render radar chart
   requestAnimationFrame(() => {
-    const stats = Array.isArray(perSkillStats) && perSkillStats.length > 0
-      ? perSkillStats
-      : buildFallbackPerSkillStats();
-    if (stats.length > 0) {
-      renderRadarChart(radarChartEl, stats);
+    if (perSkillStats.length > 0) {
+      renderCategoryRadarGrid(radarGridEl, perSkillStats);
     }
   });
 }
@@ -553,12 +738,142 @@ function buildFallbackPerSkillStats() {
   const engineers = _matrixData.engineers || [];
   return skills.map(skill => {
     let covered = 0;
+    let profSum = 0;
+    let profCount = 0;
     engineers.forEach(eng => {
       const cell = (eng.cells || {})[String(skill.id)];
-      if (cell && cell.status !== 'not_in_plan') covered++;
+      if (cell && cell.status !== 'not_in_plan') {
+        covered++;
+        if (typeof cell.proficiency_level === 'number') {
+          profSum += cell.proficiency_level;
+          profCount++;
+        }
+      }
     });
     const pct = engineers.length > 0 ? Math.round((covered / engineers.length) * 100) : 0;
-    return { skill_name: skill.name, coverage_pct: pct };
+    const avgProf = profCount > 0 ? profSum / profCount : 0;
+    return {
+      skill_id: skill.id,
+      skill_name: skill.name,
+      coverage_pct: pct,
+      avg_proficiency: avgProf,
+      categories: Array.isArray(skill.categories) ? skill.categories : [],
+    };
+  });
+}
+
+function renderCategoryRadarGrid(container, perSkillStats) {
+  container.innerHTML = '';
+  const groups = _groupByCategory(perSkillStats);
+  if (groups.length === 0) {
+    const empty = el('div', { className: 'mt-radar-empty' });
+    empty.textContent = 'No skills available for radar visualization.';
+    container.appendChild(empty);
+    return;
+  }
+  groups.forEach(group => {
+    const cell = el('div', { className: 'mt-radar-cell' });
+    const cellHeader = el('div', { className: 'mt-radar-cell-header' });
+    const title = el('span', { className: 'mt-radar-cell-title' });
+    title.textContent = group.name;
+    const count = el('span', { className: 'mt-radar-cell-count' });
+    count.textContent = `${group.items.length} skill${group.items.length === 1 ? '' : 's'}`;
+    cellHeader.appendChild(title);
+    cellHeader.appendChild(count);
+    cell.appendChild(cellHeader);
+
+    const chartEl = el('div', { className: 'mt-radar-cell-chart' });
+    cell.appendChild(chartEl);
+    container.appendChild(cell);
+
+    const accent = CATEGORY_ACCENT[group.slug] || CATEGORY_ACCENT.uncategorized;
+    if (group.items.length < 3) {
+      renderCategoryBarFallback(chartEl, group.items, accent);
+    } else {
+      renderRadarChart(chartEl, group.items, accent);
+    }
+  });
+}
+
+function renderCategoryBarFallback(container, items, accent) {
+  if (typeof echarts === 'undefined') return;
+  const cc = _getChartColors();
+  const chart = echarts.init(container, cc.theme);
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params) => {
+        const p = Array.isArray(params) ? params[0] : params;
+        const full = items[p.dataIndex]?.skill_name || p.name;
+        const pct = (items[p.dataIndex]?.coverage_pct ?? 0).toFixed(0);
+        return `<strong>${full}</strong><br/>Coverage: ${pct}%`;
+      },
+    },
+    grid: { left: 90, right: 24, top: 16, bottom: 16, containLabel: false },
+    xAxis: {
+      type: 'value', min: 0, max: 100,
+      axisLine: { lineStyle: { color: cc.gridColor } },
+      axisLabel: { color: cc.textMuted, fontSize: 10 },
+      splitLine: { lineStyle: { color: cc.gridColor } },
+    },
+    yAxis: {
+      type: 'category',
+      data: items.map(s => s.skill_name.length > 22 ? s.skill_name.slice(0, 20) + '\u2026' : s.skill_name),
+      axisLine: { lineStyle: { color: cc.gridColor } },
+      axisTick: { show: false },
+      axisLabel: { color: cc.textMuted, fontSize: 11 },
+    },
+    series: [{
+      type: 'bar',
+      data: items.map(s => s.coverage_pct ?? 0),
+      itemStyle: { color: accent, borderRadius: [0, 4, 4, 0] },
+      barMaxWidth: 18,
+    }],
+  };
+  chart.setOption(option);
+  _charts.push(chart);
+}
+
+function renderCategoryCoverageSections(container, perSkillStats) {
+  container.innerHTML = '';
+  const groups = _groupByCategory(perSkillStats);
+  groups.forEach(group => {
+    const accent = CATEGORY_ACCENT[group.slug] || CATEGORY_ACCENT.uncategorized;
+    const section = el('div', { className: 'mt-cat-section' });
+    const header = el('div', { className: 'mt-cat-section-header' });
+    const dot = el('span', { className: 'mt-cat-section-dot', style: `background:${accent};` });
+    const name = el('span', { className: 'mt-cat-section-name' });
+    name.textContent = group.name;
+    const count = el('span', { className: 'mt-cat-section-count' });
+    count.textContent = `${group.items.length}`;
+    header.appendChild(dot);
+    header.appendChild(name);
+    header.appendChild(count);
+    section.appendChild(header);
+
+    const gapList = el('div', { className: 'mt-gap-list' });
+    const sorted = [...group.items].sort((a, b) => (a.coverage_pct ?? 0) - (b.coverage_pct ?? 0));
+    sorted.forEach(s => {
+      const pct = s.coverage_pct ?? 0;
+      const color = pct < 30 ? 'var(--danger)' : pct < 60 ? 'var(--warning)' : 'var(--success)';
+      const row = el('div', { className: 'mt-gap-row' });
+      const nameEl = el('div', { className: 'mt-gap-name' });
+      nameEl.textContent = s.skill_name;
+      nameEl.title = s.skill_name;
+      const barWrap = el('div', { className: 'mt-gap-bar-wrap' });
+      const barFill = el('div', { className: 'mt-gap-bar-fill', style: `width:${pct}%;background:${color};` });
+      barWrap.appendChild(barFill);
+      const pctEl = el('div', { className: 'mt-gap-pct' });
+      pctEl.textContent = `${pct}%`;
+      row.appendChild(nameEl);
+      row.appendChild(barWrap);
+      row.appendChild(pctEl);
+      gapList.appendChild(row);
+    });
+    section.appendChild(gapList);
+    container.appendChild(section);
   });
 }
 
@@ -575,12 +890,26 @@ function _getChartColors() {
   };
 }
 
-function renderRadarChart(container, perSkillStats) {
+function renderRadarChart(container, perSkillStats, accent) {
   if (typeof echarts === 'undefined') return;
   const cc = _getChartColors();
   const chart = echarts.init(container, cc.theme);
+  const color = accent || '#3b82f6';
+  const fullNames = perSkillStats.map(s => s.skill_name);
   const option = {
     backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      formatter: (p) => {
+        const vals = Array.isArray(p.value) ? p.value : [];
+        const rows = fullNames.map((n, i) =>
+          `<div style="display:flex;justify-content:space-between;gap:16px;">
+             <span>${n}</span><strong>${(vals[i] ?? 0).toFixed(0)}%</strong>
+           </div>`
+        ).join('');
+        return `<div style="min-width:220px;"><strong>Coverage by skill</strong>${rows}</div>`;
+      },
+    },
     radar: {
       shape: 'polygon',
       splitNumber: 4,
@@ -598,9 +927,9 @@ function renderRadarChart(container, perSkillStats) {
       data: [{
         value: perSkillStats.map(s => s.coverage_pct),
         name: 'Coverage %',
-        areaStyle: { opacity: 0.15, color: '#3b82f6' },
-        lineStyle: { color: '#3b82f6', width: 2 },
-        itemStyle: { color: '#3b82f6' },
+        areaStyle: { opacity: 0.18, color },
+        lineStyle: { color, width: 2 },
+        itemStyle: { color },
       }],
     }],
   };
@@ -626,16 +955,19 @@ function _getActivityBadge(item) {
   return null;
 }
 
-function renderActivityFeed(container, items) {
-  container.innerHTML = '';
-  if (!items || items.length === 0) {
+function renderActivityFeed(container, items, { append = false } = {}) {
+  if (!append) container.innerHTML = '';
+
+  container.querySelectorAll('.mt-activity-sentinel, .mt-activity-end, .mt-activity-loading').forEach(n => n.remove());
+
+  if (!append && (!items || items.length === 0)) {
     const empty = el('div', { className: 'empty-state empty-state--compact' });
     empty.textContent = 'No recent activity';
     container.appendChild(empty);
     return;
   }
 
-  items.forEach(item => {
+  (items || []).forEach(item => {
     const row = el('div', { className: 'mt-activity-item' });
     const avatar = el('div', { className: 'mt-activity-avatar' });
     const avatarEntry = item.actor_avatar ? AVATAR_CATALOG.find(a => a.id === item.actor_avatar) : null;
@@ -665,6 +997,107 @@ function renderActivityFeed(container, items) {
     row.appendChild(body);
     container.appendChild(row);
   });
+
+  if (_activityHasMore) {
+    const sentinel = el('div', { className: 'mt-activity-sentinel', style: 'height:1px;' });
+    container.appendChild(sentinel);
+  } else if (container.children.length > 0) {
+    const end = el('div', {
+      className: 'mt-activity-end',
+      style: 'text-align:center;padding:12px 8px;color:var(--text-muted);font-size:12px;',
+    });
+    end.textContent = '— End of activity —';
+    container.appendChild(end);
+  }
+}
+
+function _updateActivityBadge() {
+  if (!_overviewBodyEl) return;
+  const badge = _overviewBodyEl.querySelector('.mt-activity-badge-count');
+  if (!badge) return;
+  const loaded = Array.isArray(_activityData?.items) ? _activityData.items.length : 0;
+  const total = Number.isFinite(_activityData?.total) ? _activityData.total : loaded;
+  badge.textContent = total > loaded ? `${loaded} / ${total}` : String(loaded);
+}
+
+async function _loadMoreActivity(scrollEl) {
+  if (_activityLoading || !_activityHasMore) return;
+  _activityLoading = true;
+
+  scrollEl.querySelectorAll('.mt-activity-sentinel').forEach(n => n.remove());
+  const loadingEl = el('div', {
+    className: 'mt-activity-loading',
+    style: 'text-align:center;padding:10px 8px;color:var(--text-muted);font-size:12px;',
+  });
+  loadingEl.textContent = 'Loading more…';
+  scrollEl.appendChild(loadingEl);
+
+  const offset = Array.isArray(_activityData?.items) ? _activityData.items.length : 0;
+  const url = _teamId
+    ? `/api/teams/activity?team_id=${_teamId}&limit=${ACTIVITY_PAGE_SIZE}&offset=${offset}`
+    : `/api/teams/activity?limit=${ACTIVITY_PAGE_SIZE}&offset=${offset}`;
+
+  try {
+    const page = await api.get(url);
+    const newItems = Array.isArray(page?.items) ? page.items : [];
+    const total = Number.isFinite(page?.total) ? page.total : (offset + newItems.length);
+
+    if (!Array.isArray(_activityData?.items)) _activityData = { items: [], total };
+    _activityData.items = _activityData.items.concat(newItems);
+    _activityData.total = total;
+    _activityHasMore = _activityData.items.length < total && newItems.length > 0;
+
+    loadingEl.remove();
+    renderActivityFeed(scrollEl, newItems, { append: true });
+    _updateActivityBadge();
+  } catch (err) {
+    loadingEl.remove();
+    const errEl = el('div', {
+      className: 'mt-activity-loading',
+      style: 'text-align:center;padding:10px 8px;color:var(--danger,#ef4444);font-size:12px;cursor:pointer;',
+    });
+    errEl.textContent = 'Failed to load — click to retry';
+    errEl.addEventListener('click', () => {
+      errEl.remove();
+      _activityLoading = false;
+      _loadMoreActivity(scrollEl);
+    });
+    scrollEl.appendChild(errEl);
+    return;
+  } finally {
+    _activityLoading = false;
+  }
+
+  attachActivityLazyLoad(scrollEl);
+}
+
+function attachActivityLazyLoad(scrollEl) {
+  if (!scrollEl) return;
+  if (_activityObserver) { try { _activityObserver.disconnect(); } catch (_) {} _activityObserver = null; }
+  if (!_activityHasMore) return;
+
+  const sentinel = scrollEl.querySelector('.mt-activity-sentinel');
+  if (!sentinel || typeof IntersectionObserver === 'undefined') {
+    const onScroll = () => {
+      if (!_activityHasMore || _activityLoading) return;
+      if (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 80) {
+        _loadMoreActivity(scrollEl);
+      }
+    };
+    scrollEl.addEventListener('scroll', onScroll, { passive: true });
+    return;
+  }
+
+  _activityObserver = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        _loadMoreActivity(scrollEl);
+        break;
+      }
+    }
+  }, { root: scrollEl, rootMargin: '120px 0px', threshold: 0 });
+
+  _activityObserver.observe(sentinel);
 }
 
 // ─── Matrix controls ──────────────────────────────────────────────────────────
@@ -686,14 +1119,16 @@ function buildMatrixControls() {
     }, 200);
   });
 
-  const skillFilter = el('select', { className: 'form-select', style: 'width:auto;max-width:280px;font-size:13px;' });
+  const skillFilter = el('select', { className: 'form-select', style: 'width:auto;max-width:280px;' });
   const filterAll = el('option', { value: '' });
   filterAll.textContent = 'All skills';
   skillFilter.appendChild(filterAll);
   skillFilter.id = 'mt-skill-filter';
+  skillFilter.dataset.empty = 'true';
 
   skillFilter.addEventListener('change', () => {
     const val = skillFilter.value;
+    skillFilter.dataset.empty = val ? 'false' : 'true';
     _visibleSkillIds = val ? new Set([Number(val)]) : null;
     if (_tabLoaded['matrix']) renderMatrixTable();
   });
@@ -776,7 +1211,62 @@ function buildBulkBar() {
 function renderMatrixTab() {
   if (!_matrixBodyEl || !_matrixData) return;
   populateSkillFilter();
+  renderMatrixCategoryChips();
   renderMatrixTable();
+}
+
+function renderMatrixCategoryChips() {
+  if (!_matrixBodyEl || !_matrixData) return;
+  const existing = document.getElementById('mt-matrix-category-toolbar');
+  if (existing) existing.remove();
+
+  const allSkills = Array.isArray(_matrixData.skills) ? _matrixData.skills : [];
+  const presentSlugs = new Set();
+  let hasUncategorized = false;
+  allSkills.forEach(s => {
+    const cats = Array.isArray(s.categories) ? s.categories : [];
+    if (cats.length === 0) { hasUncategorized = true; return; }
+    cats.forEach(c => { if (c && c.slug) presentSlugs.add(_normalizeCategorySlug(c.slug)); });
+  });
+  const orderedSlugs = CATEGORY_ORDER.filter(slug => presentSlugs.has(slug));
+  Array.from(presentSlugs).forEach(slug => { if (!orderedSlugs.includes(slug)) orderedSlugs.push(slug); });
+  if (hasUncategorized) orderedSlugs.push(UNCATEGORIZED_SLUG);
+
+  if (_matrixActiveCategories === null) {
+    _matrixActiveCategories = new Set(orderedSlugs);
+  }
+
+  const toolbar = el('div', {
+    id: 'mt-matrix-category-toolbar',
+    className: 'mp-filter-chips mt-matrix-category-chips',
+  });
+
+  orderedSlugs.forEach(slug => {
+    const isActive = _matrixActiveCategories.has(slug);
+    const chip = el('button', {
+      className: 'mp-filter-chip' + (isActive ? ' active' : ''),
+      type: 'button',
+    });
+    chip.setAttribute('data-category', slug);
+    chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    chip.appendChild(categoryChipIcon(slug, '14px'));
+    const label = el('span', { className: 'mp-filter-chip__label' });
+    label.textContent = CATEGORY_LABEL_FALLBACK[slug] || (slug === UNCATEGORIZED_SLUG ? UNCATEGORIZED_LABEL : slug);
+    chip.appendChild(label);
+    chip.addEventListener('click', () => {
+      if (_matrixActiveCategories.has(slug)) {
+        if (_matrixActiveCategories.size <= 1) return;
+        _matrixActiveCategories.delete(slug);
+      } else {
+        _matrixActiveCategories.add(slug);
+      }
+      renderMatrixCategoryChips();
+      renderMatrixTable();
+    });
+    toolbar.appendChild(chip);
+  });
+
+  _matrixBodyEl.parentNode.insertBefore(toolbar, _matrixBodyEl);
 }
 
 function populateSkillFilter() {
@@ -818,10 +1308,73 @@ function renderMatrixTable() {
     return;
   }
 
+  const activeCategories = _matrixActiveCategories || new Set(CATEGORY_ORDER.concat([UNCATEGORIZED_SLUG]));
+
+  const groups = new Map();
+  CATEGORY_ORDER.forEach(slug => { if (activeCategories.has(slug)) groups.set(slug, []); });
+  if (activeCategories.has(UNCATEGORIZED_SLUG)) groups.set(UNCATEGORIZED_SLUG, []);
+
+  skills.forEach(skill => {
+    const cats = Array.isArray(skill.categories) ? skill.categories : [];
+    if (cats.length === 0) {
+      if (activeCategories.has(UNCATEGORIZED_SLUG)) {
+        groups.get(UNCATEGORIZED_SLUG).push(skill);
+      }
+      return;
+    }
+    cats.forEach(c => {
+      const slug = _normalizeCategorySlug(c.slug);
+      if (activeCategories.has(slug)) {
+        if (!groups.has(slug)) groups.set(slug, []);
+        groups.get(slug).push(skill);
+      }
+    });
+  });
+
+  let totalRendered = 0;
+  groups.forEach((groupSkills, slug) => {
+    if (groupSkills.length === 0) return;
+    totalRendered += groupSkills.length;
+
+    const section = el('div', { className: 'mt-matrix-section' });
+    section.setAttribute('data-category', slug);
+
+    const header = el('div', { className: 'mt-matrix-section__header' });
+    const accent = CATEGORY_ACCENT[slug] || CATEGORY_ACCENT[UNCATEGORIZED_SLUG];
+    header.style.setProperty('--mt-cat-accent', accent);
+
+    const iconEl = categoryChipIcon(slug, '18px');
+    iconEl.classList.add('mt-matrix-section__icon');
+    header.appendChild(iconEl);
+
+    const title = el('h3', { className: 'mt-matrix-section__title' });
+    title.textContent = CATEGORY_LABEL_FALLBACK[slug] || (slug === UNCATEGORIZED_SLUG ? UNCATEGORIZED_LABEL : slug);
+    header.appendChild(title);
+
+    const countBadge = el('span', { className: 'mt-matrix-section__count' });
+    countBadge.textContent = `${groupSkills.length} skill${groupSkills.length === 1 ? '' : 's'}`;
+    header.appendChild(countBadge);
+
+    section.appendChild(header);
+    section.appendChild(buildMatrixSectionTable(engineers, groupSkills));
+    _matrixBodyEl.appendChild(section);
+  });
+
+  if (totalRendered === 0) {
+    const noMatches = el('div', { className: 'empty-state empty-state--inline' });
+    noMatches.textContent = 'No skills match the current category filter.';
+    _matrixBodyEl.appendChild(noMatches);
+    return;
+  }
+
+  const summary = buildSummaryRow(engineers, skills);
+  _matrixBodyEl.appendChild(summary);
+}
+
+function buildMatrixSectionTable(engineers, skills) {
   const scrollWrap = el('div', { className: 'matrix-scroll' });
   const table = el('table', { className: 'matrix-table' });
 
-  // Colgroup
   const colgroup = document.createElement('colgroup');
   const nameCol = document.createElement('col');
   nameCol.style.width = '180px';
@@ -838,7 +1391,6 @@ function renderMatrixTable() {
   });
   table.appendChild(colgroup);
 
-  // Header
   const thead = el('thead');
   const headerRow = el('tr');
 
@@ -858,7 +1410,6 @@ function renderMatrixTable() {
 
     th.title = skill.name;
 
-    // Show skill icon if available
     if (skill.icon) {
       const iconSvg = getSkillIconSVG(skill.icon, 14);
       if (iconSvg) {
@@ -875,7 +1426,6 @@ function renderMatrixTable() {
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
-  // Body
   const tbody = el('tbody');
 
   engineers.forEach((engineer) => {
@@ -945,31 +1495,24 @@ function renderMatrixTable() {
 
   table.appendChild(tbody);
   scrollWrap.appendChild(table);
-  _matrixBodyEl.appendChild(scrollWrap);
-
-  const summary = buildSummaryRow(engineers, skills);
-  _matrixBodyEl.appendChild(summary);
+  return scrollWrap;
 }
 
 // ─── Matrix cell ──────────────────────────────────────────────────────────────
 
 function buildMatrixCell(cell, engineer, skill) {
-  const { bg, border, icon } = getCellStyle(cell);
-  const stagnant = isStagnant(cell);
+  const style = getMatrixCellStyle(cell);
 
-  const td = el('td', {
-    className: 'matrix-cell' + (stagnant ? ' matrix-cell--stagnant' : ''),
-    style: `background:${bg};border:1px solid ${border};`,
-  });
+  const td = el('td', { className: style.cssClass });
 
-  if (icon) {
+  if (style.iconHtml) {
     const iconEl = el('span', { className: 'matrix-cell-icon' });
-    iconEl.innerHTML = icon;
+    iconEl.innerHTML = style.iconHtml;
     td.appendChild(iconEl);
   }
 
   td.addEventListener('mouseenter', () => {
-    td.style.filter = 'brightness(1.25)';
+    td.style.filter = 'brightness(1.18)';
     showTooltip(td, buildTooltipContent(cell, engineer, skill));
   });
   td.addEventListener('mouseleave', () => {
@@ -980,91 +1523,29 @@ function buildMatrixCell(cell, engineer, skill) {
   return td;
 }
 
-function getCellStyle(cell) {
-  const { status, proficiency_level } = cell;
-
-  const plannedSvg = '<span style="color:var(--text-muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>';
-  const eduSvg = '<span style="color:#22c55e"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>';
-  const expSvg = '<span style="color:#06b6d4"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>';
-  const expriSvg = '<span style="color:#a855f7"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>';
-  const masteredSvg = '<span style="color:#eab308"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span>';
-
-  if (status === 'not_in_plan') {
-    return { bg: 'var(--bg-elevated)', border: 'var(--border-soft)', icon: '<span style="color:var(--text-muted);font-size:16px;opacity:.4">\u2014</span>' };
-  }
-
-  if (status === 'planned') {
-    return { bg: 'rgba(156,163,175,.15)', border: 'rgba(156,163,175,.35)', icon: plannedSvg };
-  }
-
-  if (status === 'mastered') {
-    return { bg: 'rgba(234,179,8,.15)', border: 'rgba(234,179,8,.45)', icon: masteredSvg };
-  }
-
-  if (status === 'developing') {
-    if (proficiency_level === 1) {
-      return { bg: 'rgba(34,197,94,.15)', border: 'rgba(34,197,94,.35)', icon: eduSvg };
-    }
-    if (proficiency_level === 2) {
-      return { bg: 'rgba(6,182,212,.15)', border: 'rgba(6,182,212,.35)', icon: expSvg };
-    }
-    if (proficiency_level === 3) {
-      return { bg: 'rgba(168,85,247,.15)', border: 'rgba(168,85,247,.35)', icon: expriSvg };
-    }
-    if (proficiency_level === 4) {
-      return { bg: 'rgba(168,85,247,.25)', border: 'rgba(168,85,247,.5)', icon: expriSvg };
-    }
-    if (proficiency_level === 5) {
-      return { bg: 'rgba(234,179,8,.15)', border: 'rgba(234,179,8,.45)', icon: masteredSvg };
-    }
-    return { bg: 'rgba(156,163,175,.15)', border: 'rgba(156,163,175,.35)', icon: plannedSvg };
-  }
-
-  return { bg: 'var(--bg-elevated)', border: 'var(--border-soft)', icon: null };
-}
-
 function buildTooltipContent(cell, engineer, skill) {
-  const statusLabels = {
-    not_in_plan: 'Not in Plan',
-    planned: 'Planned',
-    developing: 'Developing',
-    mastered: 'Mastered',
-  };
+  const style = getMatrixCellStyle(cell);
   const levelLabels = { 1: 'Beginner', 2: 'Working Knowledge', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert' };
-  const statusLabel = statusLabels[cell.status] || cell.status;
   let levelPart = '';
   if ((cell.status === 'developing' || cell.status === 'mastered') && cell.proficiency_level) {
     levelPart = ` \u00b7 ${levelLabels[cell.proficiency_level] || `L${cell.proficiency_level}`}`;
   }
-  const stagnantPart = isStagnant(cell) ? ' \u00b7 Stagnant (90+ days)' : '';
-  return `${engineer.name} \u2014 ${skill.name}\n${statusLabel}${levelPart}${stagnantPart}`;
+  const stalledPart = style.stalled ? ` \u00b7 Stalled (${STALLED_DAYS}+ days)` : '';
+  return `${engineer.name} \u2014 ${skill.name}\n${style.label}${levelPart}${stalledPart}`;
 }
 
 // ─── Legend ───────────────────────────────────────────────────────────────────
 
 function buildLegend() {
   const legend = el('div', { className: 'matrix-legend' });
-  const items = [
-    { label: 'Not in Plan', bg: 'var(--bg-elevated)', border: 'var(--border-soft)', text: 'var(--text-muted)' },
-    { label: 'Planned', bg: 'rgba(156,163,175,.15)', border: 'rgba(156,163,175,.35)', text: 'var(--text-secondary)' },
-    { label: 'Education', bg: 'rgba(34,197,94,.15)', border: 'rgba(34,197,94,.35)', text: 'var(--text-secondary)' },
-    { label: 'Exposure', bg: 'rgba(6,182,212,.15)', border: 'rgba(6,182,212,.35)', text: 'var(--text-secondary)' },
-    { label: 'Experience', bg: 'rgba(168,85,247,.15)', border: 'rgba(168,85,247,.35)', text: 'var(--text-secondary)' },
-    { label: 'Advanced', bg: 'rgba(168,85,247,.25)', border: 'rgba(168,85,247,.5)', text: 'var(--text-secondary)' },
-    { label: 'Expert', bg: 'rgba(234,179,8,.15)', border: 'rgba(234,179,8,.45)', text: 'var(--text-secondary)' },
-    { label: 'Mastered', bg: 'rgba(234,179,8,.15)', border: 'rgba(234,179,8,.45)', text: 'var(--text-secondary)' },
-    { label: 'Stagnant', bg: 'transparent', customBorder: '2px dashed rgba(239,68,68,.5)', text: 'var(--text-secondary)' }
-  ];
-  items.forEach(({ label, bg, border, text, customBorder }) => {
-    const chip = el('div', {
-      className: 'matrix-legend-chip',
-      style: `color:${text};`,
-    });
-    const swatch = el('span', {
-      className: 'matrix-legend-swatch',
-      style: `background:${bg};` + (customBorder ? `border:${customBorder};` : `border:1px solid ${border};`)
-    });
-    chip.appendChild(swatch);
+  MATRIX_LEGEND_ITEMS.forEach(({ kind, label }) => {
+    const chip = el('div', { className: `matrix-legend-chip matrix-legend-chip--${kind}` });
+    const iconHtml = getLegendIcon(kind);
+    if (iconHtml) {
+      const iconWrap = el('span', { className: 'matrix-legend-chip-icon' });
+      iconWrap.innerHTML = iconHtml;
+      chip.appendChild(iconWrap);
+    }
     chip.appendChild(document.createTextNode(label));
     legend.appendChild(chip);
   });
@@ -1239,7 +1720,27 @@ function renderMarkdownToHtml(md) {
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 
-  const lines = md.replace(/\r\n/g, '\n').split('\n');
+  // Pre-process: split single-line pipe-tables (LLMs sometimes emit the whole
+  // table on one line) into multi-line GFM tables so the parser below works.
+  const splitInlineTables = (text) => {
+    const tableRegex = /(\|[^\n|]+(?:\|[^\n|]+)+\|(?:\s*\|[^\n|]*(?:\|[^\n|]*)+\|){2,})/g;
+    return text.replace(tableRegex, (match) => {
+      if (match.includes('\n')) return match;
+      const cells = match.split('|').map((c) => c.trim());
+      if (cells.length && cells[0] === '') cells.shift();
+      if (cells.length && cells[cells.length - 1] === '') cells.pop();
+      const sepIdx = cells.findIndex((c) => /^:?-{3,}:?$/.test(c));
+      if (sepIdx < 1) return match;
+      const colCount = sepIdx;
+      const rows = [];
+      for (let i = 0; i < cells.length; i += colCount) {
+        rows.push('| ' + cells.slice(i, i + colCount).join(' | ') + ' |');
+      }
+      return '\n' + rows.join('\n') + '\n';
+    });
+  };
+
+  const lines = splitInlineTables(md.replace(/\r\n/g, '\n')).split('\n');
   const out = [];
   let inUl = false;
   let inOl = false;
@@ -1256,8 +1757,33 @@ function renderMarkdownToHtml(md) {
     if (inOl) { out.push('</ol>'); inOl = false; }
   };
 
-  for (const raw of lines) {
+  const isTableRow = (s) => /^\s*\|.+\|\s*$/.test(s);
+  const isTableSep = (s) => /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(s);
+  const splitRow = (s) => s.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
     const line = raw.replace(/\s+$/, '');
+
+    // GFM table: header row + separator row + body rows.
+    if (isTableRow(line) && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      flushPara(); closeLists();
+      const headers = splitRow(line);
+      i += 2;
+      const bodyRows = [];
+      while (i < lines.length && isTableRow(lines[i])) {
+        bodyRows.push(splitRow(lines[i]));
+        i++;
+      }
+      i--;
+      const thead = `<thead><tr>${headers.map((h) => `<th>${inline(h)}</th>`).join('')}</tr></thead>`;
+      const tbody = `<tbody>${bodyRows
+        .map((r) => `<tr>${r.map((c) => `<td>${inline(c)}</td>`).join('')}</tr>`)
+        .join('')}</tbody>`;
+      out.push(`<table>${thead}${tbody}</table>`);
+      continue;
+    }
+
     if (!line.trim()) { flushPara(); closeLists(); continue; }
 
     const h = /^(#{1,6})\s+(.+)$/.exec(line);
@@ -1468,7 +1994,57 @@ function renderChangeLogs(data) {
     return;
   }
 
-  // Summary bar
+  // ─── Category KPI strip ────────────────────────────────────────────────
+  const catCounts = {};
+  CATEGORY_ORDER.forEach(slug => { catCounts[slug] = 0; });
+  catCounts[UNCATEGORIZED_SLUG] = 0;
+  entries.forEach(entry => {
+    const cats = Array.isArray(entry.categories) ? entry.categories : [];
+    if (cats.length === 0) {
+      catCounts[UNCATEGORIZED_SLUG] += 1;
+    } else {
+      const seen = new Set();
+      cats.forEach(c => {
+        const slug = _normalizeCategorySlug(c?.slug);
+        if (!seen.has(slug)) {
+          catCounts[slug] = (catCounts[slug] || 0) + 1;
+          seen.add(slug);
+        }
+      });
+    }
+  });
+
+  const kpiGrid = el('div', { className: 'mt-kpi-grid mt-kpi-grid--category', style: 'margin-bottom:16px;' });
+  CATEGORY_ORDER.forEach(slug => {
+    const label = CATEGORY_LABEL_FALLBACK[slug] || slug;
+    const card = el('div', { className: `mt-kpi-card mt-kpi-card--${slug}`, 'data-category': slug });
+    const labelEl = el('div', { className: 'mt-kpi-label' });
+    labelEl.textContent = label;
+    const valueEl = el('div', { className: 'mt-kpi-value' });
+    valueEl.textContent = String(catCounts[slug] || 0);
+    const subEl = el('div', { className: 'mt-kpi-sub' });
+    subEl.textContent = (catCounts[slug] || 0) === 1 ? 'change' : 'changes';
+    card.appendChild(labelEl);
+    card.appendChild(valueEl);
+    card.appendChild(subEl);
+    kpiGrid.appendChild(card);
+  });
+  if (catCounts[UNCATEGORIZED_SLUG] > 0) {
+    const card = el('div', { className: 'mt-kpi-card mt-kpi-card--uncategorized', 'data-category': UNCATEGORIZED_SLUG });
+    const labelEl = el('div', { className: 'mt-kpi-label' });
+    labelEl.textContent = UNCATEGORIZED_LABEL;
+    const valueEl = el('div', { className: 'mt-kpi-value' });
+    valueEl.textContent = String(catCounts[UNCATEGORIZED_SLUG]);
+    const subEl = el('div', { className: 'mt-kpi-sub' });
+    subEl.textContent = catCounts[UNCATEGORIZED_SLUG] === 1 ? 'change' : 'changes';
+    card.appendChild(labelEl);
+    card.appendChild(valueEl);
+    card.appendChild(subEl);
+    kpiGrid.appendChild(card);
+  }
+  _reportingBodyEl.appendChild(kpiGrid);
+
+  // ─── Summary bar (total + audit + training pills) ──────────────────────
   const summaryBar = el('div', { className: 'matrix-summary', style: 'margin-bottom:16px;' });
   const totalPill = el('div', { className: 'stat-pill' });
   const totalStrong = el('strong');
@@ -1477,8 +2053,8 @@ function renderChangeLogs(data) {
   totalPill.appendChild(document.createTextNode(' Total Changes'));
   summaryBar.appendChild(totalPill);
 
-  const auditCount = entries.filter(e => e.type === 'audit_log').length;
-  const trainingCount = entries.filter(e => e.type === 'training_log').length;
+  const auditCount = entries.filter(e => e.type === 'audit').length;
+  const trainingCount = entries.filter(e => e.type === 'training').length;
   if (auditCount > 0) {
     const auditPill = el('div', { className: 'stat-pill' });
     const auditStrong = el('strong');
@@ -1497,94 +2073,135 @@ function renderChangeLogs(data) {
   }
   _reportingBodyEl.appendChild(summaryBar);
 
-  // Group by skill_name
-  const groups = {};
+  // ─── Category-grouped feed ─────────────────────────────────────────────
+  const sectionEntries = {};
+  CATEGORY_ORDER.forEach(slug => { sectionEntries[slug] = []; });
+  sectionEntries[UNCATEGORIZED_SLUG] = [];
   entries.forEach(entry => {
-    const key = entry.skill_name || 'General';
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(entry);
+    const cats = Array.isArray(entry.categories) ? entry.categories : [];
+    if (cats.length === 0) {
+      sectionEntries[UNCATEGORIZED_SLUG].push(entry);
+    } else {
+      const seen = new Set();
+      cats.forEach(c => {
+        const slug = _normalizeCategorySlug(c?.slug);
+        if (!seen.has(slug) && sectionEntries[slug]) {
+          sectionEntries[slug].push(entry);
+          seen.add(slug);
+        }
+      });
+    }
   });
 
-  // Render each group as a collapsible card
-  Object.entries(groups).forEach(([skillName, groupEntries]) => {
-    const card = el('div', { className: 'mt-dash-card', style: 'margin-bottom:12px;' });
+  const sectionOrder = [...CATEGORY_ORDER, UNCATEGORIZED_SLUG];
+  sectionOrder.forEach(slug => {
+    const slugEntries = sectionEntries[slug] || [];
+    if (slugEntries.length === 0) return;
+    const label = slug === UNCATEGORIZED_SLUG
+      ? UNCATEGORIZED_LABEL
+      : (CATEGORY_LABEL_FALLBACK[slug] || slug);
+    const accent = CATEGORY_ACCENT[slug] || 'var(--text-muted)';
 
-    const cardHeader = el('div', { className: 'mt-dash-card-header', style: 'cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;' });
-    const headerLeft = el('div', { style: 'display:flex;align-items:center;gap:8px;' });
-    const chevronSpan = el('span', { style: 'display:inline-flex;transition:transform 0.2s;' });
-    chevronSpan.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
-    const nameSpan = el('span');
-    nameSpan.textContent = skillName;
-    headerLeft.appendChild(chevronSpan);
-    headerLeft.appendChild(nameSpan);
+    const section = el('div', { className: 'mt-matrix-section', 'data-category': slug, style: 'margin-bottom:20px;' });
+    const sectionHeader = el('div', { className: 'mt-matrix-section__header' });
+    const dot = el('span', { className: 'mt-matrix-section__dot' });
+    dot.style.background = accent;
+    const sectionLabel = el('span', { className: 'mt-matrix-section__title' });
+    sectionLabel.textContent = label;
+    const sectionCount = el('span', { className: 'mt-matrix-section__count' });
+    sectionCount.textContent = String(slugEntries.length);
+    sectionHeader.appendChild(dot);
+    sectionHeader.appendChild(sectionLabel);
+    sectionHeader.appendChild(sectionCount);
+    section.appendChild(sectionHeader);
 
-    const countBadge = el('span', {
-      style: 'background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:9999px;font-size:11px;padding:1px 8px;color:var(--text-muted);',
+    const skillGroups = {};
+    slugEntries.forEach(entry => {
+      const key = entry.skill_name || 'General';
+      if (!skillGroups[key]) skillGroups[key] = [];
+      skillGroups[key].push(entry);
     });
-    countBadge.textContent = String(groupEntries.length);
 
-    cardHeader.appendChild(headerLeft);
-    cardHeader.appendChild(countBadge);
+    Object.entries(skillGroups).forEach(([skillName, groupEntries]) => {
+      const card = el('div', { className: 'mt-dash-card', style: 'margin-bottom:12px;' });
 
-    const cardBody = el('div', { className: 'mt-dash-card-body' });
+      const cardHeader = el('div', { className: 'mt-dash-card-header', style: 'cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;' });
+      const headerLeft = el('div', { style: 'display:flex;align-items:center;gap:8px;' });
+      const chevronSpan = el('span', { style: 'display:inline-flex;transition:transform 0.2s;' });
+      chevronSpan.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+      const nameSpan = el('span');
+      nameSpan.textContent = skillName;
+      headerLeft.appendChild(chevronSpan);
+      headerLeft.appendChild(nameSpan);
 
-    let collapsed = false;
-    cardHeader.addEventListener('click', () => {
-      collapsed = !collapsed;
-      cardBody.style.display = collapsed ? 'none' : 'block';
-      chevronSpan.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
-    });
+      const countBadge = el('span', {
+        style: 'background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:9999px;font-size:11px;padding:1px 8px;color:var(--text-muted);',
+      });
+      countBadge.textContent = String(groupEntries.length);
 
-    // Render entries
-    groupEntries.forEach(entry => {
-      const item = el('div', { className: 'mt-activity-item' });
+      cardHeader.appendChild(headerLeft);
+      cardHeader.appendChild(countBadge);
 
-      const avatar = el('div', { className: 'mt-activity-avatar' });
-      if (entry.type === 'training_log') {
-        avatar.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
-        avatar.style.background = 'rgba(59,130,246,.15)';
-        avatar.style.color = 'var(--accent)';
-      } else {
-        avatar.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
-        avatar.style.background = 'rgba(245,158,11,.15)';
-        avatar.style.color = 'var(--warning)';
-      }
+      const cardBody = el('div', { className: 'mt-dash-card-body' });
 
-      const body = el('div', { className: 'mt-activity-body' });
-      const text = el('div', { className: 'mt-activity-text' });
+      let collapsed = false;
+      cardHeader.addEventListener('click', () => {
+        collapsed = !collapsed;
+        cardBody.style.display = collapsed ? 'none' : 'block';
+        chevronSpan.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+      });
 
-      const engineerName = entry.engineer_name || entry.changed_by || 'Unknown';
+      groupEntries.forEach(entry => {
+        const item = el('div', { className: 'mt-activity-item' });
 
-      if (entry.type === 'training_log') {
-        const title = entry.title || 'Training completed';
-        const notes = entry.notes ? ` \u2014 ${entry.notes}` : '';
-        text.innerHTML = `<strong>${escapeHtml(engineerName)}</strong> ${escapeHtml(title)}${escapeHtml(notes)}`;
-      } else {
-        // Audit log
-        const field = entry.field || '';
-        const oldVal = entry.old_value || '\u2014';
-        const newVal = entry.new_value || '\u2014';
-        const changedBy = entry.changed_by || engineerName;
-        if (field) {
-          text.innerHTML = `<strong>${escapeHtml(changedBy)}</strong> changed <em>${escapeHtml(field)}</em>: ${escapeHtml(oldVal)} \u2192 ${escapeHtml(newVal)}`;
+        const avatar = el('div', { className: 'mt-activity-avatar' });
+        if (entry.type === 'training') {
+          avatar.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
+          avatar.style.background = 'rgba(59,130,246,.15)';
+          avatar.style.color = 'var(--accent)';
         } else {
-          text.innerHTML = `<strong>${escapeHtml(changedBy)}</strong> made a change`;
+          avatar.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+          avatar.style.background = 'rgba(245,158,11,.15)';
+          avatar.style.color = 'var(--warning)';
         }
-      }
 
-      const time = el('div', { className: 'mt-activity-time' });
-      time.textContent = relativeTime(entry.date);
+        const body = el('div', { className: 'mt-activity-body' });
+        const text = el('div', { className: 'mt-activity-text' });
 
-      body.appendChild(text);
-      body.appendChild(time);
-      item.appendChild(avatar);
-      item.appendChild(body);
-      cardBody.appendChild(item);
+        const engineerName = entry.engineer_name || entry.changed_by || 'Unknown';
+
+        if (entry.type === 'training') {
+          const title = entry.title || 'Training completed';
+          const notes = entry.notes ? ` \u2014 ${entry.notes}` : '';
+          text.innerHTML = `<strong>${escapeHtml(engineerName)}</strong> ${escapeHtml(title)}${escapeHtml(notes)}`;
+        } else {
+          const field = entry.field || '';
+          const oldVal = entry.old_value || '\u2014';
+          const newVal = entry.new_value || '\u2014';
+          const changedBy = entry.changed_by || engineerName;
+          if (field) {
+            text.innerHTML = `<strong>${escapeHtml(changedBy)}</strong> changed <em>${escapeHtml(field)}</em>: ${escapeHtml(oldVal)} \u2192 ${escapeHtml(newVal)}`;
+          } else {
+            text.innerHTML = `<strong>${escapeHtml(changedBy)}</strong> made a change`;
+          }
+        }
+
+        const time = el('div', { className: 'mt-activity-time' });
+        time.textContent = relativeTime(entry.date);
+
+        body.appendChild(text);
+        body.appendChild(time);
+        item.appendChild(avatar);
+        item.appendChild(body);
+        cardBody.appendChild(item);
+      });
+
+      card.appendChild(cardHeader);
+      card.appendChild(cardBody);
+      section.appendChild(card);
     });
 
-    card.appendChild(cardHeader);
-    card.appendChild(cardBody);
-    _reportingBodyEl.appendChild(card);
+    _reportingBodyEl.appendChild(section);
   });
 }
 
@@ -2051,11 +2668,7 @@ function formatActivityTitle(raw, skillName) {
 }
 
 function isStagnant(cell) {
-  if (cell.status === 'not_in_plan' || cell.status === 'mastered') return false;
-  const updated = cell.last_updated_at || cell.last_training_at;
-  if (!updated) return false;
-  const diff = Date.now() - new Date(updated).getTime();
-  return diff > 90 * 24 * 60 * 60 * 1000;
+  return isStalled(cell);
 }
 
 async function downloadExport(url, filename) {

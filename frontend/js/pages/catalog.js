@@ -1154,6 +1154,23 @@ function showSkillDetailModal(skill) {
     return row;
   }
 
+  const categories = Array.isArray(skill.categories) ? skill.categories : [];
+  if (categories.length) {
+    const catRow = createElement('div', { className: 'skill-detail-assign-row skill-detail-categories' });
+    const catLabel = createElement('span', { className: 'skill-detail-assign-label' });
+    catLabel.textContent = 'Categories';
+    catRow.appendChild(catLabel);
+    categories.forEach(cat => {
+      const chip = createElement('span', { className: 'skill-detail-category-chip' });
+      chip.appendChild(categoryIconSpan(cat.slug, '14px'));
+      const txt = createElement('span', { className: 'skill-detail-category-chip__name' });
+      txt.textContent = cat.name;
+      chip.appendChild(txt);
+      catRow.appendChild(chip);
+    });
+    assignSection.appendChild(catRow);
+  }
+
   if (teams.length) {
     const teamRow = createElement('div', { className: 'skill-detail-assign-row' });
     const label = createElement('span', { className: 'skill-detail-assign-label' });

@@ -140,33 +140,49 @@ class UserContentCreate(BaseModel):
     type: SkillLevelContentType = SkillLevelContentType.action
     title: str
     description: str | None = None
+    description_format: str = "markdown"
     url: str | None = None
+    is_private: bool = False
 
 
 class UserContentUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
+    description_format: str | None = None
     url: str | None = None
     type: SkillLevelContentType | None = None
+    is_private: bool | None = None
 
 
 class UserContentResponse(BaseModel):
     id: int
     user_id: int
-    plan_skill_id: int
+    plan_skill_id: int | None = None
     skill_id: int
     level: int
     type: SkillLevelContentType
     title: str
     description: str | None = None
+    description_format: str = "markdown"
     url: str | None = None
     position: int
     completed: bool = False
     completed_at: datetime | None = None
+    is_private: bool = False
+    source_user_content_id: int | None = None
     created_at: datetime
     updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+
+class LibraryImportRequest(BaseModel):
+    source_ids: list[int]
+
+
+class LibraryImportResponse(BaseModel):
+    imported: list[UserContentResponse]
+    skipped: list[dict] = []
 
 
 # --- Merged Content Item (catalog + user completion + user override) ---
@@ -179,6 +195,7 @@ class MergedContentItem(BaseModel):
     type: SkillLevelContentType
     title: str
     description: str | None = None
+    description_format: str = "markdown"
     url: str | None = None
     position: int
     completed: bool = False
@@ -187,6 +204,8 @@ class MergedContentItem(BaseModel):
     has_override: bool = False
     override_description: str | None = None
     is_user_content: bool = False
+    is_private: bool = False
+    source_user_content_id: int | None = None
 
 
 class PlanSkillContentResponse(BaseModel):

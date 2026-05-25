@@ -5,6 +5,7 @@ import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
 import { el } from '../utils/dom.js';
 import { getSkillIconSVG } from '../components/icons.js';
+import { openLibraryModal } from '../components/library-modal.js';
 
 let _container = null;
 let _engineerId = null;
@@ -445,9 +446,9 @@ function renderActiveSection() {
 
   const sortedGroups = Array.from(groups.values()).sort((a, b) => a.cat.sort_order - b.cat.sort_order);
   const allGroups = [];
-  sortedGroups.forEach(g => allGroups.push({ id: g.cat.id, name: g.cat.name, skills: g.skills }));
+  sortedGroups.forEach(g => allGroups.push({ id: g.cat.id, slug: g.cat.slug, name: g.cat.name, skills: g.skills }));
   if (uncategorized.length > 0) {
-    allGroups.push({ id: 'uncategorized', name: 'Uncategorized', skills: uncategorized });
+    allGroups.push({ id: 'uncategorized', slug: 'uncategorized', name: 'Uncategorized', skills: uncategorized });
   }
 
   if (allGroups.length === 0) {
@@ -457,10 +458,22 @@ function renderActiveSection() {
     return;
   }
 
+  const groupIconMap = {
+    foundational: 'seedling',
+    core: 'diamond',
+    advanced: 'atom',
+    ai_future: 'sparkles',
+    'ai-future': 'sparkles',
+  };
+
   allGroups.forEach(g => {
     const groupEl = el('div', { className: 'mp-category-group' });
-    
+
     const header = el('div', { className: 'mp-category-group__header' });
+    const iconName = groupIconMap[g.slug] || 'layers';
+    const iconEl = svgIcon(iconName, '14px');
+    iconEl.classList.add('mp-category-group__icon');
+    header.appendChild(iconEl);
     const nameSpan = el('span', { className: 'mp-category-group__name' });
     nameSpan.textContent = g.name;
     const countSpan = el('span', { className: 'mp-category-group__count' });
@@ -1142,6 +1155,35 @@ function openEditSkillModal(planSkill) {
   notesGroup.appendChild(notesTextarea);
   formCol.appendChild(notesGroup);
 
+  const categories = Array.isArray(planSkill.categories) ? planSkill.categories : [];
+  if (categories.length) {
+    const catGroup = el('div', { className: 'form-group mp-modal-categories' });
+    const catLabel = el('label', { className: 'form-label' });
+    catLabel.textContent = 'Categories';
+    const catChips = el('div', { className: 'mp-modal-category-chips' });
+    const editIconMap = {
+      foundational: 'seedling',
+      core: 'diamond',
+      advanced: 'atom',
+      ai_future: 'sparkles',
+      'ai-future': 'sparkles',
+    };
+    categories.forEach(cat => {
+      const chip = el('span', { className: 'mp-modal-category-chip' });
+      const iconName = editIconMap[cat.slug] || 'layers';
+      const ic = svgIcon(iconName, '14px');
+      ic.classList.add('mp-modal-category-chip__icon');
+      chip.appendChild(ic);
+      const name = el('span', { className: 'mp-modal-category-chip__name' });
+      name.textContent = cat.name;
+      chip.appendChild(name);
+      catChips.appendChild(chip);
+    });
+    catGroup.appendChild(catLabel);
+    catGroup.appendChild(catChips);
+    formCol.appendChild(catGroup);
+  }
+
   topRow.appendChild(formCol);
 
   const overallProgressEl = el('div', { className: 'mp-modal-overall-progress' });
@@ -1445,7 +1487,7 @@ function openEditSkillModal(planSkill) {
         editBtn.innerHTML = SVG_ICONS.pencil;
         editBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          openUserContentEditor({ mode: 'edit', item, planSkill, levelKey: key }, () => refreshContent());
+          openLibraryModal({ mode: 'edit', item, planSkill, engineerId: _engineerId, levelKey: key }, () => refreshContent());
         });
         const delBtn = el('button', { className: 'btn btn-danger accordion-action-btn', 'aria-label': 'Delete item', title: 'Delete' });
         delBtn.textContent = '✕';
@@ -1541,7 +1583,7 @@ function openEditSkillModal(planSkill) {
     const addMyItemBtn = el('button', { className: 'btn btn-secondary content-add-btn mp-add-my-item-btn' });
     addMyItemBtn.textContent = `+ Add My ${levelCfg.label} Item`;
     addMyItemBtn.addEventListener('click', () => {
-      openUserContentEditor({ mode: 'create', planSkill, levelKey: key, level: levelCfg.level }, () => refreshContent());
+      openLibraryModal({ mode: 'create', planSkill, engineerId: _engineerId, levelKey: key, level: levelCfg.level }, () => refreshContent());
     });
     panel.appendChild(addMyItemBtn);
   }
@@ -1790,171 +1832,6 @@ function openOverrideEditor(item, planSkill, onSaved) {
       showToast(err.message || 'Failed to save notes', 'error');
       saveBtn.disabled = false;
       saveBtn.textContent = 'Save Notes';
-    }
-  });
-}
-
-function openUserContentEditor(opts, onSaved) {
-  const { mode, item, planSkill, levelKey, level } = opts;
-  const isEdit = mode === 'edit';
-  const levelNum = isEdit ? item.level : level;
-  const levelLabel = { 1: 'Education', 2: 'Exposure', 3: 'Experience', 4: 'Practice', 5: 'Mastery' }[levelNum] || 'Content';
-
-  const root = document.getElementById('modalRoot');
-  if (!root) return;
-
-  const overlay = el('div', { className: 'modal-overlay' });
-  const modal = el('div', { className: 'modal content-edit-modal user-content-editor-modal' });
-
-  const header = el('div', { className: 'modal-header' });
-  const titleEl = el('h2', { className: 'modal-title' });
-  titleEl.textContent = isEdit ? `Edit My Item — ${item.title}` : `Add My ${levelLabel} Item`;
-  const closeBtn = el('button', { className: 'modal-close', 'aria-label': 'Close' });
-  closeBtn.textContent = '\u2715';
-  header.appendChild(titleEl);
-  header.appendChild(closeBtn);
-  modal.appendChild(header);
-
-  const body = el('div', { className: 'modal-body' });
-
-  const hint = el('p', { className: 'mp-form-hint' });
-  hint.textContent = 'This item is personal to you and won\u2019t affect the global catalog.';
-  body.appendChild(hint);
-
-  const titleGroup = el('div', { className: 'form-group' });
-  const titleLabel = el('label', { className: 'form-label' });
-  titleLabel.textContent = 'Title';
-  const titleInput = el('input', { type: 'text', className: 'form-input', placeholder: 'e.g. Cisco Live session, Lab exercise…' });
-  if (isEdit) titleInput.value = item.title || '';
-  titleGroup.appendChild(titleLabel);
-  titleGroup.appendChild(titleInput);
-  body.appendChild(titleGroup);
-
-  const typeGroup = el('div', { className: 'form-group' });
-  const typeLabel = el('label', { className: 'form-label' });
-  typeLabel.textContent = 'Type';
-  const typeSelect = el('select', { className: 'form-select' });
-  ['course', 'certification', 'reading', 'link', 'action'].forEach(t => {
-    const opt = el('option', { value: t });
-    opt.textContent = t.charAt(0).toUpperCase() + t.slice(1);
-    if (isEdit && item.type === t) opt.selected = true;
-    typeSelect.appendChild(opt);
-  });
-  typeGroup.appendChild(typeLabel);
-  typeGroup.appendChild(typeSelect);
-  body.appendChild(typeGroup);
-
-  const urlGroup = el('div', { className: 'form-group' });
-  const urlLabel = el('label', { className: 'form-label' });
-  urlLabel.textContent = 'URL (optional)';
-  const urlInput = el('input', { type: 'url', className: 'form-input', placeholder: 'https://…' });
-  if (isEdit && item.url) urlInput.value = item.url;
-  urlGroup.appendChild(urlLabel);
-  urlGroup.appendChild(urlInput);
-  body.appendChild(urlGroup);
-
-  const descGroup = el('div', { className: 'form-group' });
-  const descLabel = el('label', { className: 'form-label' });
-  descLabel.textContent = 'Description (optional)';
-  body.appendChild(descGroup);
-
-  const toolbar = el('div', { className: 'uce-toolbar' });
-  const toolbarActions = [
-    { cmd: 'bold', icon: '<b>B</b>', title: 'Bold' },
-    { cmd: 'italic', icon: '<i>I</i>', title: 'Italic' },
-    { cmd: 'insertUnorderedList', icon: '• List', title: 'Bullet list' },
-    { cmd: 'insertOrderedList', icon: '1. List', title: 'Numbered list' },
-    { cmd: 'createLink', icon: '🔗', title: 'Insert link' },
-    { cmd: 'removeFormat', icon: '⊘', title: 'Clear formatting' },
-  ];
-  toolbarActions.forEach(({ cmd, icon, title }) => {
-    const btn = el('button', { type: 'button', className: 'uce-toolbar-btn', title });
-    btn.innerHTML = icon;
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (cmd === 'createLink') {
-        const url = prompt('Enter URL:');
-        if (url) document.execCommand(cmd, false, url);
-      } else {
-        document.execCommand(cmd, false, null);
-      }
-      editorEl.focus();
-    });
-    toolbar.appendChild(btn);
-  });
-  descGroup.appendChild(descLabel);
-  descGroup.appendChild(toolbar);
-
-  const editorEl = el('div', { className: 'uce-editor', contentEditable: 'true' });
-  if (isEdit && item.description) editorEl.innerHTML = item.description;
-  descGroup.appendChild(editorEl);
-
-  const footer = el('div', { className: 'modal-footer' });
-  const cancelBtn = el('button', { className: 'btn btn-secondary' });
-  cancelBtn.textContent = 'Cancel';
-  const saveBtn = el('button', { className: 'btn btn-primary' });
-  saveBtn.textContent = isEdit ? 'Save Changes' : 'Add Item';
-  footer.appendChild(cancelBtn);
-  footer.appendChild(saveBtn);
-
-  modal.appendChild(body);
-  modal.appendChild(footer);
-  overlay.appendChild(modal);
-  root.appendChild(overlay);
-
-  requestAnimationFrame(() => {
-    overlay.classList.add('open');
-    titleInput.focus();
-  });
-
-  function close() {
-    overlay.classList.remove('open');
-    setTimeout(() => overlay.remove(), 200);
-  }
-
-  cancelBtn.addEventListener('click', close);
-  closeBtn.addEventListener('click', close);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-
-  saveBtn.addEventListener('click', async () => {
-    const titleVal = titleInput.value.trim();
-    if (!titleVal) {
-      showToast('Title is required', 'error');
-      titleInput.focus();
-      return;
-    }
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
-
-    const descHtml = editorEl.innerHTML.trim();
-    const urlVal = urlInput.value.trim() || null;
-
-    try {
-      if (isEdit) {
-        await api.put(`/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${item.id}`, {
-          title: titleVal,
-          type: typeSelect.value,
-          description: descHtml || null,
-          url: urlVal,
-        });
-        showToast('Item updated', 'success');
-      } else {
-        await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/user-content`, {
-          level: levelNum,
-          type: typeSelect.value,
-          title: titleVal,
-          description: descHtml || null,
-          url: urlVal,
-        });
-        showToast('Item added', 'success');
-      }
-      close();
-      if (typeof onSaved === 'function') onSaved();
-    } catch (err) {
-      showToast(err.message || 'Failed to save item', 'error');
-      saveBtn.disabled = false;
-      saveBtn.textContent = isEdit ? 'Save Changes' : 'Add Item';
     }
   });
 }

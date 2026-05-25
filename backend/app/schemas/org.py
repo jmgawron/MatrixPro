@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.models.plan import PlanSkillStatus
+from app.schemas.skill import CategoryInfo
 
 
 class DomainCreate(BaseModel):
@@ -44,6 +45,7 @@ class MatrixSkillInfo(BaseModel):
     id: int
     name: str
     icon: str | None = None
+    categories: list[CategoryInfo] = []
 
 
 class MatrixCellInfo(BaseModel):
@@ -85,6 +87,7 @@ class PerSkillStat(BaseModel):
     avg_proficiency: float | None = None
     status_counts: SkillStatusCounts
     last_activity_at: datetime | None = None
+    categories: list[CategoryInfo] = []
 
 
 class PerEngineerStat(BaseModel):

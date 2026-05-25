@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
 from app.dependencies import get_current_user, require_role
@@ -15,7 +15,7 @@ from app.models.plan import (
     PlanSkillStatus,
     PlanSkillTrainingLog,
 )
-from app.models.skill import Skill, SkillTeam
+from app.models.skill import Skill, SkillCategoryAssignment, SkillTeam
 from app.models.user import User, UserRole
 from app.schemas.org import (
     ActivityItem,
@@ -31,8 +31,30 @@ from app.schemas.org import (
     TeamResponse,
     TeamStatsResponse,
 )
+from app.schemas.skill import CategoryInfo
 
 router = APIRouter(prefix="/api/teams", tags=["teams"])
+
+
+def _category_eager_option():
+    return selectinload(Skill.skill_categories).selectinload(
+        SkillCategoryAssignment.category
+    )
+
+
+def _skill_categories(skill: Skill) -> list[CategoryInfo]:
+    cats = [
+        CategoryInfo(
+            id=sca.category.id,
+            slug=sca.category.slug,
+            name=sca.category.name,
+            sort_order=sca.category.sort_order,
+        )
+        for sca in skill.skill_categories
+        if sca.category is not None
+    ]
+    cats.sort(key=lambda c: (c.sort_order, c.id))
+    return cats
 
 
 def _team_to_response(team: Team) -> TeamResponse:
@@ -119,6 +141,7 @@ def get_team_matrix(
     skill_rows = (
         db.query(Skill)
         .join(SkillTeam, SkillTeam.skill_id == Skill.id)
+        .options(_category_eager_option())
         .filter(SkillTeam.team_id == team.id, Skill.is_archived == False)  # noqa: E712
         .order_by(Skill.id)
         .all()
@@ -142,6 +165,7 @@ def get_team_matrix(
         extra_skills = (
             db.query(Skill)
             .join(SkillTeam, SkillTeam.skill_id == Skill.id)
+            .options(_category_eager_option())
             .filter(
                 SkillTeam.team_id == team.id,
                 Skill.id.in_(extra_skill_ids),
@@ -192,7 +216,13 @@ def get_team_matrix(
             training_log_map = {row[0]: row[1] for row in max_logs if row[1]}
 
     skill_infos = [
-        MatrixSkillInfo(id=s.id, name=s.name, icon=s.icon) for s in all_skills
+        MatrixSkillInfo(
+            id=s.id,
+            name=s.name,
+            icon=s.icon,
+            categories=_skill_categories(s),
+        )
+        for s in all_skills
     ]
     engineer_rows = []
     for eng in engineers:
@@ -234,6 +264,7 @@ def get_team_stats(
     team_skills = (
         db.query(Skill)
         .join(SkillTeam, SkillTeam.skill_id == Skill.id)
+        .options(_category_eager_option())
         .filter(SkillTeam.team_id == team.id, Skill.is_archived == False)  # noqa: E712
         .order_by(Skill.id)
         .all()
@@ -344,6 +375,7 @@ def get_team_stats(
                 avg_proficiency=round(avg_prof, 1) if avg_prof is not None else None,
                 status_counts=status_counts,
                 last_activity_at=last_activity,
+                categories=_skill_categories(skill),
             )
         )
 
@@ -399,6 +431,7 @@ def get_team_stats(
 def get_team_activity(
     team_id: int | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -436,13 +469,20 @@ def get_team_activity(
         skill_names = {s.id: s.name for s in skills}
 
     ps_ids = [ps.id for ps in plan_skills]
+    fetch_cap = limit + offset
     logs: list[PlanSkillTrainingLog] = []
+    logs_total = 0
     if ps_ids:
+        logs_total = (
+            db.query(PlanSkillTrainingLog)
+            .filter(PlanSkillTrainingLog.plan_skill_id.in_(ps_ids))
+            .count()
+        )
         logs = (
             db.query(PlanSkillTrainingLog)
             .filter(PlanSkillTrainingLog.plan_skill_id.in_(ps_ids))
             .order_by(PlanSkillTrainingLog.completed_at.desc())
-            .limit(limit)
+            .limit(fetch_cap)
             .all()
         )
 
@@ -468,6 +508,14 @@ def get_team_activity(
             )
         )
 
+    audit_total = (
+        db.query(AuditLog)
+        .filter(
+            AuditLog.changed_by.in_(engineer_ids),
+            AuditLog.entity_type.in_(["plan_skill", "user_content_completion"]),
+        )
+        .count()
+    )
     audit_logs = (
         db.query(AuditLog)
         .filter(
@@ -475,7 +523,7 @@ def get_team_activity(
             AuditLog.entity_type.in_(["plan_skill", "user_content_completion"]),
         )
         .order_by(AuditLog.changed_at.desc())
-        .limit(limit)
+        .limit(fetch_cap)
         .all()
     )
 
@@ -500,12 +548,13 @@ def get_team_activity(
         )
 
     items.sort(key=lambda x: x.occurred_at, reverse=True)
-    items = items[:limit]
+    total = logs_total + audit_total
+    items = items[offset : offset + limit]
 
     return TeamActivityResponse(
         team_id=team.id,
         items=items,
-        total=len(items),
+        total=total,
     )
 
 
@@ -560,16 +609,24 @@ def get_team_change_logs(
             all_plan_skill_ids.append(ps_id)
             ps_to_eng[ps_id] = plan_id_to_eng[plan.id]
 
+    ps_skill_names: dict[int, str] = {}
+    ps_skill_ids: dict[int, int] = {}
+    ps_skill_categories: dict[int, list[dict]] = {}
     if all_plan_skill_ids:
-        ps_skill_names: dict[int, str] = {}
         ps_rows2 = (
-            db.query(PlanSkill.id, Skill.name)
+            db.query(PlanSkill.id, Skill)
             .join(Skill, PlanSkill.skill_id == Skill.id)
+            .options(_category_eager_option())
             .filter(PlanSkill.id.in_(all_plan_skill_ids))
             .all()
         )
-        for ps_id, s_name in ps_rows2:
-            ps_skill_names[ps_id] = s_name
+        for ps_id, skill_obj in ps_rows2:
+            ps_skill_names[ps_id] = skill_obj.name
+            ps_skill_ids[ps_id] = skill_obj.id
+            ps_skill_categories[ps_id] = [
+                {"id": ci.id, "slug": ci.slug, "name": ci.name, "sort_order": ci.sort_order}
+                for ci in _skill_categories(skill_obj)
+            ]
 
         audit_query = db.query(AuditLog).filter(
             AuditLog.entity_type == "plan_skill",
@@ -595,6 +652,8 @@ def get_team_change_logs(
                     if eng_id
                     else "Unknown",
                     "skill_name": ps_skill_names.get(log.entity_id, "Unknown"),
+                    "skill_id": ps_skill_ids.get(log.entity_id),
+                    "categories": ps_skill_categories.get(log.entity_id, []),
                 }
             )
 
@@ -628,6 +687,8 @@ def get_team_change_logs(
                     if eng_id
                     else "Unknown",
                     "skill_name": ps_skill_names.get(tlog.plan_skill_id, "Unknown"),
+                    "skill_id": ps_skill_ids.get(tlog.plan_skill_id),
+                    "categories": ps_skill_categories.get(tlog.plan_skill_id, []),
                 }
             )
 

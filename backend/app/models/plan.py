@@ -119,7 +119,12 @@ class UserLevelContent(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    plan_skill_id = Column(Integer, ForeignKey("plan_skills.id"), nullable=False)
+    # plan_skill_id is nullable so a library item survives if the author removes the
+    # source plan_skill (community template stays discoverable / clonable). See
+    # Decision 5A in AGENTS.md §16.
+    plan_skill_id = Column(
+        Integer, ForeignKey("plan_skills.id", ondelete="SET NULL"), nullable=True
+    )
     skill_id = Column(Integer, ForeignKey("skills.id"), nullable=False)
     level = Column(Integer, nullable=False)
     type = Column(
@@ -129,16 +134,39 @@ class UserLevelContent(Base):
     )
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
+    # Format of `description`. Library items are authored in Markdown (canonical).
+    # Pre-library items default to 'legacy_html' (rendered as sanitized HTML; converted
+    # to Markdown lazily on next edit). See Decision 4A.
+    description_format = Column(
+        String(16), nullable=False, server_default="legacy_html", default="markdown"
+    )
     url = Column(String, nullable=True)
     position = Column(Integer, default=1000, nullable=False)
     completed = Column(Boolean, default=False, nullable=False)
     completed_at = Column(DateTime, nullable=True)
+    # Library visibility (Decision 6/Option C — explicit opt-out). Default 0 = public
+    # / discoverable to other engineers. Owner-only when set.
+    is_private = Column(
+        Boolean, nullable=False, server_default="0", default=False
+    )
+    # Provenance pointer for items cloned from another engineer's library item.
+    # ON DELETE SET NULL — cloned copy survives if original is hard-deleted.
+    source_user_content_id = Column(
+        Integer,
+        ForeignKey("user_level_content.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User")
     plan_skill = relationship("PlanSkill")
     skill = relationship("Skill")
+    source_item = relationship(
+        "UserLevelContent",
+        remote_side="UserLevelContent.id",
+        foreign_keys=[source_user_content_id],
+    )
 
 
 class HiddenCatalogContent(Base):

@@ -16,6 +16,7 @@ from app.routers import (
     feedback,
     reporting,
     search,
+    library,
 )
 
 app = FastAPI(title="MatrixPro API", version="0.1.0")
@@ -40,6 +41,7 @@ app.include_router(certification.router)
 app.include_router(feedback.router)
 app.include_router(reporting.router)
 app.include_router(search.router)
+app.include_router(library.router)
 
 
 @app.on_event("startup")

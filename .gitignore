@@ -24,3 +24,6 @@ htmlcov/
 # Tool/temp artifacts
 .playwright-mcp/
 tmp/
+
+# Loose screenshot artifacts at repo root
+/*.png

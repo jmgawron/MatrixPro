@@ -44,6 +44,13 @@ class PlanSkillDomainInfo(BaseModel):
     name: str
 
 
+class PlanSkillCategoryInfo(BaseModel):
+    id: int
+    slug: str
+    name: str
+    sort_order: int = 0
+
+
 class PlanSkillResponse(BaseModel):
     id: int
     plan_id: int
@@ -60,6 +67,7 @@ class PlanSkillResponse(BaseModel):
     updated_at: datetime | None = None
     training_logs: list[TrainingLogResponse] = []
     domains: list[PlanSkillDomainInfo] = []
+    categories: list[PlanSkillCategoryInfo] = []
     content_types: list[str] = []
 
     model_config = {"from_attributes": True}

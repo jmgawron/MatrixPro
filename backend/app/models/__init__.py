@@ -9,6 +9,8 @@ from app.models.skill import (  # noqa: F401
     SkillTag,
     SkillLevelContent,
     SkillLevelContentType,
+    SkillCategory,
+    SkillCategoryAssignment,
 )
 from app.models.catalog import (  # noqa: F401
     CertificationDomain,

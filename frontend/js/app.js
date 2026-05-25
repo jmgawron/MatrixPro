@@ -7,9 +7,9 @@ import { initFeedbackButton } from './components/feedback.js';
 
 import { mountHome } from './pages/home.js?v=8';
 import { mountLogin } from './pages/login.js';
-import { mountMyPlan } from './pages/my-plan.js?v=10';
+import { mountMyPlan } from './pages/my-plan.js?v=23';
 import { mountMyTeam } from './pages/my-team.js?v=8';
-import { mountCatalog } from './pages/catalog.js?v=8';
+import { mountCatalog } from './pages/catalog.js?v=16';
 import { mountSkillExplorer } from './pages/skill-explorer.js';
 import { mountSettings } from './pages/settings.js';
 import { mountAdmin } from './pages/admin.js?v=7';

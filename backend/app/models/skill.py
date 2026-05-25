@@ -43,6 +43,48 @@ class Skill(Base):
     level_content = relationship("SkillLevelContent", back_populates="skill")
     plan_skills = relationship("PlanSkill", back_populates="skill")
     skill_certificates = relationship("SkillCertificate", back_populates="skill")
+    skill_categories = relationship(
+        "SkillCategoryAssignment",
+        back_populates="skill",
+        cascade="all, delete-orphan",
+    )
+
+
+class SkillCategory(Base):
+    """
+    Classification bucket for skills (Foundational, Core, Advanced, AI & Future Skills).
+
+    Stored as DB rows (not a Python enum) so admins can add/rename categories in the
+    future without a code change. ``slug`` is a stable machine identifier; ``name`` is
+    the human-facing label; ``sort_order`` controls display order in UI groupings.
+    """
+
+    __tablename__ = "skill_categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String, unique=True, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    skill_assignments = relationship(
+        "SkillCategoryAssignment",
+        back_populates="category",
+        cascade="all, delete-orphan",
+    )
+
+
+class SkillCategoryAssignment(Base):
+    """M2M join: a skill may belong to multiple categories simultaneously."""
+
+    __tablename__ = "skill_category_assignments"
+
+    skill_id = Column(Integer, ForeignKey("skills.id"), primary_key=True)
+    category_id = Column(Integer, ForeignKey("skill_categories.id"), primary_key=True)
+
+    skill = relationship("Skill", back_populates="skill_categories")
+    category = relationship("SkillCategory", back_populates="skill_assignments")
 
 
 class SkillTeam(Base):

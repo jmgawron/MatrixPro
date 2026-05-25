@@ -7,6 +7,35 @@ import { createElement } from '../utils/dom.js';
 import { getSkillIconSVG, SKILL_ICONS, ICON_CATEGORIES } from '../components/icons.js';
 import { createComboboxMulti } from '../components/combobox-multi.js';
 
+// ─── Category icon catalog (mirrors my-plan.js SVG_ICONS for chip parity) ───
+const CATEGORY_SVG_ICONS = {
+  seedling: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10"/><path d="M12 20v-8"/><path d="M12 12c0-4 3-7 8-7-1 5-4 7-8 7z"/><path d="M12 14c0-3-2-5-6-5 1 4 3 5 6 5z"/></svg>',
+  diamond: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12"/><path d="m15 3 3 6-6 12"/></svg>',
+  atom: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><ellipse cx="12" cy="12" rx="10" ry="4.5"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(120 12 12)"/></svg>',
+  sparkles: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 11l-5.5 2.5L12 19l-2.5-5.5L4 11l5.5-2.5L12 3z"/><path d="M19 17l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/><path d="M5 4l.7 1.5L7 6l-1.3.5L5 8l-.7-1.5L3 6l1.3-.5L5 4z"/></svg>',
+  layers: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+};
+
+const CATEGORY_ICON_MAP = {
+  foundational: 'seedling',
+  core: 'diamond',
+  advanced: 'atom',
+  ai_future: 'sparkles',
+  'ai-future': 'sparkles',
+};
+
+function categoryIconSpan(slug, size) {
+  const span = createElement('span', { className: 'mp-icon catalog-category-icon-svg' });
+  span.setAttribute('aria-hidden', 'true');
+  const iconName = CATEGORY_ICON_MAP[slug] || 'layers';
+  span.innerHTML = CATEGORY_SVG_ICONS[iconName] || CATEGORY_SVG_ICONS.layers;
+  if (size) {
+    span.style.width = typeof size === 'number' ? `${size}px` : size;
+    span.style.height = typeof size === 'number' ? `${size}px` : size;
+  }
+  return span;
+}
+
 // ─── Module-level page state ─────────────────────────────────────────────────
 
 let _container = null;
@@ -33,6 +62,19 @@ let _sortMode = 'name-asc';
 
 // Cached data for skill create/edit form
 let _formDataCache = null;
+
+let _categoriesCache = null;
+const _collapsedCategorySlugs = new Set(['foundational', 'advanced', 'ai_future']);
+
+async function getCategories() {
+  if (_categoriesCache) return _categoriesCache;
+  try {
+    _categoriesCache = await api.get('/api/skills/categories');
+  } catch {
+    _categoriesCache = [];
+  }
+  return _categoriesCache;
+}
 
 // ─── Entry point ─────────────────────────────────────────────────────────────
 
@@ -596,7 +638,10 @@ async function fetchAndRenderSkills() {
   showSkeleton(_gridEl, 'cards');
 
   try {
-    const skills = await api.get('/api/skills/' + buildQueryString());
+    const [skills] = await Promise.all([
+      api.get('/api/skills/' + buildQueryString()),
+      getCategories(),
+    ]);
     const allSkills = Array.isArray(skills) ? skills : [];
     const filtered = applyClientFilters(allSkills);
     renderSkillGrid(_gridEl, filtered);
@@ -736,9 +781,102 @@ function renderSkillGrid(container, skills) {
     return;
   }
 
+  if (_activeTab !== 'org') {
+    const grid = createElement('div', { className: 'grid-3' });
+    skills.forEach(skill => grid.appendChild(buildSkillCard(skill)));
+    container.appendChild(grid);
+    return;
+  }
+
+  renderGroupedSkillGrid(container, skills);
+}
+
+function renderGroupedSkillGrid(container, skills) {
+  const categories = _categoriesCache || [];
+  if (!categories.length) {
+    const grid = createElement('div', { className: 'grid-3' });
+    skills.forEach(skill => grid.appendChild(buildSkillCard(skill)));
+    container.appendChild(grid);
+    return;
+  }
+
+  const wrap = createElement('div', { className: 'catalog-category-sections' });
+  let renderedAny = false;
+
+  categories.forEach(cat => {
+    const matching = skills.filter(s =>
+      Array.isArray(s.categories) && s.categories.some(c => c.slug === cat.slug)
+    );
+    if (!matching.length) return;
+    renderedAny = true;
+    wrap.appendChild(buildCategorySection(cat, matching));
+  });
+
+  const uncategorised = skills.filter(s => !Array.isArray(s.categories) || s.categories.length === 0);
+  if (uncategorised.length) {
+    renderedAny = true;
+    wrap.appendChild(
+      buildCategorySection(
+        { slug: '__uncategorised', name: 'Uncategorised' },
+        uncategorised
+      )
+    );
+  }
+
+  if (!renderedAny) {
+    renderEmptyState(container, 'No skills found', 'Try adjusting your search or filters.');
+    return;
+  }
+
+  container.appendChild(wrap);
+}
+
+function buildCategorySection(category, skills) {
+  const collapsed = _collapsedCategorySlugs.has(category.slug);
+  const section = createElement('section', {
+    className: 'catalog-category-section' + (collapsed ? ' collapsed' : ''),
+    'data-category-slug': category.slug,
+  });
+
+  const header = createElement('button', {
+    className: 'catalog-category-header',
+    type: 'button',
+    'aria-expanded': collapsed ? 'false' : 'true',
+  });
+  const chevron = createElement('span', { className: 'catalog-category-chevron' });
+  chevron.setAttribute('aria-hidden', 'true');
+  header.appendChild(chevron);
+
+  if (category.slug !== '__uncategorised') {
+    header.appendChild(categoryIconSpan(category.slug, '16px'));
+  }
+
+  const title = createElement('h3', { className: 'catalog-category-title' });
+  title.textContent = category.name;
+  header.appendChild(title);
+
+  const count = createElement('span', { className: 'catalog-category-count' });
+  count.textContent = String(skills.length);
+  header.appendChild(count);
+
+  const body = createElement('div', { className: 'catalog-category-body' });
   const grid = createElement('div', { className: 'grid-3' });
   skills.forEach(skill => grid.appendChild(buildSkillCard(skill)));
-  container.appendChild(grid);
+  body.appendChild(grid);
+
+  header.addEventListener('click', () => {
+    const isCollapsed = section.classList.toggle('collapsed');
+    header.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+    if (isCollapsed) {
+      _collapsedCategorySlugs.add(category.slug);
+    } else {
+      _collapsedCategorySlugs.delete(category.slug);
+    }
+  });
+
+  section.appendChild(header);
+  section.appendChild(body);
+  return section;
 }
 
 // ─── Skill card ───────────────────────────────────────────────────────────────
@@ -806,15 +944,37 @@ function buildSkillCard(skill) {
     card.appendChild(badgeRow);
   }
 
-  // Team badges
   const teams = Array.isArray(skill.teams) ? skill.teams : [];
   if (teams.length) {
     const teamsRow = createElement('div', { className: 'tool-card-badges' });
-    teams.forEach(team => {
+    const VISIBLE_LIMIT = 2;
+    const visibleTeams = teams.slice(0, VISIBLE_LIMIT);
+    const hiddenTeams = teams.slice(VISIBLE_LIMIT);
+
+    visibleTeams.forEach(team => {
       const chip = createElement('span', { className: 'triage-chip triage-signal chip-sm' });
       chip.textContent = team.name;
       teamsRow.appendChild(chip);
     });
+
+    if (hiddenTeams.length) {
+      const overflow = createElement('span', {
+        className: 'triage-chip triage-signal chip-sm team-chip-overflow',
+        tabindex: '0',
+        'aria-label': `${hiddenTeams.length} more team${hiddenTeams.length === 1 ? '' : 's'}: ${hiddenTeams.map(t => t.name).join(', ')}`,
+      });
+      overflow.textContent = `+${hiddenTeams.length} …`;
+
+      const popover = createElement('span', { className: 'team-chip-overflow__popover', role: 'tooltip' });
+      hiddenTeams.forEach(team => {
+        const line = createElement('span', { className: 'team-chip-overflow__item' });
+        line.textContent = team.name;
+        popover.appendChild(line);
+      });
+      overflow.appendChild(popover);
+      teamsRow.appendChild(overflow);
+    }
+
     card.appendChild(teamsRow);
   }
 
@@ -822,7 +982,11 @@ function buildSkillCard(skill) {
   const certs = Array.isArray(skill.certificates) ? skill.certificates : [];
   if (certs.length) {
     const certsRow = createElement('div', { className: 'tool-card-badges' });
-    certs.forEach(cert => {
+    const VISIBLE_CERT_LIMIT = 2;
+    const visibleCerts = certs.slice(0, VISIBLE_CERT_LIMIT);
+    const hiddenCerts = certs.slice(VISIBLE_CERT_LIMIT);
+
+    visibleCerts.forEach(cert => {
       const badge = createElement('span', { className: 'meta-badge meta-badge--cert meta-badge--clickable' });
       badge.textContent = cert.name;
       badge.addEventListener('click', (e) => {
@@ -831,6 +995,32 @@ function buildSkillCard(skill) {
       });
       certsRow.appendChild(badge);
     });
+
+    if (hiddenCerts.length) {
+      const overflow = createElement('span', {
+        className: 'meta-badge meta-badge--cert team-chip-overflow',
+        tabindex: '0',
+        'aria-label': `${hiddenCerts.length} more certification${hiddenCerts.length === 1 ? '' : 's'}: ${hiddenCerts.map(c => c.name).join(', ')}`,
+      });
+      overflow.textContent = `+${hiddenCerts.length} …`;
+
+      const popover = createElement('span', { className: 'team-chip-overflow__popover', role: 'tooltip' });
+      hiddenCerts.forEach(cert => {
+        const line = createElement('button', {
+          className: 'team-chip-overflow__item team-chip-overflow__item--clickable',
+          type: 'button',
+        });
+        line.textContent = cert.name;
+        line.addEventListener('click', (e) => {
+          e.stopPropagation();
+          switchTabAndFilter('cert', 'cert_id', cert.id, cert.name);
+        });
+        popover.appendChild(line);
+      });
+      overflow.appendChild(popover);
+      certsRow.appendChild(overflow);
+    }
+
     card.appendChild(certsRow);
   }
 
@@ -964,8 +1154,42 @@ function showSkillDetailModal(skill) {
     return row;
   }
 
-  const teamRow = buildAssignRow('Teams', teams, () => 'triage-chip triage-signal chip-sm');
-  if (teamRow) assignSection.appendChild(teamRow);
+  if (teams.length) {
+    const teamRow = createElement('div', { className: 'skill-detail-assign-row' });
+    const label = createElement('span', { className: 'skill-detail-assign-label' });
+    label.textContent = 'Teams';
+    teamRow.appendChild(label);
+
+    const VISIBLE_TEAM_LIMIT = 2;
+    const visibleTeams = teams.slice(0, VISIBLE_TEAM_LIMIT);
+    const hiddenTeams = teams.slice(VISIBLE_TEAM_LIMIT);
+
+    visibleTeams.forEach(team => {
+      const chip = createElement('span', { className: 'triage-chip triage-signal chip-sm' });
+      chip.textContent = team.name || team;
+      teamRow.appendChild(chip);
+    });
+
+    if (hiddenTeams.length) {
+      const overflow = createElement('span', {
+        className: 'triage-chip triage-signal chip-sm team-chip-overflow',
+        tabindex: '0',
+        'aria-label': `${hiddenTeams.length} more team${hiddenTeams.length === 1 ? '' : 's'}: ${hiddenTeams.map(t => t.name || t).join(', ')}`,
+      });
+      overflow.textContent = `+${hiddenTeams.length} …`;
+
+      const popover = createElement('span', { className: 'team-chip-overflow__popover', role: 'tooltip' });
+      hiddenTeams.forEach(team => {
+        const line = createElement('span', { className: 'team-chip-overflow__item' });
+        line.textContent = team.name || team;
+        popover.appendChild(line);
+      });
+      overflow.appendChild(popover);
+      teamRow.appendChild(overflow);
+    }
+
+    assignSection.appendChild(teamRow);
+  }
 
   const certRow = buildAssignRow('Certs', certificates, () => 'meta-badge meta-badge--cert meta-badge--clickable');
   if (certRow) {
@@ -1638,7 +1862,7 @@ async function openSkillModal(existingSkill) {
 function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   const form = createElement('div', { className: 'catalog-form skill-edit-form' });
 
-  /* ─── Row 1: Name + Desc + Tags + Icon ───────────────────────────────────── */
+  /* Row 1 target height ~330px so total stays under the 594px modal envelope. */
   const topSection = createElement('div', { className: 'skill-edit-top-section' });
 
   const leftCol = createElement('div', { className: 'skill-edit-left-col' });
@@ -1653,38 +1877,40 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   nameGroup.classList.add('skill-edit-cell', 'skill-edit-cell--name');
   leftCol.appendChild(nameGroup);
 
-  const metaRow = createElement('div', { className: 'skill-edit-row--meta' });
-
   const descGroup = buildFormGroup('Description', 'skill-desc', 'textarea', {
     placeholder: 'Describe what this skill covers...',
   }, false);
   const descTextarea = descGroup.querySelector('#skill-desc');
   if (descTextarea) descTextarea.textContent = skill?.description || '';
   descGroup.classList.add('skill-edit-cell', 'skill-edit-cell--desc');
-  metaRow.appendChild(descGroup);
+  leftCol.appendChild(descGroup);
+
+  /* Right column ----------------------------------------------------------- */
+  const rightCol = createElement('div', { className: 'skill-edit-right-col' });
+
+  const iconCell = createElement('div', { className: 'skill-edit-cell skill-edit-cell--icon' });
+  iconCell.appendChild(buildIconPicker(skill?.icon || null));
+  rightCol.appendChild(iconCell);
 
   const tagsGroup = buildFormGroup('Tags', 'skill-tags', 'input', {
     type: 'text',
-    placeholder: 'e.g. routing, bgp, advanced (comma-separated)',
+    placeholder: 'e.g. routing, bgp, advanced',
   }, false);
   const tagsInput = tagsGroup.querySelector('#skill-tags');
   if (tagsInput) tagsInput.value = Array.isArray(skill?.tags) ? skill.tags.map(t => t.name || t).join(', ') : '';
   const tagHint = createElement('div', { className: 'form-hint catalog-form-hint' });
-  tagHint.textContent = 'Separate multiple tags with commas';
+  tagHint.textContent = 'Comma-separated';
   tagsGroup.appendChild(tagHint);
   tagsGroup.classList.add('skill-edit-cell', 'skill-edit-cell--tags');
-  metaRow.appendChild(tagsGroup);
-
-  leftCol.appendChild(metaRow);
-
-  const rightCol = createElement('div', { className: 'skill-edit-right-col skill-edit-cell--icon' });
-  rightCol.appendChild(buildIconPicker(skill?.icon || null));
+  rightCol.appendChild(tagsGroup);
 
   topSection.appendChild(leftCol);
   topSection.appendChild(rightCol);
   form.appendChild(topSection);
 
-  /* ─── Row 4: Teams + Certificates side-by-side ───────────────────────────── */
+  const categoryGroup = buildSkillCategoryPicker(skill);
+  form.appendChild(categoryGroup);
+
   const existingTeamIds = new Set(
     Array.isArray(skill?.teams)
       ? skill.teams.map(t => Number(t.id))
@@ -1840,18 +2066,102 @@ function buildTeamOptions(orgTree) {
 }
 
 
+function buildSkillCategoryPicker(skill) {
+  const group = createElement('div', { className: 'form-group skill-category-picker' });
+  const label = createElement('div', { className: 'form-label' });
+  label.textContent = 'Categories';
+  group.appendChild(label);
+
+  const hint = createElement('div', { className: 'form-hint catalog-form-hint' });
+  hint.textContent = 'Select one or more. Skills appear in every matching group on the Catalog.';
+  group.appendChild(hint);
+
+  const chips = createElement('div', { className: 'skill-category-chips' });
+  group.appendChild(chips);
+  group._categoryGrid = chips;
+
+  const existingIds = new Set(
+    Array.isArray(skill?.categories) ? skill.categories.map(c => Number(c.id)) : []
+  );
+
+  getCategories().then(categories => {
+    chips.innerHTML = '';
+    if (!Array.isArray(categories) || categories.length === 0) {
+      const empty = createElement('div', { className: 'form-hint' });
+      empty.textContent = 'No categories available.';
+      chips.appendChild(empty);
+      return;
+    }
+    categories.forEach(cat => {
+      const chip = createElement('button', { className: 'mp-filter-chip skill-category-chip', type: 'button' });
+      chip.dataset.category = cat.slug || '';
+      chip.dataset.categoryId = String(cat.id);
+      const isChecked = existingIds.has(Number(cat.id));
+      if (isChecked) chip.classList.add('active');
+      chip.setAttribute('aria-pressed', isChecked ? 'true' : 'false');
+
+      chip.appendChild(categoryIconSpan(cat.slug, '14px'));
+
+      const labelSpan = createElement('span', { className: 'mp-filter-chip__label' });
+      labelSpan.textContent = cat.name;
+      chip.appendChild(labelSpan);
+
+      const cb = createElement('input', { className: 'skill-category-item__cb' });
+      cb.type = 'checkbox';
+      cb.value = String(cat.id);
+      cb.dataset.categoryId = String(cat.id);
+      cb.checked = isChecked;
+      chip.appendChild(cb);
+
+      chip.addEventListener('click', () => {
+        const next = !chip.classList.contains('active');
+        chip.classList.toggle('active', next);
+        chip.setAttribute('aria-pressed', next ? 'true' : 'false');
+        cb.checked = next;
+      });
+
+      chips.appendChild(chip);
+    });
+  }).catch(() => {
+    const err = createElement('div', { className: 'form-hint' });
+    err.textContent = 'Failed to load categories.';
+    chips.appendChild(err);
+  });
+
+  return group;
+}
+
 function buildIconPicker(selectedIcon) {
-  const group = createElement('div', { className: 'form-group' });
+  const group = createElement('div', { className: 'form-group skill-icon-picker-group' });
   const label = createElement('div', { className: 'form-label' });
   label.textContent = 'Icon';
   group.appendChild(label);
 
-  const picker = createElement('div', { className: 'skill-icon-picker' });
+  const picker = createElement('div', { className: 'skill-icon-picker skill-icon-picker--collapsed' });
+
+  const hiddenInput = createElement('input', { className: 'skill-icon-value' });
+  hiddenInput.type = 'hidden';
+  hiddenInput.value = selectedIcon || '';
+  picker.appendChild(hiddenInput);
+
+  const preview = createElement('div', { className: 'icon-picker-preview' });
+  const previewSwatch = createElement('div', { className: 'icon-picker-preview__swatch' });
+  previewSwatch.innerHTML = selectedIcon ? getSkillIconSVG(selectedIcon, 22) : '';
+  const previewName = createElement('div', { className: 'icon-picker-preview__name' });
+  previewName.textContent = selectedIcon || 'No icon selected';
+  const toggleBtn = createElement('button', { className: 'icon-picker-preview__toggle', type: 'button' });
+  toggleBtn.textContent = 'Change…';
+  preview.appendChild(previewSwatch);
+  preview.appendChild(previewName);
+  preview.appendChild(toggleBtn);
+  picker.appendChild(preview);
+
+  const expandable = createElement('div', { className: 'icon-picker-expandable' });
 
   const searchInput = createElement('input', { className: 'icon-picker-search' });
   searchInput.type = 'text';
   searchInput.placeholder = 'Search icons...';
-  picker.appendChild(searchInput);
+  expandable.appendChild(searchInput);
 
   const categoriesContainer = createElement('div', { className: 'icon-picker-categories' });
 
@@ -1880,6 +2190,9 @@ function buildIconPicker(selectedIcon) {
           picker.querySelectorAll('.skill-icon-option.selected').forEach(el => el.classList.remove('selected'));
           opt.classList.add('selected');
           selectedIcon = key;
+          hiddenInput.value = key;
+          previewSwatch.innerHTML = getSkillIconSVG(key, 22);
+          previewName.textContent = key;
         });
         grid.appendChild(opt);
       });
@@ -1887,10 +2200,18 @@ function buildIconPicker(selectedIcon) {
     });
   }
 
-  renderIcons('');
   searchInput.addEventListener('input', () => renderIcons(searchInput.value));
+  expandable.appendChild(categoriesContainer);
+  picker.appendChild(expandable);
 
-  picker.appendChild(categoriesContainer);
+  toggleBtn.addEventListener('click', () => {
+    const collapsed = picker.classList.toggle('skill-icon-picker--collapsed');
+    toggleBtn.textContent = collapsed ? 'Change…' : 'Close';
+    if (!collapsed && !categoriesContainer.hasChildNodes()) {
+      renderIcons('');
+    }
+  });
+
   group.appendChild(picker);
   return group;
 }
@@ -1921,8 +2242,9 @@ function readSkillForm(formEl) {
   const name = formEl.querySelector('#skill-name')?.value.trim() || '';
   const description = formEl.querySelector('#skill-desc')?.value.trim() || '';
 
+  const hiddenIconEl = formEl.querySelector('.skill-icon-value');
   const selectedIconEl = formEl.querySelector('.skill-icon-option.selected');
-  const icon = selectedIconEl ? selectedIconEl.dataset.icon : null;
+  const icon = (hiddenIconEl && hiddenIconEl.value) || (selectedIconEl ? selectedIconEl.dataset.icon : null) || null;
 
   const team_ids = formEl._teamCombo
     ? formEl._teamCombo.getSelected().map(Number).filter(Number.isFinite)
@@ -1934,7 +2256,11 @@ function readSkillForm(formEl) {
   const tagsRaw = formEl.querySelector('#skill-tags')?.value.trim() || '';
   const tag_names = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-  return { name, description, icon, team_ids, certificate_ids, tag_names };
+  const category_ids = Array.from(formEl.querySelectorAll('.skill-category-item__cb:checked'))
+    .map(cb => Number(cb.dataset.categoryId))
+    .filter(Number.isFinite);
+
+  return { name, description, icon, team_ids, certificate_ids, tag_names, category_ids };
 }
 
 function validateSkillForm(data) {

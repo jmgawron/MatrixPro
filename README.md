@@ -10,6 +10,7 @@ MatrixPro is a corporate web application that helps TAC Engineers and their mana
 
 ### My Plan — Personal Development Kanban
 - Drag-and-drop kanban board with three stages: **Pipeline**, **In Development**, **Proficiency**
+- **Category chips** filter the current section by skill classification (Foundational / Core / Advanced / AI & Future Skills). Skills group by category; multi-category skills appear in each matching group. Filter state persists across section switches.
 - Add skills from the catalog, track progress through the 3E Framework (Education → Exposure → Experience)
 - Training log for recording courses, certifications, and hands-on activities
 - PDF and CSV export of your development plan
@@ -22,9 +23,10 @@ MatrixPro is a corporate web application that helps TAC Engineers and their mana
 
 ### Catalog Explorer
 - Browse the full skill catalog organised by **Organisation → Domain → Team**
+- **Skill Classification** — Organization tab groups skills into 4 tiers (Foundational, Core, Advanced, AI & Future Skills). Skills can belong to multiple tiers. Collapsible category sections with Core expanded by default.
 - Search, filter by domain/team, and view detailed skill cards
 - Each skill includes proficiency-level content: recommended courses, certifications, reading, links, and actions
-- Admin CRUD for managing the catalog
+- Admin CRUD for managing the catalog (category assignment via multi-select picker in Edit modal)
 
 ### Skill Explorer
 - Search for engineers by skill across the entire organisation
@@ -115,16 +117,31 @@ Backend API: **http://localhost:8000** | Frontend: **http://localhost:3000**
 
 ## Demo Credentials
 
-The seed script creates the following test accounts (password for all: `password123`):
+The seed script creates 48 test accounts (password for all: `password123`):
 
-| Email | Role | Team |
-|-------|------|------|
-| admin@matrixpro.com | Admin | — |
-| alice@matrixpro.com | Manager | Wi-Fi 6 |
-| bob@matrixpro.com | Engineer | Wi-Fi 6 |
-| carol@matrixpro.com | Manager | WLAN Controllers |
-| dave@matrixpro.com | Engineer | WLAN Controllers |
-| eve@matrixpro.com | Engineer | Firewall |
+### LANSW Shift-2 Team (`TAC-ENT-LANSW-SHIFT2`) — demo-ready dataset
+
+| Email | Role |
+|-------|------|
+| admin@matrixpro.com | Admin |
+| alice@matrixpro.com | Manager (LANSW Shift-2) |
+| bob@matrixpro.com | Engineer (LANSW Shift-2) |
+| caden@matrixpro.com | Engineer (LANSW Shift-2) |
+| daniela@matrixpro.com | Engineer (LANSW Shift-2) |
+| ethan@matrixpro.com | Engineer (LANSW Shift-2) |
+| fiona@matrixpro.com | Engineer (LANSW Shift-2) |
+| grace@matrixpro.com | Engineer (LANSW Shift-2) |
+
+Each LANSW Shift-2 engineer has **all 18 LAN Switching skills** assigned with realistic status distribution (~30% mastered, ~50% developing, ~10% planned), full 3E completion tracking, proficiency levels, and timestamped training logs.
+
+### All other teams (20 technology areas × 4 shifts)
+
+One manager + one engineer per area on SHIFT1, following the pattern:
+`mgr-<area>@matrixpro.com` / `eng-<area>@matrixpro.com`
+
+Area codes: `lansw`, `rout`, `wlan`, `sda`, `sdwan`, `dnac`, `aci`, `nexus`, `ucs`, `mds`, `hci`, `cucm`, `cube`, `webex`, `cms`, `fw`, `ftd`, `ise`, `amp`, `umbrella`.
+
+Example: `mgr-aci@matrixpro.com` (Manager, ACI Shift-1), `eng-fw@matrixpro.com` (Engineer, Firewall Shift-1).
 
 ---
 

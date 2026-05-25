@@ -9,10 +9,20 @@ from app.dependencies import get_current_user, require_role
 from app.models.catalog import Certificate, SkillCertificate
 from app.models.org import Domain, Team
 from app.models.plan import DevelopmentPlan, PlanSkill
-from app.models.skill import Skill, SkillLevelContent, SkillTag, SkillTeam, Tag
+from app.models.skill import (
+    Skill,
+    SkillCategory,
+    SkillCategoryAssignment,
+    SkillLevelContent,
+    SkillTag,
+    SkillTeam,
+    Tag,
+)
 from app.models.user import User, UserRole
 from app.schemas.catalog import SkillAssignmentRequest
 from app.schemas.skill import (
+    CategoryInfo,
+    CategoryResponse,
     CertificateInfo,
     CompareResponse,
     CompareSkillInfo,
@@ -39,6 +49,9 @@ def _skill_eager_options():
         selectinload(Skill.skill_teams).selectinload(SkillTeam.team),
         selectinload(Skill.skill_certificates).selectinload(
             SkillCertificate.certificate
+        ),
+        selectinload(Skill.skill_categories).selectinload(
+            SkillCategoryAssignment.category
         ),
     ]
 
@@ -73,6 +86,15 @@ def _to_skill_response(skill: Skill) -> SkillResponse:
             )
             for sc in skill.skill_certificates
         ],
+        categories=[
+            CategoryInfo(
+                id=sca.category.id,
+                slug=sca.category.slug,
+                name=sca.category.name,
+                sort_order=sca.category.sort_order,
+            )
+            for sca in skill.skill_categories
+        ],
     )
 
 
@@ -80,6 +102,18 @@ def _sync_certificate_m2m(db: Session, skill_id: int, certificate_ids: list[int]
     db.query(SkillCertificate).filter(SkillCertificate.skill_id == skill_id).delete()
     for cid in certificate_ids:
         db.add(SkillCertificate(skill_id=skill_id, certificate_id=cid))
+
+
+def _sync_category_m2m(db: Session, skill_id: int, category_ids: list[int]):
+    db.query(SkillCategoryAssignment).filter(
+        SkillCategoryAssignment.skill_id == skill_id
+    ).delete()
+    for cat_id in category_ids:
+        if not db.query(SkillCategory).filter(SkillCategory.id == cat_id).first():
+            raise HTTPException(
+                status_code=400, detail=f"Category {cat_id} not found"
+            )
+        db.add(SkillCategoryAssignment(skill_id=skill_id, category_id=cat_id))
 
 
 def _check_manager_team_access(current_user: User, team_ids: list[int], db: Session):
@@ -93,6 +127,7 @@ def list_skills(
     domain_id: Optional[int] = Query(None),
     include_archived: bool = Query(False),
     cert_id: Optional[int] = Query(None),
+    category_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -126,6 +161,11 @@ def list_skills(
         query = query.join(
             SkillCertificate, Skill.id == SkillCertificate.skill_id
         ).filter(SkillCertificate.certificate_id == cert_id)
+
+    if category_id is not None:
+        query = query.join(
+            SkillCategoryAssignment, Skill.id == SkillCategoryAssignment.skill_id
+        ).filter(SkillCategoryAssignment.category_id == category_id)
 
     if search:
         search_term = f"%{search.lower()}%"
@@ -183,11 +223,24 @@ def create_skill(
         db.add(SkillTag(skill_id=skill.id, tag_id=tag.id))
 
     _sync_certificate_m2m(db, skill.id, data.certificate_ids)
+    _sync_category_m2m(db, skill.id, data.category_ids)
 
     db.commit()
 
     loaded = _eager_load_skill(db, skill.id)
     return _to_skill_response(loaded)
+
+
+@router.get("/categories", response_model=list[CategoryResponse])
+def list_categories(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return (
+        db.query(SkillCategory)
+        .order_by(SkillCategory.sort_order, SkillCategory.name)
+        .all()
+    )
 
 
 @router.get("/explorer", response_model=ExplorerResponse)
@@ -371,6 +424,10 @@ def update_skill(
         _sync_certificate_m2m(db, skill_id, data.certificate_ids)
         updated = True
 
+    if data.category_ids is not None:
+        _sync_category_m2m(db, skill_id, data.category_ids)
+        updated = True
+
     if updated:
         skill.catalog_version += 1
         skill.updated_at = datetime.utcnow()
@@ -404,6 +461,9 @@ def delete_skill(
         db.query(SkillTeam).filter(SkillTeam.skill_id == skill_id).delete()
         db.query(SkillCertificate).filter(
             SkillCertificate.skill_id == skill_id
+        ).delete()
+        db.query(SkillCategoryAssignment).filter(
+            SkillCategoryAssignment.skill_id == skill_id
         ).delete()
         db.query(SkillLevelContent).filter(
             SkillLevelContent.skill_id == skill_id

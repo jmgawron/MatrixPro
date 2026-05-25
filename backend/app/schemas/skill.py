@@ -61,6 +61,25 @@ class CertificateInfo(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CategoryInfo(BaseModel):
+    id: int
+    slug: str
+    name: str
+    sort_order: int = 0
+
+    model_config = {"from_attributes": True}
+
+
+class CategoryResponse(BaseModel):
+    id: int
+    slug: str
+    name: str
+    description: str | None = None
+    sort_order: int = 0
+
+    model_config = {"from_attributes": True}
+
+
 class SkillCreate(BaseModel):
     name: str
     description: str | None = None
@@ -68,6 +87,7 @@ class SkillCreate(BaseModel):
     team_ids: list[int] = []
     tag_names: list[str] = []
     certificate_ids: list[int] = []
+    category_ids: list[int] = []
 
 
 class SkillUpdate(BaseModel):
@@ -78,6 +98,7 @@ class SkillUpdate(BaseModel):
     team_ids: list[int] | None = None
     tag_names: list[str] | None = None
     certificate_ids: list[int] | None = None
+    category_ids: list[int] | None = None
 
 
 class TeamInfo(BaseModel):
@@ -100,6 +121,7 @@ class SkillResponse(BaseModel):
     tags: list[TagResponse] = []
     teams: list[TeamInfo] = []
     certificates: list[CertificateInfo] = []
+    categories: list[CategoryInfo] = []
 
     model_config = {"from_attributes": True}
 

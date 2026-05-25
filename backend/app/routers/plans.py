@@ -18,7 +18,7 @@ from app.models.plan import (
     UserLevelContent,
 )
 from app.models.org import Team
-from app.models.skill import Skill, SkillLevelContent, SkillTeam
+from app.models.skill import Skill, SkillCategoryAssignment, SkillLevelContent, SkillTeam
 from app.models.user import User, UserRole
 from app.schemas.org import BulkAssignRequest, BulkAssignResponse, BulkAssignResultItem
 from app.schemas.plan import (
@@ -30,6 +30,7 @@ from app.schemas.plan import (
     OwnSkillCreate,
     OwnSkillUpdate,
     PlanResponse,
+    PlanSkillCategoryInfo,
     PlanSkillContentResponse,
     PlanSkillCreate,
     PlanSkillDomainInfo,
@@ -98,6 +99,10 @@ def _eager_load_plan(db: Session, plan_id: int) -> Optional[DevelopmentPlan]:
             selectinload(DevelopmentPlan.skills)
             .selectinload(PlanSkill.skill)
             .selectinload(Skill.level_content),
+            selectinload(DevelopmentPlan.skills)
+            .selectinload(PlanSkill.skill)
+            .selectinload(Skill.skill_categories)
+            .selectinload(SkillCategoryAssignment.category),
             selectinload(DevelopmentPlan.skills).selectinload(PlanSkill.training_log),
         )
         .filter(DevelopmentPlan.id == plan_id)
@@ -115,6 +120,20 @@ def _to_plan_response(plan: DevelopmentPlan) -> PlanResponse:
                 seen_domains[d.id] = PlanSkillDomainInfo(id=d.id, name=d.name)
 
         content_types = list({lc.type.value for lc in (ps.skill.level_content or [])})
+
+        categories = [
+            PlanSkillCategoryInfo(
+                id=sca.category.id,
+                slug=sca.category.slug,
+                name=sca.category.name,
+                sort_order=sca.category.sort_order,
+            )
+            for sca in sorted(
+                ps.skill.skill_categories or [],
+                key=lambda x: x.category.sort_order if x.category else 0,
+            )
+            if sca.category is not None
+        ]
 
         skill_responses.append(
             PlanSkillResponse(
@@ -136,6 +155,7 @@ def _to_plan_response(plan: DevelopmentPlan) -> PlanResponse:
                 ],
                 domains=list(seen_domains.values()),
                 content_types=content_types,
+                categories=categories,
             )
         )
     return PlanResponse(

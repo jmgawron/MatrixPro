@@ -1,7 +1,12 @@
-from app.routers.auth import router as auth_router  # noqa: F401
-from app.routers.users import router as users_router  # noqa: F401
-from app.routers.teams import router as teams_router  # noqa: F401
-from app.routers.skills import router as skills_router  # noqa: F401
-from app.routers.plans import router as plans_router  # noqa: F401
-from app.routers.export import router as export_router  # noqa: F401
-from app.routers.domains import router as domains_router  # noqa: F401
+from app.routers import auth  # noqa: F401
+from app.routers import users  # noqa: F401
+from app.routers import teams  # noqa: F401
+from app.routers import skills  # noqa: F401
+from app.routers import plans  # noqa: F401
+from app.routers import export  # noqa: F401
+from app.routers import domains  # noqa: F401
+from app.routers import catalog  # noqa: F401
+from app.routers import certification  # noqa: F401
+from app.routers import feedback  # noqa: F401
+from app.routers import reporting  # noqa: F401
+from app.routers import search  # noqa: F401

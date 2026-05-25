@@ -15,6 +15,7 @@ from app.routers import (
     certification,
     feedback,
     reporting,
+    search,
 )
 
 app = FastAPI(title="MatrixPro API", version="0.1.0")
@@ -38,13 +39,16 @@ app.include_router(catalog.router)
 app.include_router(certification.router)
 app.include_router(feedback.router)
 app.include_router(reporting.router)
+app.include_router(search.router)
 
 
 @app.on_event("startup")
 def create_tables():
     import app.models  # noqa: F401
+    from app.migrations import run_migrations
 
     Base.metadata.create_all(bind=engine)
+    run_migrations()
 
 
 @app.get("/api/health")

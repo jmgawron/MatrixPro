@@ -17,6 +17,9 @@ let _currentSection = 'developing';
 let _activeDomainFilters = new Set();
 let _active3EFilters = new Set();
 let _activeProficiencyFilters = new Set();
+let _categoriesCache = null;
+let _categoriesInitialized = false;
+let _activeCategoryFilters = new Set();
 
 const SVG_ICONS = {
   wrench: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
@@ -32,6 +35,16 @@ const SVG_ICONS = {
   refresh: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
   circle: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
   circleCheck: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
+  blocks: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+  gear: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  zap: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  sparkles: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 11l-5.5 2.5L12 19l-2.5-5.5L4 11l5.5-2.5L12 3z"/><path d="M19 17l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/><path d="M5 4l.7 1.5L7 6l-1.3.5L5 8l-.7-1.5L3 6l1.3-.5L5 4z"/></svg>',
+  target: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+  diamond: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/><path d="M9 3 6 9l6 12"/><path d="m15 3 3 6-6 12"/></svg>',
+  trophy: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+  atom: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><ellipse cx="12" cy="12" rx="10" ry="4.5"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(120 12 12)"/></svg>',
+  pillars: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M3 20V8l9-5 9 5v12"/><path d="M7 20V10"/><path d="M12 20V10"/><path d="M17 20V10"/><path d="M3 8h18"/></svg>',
+  seedling: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10"/><path d="M12 20v-8"/><path d="M12 12c0-4 3-7 8-7-1 5-4 7-8 7z"/><path d="M12 14c0-3-2-5-6-5 1 4 3 5 6 5z"/></svg>',
 };
 
 function svgIcon(name, size) {
@@ -67,6 +80,9 @@ export function mountMyPlan(container, params) {
   _activeDomainFilters.clear();
   _active3EFilters.clear();
   _activeProficiencyFilters.clear();
+  _categoriesCache = null;
+  _categoriesInitialized = false;
+  _activeCategoryFilters.clear();
 
   const user = Store.get('user');
   _engineerId = params?.id ? Number(params.id) : user?.id;
@@ -77,11 +93,29 @@ export function mountMyPlan(container, params) {
   return () => {};
 }
 
+async function getCategories() {
+  if (_categoriesCache) return _categoriesCache;
+  try {
+    _categoriesCache = await api.get('/api/skills/categories');
+  } catch {
+    _categoriesCache = [];
+  }
+  return _categoriesCache;
+}
+
 async function loadPlan() {
   Object.values(_sectionGridEls).forEach(grid => showSkeleton(grid, 'cards'));
 
   try {
-    _planData = await api.get(`/api/plans/${_engineerId}`);
+    const [planRes, cats] = await Promise.all([
+      api.get(`/api/plans/${_engineerId}`),
+      getCategories()
+    ]);
+    _planData = planRes;
+    if (!_categoriesInitialized && cats.length > 0) {
+      cats.forEach(c => _activeCategoryFilters.add(c.id));
+      _categoriesInitialized = true;
+    }
     renderSections();
   } catch (err) {
     const msg = err.message || 'Failed to load plan';
@@ -96,7 +130,15 @@ async function loadPlan() {
 
 async function reloadPlan() {
   try {
-    _planData = await api.get(`/api/plans/${_engineerId}`);
+    const [planRes, cats] = await Promise.all([
+      api.get(`/api/plans/${_engineerId}`),
+      getCategories()
+    ]);
+    _planData = planRes;
+    if (!_categoriesInitialized && cats.length > 0) {
+      cats.forEach(c => _activeCategoryFilters.add(c.id));
+      _categoriesInitialized = true;
+    }
     renderSections();
   } catch (err) {
     showToast(err.message || 'Failed to reload plan', 'error');
@@ -230,6 +272,9 @@ function buildPageShell(container, params) {
   contentTitleWrap.appendChild(contentCount);
   contentHeader.appendChild(contentTitleWrap);
 
+  const categoryToolbarSlot = el('div', { className: 'mp-filter-chips mp-filter-chips--inline', id: 'mp-category-toolbar' });
+  contentHeader.appendChild(categoryToolbarSlot);
+
   const searchWrap = el('div', { className: 'mp-plan-search-wrap' });
   const searchIcon = el('span', { className: 'mp-search-icon' });
   searchIcon.appendChild(svgIcon('search', '14px'));
@@ -326,32 +371,112 @@ function renderActiveSection() {
 
   const sectionEl = document.getElementById('mp-active-section');
   if (sectionEl) {
+    sectionEl.innerHTML = '';
     sectionEl.dataset.status = _currentSection;
-    const oldGrid = sectionEl.querySelector('.mp-section-grid');
-    if (oldGrid) oldGrid.remove();
-    const newGrid = el('div', { className: 'mp-section-grid', id: `mp-grid-${_currentSection}` });
-    sectionEl.appendChild(newGrid);
-    _sectionGridEls = { [_currentSection]: newGrid };
+
+    const container = el('div', { className: 'mp-category-groups-container', id: `mp-grid-${_currentSection}` });
+    sectionEl.appendChild(container);
+    _sectionGridEls[_currentSection] = container;
   }
 
-  const grid = document.getElementById(`mp-grid-${_currentSection}`);
-  if (!grid) return;
+  const toolbar = document.getElementById('mp-category-toolbar');
+  if (toolbar) {
+    toolbar.innerHTML = '';
+    if (_categoriesCache && _categoriesCache.length > 0) {
+      const iconMap = {
+        foundational: 'seedling',
+        core: 'diamond',
+        advanced: 'atom',
+        ai_future: 'sparkles',
+        'ai-future': 'sparkles',
+      };
+      _categoriesCache.forEach(cat => {
+        const isActive = _activeCategoryFilters.has(cat.id);
+        const chip = el('button', { className: 'mp-filter-chip' });
+        chip.dataset.category = cat.slug || '';
+        if (isActive) chip.classList.add('active');
+        const iconName = iconMap[cat.slug] || 'layers';
+        chip.appendChild(svgIcon(iconName, '14px'));
+        const label = el('span', { className: 'mp-filter-chip__label' });
+        label.textContent = cat.name;
+        chip.appendChild(label);
+        chip.addEventListener('click', () => {
+          if (isActive) _activeCategoryFilters.delete(cat.id);
+          else _activeCategoryFilters.add(cat.id);
+          renderActiveSection();
+        });
+        toolbar.appendChild(chip);
+      });
+    }
+  }
 
-  grid.innerHTML = '';
+  const container = document.getElementById(`mp-grid-${_currentSection}`);
+  if (!container) return;
+
+  container.innerHTML = '';
 
   if (activeSkills.length === 0) {
     const empty = el('div', { className: 'empty-state empty-state--inline' });
     empty.textContent = _searchQuery || _activeDomainFilters.size > 0 || _active3EFilters.size > 0 || _activeProficiencyFilters.size > 0
       ? 'No matching skills in this section.'
       : 'No skills yet — browse the catalog to get started!';
-    grid.appendChild(empty);
+    container.appendChild(empty);
     return;
   }
 
   const sectionDef = SECTIONS.find(s => s.status === _currentSection);
+
+  const groups = new Map();
+  const uncategorized = [];
+
   activeSkills.forEach(planSkill => {
-    const card = buildCard(planSkill, _currentSection, sectionDef?.iconClass || 'mp-card-icon--dev');
-    grid.appendChild(card);
+    const cats = planSkill.categories || planSkill.skill?.categories || [];
+    if (cats.length === 0) {
+      uncategorized.push(planSkill);
+    } else {
+      cats.forEach(cat => {
+        if (_activeCategoryFilters.has(cat.id)) {
+          if (!groups.has(cat.id)) groups.set(cat.id, { cat, skills: [] });
+          groups.get(cat.id).skills.push(planSkill);
+        }
+      });
+    }
+  });
+
+  const sortedGroups = Array.from(groups.values()).sort((a, b) => a.cat.sort_order - b.cat.sort_order);
+  const allGroups = [];
+  sortedGroups.forEach(g => allGroups.push({ id: g.cat.id, name: g.cat.name, skills: g.skills }));
+  if (uncategorized.length > 0) {
+    allGroups.push({ id: 'uncategorized', name: 'Uncategorized', skills: uncategorized });
+  }
+
+  if (allGroups.length === 0) {
+    const empty = el('div', { className: 'empty-state empty-state--inline' });
+    empty.textContent = 'No skills matching selected categories.';
+    container.appendChild(empty);
+    return;
+  }
+
+  allGroups.forEach(g => {
+    const groupEl = el('div', { className: 'mp-category-group' });
+    
+    const header = el('div', { className: 'mp-category-group__header' });
+    const nameSpan = el('span', { className: 'mp-category-group__name' });
+    nameSpan.textContent = g.name;
+    const countSpan = el('span', { className: 'mp-category-group__count' });
+    countSpan.textContent = String(g.skills.length);
+    header.appendChild(nameSpan);
+    header.appendChild(countSpan);
+    groupEl.appendChild(header);
+
+    const cardsEl = el('div', { className: 'mp-category-group__cards mp-section-grid' });
+    g.skills.forEach(planSkill => {
+      const card = buildCard(planSkill, _currentSection, sectionDef?.iconClass || 'mp-card-icon--dev');
+      cardsEl.appendChild(card);
+    });
+    groupEl.appendChild(cardsEl);
+    
+    container.appendChild(groupEl);
   });
 
   // Fetch progress for all skill cards

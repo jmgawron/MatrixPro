@@ -1,7 +1,7 @@
 # MatrixPro — Cross-Session Knowledge Base
 
 > **Purpose**: Reference document for OpenCode agents working on MatrixPro across sessions.
-> **Last updated**: Post-Phase 6 — admin panel, certifications, feedback, settings, setup scripts added.
+> **Last updated**: LANSW Shift-2 overlay — 18 new LAN Switching skills (5F/7C/6A), 7 users (alice@ mgr + bob@ + 5 engineers) on `TAC-ENT-LANSW-SHIFT2`, with weighted-status development plans, 3E completions, training logs, and proficiency.
 
 ---
 
@@ -158,6 +158,7 @@ AuditLog → changed_by → User
 - `AuditLog` — entity_type + entity_id + field + old/new values
 - `CertificationDomain` / `Certification` — separate cert catalog (models/catalog.py)
 - `Feedback` — user-submitted feedback with type field (models/feedback.py)
+- `SkillCategory` / `SkillCategoryAssoc` — extensible skill classification (Foundational, Core, Advanced, AI & Future Skills); many-to-many with Skill (see §14)
 
 ---
 
@@ -471,3 +472,367 @@ Files >500 lines requiring care when modifying:
 - Bob(4) has skills 1,2,4; Dave(5) has 3,5,9; Eve(6) has 6,7,8
 - Team 1 vs Team 2 overlap: 3 skills (42.9%), Team 1 vs Team 3: 2 skills (22.2%)
 - Carol manages Dave (WLAN Controllers) and Eve (Firewall) — cross-team manager
+
+---
+
+## 14. Skill Classification Framework
+
+Adds an extensible 4-tier classification on top of the existing Domain/Team taxonomy. Skills may belong to **multiple categories** (M2M).
+
+### Categories (seeded; backed by DB rows, NOT a Python enum)
+
+| id | slug | name | sort_order |
+|----|------|------|------------|
+| 1 | foundational | Foundational | 0 |
+| 2 | core | Core | 1 |
+| 3 | advanced | Advanced | 2 |
+| 4 | ai-future | AI & Future Skills | 3 |
+
+Categories live in `skill_categories`; associations in `skill_category_assoc(skill_id, category_id)`. Adding a new category is a single INSERT — no code changes needed. Existing skills backfill to **Core** by default.
+
+### Data Model
+- `backend/app/models/skill.py` → `SkillCategory`, `SkillCategoryAssoc`
+- `Skill.categories` relationship (M2M via association table)
+- `backend/app/schemas/skill.py` → `SkillCategoryOut`, `SkillOut.categories: List[SkillCategoryOut]`, `SkillUpdate.category_ids: List[int] | None`
+- `backend/app/schemas/plan.py` → `PlanSkillOut.categories` (sibling of `skill_id`/`skill_name`, NOT nested under `skill`)
+
+### API
+- `GET /api/skills/categories` → list all categories
+- `GET /api/skills/?category_id=N` → filter catalog by category
+- `PUT /api/skills/{id}` accepts `category_ids: [int]` to replace associations
+- `GET /api/skills/{id}` returns `categories` array
+- `GET /api/plans/{engineer_id}` plan_skill rows include top-level `categories` array
+
+### Frontend
+- **Catalog (Organization tab only)**: skills grouped by category as collapsible sections. Default state: **Core expanded, others collapsed**. Each section header = title + chevron + count. Cert/Non-Technical tabs untouched.
+- **Edit Skill modal**: category picker (native checkboxes) inserted BETWEEN `metaRow` and `assocRow` with `<hr>` separators. Multi-select. Saves via `PUT /api/skills/{id}` with `category_ids`.
+- **My Plan**: per-active-section chip toolbar (above the current section grid). Chips render all categories, ALL active by default. Toggling a chip OFF removes that category group; toggling back ON restores. Skills with multiple categories appear in EACH matching group (intentional). Uncategorized skills land in a pseudo-group. State persists across section switches via module-level `_activeCategoryFilters: Set<number>`.
+
+### Critical Frontend Bugs Encountered
+1. **Plan payload shape**: Agent assumed `planSkill.skill.categories` but API returns `planSkill.categories` at top level. Fixed in `my-plan.js` line 408 with fallback: `planSkill.categories || planSkill.skill?.categories || []`.
+2. **Cache busting**: Both `frontend/js/app.js?v=N` (in `index.html`) AND `pages/my-plan.js?v=N` (in `app.js`) must be bumped together — bumping only the inner import leaves the parent app.js cached.
+
+### CSS
+- `frontend/css/style.css` §7.17 — catalog category sections (uses `.collapsible` primitive + dedicated `.catalog-category-chevron` to avoid `::before` collision with `.chevron`). **Post-polish**: editorial typography — transparent bg, 1px border-bottom rule, title 14px/600 uppercase/0.56px letter-spacing, count rendered as 11px pill. No boxed/heavy container.
+- §7.18 — skill category picker in Edit modal. **Post-polish**: custom checkbox cards via `:has(input:checked)`. Native checkbox hidden (opacity:0 + position:absolute + appearance:none); explicit `<span class="skill-category-item__check">` indicator (16×16, 1.5px border, 4px radius). Card uses `--accent-soft` bg + accent border when checked. Picker container class `.skill-category-picker`; item class `.skill-category-item`.
+- §7.19 — My Plan category groups. **Post-polish**: chip toolbar `#mp-category-toolbar` (class `.mp-filter-chips`, padding `0 18px` to align with `.mp-section-grid`). Groups container `.mp-category-groups-container`. Each group: `.mp-category-group` → `.mp-category-group__header` (border-bottom rule) → `.mp-category-group__name` (12px/600/uppercase/0.72px) + `.mp-category-group__count` (11px tabular-nums) → `.mp-category-group__cards.mp-section-grid`.
+
+### Category Icon Set (final, shared across My Plan + Catalog)
+
+| Category | Icon name | Visual |
+|----------|-----------|--------|
+| Foundational | `seedling` | Sprout from soil |
+| Core | `diamond` | Multi-facet diamond |
+| Advanced | `atom` | 3-orbit atom |
+| AI & Future Skills | `sparkles` | 4-point star with sparkles |
+| (uncategorized fallback) | `layers` | Stacked layers |
+
+Canonical SVG dictionary lives in `frontend/js/pages/my-plan.js` (`SVG_ICONS`, L25+). `catalog.js` ships its own `CATEGORY_SVG_ICONS` mirror (top of file, ~L10) to avoid cross-page imports; both must stay in sync when icons change. Slug→icon map (`CATEGORY_ICON_MAP`) maps both `ai_future` (backend slug) and `ai-future` (alias) to `sparkles`.
+
+### Catalog Module Visual Parity (post-Skill-Classification polish)
+
+- **Organization tab section titles** (`buildCategorySection` in `catalog.js`): icon SVG injected between `.catalog-category-chevron` and `.catalog-category-title` via `categoryIconSpan(slug, '16px')`. CSS hook: `.catalog-category-icon-svg` (style.css after `.catalog-category-title`) — 16×16, `var(--text-secondary)` at 0.85 opacity, brightens to `--text-primary` on header hover.
+- **Edit Skill modal category picker** (`buildSkillCategoryPicker` in `catalog.js`): replaced legacy `.skill-category-grid` of checkbox `<label>` cards with `.skill-category-chips` (NO `mp-filter-chips--inline` modifier — see Specificity Trap below) containing `<button class="mp-filter-chip skill-category-chip">` per category. Each chip carries `data-category-id` + `data-category` (slug), preselect via `.active` class from existing `categories`, click toggles `.active` + `aria-pressed`. Hidden `<input.skill-category-item__cb>` retained inside each chip and synced on toggle so existing `readSkillForm` selector (`.skill-category-item__cb:checked`) keeps working without changes. Picker container wraps chips in a bordered card (`var(--bg-card-soft)`, `--border-soft`, `--radius-md`) at style.css §7.18.
+- **Modal picker active state (pill + ✓)**: `.skill-category-picker .skill-category-chip.active` ruleset at style.css L8316-8395 — `background: var(--accent-soft, rgba(59,130,246,.1))`, `border: 1px solid var(--accent, #3b82f6)`, inset accent ring via `box-shadow`, `color: var(--accent)`, `font-weight: 600`, and `::after { content: "✓" }` rendered as 14px bold accent glyph after the label. Hex fallbacks after `var(--accent, …)` for robustness. Picked unambiguously over the subtler "border-left only" sidebar variant because horizontal chip layouts have no left edge to anchor a border-left highlight on.
+- **Specificity Trap (DO NOT REINTRODUCE)**: `mp-filter-chips--inline` is the LEFT-SIDEBAR variant used in My Plan's section nav. Its `.mp-filter-chips--inline .mp-filter-chip.active` rule (style.css ~L8450) uses `border-left: 3px solid var(--accent)` with the same `(0,2,0)` specificity as `.mp-filter-chip.active` and appears LATER in source order, so it silently overrides any picker-specific rules. The Edit Skill modal picker is a **horizontal** chip group, not a sidebar — its wrapper must use `class="skill-category-chips"` only (no `mp-filter-chips--inline`), and the new ruleset uses `.skill-category-picker .skill-category-chip.active` `(0,3,0)` to win cleanly.
+
+### Validation (Playwright, post-implementation + post-polish)
+- Catalog Organization tab: Foundational(7) collapsed, Core(18) expanded, Advanced(15) collapsed, AI & Future(5) collapsed. Cert tab unaffected. ✅
+- Edit Skill modal: open skill 1, picker shows 4 items with Foundational+Core prechecked. Toggle Advanced ON → save → `GET /api/skills/1` returns `['Foundational','Core','Advanced']`. ✅
+- My Plan (Bob, engineer 6): 4 category chips render active by default; skill 1 (cats Foundational+Core+Advanced) appears in all 3 matching groups; toggling Advanced OFF removes Advanced group; chip state persists when switching to Planned section. ✅
+- **Post-polish visual verification (computed styles via Playwright)**: Catalog headers transparent + uppercase small-caps ✅; modal items hide native input + render custom check indicator with `--accent-soft` on checked ✅; My Plan toolbar `left=528.5px` matches groups container `left=528.5px` (perfect alignment) ✅; chip toggle Advanced OFF correctly drops the Advanced group from rendered list (3 → 2) ✅.
+- **Pill + ✓ rollout verification (v=13)**: Removed `mp-filter-chips--inline` from `buildSkillCategoryPicker` wrapper to break specificity tie with sidebar variant. Bumped `frontend/index.html` to `css/style.css?v=13` (CSS file cache was the silent blocker — `style.css?v=12` stayed cached even after `catalog.js?v=12` reloaded, so the new picker rules were never parsed). Post-bump computed styles confirmed: active chip `bg=rgba(59,130,246,0.1)`, `color=rgb(59,130,246)`, `border=1px solid rgb(59,130,246)`, `box-shadow=rgb(59,130,246) 0px 0px 0px 1px inset`, `font-weight=600`, `::after content="✓"`. Inactive chip: white bg, slate text, soft border, no check. Save roundtrip on skill 22 (ACI Fabric Fundamentals): toggle AI & Future OFF → `PUT /api/skills/22 { category_ids: [1,2,3] }` → `GET` returns `[Foundational, Core, Advanced]` → reopen modal → preselect matches ✅. Baseline `[Foundational, Core, Advanced, AI & Future Skills]` restored. Screenshots: `modal-v13-pill-check.png` (light), `modal-v13-dark.png` (dark — note: app defaults to light body bg regardless of `data-theme` attr, but chip rules use theme-invariant accent tokens so visual identical).
+- **Cache versions live**: `app.js?v=34`, `style.css?v=16`, `catalog.js?v=13`, `my-plan.js?v=22`.
+
+### Edit Skill Modal Redesign (v=16)
+
+**Problem**: Modal required scrolling at 1920×852 (322px overflow). Inconsistent label styles, oversized icon picker dominating viewport, vertically-stacked assoc fields wasting horizontal space.
+
+**Approach**: Layout restructure + collapsed-by-default icon picker + visual consistency polish. No functionality changes — pure presentation.
+
+**Layout (final)**:
+- Row 1 (`.skill-edit-top-section`): 2-col grid `minmax(0,1fr) minmax(300px,340px)` with `align-items:start`. Left = Name + Description (textarea fills available space, `min-height:88px`). Right = Icon picker (collapsed) + Tags.
+- Row 2 (`.skill-category-picker`): full-width horizontal chip strip (v=13 pill+✓ styling preserved).
+- Row 3 (`.skill-edit-row.skill-edit-row--assoc`): 2-col grid Teams | Certs, each `.skill-assoc-section` `min-height:150px` (was 320px), `padding:12px 14px`.
+- All `<hr class="skill-edit-divider">` removed from DOM; visual separation via section labels + assoc card borders.
+- Section labels unified: 12px / 600 / uppercase / 0.06em letter-spacing.
+
+**Icon picker collapsed mode (`buildIconPicker` in `catalog.js` L2052)**:
+- Default state = `.skill-icon-picker--collapsed`. Shows compact preview row: 36×36 swatch (`.icon-picker-preview__swatch`) + icon name + "Change…" button (`.icon-picker-preview__toggle`). Height ~107px (was ~360px expanded).
+- Click "Change…" → removes `--collapsed` class, lazy-calls `renderIcons('')` on first expand (avoids upfront DOM cost), toggle text becomes "Close", expandable search + grid revealed.
+- CSS hook: `.skill-icon-picker--collapsed .icon-picker-expandable { display: none }`.
+- **Hidden input safeguard**: `<input type="hidden" class="skill-icon-value">` carries selected icon name. `readSkillForm` (L2129) reads this FIRST, falls back to `.skill-icon-option.selected` only if missing. Prevents icon being wiped to `null` when user saves without ever opening the picker (the rendered `.icon-picker-categories` is empty until first expand, so `.selected` doesn't exist).
+
+**Modal envelope** (`style.css` L1423):
+- `.modal-skill-edit .modal-body { max-height: calc(92vh - 130px) }` (was 85vh). At 1920×852 → 653px usable, content = 645px, **overflow = 0**.
+
+**Validation (Playwright, 1920×852)**:
+- Modal h=776, bottom=814 vs viewport 852 (38px gap) ✅.
+- modal-body overflow = 0 ✅.
+- Component heights: top=264, icon-picker=107 (collapsed), category-picker=123, assoc=150 ✅.
+- Icon picker expand: class removed, "Change…" → "Close", grid renders 14 category labels lazily ✅.
+- Icon picker collapse cycle: class restored ✅.
+- Save roundtrip on skill 22: toggle AI & Future chip OFF → `PUT /api/skills/22 { category_ids: [1,2,3] }` → `GET` returns `[foundational, core, advanced]` ✅. Icon field preserved as `"fabric"` (hidden-input safeguard worked — picker never opened during the test) ✅.
+- Baseline restored: skill 22 = all 4 categories ✅.
+- Screenshots: `edit-skill-v16-top.png` (collapsed), `edit-skill-v16-iconexpanded.png` (expanded).
+
+**Cache bumps applied**: `style.css?v=15 → v=16`, `catalog.js?v=12 → v=13`.
+
+### Edit Skill Modal v=17 Regression Fixes
+
+Two functional regressions surfaced by user testing post-v=16:
+
+**Bug 1 — Teams/Certs combobox dropdown collapsed to 8–10px height despite portal mount.**
+- Root cause: `.combobox-multi__dropdown` (style.css L7833) sets `top: calc(100% + 4px)` for the default in-flow case. The portal variant `.combobox-multi__dropdown--portal` only overrode `z-index`, leaving `top` to resolve against `<body>` (≈856px). Combined with the inline `bottom: 217.961px` set by the portal positioning JS, this gave the fixed element conflicting top+bottom anchors that squashed it to `height ≈ 8–10px`.
+- Fix (style.css L7847): extended portal rule to also set `top: auto; left: auto; right: auto`, letting inline positioning win cleanly.
+- Verified via Playwright: dropdown renders at `y=336.9, h=280` with 22 options; typing "Wi-Fi" filters to `["Wi-Fi 6/6E"]`. Certs combo behaves identically (y=544, h=72).
+
+**Bug 2 — Icon picker "Close" button left grid visible instead of collapsing.**
+- Root cause: source order in §7.18-adjacent rules. `.skill-icon-picker--collapsed .icon-picker-expandable { display: none }` (L5838, specificity 0,2,0) was defined BEFORE the broader `.skill-icon-picker .icon-picker-expandable { display: flex }` (L5841, same 0,2,0 specificity) — the later rule won the cascade and overrode the collapse.
+- Fix (style.css L5837): reordered so the `display:flex` base rule comes first, followed by the collapse override (`.skill-icon-picker.skill-icon-picker--collapsed .icon-picker-expandable { display: none }` — chained class bumps specificity slightly for clarity).
+- Verified: Expand → `exp_display:flex, exp_h:197`; click icon → click Close → `classes:"skill-icon-picker skill-icon-picker--collapsed"`, `exp_display:none, exp_h:0, ip_h:50`.
+
+**Cache bumps applied**: `style.css?v=16 → v=17`. `catalog.js` untouched (no JS change needed).
+
+**Baseline preserved**: skill 22 restored to `icon=fabric, categories=[Foundational, Core, Advanced, AI & Future Skills]` after test cycles.
+
+### Global TAC Reseed — 174 skills × 100 technology teams × 51 users (current)
+
+**Trigger**: User request to reseed the database to model realistic global Cisco TAC operations: 25 technology team areas × 4 shifts (follow-the-sun) across Enterprise / DC / Collaboration / Security domains, plus a non-technical domain, with skills aligned to the 3E philosophy (Education / Exposure / Experience) and a full certification catalog.
+
+**Approach**: Full `Base.metadata.drop_all` + `create_all` re-run via `python -m app.seed`. Complete catalog generation from declarative tuples.
+
+**Domains (5 total)**:
+
+| code | name | is_technical |
+|------|------|--------------|
+| ENT | Enterprise Networking | True |
+| DC | Data Center | True |
+| COLL | Collaboration | True |
+| SEC | Security | True |
+| NTECH | Non-Technical | False |
+
+**Team taxonomy — 104 Team rows**:
+- 25 technology areas × 4 shifts = 100 technical teams.
+- 4 NTECH-GEN virtual teams (one per shift) attaching non-technical skills.
+- Naming: `TAC-<DOMAIN>-<AREA>-SHIFT<N>` (e.g. `TAC-ENT-LANSW-SHIFT1`, `TAC-DC-ACI-SHIFT3`, `TAC-SEC-FW-SHIFT2`, `TAC-NTECH-GEN-SHIFT1`).
+- Area codes:
+  - **ENT (7)**: LANSW, ROUT, WLAN, SDA, SDWAN, DNAC, ARCH
+  - **DC (6)**: ACI, NEXUS, UCS, MDS, HCI, CLOUD
+  - **COLL (6)**: CUCM, CUBE, WEBEX, CMS, CCX, CONTCTR
+  - **SEC (6)**: FW, FTD, ISE, AMP, UMBRELLA, SECARCH
+
+**Skill catalog — 174 skills (after seed completion; spec asked ~150)**:
+
+| Category | Count | Notes |
+|----------|-------|-------|
+| Foundational | 24 | Cross-cutting basics (TCP/IP, RF intro, CLI, OS, packet capture, ticketing, customer comms) |
+| Core | 64 | Day-to-day operations per technology area |
+| Advanced | 85 | Deep troubleshooting, multi-feature integration, escalation-grade analysis |
+| AI & Future Skills | 14 | LLM-assisted triage, AI ops, telemetry/observability, automation, ChatOps |
+
+- Avg categories/skill = 1.07 (most strict 1:1; foundational + AI skills sometimes overlap into Core).
+- Every skill has 5 `SkillLevelContent` rows = **870 content rows** total (Education ×2, Exposure ×2, Experience ×1 per skill — generated via `_content_rows()`).
+- Every skill carries 2–4 tags (e.g. `troubleshooting`, `escalation`, `protocol-analysis`, `customer-comms`, `automation`, `ai-assisted`).
+
+**Certification catalog — 27 certificates across 7 domains**:
+
+| Domain | Examples |
+|--------|----------|
+| Foundational | CCST, CCNA, ITIL 4 |
+| Enterprise | CCNP ENCOR, ENWLSI, ENARSI, CCIE EI, CCIE Wireless |
+| Data Center | CCNP DC, CCIE DC, VMware VCP-NV |
+| Collaboration | CCNP Collab, CCIE Collab |
+| Security | CCNP Security, CCIE Security, CISSP, GCIH, GIAC GNFA |
+| Automation & DevOps | DevNet Associate, DevNet Pro, DevNet Expert, HashiCorp Terraform Assoc., Python PCAP |
+| Soft Skills / Service | ITIL 4 Specialist, Customer Service Pro, Crucial Conversations |
+
+Skills are linked to certs via `SkillCertificate` M2M when the skill maps to a known cert track.
+
+**Roster — 51 users (all password `password123`)**:
+- 1 admin: `admin@matrixpro.com`.
+- 25 managers (one per technology area, placed on SHIFT1): `mgr-<area>@matrixpro.com` (e.g. `mgr-lansw@matrixpro.com`, `mgr-aci@matrixpro.com`, `mgr-fw@matrixpro.com`).
+- 25 engineers (one per area, SHIFT1, reporting to the area manager): `eng-<area>@matrixpro.com` (e.g. `eng-lansw@matrixpro.com`).
+- SHIFT2/3/4 teams remain empty (demonstrates the shift taxonomy without bloating the user list).
+
+**Development plans — 25 plans, 175 plan_skills (7 each)**:
+- Each engineer gets the first 7 skills from their team's skill set, with statuses rotated across `planned` / `developing` / `mastered`.
+- Every `mastered` plan-skill gets a `PlanSkillTrainingLog` entry (`title`, `type=action`, `completed_at`, `notes`).
+- `proficiency_level` rotates 1→2→3.
+
+**Verification (post-seed API smoke test)**:
+- `GET /api/health` → `{"status":"ok","service":"MatrixPro API"}` ✅.
+- Admin login returns JWT ✅.
+- `GET /api/skills/` → 174 skills, every skill has ≥1 category, distribution matches table above ✅.
+- `GET /api/teams/` → 104 teams, naming convention `TAC-ENT-LANSW-SHIFT1` etc. confirmed ✅.
+- `GET /api/plans/` → 25 plans ✅.
+
+**Schema corrections required during implementation (model drift vs. earlier handoff notes)**:
+1. `PlanSkillStatus` actual members are `planned` / `developing` / `mastered` — NOT the `in_pipeline` / `in_development` / `proficiency` strings used in §11 / earlier sessions. README still describes the kanban as "Pipeline / In Development / Proficiency" — those are UI labels for the same underlying enum values.
+2. `PlanSkillTrainingLog` schema is `(plan_skill_id, title, type, completed_at, notes)` — NOT `(plan_skill_id, note, logged_at)`. The `type` column is a `SkillLevelContentType` enum, so seed uses `SkillLevelContentType.action` for "mastered" milestones.
+3. `Certificate` has no `code` column — `code` strings (e.g. "CCIE-EI") exist only as in-memory dict keys for skill→cert lookup during seed.
+
+**Stale references to retire (older AGENTS.md content now obsolete)**:
+- §9 "Test Credentials" table (admin@/alice@/bob@/carol@/dave@/eve@) — replaced by `mgr-<area>@` / `eng-<area>@` pattern.
+- §13 "Seed Data" — Bob/Dave/Eve skill assignments no longer apply.
+- §14 "Catalog Reset — 24 TAC-Realistic Skills" (next section) — superseded by this entry. Kept below for historical context only.
+- README §"Demo Credentials" table — out of date with the new roster (README is not authoritative for seed contents; future doc pass should sync).
+
+**Files touched**:
+- `backend/app/seed.py` — full rewrite (~1090 lines): `DOMAINS`, `TEAM_TAXONOMY`, `CATEGORIES`, `CERT_CATALOG`, 28 skill-group constants, `ALL_SKILL_GROUPS` aggregator, `_content_rows()` 3E generator, manager/engineer roster loop, plan/training-log generator.
+- No frontend changes required (the new data flows through existing endpoints unchanged).
+
+### Catalog Reset — 24 TAC-Realistic Skills (strict 1:1 category mapping)
+
+**Trigger**: User request to reset the skill catalog with brand-new skills, balanced across all 4 categories, with strict **one category per skill** (overriding the schema's M2M capability for this dataset).
+
+**Approach**: Full seed re-run (`python -m app.seed`) — wipes everything (users, plans, skills, logs) and reseeds from scratch.
+
+**New catalog (24 skills, 6 per category, single category each)**:
+
+| idx | name | category | team(s) | cert |
+|-----|------|----------|---------|------|
+| 0 | OSI Model & TCP/IP Fundamentals | Foundational | campus_sw, routing | CCNA |
+| 1 | IPv4 Subnetting & VLSM | Foundational | campus_sw, routing | CCNA |
+| 2 | Ethernet, VLANs & Trunking Basics | Foundational | campus_sw | CCNA |
+| 3 | Introduction to Wireless RF | Foundational | wifi6, wlan_ctrl | CCNA |
+| 4 | Cisco IOS CLI Survival Skills | Foundational | campus_sw, routing | CCNA |
+| 5 | Customer Communication Essentials | Foundational | (soft skills) | — |
+| 6 | Catalyst 9000 Switching Operations | Core | campus_sw | CCNP ENCOR |
+| 7 | OSPF Multi-Area Design & Troubleshooting | Core | routing | CCNP ENCOR |
+| 8 | Catalyst 9800 WLC Day-to-Day Ops | Core | wifi6, wlan_ctrl | CCNP ENWLSI |
+| 9 | ASA Firewall Policy & NAT | Core | firewall | CCNP Security |
+| 10 | AnyConnect Remote-Access VPN | Core | firewall, vpn_team | CCNP Security |
+| 11 | CUCM Dial Plan & Call Routing | Core | uc_team | CCNP Collab |
+| 12 | BGP Route-Reflector & Confederation Design | Advanced | routing | CCIE EI |
+| 13 | SD-Access Fabric Deep Dive | Advanced | campus_sw, sdwan_team | CCIE EI |
+| 14 | FTD Threat Tuning & Snort Rules | Advanced | firewall | CCIE Security |
+| 15 | ACI Multi-Pod & Multi-Site | Advanced | aci_team | CCIE DC |
+| 16 | DMVPN Phase 3 & FlexVPN Deep Dive | Advanced | vpn_team, routing | CCIE Security |
+| 17 | Zero Trust Architecture & Microsegmentation | Advanced | ise_team, firewall | — |
+| 18 | LLM-Assisted Log Triage | AI & Future Skills | (cross-team) | — |
+| 19 | Webex AI Assistant Configuration | AI & Future Skills | webex_team | — |
+| 20 | Python & pyATS Network Automation | AI & Future Skills | campus_sw, routing | DevNet Pro |
+| 21 | Terraform for Cisco Infrastructure | AI & Future Skills | aci_team, sdwan_team | DevNet Pro |
+| 22 | DNAC Predictive Wireless Insights | AI & Future Skills | wifi_assurance, wifi6 | — |
+| 23 | ThousandEyes + Splunk AIOps | AI & Future Skills | (cross-team) | — |
+
+**plan_assignments rewrite**: All 9 engineer assignments re-mapped to valid indices (0-23) aligned with each engineer's team domain. Old code referenced indices 23/24/25 (out of bounds for new 24-skill catalog). Engineer→indices:
+- bob (Wi-Fi 6): [3, 8, 0] · dave (WLAN): [8, 3, 4] · eve (Firewall): [9, 14, 10] · henry (ISE): [17, 9, 14]
+- ivan (Campus SW): [2, 6, 20] · julia (Routing): [7, 12, 10] · kevin (SD-WAN): [16, 21, 17]
+- lisa (Webex): [11, 19, 23] · mike (ACI): [15, 6, 21]
+
+**API verification** (admin token, `GET /api/skills/`):
+- Total skills = 24 ✅
+- Per-category counts = `{Foundational: 6, Core: 6, Advanced: 6, AI & Future Skills: 6}` ✅
+- Skills with >1 category = 0 ✅ (strict 1:1 enforced)
+- Skills with 0 categories = 0 ✅
+- Bob's plan (engineer_id=6): 3 skills, all reference valid new catalog ids (4/9/1), categories populated at top-level of plan_skill payload ✅
+
+**Stale references to retire**:
+- Old per-engineer skill IDs in §13 ("Bob(4) has skills 1,2,4 …") — no longer valid. Bob is now `engineer_id=6` and has plan skills referencing catalog ids 4, 9, 1.
+- Skill 22 baseline mentioned in earlier sections — skill 22 is now `DNAC Predictive Wireless Insights` (AI & Future), no longer `ACI Fabric Fundamentals`. Old AI testing references to skill 22 are obsolete.
+- Old Carol-manages-Dave-and-Eve cross-team detail in §13 still holds (seed retains that structure).
+
+**Schema clarification**: Model name in code is `SkillCategoryAssignment` (not `SkillCategoryAssoc` as stated in §4). AGENTS.md §4 has minor documentation drift — code is authoritative.
+
+**Files touched**: `backend/app/seed.py` only (`skill_category_map`, `skill_defs`, `plan_assignments`).
+
+### LANSW Shift-2 Overlay — Realistic LAN Switching dataset (current)
+
+Adds a destructive overlay on top of the global TAC reseed so the `TAC-ENT-LANSW-SHIFT2` team has a deep dataset for demos. Runs as the last step of `python -m app.seed` via `_seed_lansw_shift2(db)` in `backend/app/seed.py`.
+
+**18 LANSW skills (strict 1:1 category, replaces overlapping LANSW catalog)**:
+
+| # | Category | Skill |
+|---|----------|-------|
+| 1 | Foundational | Layer 2 Switching Fundamentals |
+| 2 | Foundational | VLANs, Trunking & VTP |
+| 3 | Foundational | Spanning Tree: STP, RSTP & MST |
+| 4 | Foundational | EtherChannel & Link Aggregation (LACP/PAgP) |
+| 5 | Foundational | First Hop Redundancy (HSRP/VRRP/GLBP) |
+| 6 | Core | Layer 3 Switching & Inter-VLAN Routing |
+| 7 | Core | Catalyst 9000 IOS-XE Operations |
+| 8 | Core | Stacking & StackWise Virtual |
+| 9 | Core | QoS on Campus Switches |
+| 10 | Core | Multicast on Campus (IGMP/PIM-SM) |
+| 11 | Core | DHCP, DHCP Snooping & Dynamic ARP Inspection |
+| 12 | Core | 802.1X, MAB & MACsec Switchport Security |
+| 13 | Advanced | VXLAN EVPN Campus Fabric |
+| 14 | Advanced | SD-Access Underlay & Fabric Edge Troubleshooting |
+| 15 | Advanced | Stack/SVL Split-Brain & ISSU Recovery |
+| 16 | Advanced | Catalyst Hardware ASIC & TCAM Troubleshooting |
+| 17 | Advanced | EPC, ELAM & FED Packet Capture |
+| 18 | Advanced | Campus Telemetry: Model-Driven & gNMI/YANG |
+
+- All 18 bound to all 4 LANSW shift teams (SHIFT1-4) so catalog stays cross-shift consistent.
+- Each gets 18 `SkillLevelContent` rows (6 Education L1 / 6 Exposure L2 / 6 Experience L3) via `_content_rows()`.
+- Certs: foundational/core → `CCNA` + `CCNP-ENCOR`; advanced → `CCIE-EI`.
+- Pre-step: detaches all `SkillTeam` rows for the 4 LANSW shifts before creating the 18 — idempotent within a reseed.
+
+**7 users on `TAC-ENT-LANSW-SHIFT2` (team_id=2)**, password `password123`:
+
+| Email | Role | Reports to |
+|-------|------|-----------|
+| `alice@matrixpro.com` | manager | (none) |
+| `bob@matrixpro.com` | engineer | alice |
+| `caden@matrixpro.com` | engineer | alice |
+| `daniela@matrixpro.com` | engineer | alice |
+| `ethan@matrixpro.com` | engineer | alice |
+| `fiona@matrixpro.com` | engineer | alice |
+| `grace@matrixpro.com` | engineer | alice |
+
+**Plans (6 engineers × 18 = 108 plan_skills)**:
+- Each engineer gets ALL 18 LANSW skills.
+- Status from deterministic weighted pool (`rng = random.Random(20260524)`): ~30% mastered / ~50% developing / ~10% planned / remaining 10 sub-weighted 3/5/2. Verified Bob: 4 mastered / 13 developing / 1 planned. Across the 6: 4-8 mastered, 7-13 developing, 1-3 planned.
+- **Mastered**: all 18 content rows complete in `UserContentCompletion` with `completed_at` spread across last 6 months. `proficiency_level=5`. One `PlanSkillTrainingLog` entry (`type=action`, current-quarter).
+- **Developing**: subset of 3E rows complete (Education always, Exposure partial, Experience rare) — `completed_at` within current quarter. `proficiency_level` 2/3/4/5 by 3E depth. One in-progress log.
+- **Planned**: 0 completions, `proficiency_level=NULL`, 0 logs.
+
+**Verification (post-seed)**:
+- Bob (`id=43`): 18 skills, 174 `UserContentCompletion` rows, 31 `PlanSkillTrainingLog` rows.
+  - Mastered "Layer 2 Switching Fundamentals" → 18 completions, prof=5, 1 log ✅
+  - Developing "VLANs, Trunking & VTP" → 13 completions, prof=5, 1 log ✅
+  - Planned "Spanning Tree: STP, RSTP & MST" → 0 completions, prof=null, 0 logs ✅
+- Alice (mgr, `team_id=2`): `GET /api/plans/` returns 6 plans, each 18 skills ✅.
+- Final DB counts: 84 teams, **70 skills** (52 base + 18 LANSW), 1260 content rows, 48 users, 26 plans, 227 plan_skills.
+
+**Cert-name lookup gotcha**: `CERT_CATALOG` rows are `(code, name, description)`; persisted as `Certificate.name = <full name>`. Overlay queries by name, uses internal `cert_code_to_name` dict mapping `"CCNA" → "Cisco Certified Network Associate"`, `"CCNP-ENCOR" → "CCNP Enterprise Core"`, `"CCIE-EI" → "CCIE Enterprise Infrastructure"` — must stay in sync with `CERT_CATALOG` in main seed body.
+
+**Stale references to retire**:
+- §9 "Test Credentials" + README "Demo Credentials" table — alice/bob are NOW on `TAC-ENT-LANSW-SHIFT2` (LANSW Shift-2), not Wi-Fi 6. Carol/Dave/Eve no longer exist as those names — the global reseed uses `mgr-<area>@` / `eng-<area>@` for all OTHER teams.
+- Previous "25 managers + 25 engineers" stat — current totals: 1 admin + 20 base managers + 20 base engineers + 1 LANSW mgr (alice) + 6 LANSW engineers = **48 users**.
+
+**Files touched**: `backend/app/seed.py` — added `timedelta` to datetime import; added `LANSW_SHIFT2_SKILLS` + `LANSW_SHIFT2_USERS` constants and `_seed_lansw_shift2()` helper above `run()`; wired call into `run()` after main plan loop.
+
+### Personalized 3E Content for LANSW Shift-2 (current)
+
+Adds per-engineer `UserLevelContent` rows on top of the global catalog so each LANSW Shift-2 engineer sees realistic personal 3E items in My Plan, unique per persona, never duplicating the catalog.
+
+**Personas (`LANSW_ENGINEER_PERSONAS` in `backend/app/seed.py`)** — one per engineer, drives the template pool:
+
+| Engineer | Tone | Specialization | Sample item flavor |
+|----------|------|----------------|--------------------|
+| bob@ | lab-first | Lab automation & repro engineer | "Build a CML sandbox reproducing the top-3 issues" / "Automate a regression suite in pyATS" |
+| caden@ | customer-first | Customer-facing escalation engineer & mentor | "Co-pilot 3 customer calls" / "Own ≥3 high-touch escalations end-to-end" |
+| daniela@ | forensic | Deep-dive packet-level troubleshooter | "Capture & dissect a live flow with EPC+ELAM" / "Drive a forwarding-plane RCA" |
+| ethan@ | writer | Documentation & RCA writer | "RCA template library" / "Publish 2 KB articles covering common pitfalls" |
+| fiona@ | innovator | AI/automation & innovation engineer | "Wire LLM-assisted log triage into a lab pipeline" / "Ship an AIOps prototype" |
+| grace@ | learner | Junior engineer ramping on fundamentals | "Anki flashcards" / "Shadow 2 SRs with a senior" / "Own a sev-3 SR with mentor review" |
+
+**Generator (`_personal_items_for(skill_name, persona, level, rng)`)**: returns 1-2 items per (engineer, skill, level=1/2/3), parameterized by persona tone. Each item is a tuple `(content_type, title, description, url_or_None)`. Description always namedrops the engineer + a persona interest (`pyATS`, `mentoring`, `EPC`, etc.) so items read as that engineer's actual personal artifacts. Pool size: 2 items per (tone, level), randomly shuffled, sliced to 1-2.
+
+**Completion rules**:
+- `mastered` → all personal items complete; `completed_at` ∈ last 300 days.
+- `developing` → probabilistic per level: L1 (Education) 85% done, L2 (Exposure) 45%, L3 (Experience) 15%; `completed_at` ∈ last 85 days.
+- `planned` → nothing complete, no `completed_at`.
+
+**Volume (verified after seed)**:
+- **496** `UserLevelContent` rows total across 6 engineers × 18 skills × 3 levels × 1-2 items.
+- Per-engineer distribution: bob=83, caden=86, daniela=80, ethan=83, fiona=83, grace=81 (variance from `rng.randint(1, 2)` slice).
+- Completion by status: mastered 160/160 done; developing 154/(154+128)≈55%; planned 0/54.
+
+**Validation (sqlite-level, post-seed)**: sample of Bob's items confirms persona voice intact ("Bob's lab notebook — Layer 2 Switching Fundamentals repro recipes", "Automate a … regression suite in pyATS"); distinct titles per skill; no overlap with global `skill_level_content` rows. Items consumed by `routers/plans.py:851` and rendered alongside catalog items with `is_user_content=true`.
+
+**Files touched**: `backend/app/seed.py` only — added `UserLevelContent` to model imports, added `LANSW_ENGINEER_PERSONAS` dict + `_PERSONAL_VERB_BY_LEVEL` + `_personal_items_for()` helper above `_seed_lansw_shift2()`, injected per-(engineer, skill) personalization block inside the plan-building loop after the status branch.
+

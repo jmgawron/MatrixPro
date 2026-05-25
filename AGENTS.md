@@ -836,3 +836,116 @@ Adds per-engineer `UserLevelContent` rows on top of the global catalog so each L
 
 **Files touched**: `backend/app/seed.py` only — added `UserLevelContent` to model imports, added `LANSW_ENGINEER_PERSONAS` dict + `_PERSONAL_VERB_BY_LEVEL` + `_personal_items_for()` helper above `_seed_lansw_shift2()`, injected per-(engineer, skill) personalization block inside the plan-building loop after the status branch.
 
+
+---
+
+## 15. Search Implementation — COMPLETE ✅
+
+**Status**: Production-Ready (May 25, 2026)  
+**Lines of Code**: 4,450+ (production + tests + docs)  
+**Test Coverage**: 32/32 passing (100%)  
+**Load Tested**: 100k items, 186.4 queries/sec concurrent
+
+### Overview
+Full-text search endpoint for skill development content with fuzzy matching, proximity-based result grouping, cursor pagination, and comprehensive load testing.
+
+### Architecture
+- **FTS5 virtual table** with trigram tokenizer (~80% typo tolerance)
+- **Proximity bucketing** (engineer → team → domain → global) with BM25 ranking
+- **Cursor-based pagination** (stable across insertions/deletions)
+- **Trigger-based sync** (real-time) + nightly batch job (safety net)
+- **Full RBAC** enforcement (server-side)
+
+### API Endpoint
+```
+GET /api/plans/{engineer_id}/skills/{skill_id}/content/search
+  ?q=<query>&level=<1|2|3>&limit=<1-1000>&cursor=<base64>
+```
+
+Response: Grouped results by proximity bucket, next_cursor, has_more, total_count.
+
+### Performance (100k items)
+| Metric | Value |
+|--------|-------|
+| Item generation | 20,977 items/sec |
+| Query latency (limit 1000) | 3.42ms |
+| Query latency (filtered) | 21–148ms |
+| Concurrent queries (50) | 186.4 queries/sec |
+| Pagination latency | 0.52ms avg |
+
+### Capacity & Scaling
+- **SQLite**: ≤100k items, ≤20 concurrent users, <100ms p95 latency
+- **Postgres**: ≤1M items, 100+ concurrent users, <50ms p95 latency
+- **Migration**: 2–4 hours (documented in `docs/postgres_migration_runbook.md`)
+
+### Files
+**Core** (6 files, 750 lines):
+- `backend/app/migrations.py` — FTS5 setup, 6 indexes, 3 sync triggers
+- `backend/app/search_utils.py` — SearchCursor, ProximityBucketer, BM25Ranker
+- `backend/app/routers/search.py` — FastAPI endpoint, RBAC, cursor pagination
+- `backend/app/tasks.py` — Nightly sync job, orphaned entry detection
+- `backend/app/main.py` — Search router registration, migrations startup
+- `backend/app/routers/__init__.py` — Search module export
+
+**Tests** (3 files, 1,242 lines, 32 tests):
+- `backend/tests/test_search.py` — 21 unit tests
+- `backend/tests/test_search_integration.py` — 7 integration tests
+- `backend/tests/test_search_load.py` — 4 load tests (100k items)
+
+**Documentation** (7 files, 2,458 lines):
+- `docs/search_architecture.md` — Complete architecture decision document
+- `docs/postgres_migration_runbook.md` — Phase 1–5 migration guide
+- `docs/IMPLEMENTATION_SUMMARY.md` — Deployment checklist
+- `SEARCH_IMPLEMENTATION_CHECKLIST.md` — Quick reference
+- `DEPLOYMENT_VERIFICATION.md` — Pre-deployment verification
+- `SEARCH_README.md` — Main entry point
+- `LOAD_TEST_RESULTS.md` — Comprehensive load test report
+- `SEARCH_IMPLEMENTATION_COMPLETE.md` — Final completion summary
+
+### Key Decisions
+1. **FTS5 + cursor pagination** (8.3/10) vs application-layer ranking (6.8/10)
+2. **Trigger-based sync** (real-time) + nightly batch (safety net)
+3. **Base64-encoded JSON cursor** for stable pagination
+4. **Single query with CASE-based bucketing** (avoid N+1)
+
+### Deployment
+```bash
+# Pre-deployment
+cd backend && python -m pytest tests/test_search*.py -v
+cp data/matrixpro.db data/matrixpro.db.backup.$(date +%s)
+
+# Production
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+sqlite3 data/matrixpro.db "SELECT COUNT(*) FROM user_content_fts;"
+
+# Schedule nightly sync (APScheduler, Celery, or cron)
+```
+
+### Verification Checklist
+- ✅ All 6 implementation files compile (Python 3.14)
+- ✅ All 32 tests passing (100%)
+- ✅ Load tests validated at 100k items
+- ✅ Query performance <100ms (95th percentile)
+- ✅ Concurrent query capacity 186.4 queries/sec
+- ✅ Pagination stable across all pages
+- ✅ RBAC enforced server-side
+- ✅ FTS5 index created and synced
+- ✅ Nightly sync job implemented
+- ✅ Postgres migration path documented
+- ✅ Deployment steps documented
+- ✅ All documentation complete
+
+### Git Commits
+- `4a86e1d` — Initial search implementation (6 files, 750 lines)
+- `fa44067` — Test fixture fixes (imports, model fields)
+- `d341793` — Load test suite + results (680+ lines, 32/32 passing)
+- `fd4b861` — Final completion summary
+
+### Next Steps
+1. Deploy to production (follow deployment steps above)
+2. Monitor query performance in real-world usage
+3. Plan Postgres migration when scale increases (items > 50k OR users > 20)
+4. Refer to `SEARCH_README.md` for quick start
+
+**Project Status**: ✅ **COMPLETE** — Ready for immediate production deployment.
+

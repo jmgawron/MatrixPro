@@ -921,7 +921,7 @@ function buildSkillCard(skill) {
     const archiveBtn = createElement('button', {
       className: skill.is_archived
         ? 'btn btn-sm btn-primary card-action-btn'
-        : 'btn btn-sm btn-danger card-action-btn',
+        : 'btn btn-sm btn-secondary card-action-btn',
     });
     archiveBtn.textContent = skill.is_archived ? 'Restore' : 'Archive';
     archiveBtn.addEventListener('click', (e) => {
@@ -929,8 +929,18 @@ function buildSkillCard(skill) {
       handleArchiveSkill(skill);
     });
 
+    const deleteBtn = createElement('button', {
+      className: 'btn btn-sm btn-danger card-action-btn'
+    });
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleCascadeDeleteSkill(skill.id, skill.name);
+    });
+
     actions.appendChild(editBtn);
     actions.appendChild(archiveBtn);
+    actions.appendChild(deleteBtn);
     headerRow.appendChild(actions);
   }
   card.appendChild(headerRow);
@@ -1879,6 +1889,62 @@ async function openSkillModal(existingSkill) {
 function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   const form = createElement('div', { className: 'catalog-form skill-edit-form' });
 
+  const isCreateMode = !skill;
+  let ntechCheckbox;
+  let ntechTeamsPanel;
+
+  if (isCreateMode) {
+    const ntechGroup = createElement('div', { className: 'skill-form__ntech-toggle form-group' });
+    const ntechLabel = createElement('label', { className: 'form-label' });
+    ntechCheckbox = createElement('input', { type: 'checkbox', className: 'skill-form__ntech-cb' });
+    ntechLabel.appendChild(ntechCheckbox);
+    ntechLabel.appendChild(document.createTextNode(' This is a Non-Technical skill'));
+    const ntechHint = createElement('div', { className: 'form-hint catalog-form-hint' });
+    ntechHint.textContent = 'Non-technical skills are assigned to NTECH-GEN shift teams instead of organization teams.';
+    ntechGroup.appendChild(ntechLabel);
+    ntechGroup.appendChild(ntechHint);
+    form.appendChild(ntechGroup);
+    form._ntechCheckbox = ntechCheckbox;
+
+    ntechTeamsPanel = createElement('div', { className: 'skill-form__ntech-teams', style: 'display: none;' });
+    const ntechInfo = createElement('div', { className: 'skill-form__ntech-info' });
+    ntechInfo.innerHTML = '<span class="ntech-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span> Will be assigned to: NTECH-GEN domain';
+    ntechTeamsPanel.appendChild(ntechInfo);
+    
+    const ntechChecksContainer = createElement('div', { className: 'skill-form__ntech-checks' });
+    ntechTeamsPanel.appendChild(ntechChecksContainer);
+
+    let fetched = false;
+    ntechCheckbox.addEventListener('change', async () => {
+      const checked = ntechCheckbox.checked;
+      ntechGroup.classList.toggle('skill-form__ntech-toggle--active', checked);
+      
+      const regularTeamsPanel = form.querySelector('.skill-edit-row--assoc > .skill-assoc-section:first-child');
+      if (regularTeamsPanel) {
+        regularTeamsPanel.style.display = checked ? 'none' : '';
+      }
+      ntechTeamsPanel.style.display = checked ? 'block' : 'none';
+
+      if (checked && !fetched) {
+        fetched = true;
+        ntechChecksContainer.innerHTML = 'Loading...';
+        try {
+          const ntechTeams = await api.get('/api/skills/ntech-teams');
+          ntechChecksContainer.innerHTML = '';
+          ntechTeams.forEach(t => {
+            const lbl = createElement('label', { className: 'ntech-team-label' });
+            const cb = createElement('input', { type: 'checkbox', value: t.id, checked: true, className: 'ntech-team-cb' });
+            lbl.appendChild(cb);
+            lbl.appendChild(document.createTextNode(` ${t.name}`));
+            ntechChecksContainer.appendChild(lbl);
+          });
+        } catch (err) {
+          ntechChecksContainer.innerHTML = 'Failed to load NTECH teams.';
+        }
+      }
+    });
+  }
+
   /* Row 1 target height ~330px so total stays under the 594px modal envelope. */
   const topSection = createElement('div', { className: 'skill-edit-top-section' });
 
@@ -1948,6 +2014,10 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   teamsHeader.appendChild(teamsLabel);
   teamsHeader.appendChild(teamsBadge);
   teamsPanel.appendChild(teamsHeader);
+
+  if (isCreateMode && ntechTeamsPanel) {
+    assocRow.appendChild(ntechTeamsPanel);
+  }
 
   const teamOptionsAll = buildTeamOptions(formData.orgTree || []);
   
@@ -2258,14 +2328,23 @@ function buildFormGroup(labelText, inputId, inputTag, attrs, required) {
 function readSkillForm(formEl) {
   const name = formEl.querySelector('#skill-name')?.value.trim() || '';
   const description = formEl.querySelector('#skill-desc')?.value.trim() || '';
+  const iconInput = formEl.querySelector('.skill-icon-value');
+  const icon = iconInput && iconInput.value ? iconInput.value : null;
 
-  const hiddenIconEl = formEl.querySelector('.skill-icon-value');
-  const selectedIconEl = formEl.querySelector('.skill-icon-option.selected');
-  const icon = (hiddenIconEl && hiddenIconEl.value) || (selectedIconEl ? selectedIconEl.dataset.icon : null) || null;
+  let team_ids = [];
+  let is_non_technical = false;
 
-  const team_ids = formEl._teamCombo
-    ? formEl._teamCombo.getSelected().map(Number).filter(Number.isFinite)
-    : [];
+  if (formEl._ntechCheckbox && formEl._ntechCheckbox.checked) {
+    is_non_technical = true;
+    team_ids = Array.from(formEl.querySelectorAll('.ntech-team-cb:checked'))
+      .map(cb => Number(cb.value))
+      .filter(Number.isFinite);
+  } else {
+    team_ids = formEl._teamCombo 
+      ? formEl._teamCombo.getSelected().map(Number).filter(Number.isFinite)
+      : [];
+  }
+
   const certificate_ids = formEl._certCombo
     ? formEl._certCombo.getSelected().map(Number).filter(Number.isFinite)
     : [];
@@ -2277,7 +2356,7 @@ function readSkillForm(formEl) {
     .map(cb => Number(cb.dataset.categoryId))
     .filter(Number.isFinite);
 
-  return { name, description, icon, team_ids, certificate_ids, tag_names, category_ids };
+  return { name, description, icon, team_ids, certificate_ids, tag_names, category_ids, is_non_technical };
 }
 
 function validateSkillForm(data) {
@@ -2307,6 +2386,77 @@ async function handleArchiveSkill(skill) {
     fetchAndRenderSkills();
   } catch (err) {
     showToast(err.message || `Failed to ${action} skill`, 'error');
+  }
+}
+
+async function handleCascadeDeleteSkill(skillId, skillName) {
+  try {
+    const preview = await api.get(`/api/skills/${skillId}/cascade-preview`);
+    
+    const body = createElement('div', { className: 'cascade-delete-modal__body' });
+    
+    const warningHeader = createElement('div', { className: 'cascade-delete-modal__warning' });
+    const warningIcon = createElement('span');
+    warningIcon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+    const warningText = createElement('span');
+    warningText.textContent = 'This will permanently remove the skill from the catalog.';
+    warningHeader.appendChild(warningIcon);
+    warningHeader.appendChild(warningText);
+    body.appendChild(warningHeader);
+
+    const impactCard = createElement('div', { className: 'cascade-delete-modal__impact' });
+    impactCard.innerHTML = `<p><strong>${preview.engineers_affected}</strong> engineers currently have this skill in their plan.</p>
+                            <p>Their training logs (<strong>${preview.training_logs_preserved}</strong>) and content completions will be preserved as personal skill.</p>`;
+    body.appendChild(impactCard);
+
+    const confirmRow = createElement('div', { className: 'cascade-delete-modal__confirm-row' });
+    const confirmLabel = createElement('label', { htmlFor: 'cascade-confirm-input' });
+    confirmLabel.textContent = `Type "${skillName}" to confirm`;
+    const confirmInput = createElement('input', { type: 'text', id: 'cascade-confirm-input', className: 'form-control', autocomplete: 'off' });
+    confirmRow.appendChild(confirmLabel);
+    confirmRow.appendChild(confirmInput);
+    body.appendChild(confirmRow);
+
+    const resultPromise = showModal({
+      title: `Delete skill: "${skillName}"`,
+      body: body,
+      modalClass: 'cascade-delete-modal',
+      actions: [
+        { label: 'Cancel', className: 'btn btn-secondary', value: false },
+        { label: 'Delete permanently', className: 'btn cascade-delete-modal__danger-btn', value: true }
+      ]
+    });
+
+    // Wire up input validation after modal is rendered
+    requestAnimationFrame(() => {
+      const deleteBtn = document.querySelector('.cascade-delete-modal__danger-btn');
+      if (deleteBtn) {
+        deleteBtn.disabled = true;
+        confirmInput.addEventListener('input', () => {
+          deleteBtn.disabled = confirmInput.value !== skillName;
+        });
+      }
+      confirmInput.focus();
+    });
+
+    const result = await resultPromise;
+
+    if (result) {
+      try {
+        const res = await api.del(`/api/skills/${skillId}/cascade`);
+        if (res.tombstone) {
+          showToast(`Skill deleted from catalog. Kept as personal skill for ${res.plan_skills_affected} engineers.`, 'success');
+        } else {
+          showToast('Skill permanently deleted.', 'success');
+        }
+        fetchAndRenderSkills();
+      } catch (err) {
+        showToast(err.message || 'Failed to delete skill', 'error');
+      }
+    }
+
+  } catch (err) {
+    showToast(err.message || 'Failed to load skill impact', 'error');
   }
 }
 

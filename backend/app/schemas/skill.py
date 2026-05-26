@@ -88,6 +88,7 @@ class SkillCreate(BaseModel):
     tag_names: list[str] = []
     certificate_ids: list[int] = []
     category_ids: list[int] = []
+    is_non_technical: bool = False
 
 
 class SkillUpdate(BaseModel):
@@ -115,6 +116,7 @@ class SkillResponse(BaseModel):
     description: str | None = None
     icon: str | None = None
     is_archived: bool
+    is_orphaned: bool = False
     catalog_version: int
     created_at: datetime
     updated_at: datetime | None = None

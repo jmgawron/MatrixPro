@@ -58,6 +58,7 @@ class PlanSkillResponse(BaseModel):
     skill_name: str
     skill_icon: str | None = None
     is_custom: bool = False
+    is_orphaned: bool = False
     status: PlanSkillStatus
     proficiency_level: int | None = None
     focus_area: str | None = None

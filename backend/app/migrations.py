@@ -51,10 +51,25 @@ def _ensure_user_level_content_columns(conn):
         ))
 
 
+def _ensure_skills_columns(conn):
+    """Ensure skills table has is_orphaned column (Catalog tombstone-delete)."""
+    cols = _table_columns(conn, "skills")
+    if not cols:
+        return
+
+    if "is_orphaned" not in cols:
+        logger.info("ALTER skills ADD is_orphaned (default 0)")
+        conn.execute(text(
+            "ALTER TABLE skills "
+            "ADD COLUMN is_orphaned BOOLEAN NOT NULL DEFAULT 0"
+        ))
+
+
 def run_migrations():
     """Execute all pending migrations idempotently."""
     with engine.connect() as conn:
         _ensure_user_level_content_columns(conn)
+        _ensure_skills_columns(conn)
 
         logger.info("Creating user_content_fts virtual table...")
         conn.execute(text("""

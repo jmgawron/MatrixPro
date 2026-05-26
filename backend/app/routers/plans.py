@@ -162,6 +162,7 @@ def _to_plan_response(plan: DevelopmentPlan) -> PlanResponse:
                 skill_name=ps.skill.name,
                 skill_icon=ps.skill.icon,
                 is_custom=ps.skill.is_custom,
+                is_orphaned=getattr(ps.skill, "is_orphaned", False),
                 status=ps.status,
                 proficiency_level=ps.proficiency_level,
                 focus_area=ps.focus_area,

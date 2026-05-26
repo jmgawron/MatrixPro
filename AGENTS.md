@@ -1,7 +1,7 @@
 # MatrixPro — Cross-Session Knowledge Base
 
 > **Purpose**: Reference document for OpenCode agents working on MatrixPro across sessions.
-> **Last updated**: LANSW Shift-2 overlay — 18 new LAN Switching skills (5F/7C/6A), 7 users (alice@ mgr + bob@ + 5 engineers) on `TAC-ENT-LANSW-SHIFT2`, with weighted-status development plans, 3E completions, training logs, and proficiency.
+> **Last updated**: Catalog Tombstone-Delete + Non-Technical Skill Toggle — admin cascade-delete keeps plan_skills as orphaned personal artifacts with amber badge; Create Skill modal Non-Technical toggle routes to NTECH-GEN multi-shift teams.
 
 ---
 
@@ -1039,3 +1039,71 @@ sqlite3 data/matrixpro.db "SELECT COUNT(*) FROM user_content_fts;"
 - "Add My Item" button labels in `my-plan.js` — now reads "+ Add My {Education|Exposure|Experience} Item" launching Library Modal.
 - `openUserContentEditor` (legacy modal builder) — deleted from `my-plan.js`.
 
+
+---
+
+## 17. Catalog Tombstone-Delete + Non-Technical Skill Toggle (current)
+
+**Status**: Implemented + verified (8/8 Playwright tests PASS, both themes). Uncommitted at HEAD `6a924d3`.
+
+### Feature 1 — Cascade-Delete (Tombstone)
+Admin Catalog gets a **Delete** danger button alongside the existing Edit/Archive controls. Two-branch behavior:
+
+- **Hard delete** (zero engineers have it in any plan): row is removed from `skills` plus all assoc tables (`SkillTag`, `SkillTeam`, `SkillCertificate`, `SkillCategoryAssignment`, `SkillLevelContent`).
+- **Tombstone delete** (≥1 engineer has it in their plan): `skills` row kept with `is_archived=True` + `is_orphaned=True`; all catalog assocs stripped; `PlanSkill`, `PlanSkillTrainingLog`, `UserLevelContent`, `UserContentCompletion` rows **preserved untouched**. Skill becomes a per-engineer personal artifact.
+
+Confirmation uses a **typed-confirmation modal** showing engineer count + log count. Danger button stays disabled until the user types the exact skill name.
+
+**Backend**:
+- `models/skill.py:35` — `is_orphaned: bool` column (default False).
+- `migrations.py` — `_ensure_skills_columns()` idempotent ALTER for legacy DBs.
+- `routers/skills.py:519` — `GET /api/skills/{id}/cascade-preview` returns `{engineer_count, log_count, will_tombstone}`.
+- `routers/skills.py:563-607` — `DELETE /api/skills/{id}/cascade` (admin only). Branches at L589 on engineer count.
+- `routers/plans.py:164` — `PlanSkillResponse.is_orphaned` populated from joined skill.
+- Existing soft-archive `DELETE /api/skills/{id}` **unchanged** (Archive button still works independently).
+
+**Frontend**:
+- `catalog.js:932-939` — Delete danger button next to Edit/Archive.
+- `catalog.js:2392+` — `handleCascadeDeleteSkill` typed-confirm modal.
+- `my-plan.js:734-737` — amber "Personal — removed from catalog" badge when `plan_skill.is_orphaned === true`.
+- `style.css` §7.21/§7.22/§7.23 — danger button, typed-confirm modal, orphan badge styles (token-driven, light+dark).
+
+### Feature 2 — Non-Technical Skill Toggle (Create modal only)
+Create Skill modal gets a "Non-Technical Skill" checkbox above the team picker. When ON:
+- Standard team picker hidden, replaced by NTECH-GEN-SHIFT{1..4} 4-shift checkbox group (all checked by default).
+- Banner explains "This skill will be added to the Non-Technical catalog across all 4 shifts."
+- Backend auto-routes skill under domain `NTECH` and creates `SkillTeam` rows for selected NTECH shift teams (ids 81-84).
+- Validation rejects mixing NTECH teams with regular teams.
+
+Edit modal does **not** get the toggle (intentional — change-of-classification not supported; admin can delete + recreate).
+
+**Backend**:
+- `schemas/skill.py` — `SkillCreate.is_non_technical: bool` (default False).
+- `routers/skills.py` — `create_skill` validates + auto-assigns NTECH-GEN teams when flag set.
+- `routers/skills.py` — `GET /api/skills/ntech-teams` returns the 4 shift teams for the picker.
+
+**Frontend**:
+- `catalog.js:1897-1925` — Toggle + NTECH picker (Create modal only; guarded by `mode === 'create'`).
+- `catalog.js:2280-2295` — `readSkillForm` extended to emit `is_non_technical` + `team_ids` from NTECH picker.
+
+### Cache versions (current)
+- `frontend/index.html`: `style.css?v=38`, `app.js?v=37`
+- `frontend/js/app.js`: `pages/my-plan.js?v=27`, `pages/catalog.js?v=18`
+
+### Verification (8/8 PASS, dual-theme)
+1. Hard delete skill 8 (0 engineers) → row gone, 404 on GET ✅
+2. Tombstone delete skill 53 (6 engineers, 6 logs) → `is_archived=is_orphaned=True`, plan_skills intact ✅
+3. Orphan badge on bob's My Plan, light + dark ✅
+4. Non-Tech toggle in Create modal → 4 NTECH shifts visible + banner ✅
+5a. Edit modal has NO Non-Tech toggle ✅
+5b. Archive still works (separate code path from cascade) ✅
+5c. Kanban + category chip filters unaffected ✅
+6. Reseed clean: 70 skills, 48 users, 26 plans ✅
+
+Screenshots stored in repo work area: `ntech-toggle-on-{light,dark}.png`, `orphan-badge-{light,dark}.png`, `regression-myplan-dark.png`.
+
+### Critical implementation notes
+- **NTECH team ids 81-84** are seeded by the global TAC reseed (§14) — do not hardcode IDs; resolve by `Team.name LIKE 'TAC-NTECH-GEN-SHIFT%'` if reseed pattern changes.
+- **Cascade preserves**: `PlanSkill, PlanSkillTrainingLog, UserLevelContent, UserContentCompletion`. **Strips**: `SkillTag, SkillTeam, SkillCertificate, SkillCategoryAssignment, SkillLevelContent`.
+- `is_orphaned` is a **separate flag** from `is_archived` so future admin UI can distinguish "archived for retirement" vs "deleted but tombstoned for owners".
+- Typed-confirmation modal is the same primitive as the destructive delete patterns elsewhere — reuse, don't reimplement.

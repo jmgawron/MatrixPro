@@ -731,6 +731,12 @@ function buildCard(planSkill, status, iconClass) {
   nameEl.textContent = skillName;
   info.appendChild(nameEl);
 
+  if (planSkill.is_orphaned) {
+    const orphanBadge = el('div', { className: 'mp-card__orphan-badge', title: 'This skill was removed from the catalog. Your progress and training logs are preserved.' });
+    orphanBadge.textContent = 'Personal — removed from catalog';
+    info.appendChild(orphanBadge);
+  }
+
   const badgeWrap = el('div', { className: 'mp-card-badge' });
   const profLabel = el('span', { className: 'mp-card-prof-label' });
   profLabel.textContent = 'Proficiency';

@@ -72,6 +72,7 @@ def _to_skill_response(skill: Skill) -> SkillResponse:
         description=skill.description,
         icon=skill.icon,
         is_archived=skill.is_archived,
+        is_orphaned=getattr(skill, "is_orphaned", False),
         catalog_version=skill.catalog_version,
         created_at=skill.created_at,
         updated_at=skill.updated_at,
@@ -194,9 +195,34 @@ def create_skill(
     db: Session = Depends(get_db),
     current_user: User = require_role(UserRole.admin, UserRole.manager),
 ):
-    _check_manager_team_access(current_user, data.team_ids, db)
+    team_ids = list(data.team_ids)
 
-    for tid in data.team_ids:
+    if data.is_non_technical:
+        ntech_team_ids = [
+            t.id
+            for t in db.query(Team).filter(Team.name.like("TAC-NTECH-GEN-%")).all()
+        ]
+        if not ntech_team_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="Non-Technical team (NTECH-GEN) not found in catalog",
+            )
+        if team_ids:
+            invalid = [tid for tid in team_ids if tid not in ntech_team_ids]
+            if invalid:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Non-technical skill must only be assigned to NTECH-GEN "
+                        f"teams; invalid team_ids: {invalid}"
+                    ),
+                )
+        else:
+            team_ids = ntech_team_ids
+
+    _check_manager_team_access(current_user, team_ids, db)
+
+    for tid in team_ids:
         if not db.query(Team).filter(Team.id == tid).first():
             raise HTTPException(status_code=400, detail=f"Team {tid} not found")
 
@@ -211,7 +237,7 @@ def create_skill(
     db.add(skill)
     db.flush()
 
-    for tid in data.team_ids:
+    for tid in team_ids:
         db.add(SkillTeam(skill_id=skill.id, team_id=tid))
 
     for tag_name in data.tag_names:
@@ -241,6 +267,23 @@ def list_categories(
         .order_by(SkillCategory.sort_order, SkillCategory.name)
         .all()
     )
+
+
+@router.get("/ntech-teams")
+def list_ntech_teams(
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
+):
+    teams = (
+        db.query(Team)
+        .filter(Team.name.like("TAC-NTECH-GEN-%"))
+        .order_by(Team.name)
+        .all()
+    )
+    return [
+        {"id": t.id, "name": t.name, "shift": t.shift}
+        for t in teams
+    ]
 
 
 @router.get("/explorer", response_model=ExplorerResponse)
@@ -471,6 +514,97 @@ def delete_skill(
         db.delete(skill)
         db.commit()
         return {"detail": "Skill deleted"}
+
+
+@router.get("/{skill_id}/cascade-preview")
+def cascade_preview(
+    skill_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin),
+):
+    from app.models.plan import PlanSkillTrainingLog
+
+    skill = db.query(Skill).filter(Skill.id == skill_id).first()
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found")
+
+    plan_skill_ids = [
+        ps.id
+        for ps in db.query(PlanSkill.id)
+        .filter(PlanSkill.skill_id == skill_id)
+        .all()
+    ]
+
+    engineer_ids = (
+        db.query(PlanSkill.plan_id)
+        .filter(PlanSkill.skill_id == skill_id)
+        .distinct()
+        .count()
+    )
+
+    training_log_count = 0
+    if plan_skill_ids:
+        training_log_count = (
+            db.query(PlanSkillTrainingLog)
+            .filter(PlanSkillTrainingLog.plan_skill_id.in_(plan_skill_ids))
+            .count()
+        )
+
+    return {
+        "skill_id": skill_id,
+        "skill_name": skill.name,
+        "engineers_affected": engineer_ids,
+        "plan_skills_affected": len(plan_skill_ids),
+        "training_logs_preserved": training_log_count,
+        "already_orphaned": bool(getattr(skill, "is_orphaned", False)),
+    }
+
+
+@router.delete("/{skill_id}/cascade")
+def cascade_delete_skill(
+    skill_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin),
+):
+    skill = db.query(Skill).filter(Skill.id == skill_id).first()
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found")
+
+    plan_skill_count = (
+        db.query(PlanSkill).filter(PlanSkill.skill_id == skill_id).count()
+    )
+
+    db.query(SkillTag).filter(SkillTag.skill_id == skill_id).delete()
+    db.query(SkillTeam).filter(SkillTeam.skill_id == skill_id).delete()
+    db.query(SkillCertificate).filter(
+        SkillCertificate.skill_id == skill_id
+    ).delete()
+    db.query(SkillCategoryAssignment).filter(
+        SkillCategoryAssignment.skill_id == skill_id
+    ).delete()
+    db.query(SkillLevelContent).filter(
+        SkillLevelContent.skill_id == skill_id
+    ).delete()
+
+    if plan_skill_count > 0:
+        skill.is_archived = True
+        skill.is_orphaned = True
+        skill.catalog_version += 1
+        skill.updated_at = datetime.utcnow()
+        db.commit()
+        return {
+            "detail": "Skill cascade-deleted, kept as tombstone for active plans",
+            "plan_skills_affected": plan_skill_count,
+            "tombstone": True,
+        }
+    else:
+        db.delete(skill)
+        db.commit()
+        return {
+            "detail": "Skill cascade-deleted (hard delete, no active plans)",
+            "plan_skills_affected": 0,
+            "tombstone": False,
+        }
 
 
 @router.post("/{skill_id}/assignments")

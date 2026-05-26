@@ -9774,3 +9774,153 @@ textarea.is-error:focus {
 .mp-modal-categories .form-label {
   margin-bottom: 6px;
 }
+
+/* ─── §7.21 Cascade Delete Modal ─────────────────────────────────────────── */
+
+.cascade-delete-modal {
+  max-width: 520px;
+}
+.cascade-delete-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+.cascade-delete-modal__warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: #ef4444; /* danger */
+  font-weight: 600;
+}
+.cascade-delete-modal__impact {
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.cascade-delete-modal__impact p {
+  margin: 0 0 8px 0;
+}
+.cascade-delete-modal__impact p:last-child {
+  margin: 0;
+}
+.cascade-delete-modal__impact strong {
+  color: var(--text-primary);
+}
+.cascade-delete-modal__confirm-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.cascade-delete-modal__confirm-row label {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.cascade-delete-modal__danger-btn {
+  background: #ef4444;
+  color: #fff;
+  border: 1px solid #dc2626;
+  transition: opacity var(--motion-fast), background var(--motion-fast);
+}
+.cascade-delete-modal__danger-btn:not(:disabled):hover {
+  background: #dc2626;
+}
+.cascade-delete-modal__danger-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #ef4444;
+}
+
+/* ─── §7.22 Non-Technical Toggle ─────────────────────────────────────────── */
+
+.skill-form__ntech-toggle {
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  transition: border-color var(--motion-fast), background var(--motion-fast);
+}
+.skill-form__ntech-toggle--active {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft, rgba(59, 130, 246, 0.05));
+}
+.skill-form__ntech-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+.skill-form__ntech-toggle .catalog-form-hint {
+  margin-left: 21px; /* Align under checkbox */
+}
+.skill-form__ntech-teams {
+  margin-top: 16px;
+  animation: fadeIn var(--motion-fast) ease-out;
+}
+.skill-form__ntech-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-tertiary);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+.skill-form__ntech-info .ntech-icon svg {
+  color: var(--text-muted);
+}
+.skill-form__ntech-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skill-form__ntech-checks .ntech-team-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-primary);
+  transition: border-color var(--motion-fast);
+}
+.skill-form__ntech-checks .ntech-team-label:hover {
+  border-color: var(--border-hover);
+}
+
+/* ─── §7.23 Orphan Skill Badge ───────────────────────────────────────────── */
+
+.mp-card__orphan-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(245, 158, 11, 0.12); /* Amber with 12% opacity */
+  color: #f59e0b; /* Amber 500 */
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-sm, 4px);
+  padding: 2px 6px;
+  margin-top: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skill-form__ntech-teams {
+    animation: none;
+  }
+}
+

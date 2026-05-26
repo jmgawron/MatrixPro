@@ -9925,14 +9925,14 @@ textarea.is-error:focus {
 }
 
 
-/* 7.24 Skill Edit Modal Redesign */
+/* 7.24 Skill Edit Modal Redesign (v=40 — compact + unified accent) */
 .skill-edit-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md, 16px);
-  padding: 0 0 24px 0;
+  gap: 10px;
+  padding: 0 0 14px 0;
   border-bottom: 1px solid var(--border-soft);
-  margin-bottom: 24px;
+  margin-bottom: 14px;
 }
 .skill-edit-section:last-child {
   border-bottom: none;
@@ -9940,19 +9940,19 @@ textarea.is-error:focus {
   padding-bottom: 0;
 }
 .skill-edit-section__header {
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 .skill-edit-section__title {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+  color: var(--accent);
 }
 .skill-edit-section__body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md, 16px);
+  gap: 12px;
 }
 
 .skill-edit-modal__sticky-header {
@@ -9962,8 +9962,8 @@ textarea.is-error:focus {
   z-index: 10;
   border-bottom: 1px solid var(--border-soft);
   /* Since it's inside modal-body which has padding 24px, we need negative margin to stretch to the edges */
-  margin: -24px -24px 24px -24px;
-  padding: 20px 24px 16px 24px;
+  margin: -24px -24px 14px -24px;
+  padding: 14px 24px 12px 24px;
 }
 .skill-edit-modal__sticky-footer {
   position: sticky;
@@ -9972,8 +9972,8 @@ textarea.is-error:focus {
   z-index: 10;
   border-top: 1px solid var(--border-soft);
   /* Similar negative margin for footer */
-  margin: 24px -24px -24px -24px;
-  padding: 16px 24px;
+  margin: 14px -24px -24px -24px;
+  padding: 12px 24px;
 }
 
 /* Classification Row */

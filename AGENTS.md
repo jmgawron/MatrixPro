@@ -1068,7 +1068,38 @@ Confirmation uses a **typed-confirmation modal** showing engineer count + log co
 - `my-plan.js:734-737` — amber "Personal — removed from catalog" badge when `plan_skill.is_orphaned === true`.
 - `style.css` §7.21/§7.22/§7.23 — danger button, typed-confirm modal, orphan badge styles (token-driven, light+dark).
 
-### Feature 2 — Non-Technical Skill Toggle (Create modal only)
+
+### Skill Modal Redesign (v=19) — Sectioned Layout + Functional Non-Tech Toggle
+
+**Structure**:
+1. **Identity** (Name, Description, Tags)
+2. **Classification** (Non-Technical Toggle, Category Picker)
+3. **Associations** (Teams ↔ NTECH Shifts swap, Certifications)
+4. **Visual** (Icon Picker, collapsed by default)
+
+**Toggle Behavior & Confirmation**:
+- Replaced the old checkbox with an iOS-style toggle switch (`.toggle-switch`).
+- It is now visible and functional in **both** Create and Edit modes.
+- In Edit mode, flipping the toggle and submitting triggers a typed confirmation flow via `showConfirm`. The prompt is populated by pre-fetching `GET /api/skills/{id}/reclassify-preview` on modal open.
+- The confirm dialog lists how many engineers will be affected.
+
+**Sticky Chrome inside `.modal-body`**:
+- The main modal `.modal-header` and `.modal-footer` are moved via JS into `.modal-body` and given `.skill-edit-modal__sticky-header` / `.skill-edit-modal__sticky-footer` classes.
+- This allows them to stay sticky while the `.modal-body` handles all scrolling. `margin` compensations handle the `.modal-body` padding.
+- `showModal`'s native Promise-based flow relies on closures, so reparenting the elements doesn't break their event handlers.
+
+**CSS Hooks & Specificity (§7.24)**:
+- `.skill-edit-section`, `.skill-edit-section__header`, `.skill-edit-section__title`, `.skill-edit-section__body`
+- `.skill-edit-classification-row` and `.skill-ntech-toggle-group`
+- `.toggle-switch`, `.toggle-switch__input`, `.toggle-switch__track`, `.toggle-switch__thumb`
+- `prefers-reduced-motion` applies to the thumb and track transitions.
+- Focus outline relies on `.toggle-switch__input:focus-visible + .toggle-switch__track`.
+
+**Cache Versions Bumps**:
+- `frontend/index.html` → `css/style.css?v=39`, `js/app.js?v=37`
+- `frontend/js/app.js` → `pages/catalog.js?v=19`
+
+### Feature 2 — Non-Technical Skill Toggle (Legacy Create-only)
 Create Skill modal gets a "Non-Technical Skill" checkbox above the team picker. When ON:
 - Standard team picker hidden, replaced by NTECH-GEN-SHIFT{1..4} 4-shift checkbox group (all checked by default).
 - Banner explains "This skill will be added to the Non-Technical catalog across all 4 shifts."

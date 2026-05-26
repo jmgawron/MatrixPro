@@ -427,6 +427,70 @@ def update_skill(
 
     updated = False
 
+    # Handle is_non_technical reclassification BEFORE team_ids processing so the
+    # NTECH-aware team list flows through the same SkillTeam replace path below.
+    if data.is_non_technical is not None:
+        ntech_team_ids = [
+            t.id
+            for t in db.query(Team).filter(Team.name.like("TAC-NTECH-GEN-%")).all()
+        ]
+        if not ntech_team_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="Non-Technical team (NTECH-GEN) not found in catalog",
+            )
+        current_team_ids = [
+            st.team_id
+            for st in db.query(SkillTeam).filter(SkillTeam.skill_id == skill_id).all()
+        ]
+        current_is_ntech = any(tid in ntech_team_ids for tid in current_team_ids)
+
+        if data.is_non_technical and not current_is_ntech:
+            # Flip Technical -> Non-Technical: replace with all NTECH-GEN teams
+            # unless caller supplied an explicit subset.
+            if data.team_ids:
+                invalid = [tid for tid in data.team_ids if tid not in ntech_team_ids]
+                if invalid:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "Non-technical skill must only be assigned to NTECH-GEN "
+                            f"teams; invalid team_ids: {invalid}"
+                        ),
+                    )
+            else:
+                data.team_ids = ntech_team_ids
+        elif (not data.is_non_technical) and current_is_ntech:
+            # Flip Non-Technical -> Technical: caller MUST provide regular team_ids
+            if not data.team_ids:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Reclassifying to Technical requires team_ids for the new "
+                        "regular team assignments"
+                    ),
+                )
+            invalid = [tid for tid in data.team_ids if tid in ntech_team_ids]
+            if invalid:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Technical skill cannot be assigned to NTECH-GEN teams; "
+                        f"invalid team_ids: {invalid}"
+                    ),
+                )
+        elif data.is_non_technical and current_is_ntech and data.team_ids:
+            # Already Non-Technical, validate any new team_ids stay within NTECH.
+            invalid = [tid for tid in data.team_ids if tid not in ntech_team_ids]
+            if invalid:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Non-technical skill must only be assigned to NTECH-GEN "
+                        f"teams; invalid team_ids: {invalid}"
+                    ),
+                )
+
     if data.name is not None:
         skill.name = data.name
         updated = True
@@ -557,6 +621,42 @@ def cascade_preview(
         "plan_skills_affected": len(plan_skill_ids),
         "training_logs_preserved": training_log_count,
         "already_orphaned": bool(getattr(skill, "is_orphaned", False)),
+    }
+
+
+@router.get("/{skill_id}/reclassify-preview")
+def reclassify_preview(
+    skill_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
+):
+    skill = db.query(Skill).filter(Skill.id == skill_id).first()
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found")
+
+    ntech_team_ids = {
+        t.id
+        for t in db.query(Team).filter(Team.name.like("TAC-NTECH-GEN-%")).all()
+    }
+    current_team_ids = [
+        st.team_id
+        for st in db.query(SkillTeam).filter(SkillTeam.skill_id == skill_id).all()
+    ]
+    current_is_non_technical = any(tid in ntech_team_ids for tid in current_team_ids)
+
+    engineers_affected = (
+        db.query(PlanSkill.plan_id)
+        .filter(PlanSkill.skill_id == skill_id)
+        .distinct()
+        .count()
+    )
+
+    return {
+        "skill_id": skill_id,
+        "skill_name": skill.name,
+        "current_is_non_technical": current_is_non_technical,
+        "engineers_affected": engineers_affected,
+        "current_team_count": len(current_team_ids),
     }
 
 

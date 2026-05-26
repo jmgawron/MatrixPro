@@ -100,6 +100,7 @@ class SkillUpdate(BaseModel):
     tag_names: list[str] | None = None
     certificate_ids: list[int] | None = None
     category_ids: list[int] | None = None
+    is_non_technical: bool | None = None
 
 
 class TeamInfo(BaseModel):

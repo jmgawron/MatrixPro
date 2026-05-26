@@ -1851,7 +1851,18 @@ async function openSkillModal(existingSkill) {
     }
   }
 
-  const formEl = buildSkillForm(existingSkill, _formDataCache, isAdmin, isManager, user);
+  let initialIsNonTechnical = false;
+  let reclassifyPreview = null;
+  if (isEdit) {
+    try {
+      reclassifyPreview = await api.get(`/api/skills/${existingSkill.id}/reclassify-preview`);
+      initialIsNonTechnical = reclassifyPreview.current_is_non_technical;
+    } catch (err) {
+      console.warn('Failed to load reclassify preview', err);
+    }
+  }
+
+  const formEl = buildSkillForm(existingSkill, _formDataCache, isAdmin, isManager, user, initialIsNonTechnical);
 
   showModal({
     title: isEdit ? 'Edit Skill' : 'Create Skill',
@@ -1868,6 +1879,18 @@ async function openSkillModal(existingSkill) {
         return;
       }
 
+      if (isEdit && formData.is_non_technical !== initialIsNonTechnical) {
+        const affectedCount = reclassifyPreview?.engineers_affected || 0;
+        const targetDesc = formData.is_non_technical ? 'the NTECH-GEN shifts' : 'regular teams';
+        const msg = `Reclassifying this skill will clear its current team assignments and reassign it to ${targetDesc}. ${affectedCount} engineer(s) currently have this skill in their plan — their plan entries will be preserved as personal artifacts. Continue?`;
+        const confirmed = await showConfirm({
+          title: "Reclassify skill",
+          body: msg,
+          danger: true
+        });
+        if (!confirmed) return;
+      }
+
       try {
         if (isEdit) {
           await api.put(`/api/skills/${existingSkill.id}`, formData);
@@ -1880,76 +1903,40 @@ async function openSkillModal(existingSkill) {
         delete _treeCache[_activeTab];
         fetchAndRenderSkills();
       } catch (err) {
-        showToast(err.message || 'Failed to save skill', 'error');
+        showToast(err.detail || err.message || 'Failed to save skill', 'error');
       }
     },
   });
+
+  requestAnimationFrame(() => {
+    const modal = formEl.closest('.modal-skill-edit');
+    if (modal) {
+      const header = modal.querySelector('.modal-header');
+      const footer = modal.querySelector('.modal-footer');
+      const body = modal.querySelector('.modal-body');
+      if (header && footer && body) {
+        header.classList.add('skill-edit-modal__sticky-header');
+        footer.classList.add('skill-edit-modal__sticky-footer');
+        body.insertBefore(header, body.firstChild);
+        body.appendChild(footer);
+      }
+    }
+  });
 }
 
-function buildSkillForm(skill, formData, isAdmin, isManager, user) {
+function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonTechnical = false) {
   const form = createElement('div', { className: 'catalog-form skill-edit-form' });
-
   const isCreateMode = !skill;
-  let ntechCheckbox;
-  let ntechTeamsPanel;
 
-  if (isCreateMode) {
-    const ntechGroup = createElement('div', { className: 'skill-form__ntech-toggle form-group' });
-    const ntechLabel = createElement('label', { className: 'form-label' });
-    ntechCheckbox = createElement('input', { type: 'checkbox', className: 'skill-form__ntech-cb' });
-    ntechLabel.appendChild(ntechCheckbox);
-    ntechLabel.appendChild(document.createTextNode(' This is a Non-Technical skill'));
-    const ntechHint = createElement('div', { className: 'form-hint catalog-form-hint' });
-    ntechHint.textContent = 'Non-technical skills are assigned to NTECH-GEN shift teams instead of organization teams.';
-    ntechGroup.appendChild(ntechLabel);
-    ntechGroup.appendChild(ntechHint);
-    form.appendChild(ntechGroup);
-    form._ntechCheckbox = ntechCheckbox;
+  // -- Section 1: Identity
+  const identitySection = createElement('div', { className: 'skill-edit-section' });
+  const identityHeader = createElement('div', { className: 'skill-edit-section__header' });
+  const identityTitle = createElement('div', { className: 'skill-edit-section__title' });
+  identityTitle.textContent = 'Identity';
+  identityHeader.appendChild(identityTitle);
+  identitySection.appendChild(identityHeader);
 
-    ntechTeamsPanel = createElement('div', { className: 'skill-form__ntech-teams', style: 'display: none;' });
-    const ntechInfo = createElement('div', { className: 'skill-form__ntech-info' });
-    ntechInfo.innerHTML = '<span class="ntech-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span> Will be assigned to: NTECH-GEN domain';
-    ntechTeamsPanel.appendChild(ntechInfo);
-    
-    const ntechChecksContainer = createElement('div', { className: 'skill-form__ntech-checks' });
-    ntechTeamsPanel.appendChild(ntechChecksContainer);
-
-    let fetched = false;
-    ntechCheckbox.addEventListener('change', async () => {
-      const checked = ntechCheckbox.checked;
-      ntechGroup.classList.toggle('skill-form__ntech-toggle--active', checked);
-      
-      const regularTeamsPanel = form.querySelector('.skill-edit-row--assoc > .skill-assoc-section:first-child');
-      if (regularTeamsPanel) {
-        regularTeamsPanel.style.display = checked ? 'none' : '';
-      }
-      ntechTeamsPanel.style.display = checked ? 'block' : 'none';
-
-      if (checked && !fetched) {
-        fetched = true;
-        ntechChecksContainer.innerHTML = 'Loading...';
-        try {
-          const ntechTeams = await api.get('/api/skills/ntech-teams');
-          ntechChecksContainer.innerHTML = '';
-          ntechTeams.forEach(t => {
-            const lbl = createElement('label', { className: 'ntech-team-label' });
-            const cb = createElement('input', { type: 'checkbox', value: t.id, checked: true, className: 'ntech-team-cb' });
-            lbl.appendChild(cb);
-            lbl.appendChild(document.createTextNode(` ${t.name}`));
-            ntechChecksContainer.appendChild(lbl);
-          });
-        } catch (err) {
-          ntechChecksContainer.innerHTML = 'Failed to load NTECH teams.';
-        }
-      }
-    });
-  }
-
-  /* Row 1 target height ~330px so total stays under the 594px modal envelope. */
-  const topSection = createElement('div', { className: 'skill-edit-top-section' });
-
-  const leftCol = createElement('div', { className: 'skill-edit-left-col' });
-
+  const identityBody = createElement('div', { className: 'skill-edit-section__body' });
   const nameGroup = buildFormGroup('Name', 'skill-name', 'input', {
     type: 'text',
     placeholder: 'e.g. Wi-Fi 6 Configuration',
@@ -1957,24 +1944,13 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   }, true);
   const nameInput = nameGroup.querySelector('#skill-name');
   if (nameInput) nameInput.value = skill?.name || '';
-  nameGroup.classList.add('skill-edit-cell', 'skill-edit-cell--name');
-  leftCol.appendChild(nameGroup);
-
+  
   const descGroup = buildFormGroup('Description', 'skill-desc', 'textarea', {
     placeholder: 'Describe what this skill covers...',
   }, false);
   const descTextarea = descGroup.querySelector('#skill-desc');
   if (descTextarea) descTextarea.textContent = skill?.description || '';
-  descGroup.classList.add('skill-edit-cell', 'skill-edit-cell--desc');
-  leftCol.appendChild(descGroup);
-
-  /* Right column ----------------------------------------------------------- */
-  const rightCol = createElement('div', { className: 'skill-edit-right-col' });
-
-  const iconCell = createElement('div', { className: 'skill-edit-cell skill-edit-cell--icon' });
-  iconCell.appendChild(buildIconPicker(skill?.icon || null));
-  rightCol.appendChild(iconCell);
-
+  
   const tagsGroup = buildFormGroup('Tags', 'skill-tags', 'input', {
     type: 'text',
     placeholder: 'e.g. routing, bgp, advanced',
@@ -1984,48 +1960,83 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   const tagHint = createElement('div', { className: 'form-hint catalog-form-hint' });
   tagHint.textContent = 'Comma-separated';
   tagsGroup.appendChild(tagHint);
-  tagsGroup.classList.add('skill-edit-cell', 'skill-edit-cell--tags');
-  rightCol.appendChild(tagsGroup);
 
-  topSection.appendChild(leftCol);
-  topSection.appendChild(rightCol);
-  form.appendChild(topSection);
+  identityBody.appendChild(nameGroup);
+  identityBody.appendChild(descGroup);
+  identityBody.appendChild(tagsGroup);
+  identitySection.appendChild(identityBody);
+  form.appendChild(identitySection);
+
+  // -- Section 2: Classification
+  const classSection = createElement('div', { className: 'skill-edit-section' });
+  const classHeader = createElement('div', { className: 'skill-edit-section__header' });
+  const classTitle = createElement('div', { className: 'skill-edit-section__title' });
+  classTitle.textContent = 'Classification';
+  classHeader.appendChild(classTitle);
+  classSection.appendChild(classHeader);
+
+  const classBody = createElement('div', { className: 'skill-edit-section__body' });
+  
+  const toggleRow = createElement('div', { className: 'skill-edit-classification-row' });
+  const toggleGroup = createElement('div', { className: 'form-group skill-ntech-toggle-group' });
+  const toggleLabel = createElement('label', { className: 'toggle-switch' });
+  const toggleInput = createElement('input', { 
+    type: 'checkbox', 
+    id: 'skill-non-technical',
+    className: 'toggle-switch__input' 
+  });
+  toggleInput.checked = initialIsNonTechnical;
+  form._ntechCheckbox = toggleInput; // for readSkillForm compatibility
+
+  const toggleTrack = createElement('span', { className: 'toggle-switch__track' });
+  const toggleThumb = createElement('span', { className: 'toggle-switch__thumb' });
+  toggleTrack.appendChild(toggleThumb);
+  toggleLabel.appendChild(toggleInput);
+  toggleLabel.appendChild(toggleTrack);
+  toggleLabel.appendChild(document.createTextNode(' Non-Technical Skill'));
+  
+  const ntechHint = createElement('div', { className: 'form-hint catalog-form-hint' });
+  ntechHint.textContent = 'Non-technical skills are assigned to NTECH-GEN shift teams instead of organization teams.';
+  
+  toggleGroup.appendChild(toggleLabel);
+  toggleGroup.appendChild(ntechHint);
+  toggleRow.appendChild(toggleGroup);
 
   const categoryGroup = buildSkillCategoryPicker(skill);
-  form.appendChild(categoryGroup);
+  toggleRow.appendChild(categoryGroup);
+  classBody.appendChild(toggleRow);
+  classSection.appendChild(classBody);
+  form.appendChild(classSection);
 
+  // -- Section 3: Associations
+  const assocSection = createElement('div', { className: 'skill-edit-section' });
+  const assocHeader = createElement('div', { className: 'skill-edit-section__header' });
+  const assocTitle = createElement('div', { className: 'skill-edit-section__title' });
+  assocTitle.textContent = 'Associations';
+  assocHeader.appendChild(assocTitle);
+  assocSection.appendChild(assocHeader);
+  
+  const assocBody = createElement('div', { className: 'skill-edit-row skill-edit-row--assoc' });
+
+  // Teams (Technical) Panel
   const existingTeamIds = new Set(
     Array.isArray(skill?.teams)
       ? skill.teams.map(t => Number(t.id))
       : (Array.isArray(skill?.team_ids) ? skill.team_ids.map(Number) : [])
   );
-  const existingCertIds = new Set(
-    Array.isArray(skill?.certificates) ? skill.certificates.map(c => Number(c.id)) : []
-  );
-
-  const assocRow = createElement('div', { className: 'skill-edit-row skill-edit-row--assoc' });
-
-  /* Teams panel */
+  
   const teamsPanel = createElement('div', { className: 'skill-assoc-section' });
-  const teamsHeader = createElement('div', { className: 'skill-assoc-section__header' });
+  const teamsPanelHeader = createElement('div', { className: 'skill-assoc-section__header' });
   const teamsLabel = createElement('div', { className: 'skill-assoc-section__label' });
   teamsLabel.textContent = 'Teams';
   const teamsBadge = createElement('span', { className: 'skill-assoc-section__badge' });
-  teamsHeader.appendChild(teamsLabel);
-  teamsHeader.appendChild(teamsBadge);
-  teamsPanel.appendChild(teamsHeader);
-
-  if (isCreateMode && ntechTeamsPanel) {
-    assocRow.appendChild(ntechTeamsPanel);
-  }
+  teamsPanelHeader.appendChild(teamsLabel);
+  teamsPanelHeader.appendChild(teamsBadge);
+  teamsPanel.appendChild(teamsPanelHeader);
 
   const teamOptionsAll = buildTeamOptions(formData.orgTree || []);
-  
-  // Shift filter toggles
   const shiftToggleGroup = createElement('div', { className: 'skill-shift-filter', role: 'group', 'aria-label': 'Filter by shift' });
   const activeShifts = new Set([1, 2, 3, 4]);
-  
-  // Teams with _shift === 0 ("No Shift") are ALWAYS shown regardless of toggle state
   [1, 2, 3, 4].forEach(s => {
     const btn = createElement('button', { type: 'button', className: 'skill-shift-filter__btn is-active' });
     btn.textContent = `Shift ${s}`;
@@ -2046,12 +2057,9 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   function rebuildTeamCombo() {
     const currentSelected = form._teamCombo ? form._teamCombo.getSelected() : Array.from(existingTeamIds);
     const selectedSet = new Set(currentSelected);
-    
-    // Filter options: match active shifts, OR _shift === 0 (always shown), OR currently selected
     const filteredOptions = teamOptionsAll.filter(o => 
       o._shift === 0 || activeShifts.has(o._shift) || selectedSet.has(o.id)
     );
-    
     const newCombo = createComboboxMulti({
       options: filteredOptions,
       selectedValues: currentSelected,
@@ -2060,7 +2068,6 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
       onChange: (vals) => { teamsBadge.textContent = String(vals.length); },
       onOpen: () => scrollAssocIntoView(teamsPanel),
     });
-    
     if (form._teamCombo) {
       teamsPanel.replaceChild(newCombo.element, form._teamCombo.element);
       form._teamCombo.destroy();
@@ -2070,10 +2077,56 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
     form._teamCombo = newCombo;
     teamsBadge.textContent = String(newCombo.getSelected().length);
   }
-  
   rebuildTeamCombo();
 
-  /* Certificates panel */
+  // NTECH-GEN (Non-Technical) Panel
+  const ntechTeamsPanel = createElement('div', { className: 'skill-assoc-section skill-form__ntech-teams' });
+  const ntechInfo = createElement('div', { className: 'skill-form__ntech-info' });
+  ntechInfo.innerHTML = '<span class="ntech-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span> Will be assigned to: NTECH-GEN domain';
+  ntechTeamsPanel.appendChild(ntechInfo);
+  const ntechChecksContainer = createElement('div', { className: 'skill-form__ntech-checks' });
+  ntechTeamsPanel.appendChild(ntechChecksContainer);
+
+  let fetchedNTech = false;
+  async function loadNTechTeams() {
+    if (fetchedNTech) return;
+    fetchedNTech = true;
+    ntechChecksContainer.innerHTML = 'Loading...';
+    try {
+      const ntechTeams = await api.get('/api/skills/ntech-teams');
+      ntechChecksContainer.innerHTML = '';
+      ntechTeams.forEach(t => {
+        const lbl = createElement('label', { className: 'ntech-team-label' });
+        // If edit mode and currently non-tech, check if this team is in existingTeamIds
+        const isChecked = isCreateMode ? true : (initialIsNonTechnical ? existingTeamIds.has(Number(t.id)) : true);
+        const cb = createElement('input', { type: 'checkbox', value: t.id, checked: isChecked, className: 'ntech-team-cb' });
+        lbl.appendChild(cb);
+        lbl.appendChild(document.createTextNode(` ${t.name}`));
+        ntechChecksContainer.appendChild(lbl);
+      });
+    } catch (err) {
+      ntechChecksContainer.innerHTML = 'Failed to load NTECH teams.';
+    }
+  }
+
+  // Toggle Logic
+  function updateAssociationsVisibility() {
+    if (toggleInput.checked) {
+      teamsPanel.style.display = 'none';
+      ntechTeamsPanel.style.display = 'block';
+      loadNTechTeams();
+    } else {
+      teamsPanel.style.display = 'block';
+      ntechTeamsPanel.style.display = 'none';
+    }
+  }
+  toggleInput.addEventListener('change', updateAssociationsVisibility);
+  updateAssociationsVisibility();
+
+  assocBody.appendChild(teamsPanel);
+  assocBody.appendChild(ntechTeamsPanel);
+
+  // Certificates Panel
   const certsPanel = createElement('div', { className: 'skill-assoc-section' });
   const certsHeader = createElement('div', { className: 'skill-assoc-section__header' });
   const certsLabel = createElement('div', { className: 'skill-assoc-section__label' });
@@ -2083,6 +2136,9 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   certsHeader.appendChild(certsBadge);
   certsPanel.appendChild(certsHeader);
 
+  const existingCertIds = new Set(
+    Array.isArray(skill?.certificates) ? skill.certificates.map(c => Number(c.id)) : []
+  );
   const certOptions = (formData.certTree || []).flatMap(cd =>
     (Array.isArray(cd.certificates) ? cd.certificates : []).map(c => ({
       id: Number(c.id),
@@ -2102,9 +2158,22 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user) {
   certsBadge.textContent = String(certCombo.getSelected().length);
   form._certCombo = certCombo;
 
-  assocRow.appendChild(teamsPanel);
-  assocRow.appendChild(certsPanel);
-  form.appendChild(assocRow);
+  assocBody.appendChild(certsPanel);
+  assocSection.appendChild(assocBody);
+  form.appendChild(assocSection);
+
+  // -- Section 4: Visual
+  const visualSection = createElement('div', { className: 'skill-edit-section' });
+  const visualHeader = createElement('div', { className: 'skill-edit-section__header' });
+  const visualTitle = createElement('div', { className: 'skill-edit-section__title' });
+  visualTitle.textContent = 'Visual';
+  visualHeader.appendChild(visualTitle);
+  visualSection.appendChild(visualHeader);
+
+  const visualBody = createElement('div', { className: 'skill-edit-section__body' });
+  visualBody.appendChild(buildIconPicker(skill?.icon || null));
+  visualSection.appendChild(visualBody);
+  form.appendChild(visualSection);
 
   return form;
 }

@@ -9925,14 +9925,14 @@ textarea.is-error:focus {
 }
 
 
-/* 7.24 Skill Edit Modal Redesign (v=40 — compact + unified accent) */
+/* 7.24 Skill Edit Modal Redesign (v=41 — tighter sections + opaque sticky chrome) */
 .skill-edit-section {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 0 0 14px 0;
+  padding: 0 0 10px 0;
   border-bottom: 1px solid var(--border-soft);
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .skill-edit-section:last-child {
   border-bottom: none;
@@ -9952,28 +9952,33 @@ textarea.is-error:focus {
 .skill-edit-section__body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
+/* Sticky chrome lives INSIDE .modal-body (which has padding:24px).
+   Use the parent modal's background (--bg-panel) so the surface is
+   fully opaque while content scrolls underneath. Negative margins
+   stretch to the modal edges; a soft drop-shadow makes the edge
+   readable when content overlaps. */
 .skill-edit-modal__sticky-header {
   position: sticky;
-  top: 0;
-  background: var(--bg-card);
+  top: -24px;
+  background: var(--bg-panel);
   z-index: 10;
   border-bottom: 1px solid var(--border-soft);
-  /* Since it's inside modal-body which has padding 24px, we need negative margin to stretch to the edges */
-  margin: -24px -24px 14px -24px;
-  padding: 14px 24px 12px 24px;
+  margin: -24px -24px 12px -24px;
+  padding: 14px 24px 10px 24px;
+  box-shadow: 0 4px 8px -6px rgba(0, 0, 0, 0.35);
 }
 .skill-edit-modal__sticky-footer {
   position: sticky;
-  bottom: 0;
-  background: var(--bg-card);
+  bottom: -24px;
+  background: var(--bg-panel);
   z-index: 10;
   border-top: 1px solid var(--border-soft);
-  /* Similar negative margin for footer */
-  margin: 14px -24px -24px -24px;
-  padding: 12px 24px;
+  margin: 12px -24px -24px -24px;
+  padding: 10px 24px 14px 24px;
+  box-shadow: 0 -4px 8px -6px rgba(0, 0, 0, 0.35);
 }
 
 /* Classification Row */

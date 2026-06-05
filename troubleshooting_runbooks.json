@@ -77,7 +77,7 @@
       "Validate Map Server registration status",
       "Analyze EID database for missing entries"
     ],
-    "created_date": "2026-05-24T20:50:42.412025",
+    "created_date": "2026-06-03T14:13:20.746811",
     "tags": [
       "lisp",
       "mac"
@@ -128,7 +128,7 @@
       "Use System port gid and Asic from IFM interface details to inspect fwd-asic client classification and SANET ACL state",
       "An empty access-security table can be normal if no client MAC has been learned yet on the port"
     ],
-    "created_date": "2026-05-24T20:50:42.425406",
+    "created_date": "2026-06-03T14:13:20.755382",
     "tags": [
       "security",
       "port-security",
@@ -274,7 +274,7 @@
       "Check SDM template allocation if any region approaches limits",
       "Look for TCAM exhaustion syslogs (%FED-1-TCAM_RESOURCE) in device logs"
     ],
-    "created_date": "2026-05-24T20:50:42.433866",
+    "created_date": "2026-06-03T14:13:20.763846",
     "tags": [
       "tcam",
       "acl",
@@ -359,7 +359,7 @@
       "Analyze traffic classification accuracy",
       "Validate bandwidth allocation and utilization"
     ],
-    "created_date": "2026-05-24T20:50:42.442699",
+    "created_date": "2026-06-03T14:13:20.773060",
     "tags": [
       "qos",
       "performance",
@@ -442,7 +442,7 @@
       "Verify control plane protection policies",
       "Monitor CPU utilization from punt traffic"
     ],
-    "created_date": "2026-05-24T20:50:42.451624",
+    "created_date": "2026-06-03T14:13:20.781848",
     "tags": [
       "punt",
       "cpu",
@@ -780,7 +780,7 @@
       "Check second-level policer 21 (ios-feature) for ICMP protection stats",
       "Verify no RX suspend events in CPU queues indicating congestion"
     ],
-    "created_date": "2026-05-24T20:50:42.460956",
+    "created_date": "2026-06-03T14:13:20.790471",
     "tags": [
       "icmp",
       "punt",
@@ -945,7 +945,7 @@
       "Document attacker IP for ACL-based blocking",
       "Correlate physical interface to network topology to identify attack entry point"
     ],
-    "created_date": "2026-05-24T20:50:42.469926",
+    "created_date": "2026-06-03T14:13:20.799705",
     "tags": [
       "packet-capture",
       "security",
@@ -1182,7 +1182,7 @@
       "Verify VRF to table-id mapping is correct",
       "Check OCE chain in route detail shows correct forwarding path"
     ],
-    "created_date": "2026-05-24T20:50:42.479113",
+    "created_date": "2026-06-03T14:13:20.808757",
     "tags": [
       "fed",
       "dp-download",
@@ -1361,7 +1361,7 @@
       "After running common CLIs, select a platform sub-workflow based on the ASIC type",
       "Drill into 'EVPN VXLAN VNI Scale TCAM Validation' sub-workflow for full analysis"
     ],
-    "created_date": "2026-05-24T20:50:42.487896",
+    "created_date": "2026-06-03T14:13:20.817880",
     "tags": [
       "evpn",
       "vxlan",
@@ -1477,7 +1477,7 @@
       "Verify NVE interface has valid IF_ID in FED and is programmed with correct source IP and encap mode",
       "After Doppler baseline, select sub-workflow: Multicast, L3VNI, or VNI Scale TCAM Validation"
     ],
-    "created_date": "2026-05-24T20:50:42.497438",
+    "created_date": "2026-06-03T14:13:20.827132",
     "tags": [
       "evpn",
       "vxlan",
@@ -1768,7 +1768,7 @@
       "Check if BUM traffic multicast group is configured correctly",
       "Validate MFIB adjacency is configured for multicast forwarding"
     ],
-    "created_date": "2026-05-24T20:50:42.505598",
+    "created_date": "2026-06-03T14:13:20.835794",
     "tags": [
       "evpn",
       "vxlan",
@@ -1910,7 +1910,7 @@
       "Ensure loopback interface has IP for unnumbered SVI",
       "Verify VRF route-targets are correctly configured"
     ],
-    "created_date": "2026-05-24T20:50:42.514270",
+    "created_date": "2026-06-03T14:13:20.844663",
     "tags": [
       "evpn",
       "l3vni",
@@ -2071,7 +2071,7 @@
       "REMEDIATION: If TCAM is full, options include: (1) Reduce total VNI count to stay within hardware limit, (2) Check if a different SDM template allocates more TCAM to Lisp Inst Mapping, (3) Distribute VNIs across multiple switches if the fabric supports it, (4) Upgrade to a platform with larger TCAM capacity. After reducing VNI count, toggle 'shut/no shut' on interface nve1 to force reprogramming of all VNIs in hardware",
       "VERIFY FIX: After remediation, re-run 'show platform hardware fed ... tcam table vnid_trans format 1 | count TranslatedInstance' and confirm the count matches 'show nve vni | count Up' plus 1 (for catchall). Also verify 'show platform hardware fed ... tcam utilization' shows Lisp Inst Mapping Used < Max"
     ],
-    "created_date": "2026-05-24T20:50:42.523501",
+    "created_date": "2026-06-03T14:13:20.853415",
     "tags": [
       "evpn",
       "vxlan",
@@ -2367,7 +2367,7 @@
       "ANCHOR REDUNDANCY: Multiple borders can share the same mini-subnet index for redundancy (Redundancy Group). Example: B1 and B2 both have index [0], B3 and B4 both have index [1]. A single border can also own multiple indices if needed",
       "ARP MULTI-SUBNET: Borders use the corresponding mini-subnet gateway address for ARP discovery. For /25 index 0, gateway is .126; for /25 index 1, gateway is .254. Hosts on leafs respond to ARP from either gateway. Device-tracking on leaf shows hosts learned via ARP from the appropriate mini-subnet gateway"
     ],
-    "created_date": "2026-05-24T20:50:42.532888",
+    "created_date": "2026-06-03T14:13:20.862025",
     "tags": [
       "evpn",
       "vxlan",
@@ -2473,7 +2473,7 @@
       "Get VLAN IF_IDs from FED ifm for subsequent S1 insight queries (l2m_group_members, vxlan_ports_dump, vxlan_vni_details)",
       "After S1 baseline, select sub-workflow: S1 Platform Command for ASIC-level VXLAN inspection, or Protected VLAN ARP for NPU trap drops on protected VLANs"
     ],
-    "created_date": "2026-05-24T20:50:42.541519",
+    "created_date": "2026-06-03T14:13:20.870596",
     "tags": [
       "evpn",
       "vxlan",
@@ -2656,7 +2656,7 @@
       "Workaround: Remove and re-add protected keyword to force FED reprogram",
       "Root cause: Remote MAC adjacency not reprogrammed when protected state changes on VLAN"
     ],
-    "created_date": "2026-05-24T20:50:42.550426",
+    "created_date": "2026-06-03T14:13:20.879126",
     "tags": [
       "evpn",
       "vxlan",
@@ -3049,7 +3049,7 @@
       "Check underlay routing: FED ip route to remote VTEP must resolve via ECMP through spine uplinks. Missing route = no VXLAN reachability",
       "Troubleshooting flow: SISF > EVPN Mgr > L2RIB > BGP RT-2 > L2FIB > FED matm > SDK vxlan_ports/vni > Underlay route > Decap tunnels"
     ],
-    "created_date": "2026-05-24T20:50:42.559182",
+    "created_date": "2026-06-03T14:13:20.887750",
     "tags": [
       "evpn",
       "vxlan",
@@ -3410,7 +3410,7 @@
       "L3VNI decap EFP Type must be L3_CP (not L2_CP). Type mismatch indicates wrong NVE member config (mcast-group vs vrf)",
       "Troubleshooting flow: SISF MAC/IP > EVPN Mgr > L2RIB > BGP RT-2 (dual label) > VPNv4 > RIB > FED VXLAN NH > SDK encap/decap > Underlay ECMP"
     ],
-    "created_date": "2026-05-24T20:50:42.568070",
+    "created_date": "2026-06-03T14:13:20.896601",
     "tags": [
       "evpn",
       "vxlan",
@@ -3657,7 +3657,7 @@
       "Check BGP route-type 3 (IMET) exchange between VTEPs to confirm IR peer discovery is complete",
       "Troubleshooting flow: MAC table > IFM VLAN IF_ID > Mcast GID > l2m_group_members > vxlan_ports_dump > vxlan_vni_details encap > Decap: EFP > MCG > sysport-gid > Interface > VLAN membership"
     ],
-    "created_date": "2026-05-24T20:50:42.577855",
+    "created_date": "2026-06-03T14:13:20.905503",
     "tags": [
       "evpn",
       "vxlan",
@@ -3914,7 +3914,7 @@
       "Verify underlay PIM/IGMP: spine must be RP or PIM-SM neighbor. NVE source loopback is the multicast source. Flags 'FTx' in mroute confirm VxLAN group",
       "Troubleshooting flow: MAC table > IFM VLAN IF_ID > Mcast GID > l2m_group_members (mcast dest) > vxlan_ports_dump (mcast) > vxlan_vni_details encap > ip mroute > Decap: EFP > MCG > Interface > VLAN"
     ],
-    "created_date": "2026-05-24T20:50:42.586407",
+    "created_date": "2026-06-03T14:13:20.914524",
     "tags": [
       "evpn",
       "vxlan",
@@ -4006,7 +4006,7 @@
       "Use vxlan_ports_dump to confirm VXLAN port Dest/Src IP and tunnel mode",
       "Use vxlan_vni_details with is_l2=True,is_encap=True to verify VNI encap programming. Empty table = VNI not programmed in S1 ASIC"
     ],
-    "created_date": "2026-05-24T20:50:42.596365",
+    "created_date": "2026-06-03T14:13:20.923600",
     "tags": [
       "evpn",
       "vxlan",
@@ -4141,7 +4141,7 @@
       "Both spines must be Established neighbors in 'show bgp l2vpn evpn summary'",
       "No route-reflector-client config is expected on a leaf"
     ],
-    "created_date": "2026-05-24T20:50:42.604868",
+    "created_date": "2026-06-03T14:13:20.933607",
     "tags": [
       "evpn",
       "vxlan",
@@ -4252,7 +4252,7 @@
       "Underlay OSPF/IS-IS must be Full to all directly-attached leaves",
       "route-reflector-client must cover ALL leaf neighbors \u2014 including those configured via 'neighbor X inherit peer-policy <name>' where the policy template carries 'route-reflector-client'"
     ],
-    "created_date": "2026-05-24T20:50:42.613364",
+    "created_date": "2026-06-03T14:13:20.942538",
     "tags": [
       "evpn",
       "vxlan",
@@ -4388,7 +4388,7 @@
       "VRF-Lite handoff interfaces must be in the correct tenant VRF",
       "Type-5 (IP-Prefix) advertisements should be observed for external prefixes"
     ],
-    "created_date": "2026-05-24T20:50:42.623844",
+    "created_date": "2026-06-03T14:13:20.951953",
     "tags": [
       "evpn",
       "vxlan",
@@ -4499,7 +4499,7 @@
       "RR-client coverage MUST include neighbors that inherit a peer-policy template containing 'route-reflector-client' \u2014 direct-only inspection misses these",
       "External BGP peers (eBGP, VPNv4) must be Established"
     ],
-    "created_date": "2026-05-24T20:50:42.632088",
+    "created_date": "2026-06-03T14:13:20.960216",
     "tags": [
       "evpn",
       "vxlan",
@@ -4538,7 +4538,7 @@
       "The engine's EVPN-gated branch in _chain_sub_runbooks_if_needed (single-device) and execute_multi_device_runbook (multi-device) performs the role classification before dispatch",
       "Roles map to sub_runbooks via device_role: leaf -> leaf sub, spine -> spine sub, border-leaf -> border-leaf sub, border-spine -> border-spine sub"
     ],
-    "created_date": "2026-05-24T20:50:42.640761",
+    "created_date": "2026-06-03T14:13:20.968991",
     "tags": [
       "evpn",
       "vxlan",
@@ -4853,7 +4853,7 @@
       "TUNNEL SOURCE AWARENESS: Note the source type for each tunnel \u2014 Loopback (most reliable), physical interface, or SVI. SVI-sourced tunnels have a known FED race condition (CSCwt84307) that can cause traffic failure despite tunnel showing UP",
       "After running common CLIs, select a sub-runbook based on the specific symptom:\n  - DOWN-NEGOTIATING \u2192 Underlay and VRF Diagnostics\n  - IKEv2 SA issues \u2192 IKEv2 SA Troubleshooting\n  - SA/rekey issues \u2192 IPsec SA and Rekey Validation\n  - Tunnel interface issues \u2192 Tunnel Interface Diagnostics\n  - Hardware/FED issues \u2192 Platform and Hardware Diagnostics\n  - Stack issues \u2192 Stack Diagnostics\n  - Config removal \u2192 Configuration Cleanup"
     ],
-    "created_date": "2026-05-24T20:50:42.649052",
+    "created_date": "2026-06-03T14:13:20.977501",
     "tags": [
       "ipsec",
       "crypto",
@@ -5133,7 +5133,7 @@
       "Review IKEv2 stats for failure counters \u2014 auth failures indicate key/cert mismatch, init failures indicate proposal/reachability issues",
       "Use show crypto ikev2 diagnose error for the most recent failure reason"
     ],
-    "created_date": "2026-05-24T20:50:42.658770",
+    "created_date": "2026-06-03T14:13:20.986012",
     "tags": [
       "ipsec",
       "ikev2",
@@ -5524,7 +5524,7 @@
       "Anti-replay errors may indicate asymmetric routing or packet reordering \u2014 not necessarily an attack",
       "ARGON (C9350 Silicon One) DEEP-DIVE: orders 9-21 add C9350-verified drill-downs. Use 'show crypto ipsec internal error' (order 9) to snapshot internal error counters before/after the suspected event (only the 'error' sub-command exists on Argon \u2014 the Doppler internal-state-machine variants are NOT registered). Use 'show crypto ipsec profile' (order 11) to detect Kilobyte-Volume-Rekey-disabled profiles which are at risk of PN rollover on high-throughput tunnels. Use 'spi-lookup detail' (order 13) and 'out-sa-hash' (order 12) to confirm the inbound / outbound SAs are armed in the IOS fast-path lookup tables \u2014 missing entries here mean SAs were negotiated but never installed. For IPv6 use 'sa ipv6 detailed' (order 21); on Argon the keyword is 'detailed' (not 'detail')"
     ],
-    "created_date": "2026-05-24T20:50:42.667448",
+    "created_date": "2026-06-03T14:13:20.994774",
     "tags": [
       "ipsec",
       "crypto",
@@ -5796,7 +5796,7 @@
       "Output drops may indicate crypto engine bottleneck or QoS shaping",
       "For all VRF and underlay issues, drill into the 'IPsec Underlay and VRF Diagnostics' sub-runbook for comprehensive checks"
     ],
-    "created_date": "2026-05-24T20:50:42.677250",
+    "created_date": "2026-06-03T14:13:21.003743",
     "tags": [
       "ipsec",
       "tunnel",
@@ -6350,7 +6350,7 @@
       "ASIC SA TABLE COLUMNS (CSCwu24703 / fwd-asic insight): the new tabular output prints one INGRESS row and one EGRESS row per device id. Ingress row exposes 'Auth Errors' (GCM ICV / HMAC verification failures) and 'Decrypt Errors' (length / format / policy drops) \u2014 previously these counts were only visible from the SDK debug shell, with insight reporting Errors:0. Egress row exposes 'Encrypt Errors'. ESN and Anti-Replay reflect esn-enable and anti-replay-en from the SDK SA. Use this view FIRST when the operator complains of high RX_METER drops, tunnel up but no traffic, or volume-based-rekey corruption \u2014 non-zero Auth Errors on INGRESS is the smoking gun for ICV/HMAC key skew between peers",
       "ARGON (C9350) PAL/HAPI INVENTORY: orders 21-27 add platform-layer drill-downs verified on RAITT-41. 'policy statistics detail' (order 21) is the canonical signal for SA-install rejection \u2014 non-zero REPLY_ERR / PROC_ERR columns mean a control-plane SA was rejected by the data-plane. 'isakmp-sa all' (order 24) is the platform mirror of 'show crypto ikev2 sa'; mismatch between the two views indicates a control-plane / data-plane sync issue, the classic cause of tunnel-up-but-no-traffic. 'modexp-throttle-stats' (order 25) explains slow IKE_SA_INIT / rekey on busy aggregation hubs (DH key-derivation throttled). 'ftm-msg-stats' and 'hapi-msg-trace' (orders 26-27) confirm whether SA programming messages reached FTM/FED. NOTE: Doppler-only commands ('pal-cmd-list', 'fp active inventory', 'mode', 'transform-proposal') are NOT registered on Argon \u2014 use the above C9350-verified set instead"
     ],
-    "created_date": "2026-05-24T20:50:42.686352",
+    "created_date": "2026-06-03T14:13:21.012449",
     "tags": [
       "ipsec",
       "crypto",
@@ -6518,7 +6518,7 @@
       "FAILOVER: After stack master switchover, verify IPsec SAs are reprogrammed on the new active member by checking ipsec_security_association() on both old and new active",
       "IF_ID CONSISTENCY: The tunnel IF_ID from 'ifm interfaces tunnel' should be the same across all members \u2014 different IF_IDs indicate FED programming inconsistency that requires clearing crypto SAs and bouncing the tunnel interface"
     ],
-    "created_date": "2026-05-24T20:50:42.694837",
+    "created_date": "2026-06-03T14:13:21.020557",
     "tags": [
       "ipsec",
       "crypto",
@@ -6807,7 +6807,7 @@
       "VERIFY FED CLEANUP: After all IOS-level cleanup, check FED with 'show platform software fed ... ipsec sa' \u2014 stale FED entries can cause programming failures when reconfiguring IPsec",
       "CAUTION: This runbook is DESTRUCTIVE \u2014 all IPsec tunnels will go down permanently. Ensure you have the config saved or documented before proceeding if you plan to reconfigure later"
     ],
-    "created_date": "2026-05-24T20:50:42.703658",
+    "created_date": "2026-06-03T14:13:21.029066",
     "tags": [
       "ipsec",
       "crypto",
@@ -7080,7 +7080,7 @@
       "CONFIG PERSISTENCE: After restoring device config, always verify 'ip routing' and 'ipv6 unicast-routing' are enabled globally. Without these, VRF routing tables will not populate even if interfaces and OSPF are configured correctly",
       "SIMULTANEOUS FAILURE: When all tunnels go DOWN-NEGOTIATING at the same time, the root cause is shared infrastructure \u2014 underlay interface down, OSPF process crash, VRF deletion, or transit router failure. Individual tunnel failures point to per-tunnel crypto issues instead"
     ],
-    "created_date": "2026-05-24T20:50:42.711935",
+    "created_date": "2026-06-03T14:13:21.037202",
     "tags": [
       "ipsec",
       "crypto",
@@ -7272,7 +7272,7 @@
       "Exporter statistics should show sent packets with zero failures \u2014 non-zero failures indicate collector reachability or path issues",
       "After running common CLIs, select a sub-workflow based on the specific symptom"
     ],
-    "created_date": "2026-05-24T20:50:42.721101",
+    "created_date": "2026-06-03T14:13:21.046728",
     "tags": [
       "netflow",
       "fnf",
@@ -7482,7 +7482,7 @@
       "Sampler is optional. 'mode random 1 out-of 10' samples 10% of packets, reducing CPU/cache load. Without a sampler, 100% of packets on the monitored interface are tracked",
       "Interface application syntax: 'ip flow monitor FM sampler FS input' (with sampler) or 'ip flow monitor FM input' (without sampler)"
     ],
-    "created_date": "2026-05-24T20:50:42.730222",
+    "created_date": "2026-06-03T14:13:21.055953",
     "tags": [
       "netflow",
       "fnf",
@@ -7640,7 +7640,7 @@
       "Cache size determines maximum concurrent flows tracked. If current entries approach cache size, flows are prematurely evicted and data is lost",
       "The flow monitor must be applied to the interface under 'ip flow monitor <name> input/output' \u2014 configuring the monitor alone is not sufficient"
     ],
-    "created_date": "2026-05-24T20:50:42.751676",
+    "created_date": "2026-06-03T14:13:21.064614",
     "tags": [
       "netflow",
       "fnf",
@@ -7803,7 +7803,7 @@
       "DSCP and TTL settings affect how export packets traverse the network \u2014 ensure DSCP is not deprioritized and TTL is sufficient to reach the collector",
       "Non-zero 'Client send statistics' failures in exporter statistics are the primary indicator of export delivery problems"
     ],
-    "created_date": "2026-05-24T20:50:42.761219",
+    "created_date": "2026-06-03T14:13:21.074748",
     "tags": [
       "netflow",
       "fnf",
@@ -8002,7 +8002,7 @@
       "Verify the CEF path ensures traffic actually enters the monitored interface \u2014 routing asymmetry can cause missing flows",
       "REPRO WORKFLOW: Always clear the cache ('clear flow monitor <name> cache') AND statistics ('clear flow monitor <name> statistics') before a repro attempt. This gives a clean baseline so delta counters reflect only the reproduced issue. Then send test traffic, then check cache and stats"
     ],
-    "created_date": "2026-05-24T20:50:42.770280",
+    "created_date": "2026-06-03T14:13:21.087104",
     "tags": [
       "netflow",
       "fnf",
@@ -8426,7 +8426,7 @@
       "Compare netflow_learn_info_flow_records() with 'show flow monitor cache' to verify hardware and software flow records are in sync \u2014 discrepancies indicate a FED-to-ASIC programming issue",
       "LEABA process database tables (la_fnf_*) provide the deepest Silicon One SDK view: la_fnf_bind_table shows interface bindings, la_fnf_mon_table shows monitor entries, la_fnf_records_handler_table shows record handlers, and la_fnf_feature_profile_table shows field extraction profiles. Cross-reference these with FED-level dumps (monitors-dump, profiles-dump, attach-points-dump) to isolate FED-to-SDK programming failures"
     ],
-    "created_date": "2026-05-24T20:50:42.780076",
+    "created_date": "2026-06-03T14:13:21.096473",
     "tags": [
       "netflow",
       "fnf",
@@ -8539,7 +8539,7 @@
       "Template refresh interval controls how often templates are re-sent. If the collector restarts, it needs a template before it can decode data \u2014 shorter refresh means faster recovery",
       "IPFIX supports both UDP and TCP transport. TCP provides reliability but adds overhead. UDP is more common in practice"
     ],
-    "created_date": "2026-05-24T20:50:42.789435",
+    "created_date": "2026-06-03T14:13:21.107204",
     "tags": [
       "netflow",
       "fnf",
@@ -8717,7 +8717,7 @@
       "For deeper VLAN map and MAC filter checks, use the VLAN map sub-workflow",
       "For debug and hardware ACL usage, use the Debugging sub-workflow (may be CPU-impacting)"
     ],
-    "created_date": "2026-05-24T20:50:42.799454",
+    "created_date": "2026-06-03T14:13:21.116676",
     "tags": [
       "acl",
       "access-list",
@@ -8821,7 +8821,7 @@
       "Only one VLAN map can be applied to a VLAN (check vlan filter mapping)",
       "IP packets in VLAN maps: match ip address against standard/extended IP ACLs; non-IP uses MAC extended ACLs"
     ],
-    "created_date": "2026-05-24T20:50:42.807903",
+    "created_date": "2026-06-03T14:13:21.124910",
     "tags": [
       "acl",
       "vacl",
@@ -9257,7 +9257,7 @@
       "Troubleshoot non-zero AOM before expecting clean ACL program",
       "After ``set platform software trace`` restore defaults per TAC procedure"
     ],
-    "created_date": "2026-05-24T20:50:42.817137",
+    "created_date": "2026-06-03T14:13:21.133358",
     "tags": [
       "acl",
       "access-list",
@@ -10131,7 +10131,7 @@
       "If IOS view is correct but FED/S1 hardware view is missing, triage the programming path: object-manager pending-ack-update, FED SGACL cell table, ACL CG table, SDK insight matrix map, and S1 SDK traces.",
       "If counters stay zero, confirm test traffic matches the same source/destination SGT pair, confirm traffic is unicast and exits an enforcement-supported interface, and confirm monitor mode expectations before declaring enforcement failure."
     ],
-    "created_date": "2026-05-24T20:50:42.826571",
+    "created_date": "2026-06-03T14:13:21.144050",
     "tags": [
       "security",
       "cts",

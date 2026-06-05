@@ -5,12 +5,12 @@ import { initNav } from './components/nav.js?v=8';
 import { initThemeToggle } from './components/theme.js';
 import { initFeedbackButton } from './components/feedback.js';
 
-import { mountHome } from './pages/home.js?v=8';
+import { mountHome } from './pages/home.js?v=9';
 import { mountLogin } from './pages/login.js';
-import { mountMyPlan } from './pages/my-plan.js?v=27';
-import { mountMyTeam } from './pages/my-team.js?v=22';
+import { mountMyPlan } from './pages/my-plan.js?v=34';
+import { mountMyTeam } from './pages/my-team.js?v=23';
 import { mountCatalog } from './pages/catalog.js?v=19';
-import { mountSkillExplorer } from './pages/skill-explorer.js';
+import { mountSkillExplorer } from './pages/skill-explorer.js?v=9';
 import { mountSettings } from './pages/settings.js';
 import { mountAdmin } from './pages/admin.js?v=7';
 

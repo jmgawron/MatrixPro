@@ -862,6 +862,120 @@ def _build_prompt(
     ]
 
 
+def _build_engineer_self_prompt(
+    engineer: User,
+    team: Optional[Team],
+    engineer_data: dict,
+    from_date: Optional[str],
+    to_date: Optional[str],
+) -> list[dict]:
+    """Supportive second-person prompt for engineer self-reflection reports."""
+    period_bits: list[str] = []
+    if from_date:
+        period_bits.append(f"from {from_date}")
+    if to_date:
+        period_bits.append(f"to {to_date}")
+    period_text = " ".join(period_bits) if period_bits else "the selected period"
+
+    system = (
+        "You are a supportive skill-development coach helping a TAC engineer "
+        "reflect on their own growth journey.\n\n"
+        "Tone requirements:\n"
+        "- Write in second person (you/your).\n"
+        "- Be encouraging, constructive, and growth-oriented.\n"
+        "- Promote self-reflection — this is for the engineer, NOT a manager review.\n"
+        "- Never use punitive, judgmental, or performance-review language.\n"
+        "- Celebrate wins genuinely; frame gaps as opportunities.\n\n"
+        "Rules:\n"
+        "1. EVIDENCE-FIRST: ground every claim in the supplied data.\n"
+        "2. NO INVENTION: do not fabricate activities or skill names.\n"
+        "3. 3E-AWARE: Education, Exposure, Experience framework matters.\n"
+        "4. ACTIONABLE: recommendations must be specific and achievable.\n"
+        "5. Do NOT include peer rankings or comparative standings.\n"
+        "6. Respond ONLY with a single JSON object matching this schema:\n"
+        "{\n"
+        '  "markdown": "<full Markdown report>",\n'
+        '  "executive_summary": "...",\n'
+        '  "key_achievements": ["..."],\n'
+        '  "growth_areas": ["..."],\n'
+        '  "areas_requiring_attention": ["..."],\n'
+        '  "recommended_next_steps": ["..."]\n'
+        "}\n\n"
+        "The markdown field MUST contain these H2 sections in order:\n"
+        "## Executive Summary\n"
+        "## Achievements\n"
+        "## Growth Areas\n"
+        "## Areas Requiring Attention\n"
+        "## Recommended Next Steps\n"
+        "Use H2 only. Use bullet lists and bold for emphasis."
+    )
+
+    raw_data = _prioritise_and_render(engineer_data, MAX_RAW_DATA_CHARS)
+    user_content = (
+        f"Generate a personal development summary for {engineer.name} "
+        f"covering {period_text}.\n\n"
+        f"Return exactly one JSON object. Do not wrap in code fences.\n\n"
+        f"## Raw Data\n\n{raw_data}"
+    )
+
+    return [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user_content},
+    ]
+
+
+def run_engineer_self_analysis(
+    engineer: User,
+    db: Session,
+    from_date: Optional[str],
+    to_date: Optional[str],
+    current_user: User,
+) -> dict:
+    """Engineer-scoped AI summary — self or manager/admin viewing engineer plan."""
+    team = None
+    if engineer.team_id:
+        team = db.query(Team).filter(Team.id == engineer.team_id).first()
+
+    from_dt = _parse_date(from_date)
+    to_dt = _parse_date(to_date, end_of_day=True)
+
+    engineer_data = _collect_engineer_data(engineer, team, db, from_dt, to_dt)
+    messages = _build_engineer_self_prompt(
+        engineer, team, engineer_data, from_date, to_date
+    )
+
+    try:
+        raw_out = chat_completion(
+            messages,
+            temperature=0.3,
+            max_tokens=4000,
+            top_p=0.9,
+        )
+    except LLMError as exc:
+        raise HTTPException(status_code=502, detail=f"LLM error: {exc}") from exc
+
+    structured = _extract_json(raw_out)
+    if structured and isinstance(structured.get("markdown"), str) and structured["markdown"].strip():
+        markdown_out = structured["markdown"]
+    else:
+        logger.warning("Engineer self-analysis: falling back to raw LLM output.")
+        markdown_out = raw_out
+        structured = None
+
+    return {
+        "markdown": markdown_out,
+        "structured": structured,
+        "target_name": engineer.name,
+        "team_id": team.id if team else None,
+        "team_name": team.name if team else "",
+        "engineer_id": engineer.id,
+        "from_date": from_date,
+        "to_date": to_date,
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "generated_by": current_user.name,
+    }
+
+
 # ─── JSON extraction ──────────────────────────────────────────────────────────
 
 

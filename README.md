@@ -223,6 +223,29 @@ MatrixPro/
 
 ---
 
+## Contributor Skills for OpenCode
+
+This repo now includes project-local OpenCode skills under `.opencode/skills/` to help additional contributors work consistently with MatrixPro's patterns.
+
+Recommended starting point:
+
+- `matrixpro-contributor-onboarding`
+
+Then load the skill that matches the area you are changing:
+
+- `matrixpro-backend-fastapi`
+- `matrixpro-frontend-spa`
+- `matrixpro-cisco-modern-design`
+- `matrixpro-seed-and-demo-data`
+- `matrixpro-verification-and-regression`
+- `matrixpro-docs-and-handoff`
+
+These skills capture project-specific rules that are easy to miss, especially around the no-build frontend, FastAPI route ordering, cache-busting, seed-data realism, and the use of `AGENTS.md` as active project memory.
+
+For UI polish or redesign work, use `matrixpro-cisco-modern-design` together with `matrixpro-frontend-spa`. It adapts the Cisco Modern design language to MatrixPro's existing token system and workflow-heavy screens.
+
+---
+
 ## License
 
 Internal use only.

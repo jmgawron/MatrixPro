@@ -329,16 +329,11 @@ function buildStatusChip(status) {
     developing: 'Developing',
     mastered:   'Mastered',
   };
-  const modifierMap = {
-    planned:    'pipeline',
-    developing: 'development',
-    mastered:   'proficiency',
-  };
+  const slug = ['planned', 'developing', 'mastered'].includes(status) ? status : 'unknown';
   const label = labelMap[status] || status || '—';
-  const modifier = modifierMap[status] || 'unknown';
 
   const chip = createElement('span', {
-    className: `explorer-status-chip explorer-status-chip--${modifier}`,
+    className: `status-chip status-chip--${slug}`,
   });
   chip.textContent = label;
   return chip;

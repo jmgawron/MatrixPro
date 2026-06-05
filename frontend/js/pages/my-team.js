@@ -2313,11 +2313,13 @@ function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
       const statusPct = planSkill.status === 'planned' ? 25 : planSkill.status === 'developing' ? 60 : 100;
       const barFill = el('div', { className: 'drawer-progress-fill', style: `width:${statusPct}%;` });
       barWrap.appendChild(barFill);
-      const statusChip = el('span', { className: 'drawer-progress-status triage-chip' });
+      const statusSlug = ['planned', 'developing', 'mastered'].includes(planSkill.status)
+        ? planSkill.status
+        : 'unknown';
+      const statusChip = el('span', {
+        className: `drawer-progress-status status-chip status-chip--${statusSlug}`,
+      });
       statusChip.textContent = planSkill.status === 'planned' ? 'Planned' : planSkill.status === 'developing' ? 'Developing' : 'Mastered';
-      if (planSkill.status === 'planned') statusChip.style.background = 'rgba(245,158,11,.2)';
-      else if (planSkill.status === 'developing') statusChip.style.background = 'rgba(59,130,246,.2)';
-      else statusChip.style.background = 'rgba(34,197,94,.2)';
       item.appendChild(skillName);
       item.appendChild(barWrap);
       item.appendChild(statusChip);

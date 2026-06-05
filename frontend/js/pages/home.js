@@ -48,6 +48,20 @@ function h(tag, attrs, ...children) {
   return el;
 }
 
+const ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+
+function ctaButton(href, label, variant = 'primary') {
+  const btn = h('a', {
+    className: variant === 'primary' ? 'btn btn-primary' : 'btn btn-secondary',
+    href,
+  });
+  btn.appendChild(document.createTextNode(label));
+  const arrow = h('span', { style: 'display:inline-flex;align-items:center;' });
+  arrow.innerHTML = ARROW_SVG;
+  btn.appendChild(arrow);
+  return btn;
+}
+
 // ─── Stats state ──────────────────────────────────────────────────────────────
 
 let _homeValueEls = {};
@@ -66,12 +80,10 @@ async function fetchStats() {
   } catch { /* non-critical */ }
 }
 
-// ─── Stats row (ide.cisco.com style — inline in hero) ─────────────────────────
+// ─── Stats row ────────────────────────────────────────────────────────────────
 
 function buildStatsRow() {
-  const wrapper = h('div', {
-    className: 'stats-row',
-  });
+  const wrapper = h('div', { className: 'stats-row' });
 
   const statDefs = [
     { key: 'total_engineers', label: 'Engineers' },
@@ -82,23 +94,13 @@ function buildStatsRow() {
   _homeValueEls = {};
 
   statDefs.forEach(({ key, label }) => {
-    const numEl = h('div', {
-      className: 'stat-block-value stat-block-value--lg',
-      textContent: '—',
-    });
+    const numEl = h('div', { className: 'stat-block-value', textContent: '—' });
     _homeValueEls[key] = numEl;
-
-    const labelEl = h('div', {
-      className: 'stat-block-label',
-      textContent: label,
-    });
-
-    const statBlock = h('div', { className: 'stat-block' }, numEl, labelEl);
-    wrapper.appendChild(statBlock);
+    const labelEl = h('div', { className: 'stat-block-label', textContent: label });
+    wrapper.appendChild(h('div', { className: 'stat-block' }, numEl, labelEl));
   });
 
   fetchStats();
-
   return wrapper;
 }
 
@@ -149,20 +151,14 @@ function build3ESection() {
 
   THREE_E_CARDS.forEach(({ title, tagline, desc, icon }) => {
     const card = h('div', { className: 'home-3e-card' });
-
     const cardHeader = h('div', { className: 'home-3e-card-header' });
     const iconWrap = h('div', { className: 'home-3e-icon' });
     iconWrap.innerHTML = icon;
-    const titleEl = h('h3', { className: 'home-3e-card-title', textContent: title });
     cardHeader.appendChild(iconWrap);
-    cardHeader.appendChild(titleEl);
-
-    const taglineEl = h('p', { className: 'home-3e-card-tagline', textContent: tagline });
-    const descEl = h('p', { className: 'home-3e-card-desc', textContent: desc });
-
+    cardHeader.appendChild(h('h3', { className: 'home-3e-card-title', textContent: title }));
     card.appendChild(cardHeader);
-    card.appendChild(taglineEl);
-    card.appendChild(descEl);
+    card.appendChild(h('p', { className: 'home-3e-card-tagline', textContent: tagline }));
+    card.appendChild(h('p', { className: 'home-3e-card-desc', textContent: desc }));
     grid.appendChild(card);
   });
 
@@ -176,76 +172,28 @@ export function mountHome(container) {
   container.innerHTML = '';
 
   const user = Store.get('user');
+  const page = h('div', { className: 'home-page' });
+  page.appendChild(h('div', { className: 'home-page__glow' }));
 
-  const page = h('div', {
-    style: [
-      'background:var(--home-bg);',
-      'min-height:calc(100vh - 60px);',
-      'display:flex;flex-direction:column;align-items:center;',
-      'position:relative;overflow:hidden;',
-    ].join(''),
-  });
+  const content = h('div', { className: 'home-page__content' });
+  const hero = h('div', { className: 'home-hero' });
 
-  const glow = h('div', {
-    style: [
-      'position:absolute;top:-200px;left:50%;transform:translateX(-50%);',
-      'width:900px;height:600px;',
-      'background:radial-gradient(ellipse at center, var(--home-glow) 0%, transparent 70%);',
-      'pointer-events:none;z-index:0;',
-    ].join(''),
-  });
-  page.appendChild(glow);
-
-  const content = h('div', {
-    style: 'position:relative;z-index:1;width:100%;display:flex;flex-direction:column;align-items:center;padding:0 24px;',
-  });
-
-  // ── Title with gradient ──
-  const titleSpacer = h('div', { style: 'margin-top:72px;' });
-  content.appendChild(titleSpacer);
-
-  const title = h('h1', {
-    style: [
-      'font-size:clamp(36px, 5vw, 56px);font-weight:800;',
-      'line-height:1.1;letter-spacing:-0.02em;',
-      'text-align:center;margin-bottom:16px;',
-      'color:var(--text-primary);',
-    ].join(''),
-  });
+  const title = h('h1', { className: 'home-hero__title' });
   title.appendChild(document.createTextNode('Skill Development Platform'));
   title.appendChild(h('br'));
-  const gradientSpan = h('span', {
-    style: [
-      'background:linear-gradient(90deg, #00C6FF 0%, #0072FF 100%);',
-      '-webkit-background-clip:text;-webkit-text-fill-color:transparent;',
-      'background-clip:text;',
-    ].join(''),
-    textContent: 'for TAC Engineers',
-  });
-  title.appendChild(gradientSpan);
-  content.appendChild(title);
+  title.appendChild(h('span', { className: 'mp-title-gradient', textContent: 'for TAC Engineers' }));
+  hero.appendChild(title);
 
-  // ── Subtitle ──
-  const subtitle = h('p', {
-    style: [
-      'font-size:18px;color:var(--text-muted);',
-      'text-align:center;max-width:600px;line-height:1.6;',
-      'margin-bottom:40px;',
-    ].join(''),
+  hero.appendChild(h('p', {
+    className: 'home-hero__subtitle',
     textContent: 'Build, track, and manage individual skill development plans with kanban workflows, team matrices, and cross-team analytics.',
-  });
-  content.appendChild(subtitle);
+  }));
 
-  // ── Stats row ──
   const stats = buildStatsRow();
-  stats.style.marginBottom = '40px';
-  content.appendChild(stats);
+  stats.className = 'stats-row home-hero__stats';
+  hero.appendChild(stats);
 
-  // ── CTA buttons ──
-  const ctaRow = h('div', {
-    style: 'display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:80px;',
-  });
-
+  const ctaRow = h('div', { className: 'home-hero__cta' });
   if (user) {
     let ctaHref = '#/my-plan';
     let ctaLabel = 'Go to My Plan';
@@ -256,86 +204,15 @@ export function mountHome(container) {
       ctaHref = '#/my-team';
       ctaLabel = 'Go to My Team';
     }
-    const primaryBtn = h('a', {
-      style: [
-        'display:inline-flex;align-items:center;gap:8px;',
-        'background:#00AEEF;color:#fff;',
-        'padding:12px 28px;border-radius:8px;',
-        'font-size:15px;font-weight:600;',
-        'text-decoration:none;cursor:pointer;',
-        'transition:transform 0.15s, box-shadow 0.15s;',
-        'border:none;',
-      ].join(''),
-      href: ctaHref,
-      textContent: ctaLabel,
-    });
-    const arrow = h('span', { style: 'display:inline-flex;align-items:center;' });
-    arrow.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
-    primaryBtn.appendChild(arrow);
-    primaryBtn.addEventListener('mouseenter', () => {
-      primaryBtn.style.transform = 'translateY(-1px)';
-      primaryBtn.style.boxShadow = '0 6px 20px rgba(0,174,239,0.35)';
-    });
-    primaryBtn.addEventListener('mouseleave', () => {
-      primaryBtn.style.transform = '';
-      primaryBtn.style.boxShadow = '';
-    });
-    ctaRow.appendChild(primaryBtn);
-
-    const secBtn = h('a', {
-      style: [
-        'display:inline-flex;align-items:center;gap:8px;',
-        'background:var(--home-card-bg);',
-        'border:1px solid var(--home-card-border);',
-        'color:var(--text-secondary);',
-        'padding:12px 28px;border-radius:8px;',
-        'font-size:15px;font-weight:600;',
-        'text-decoration:none;cursor:pointer;',
-        'transition:transform 0.15s, border-color 0.15s, color 0.15s;',
-      ].join(''),
-      href: '#/catalog',
-      textContent: 'Browse Catalog',
-    });
-    secBtn.addEventListener('mouseenter', () => {
-      secBtn.style.borderColor = 'var(--text-muted)';
-      secBtn.style.color = 'var(--text-primary)';
-    });
-    secBtn.addEventListener('mouseleave', () => {
-      secBtn.style.borderColor = 'var(--home-card-border)';
-      secBtn.style.color = 'var(--text-secondary)';
-    });
-    ctaRow.appendChild(secBtn);
+    ctaRow.appendChild(ctaButton(ctaHref, ctaLabel, 'primary'));
+    ctaRow.appendChild(ctaButton('#/catalog', 'Browse Catalog', 'secondary'));
   } else {
-    const signInBtn = h('a', {
-      style: [
-        'display:inline-flex;align-items:center;gap:8px;',
-        'background:#00AEEF;color:#fff;',
-        'padding:12px 28px;border-radius:8px;',
-        'font-size:15px;font-weight:600;',
-        'text-decoration:none;cursor:pointer;',
-        'transition:transform 0.15s, box-shadow 0.15s;',
-        'border:none;',
-      ].join(''),
-      href: '#/login',
-    });
-    signInBtn.textContent = 'Get Started';
-    const arrow2 = h('span', { style: 'display:inline-flex;align-items:center;' });
-    arrow2.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
-    signInBtn.appendChild(arrow2);
-    signInBtn.addEventListener('mouseenter', () => {
-      signInBtn.style.transform = 'translateY(-1px)';
-      signInBtn.style.boxShadow = '0 6px 20px rgba(0,174,239,0.35)';
-    });
-    signInBtn.addEventListener('mouseleave', () => {
-      signInBtn.style.transform = '';
-      signInBtn.style.boxShadow = '';
-    });
-    ctaRow.appendChild(signInBtn);
+    ctaRow.appendChild(ctaButton('#/login', 'Get Started', 'primary'));
   }
-  content.appendChild(ctaRow);
+  hero.appendChild(ctaRow);
 
+  content.appendChild(hero);
   content.appendChild(build3ESection());
-
   page.appendChild(content);
   container.appendChild(page);
 }

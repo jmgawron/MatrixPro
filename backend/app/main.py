@@ -15,6 +15,7 @@ from app.routers import (
     certification,
     feedback,
     reporting,
+    reports,
     search,
     library,
 )
@@ -40,6 +41,7 @@ app.include_router(catalog.router)
 app.include_router(certification.router)
 app.include_router(feedback.router)
 app.include_router(reporting.router)
+app.include_router(reports.router)
 app.include_router(search.router)
 app.include_router(library.router)
 

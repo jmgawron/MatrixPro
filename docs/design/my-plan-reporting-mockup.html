@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — My Plan Reporting Mockup</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-reporting">
+  <style>
+    body.mockup-page { margin: 0; min-height: 100vh; background: var(--bg-page); }
+
+    .mockup-banner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 20px 24px 0;
+    }
+
+    .mockup-banner h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .mockup-banner p {
+      margin: 0 0 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      max-width: 95ch;
+    }
+
+    .mockup-nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .mockup-nav button {
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-soft);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast);
+    }
+
+    .mockup-nav button:hover { border-color: var(--accent); color: var(--text-primary); }
+    .mockup-nav button.active {
+      background: var(--accent-soft, rgba(59,130,246,.12));
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .mockup-screen { display: none; max-width: 1280px; margin: 0 auto; padding: 0 24px 40px; }
+    .mockup-screen.active { display: block; }
+
+    /* ── Reporting shell (.mpr-*) ─────────────────────────────────────── */
+    .mpr-shell {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      gap: 0;
+      min-height: 720px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .mpr-sidebar {
+      background: var(--bg-card-soft);
+      border-right: 1px solid var(--border-soft);
+      padding: 20px 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mpr-sidebar__back {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 18px 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-soft);
+      margin-bottom: 12px;
+    }
+
+    .mpr-sidebar__title {
+      padding: 0 18px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .mpr-catalog-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 18px;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: background var(--motion-fast);
+    }
+
+    .mpr-catalog-item:hover { background: var(--bg-elevated); }
+    .mpr-catalog-item.active {
+      background: var(--accent-soft, rgba(59,130,246,.1));
+      border-right: 3px solid var(--accent);
+      color: var(--accent);
+    }
+
+    .mpr-catalog-item__icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .mpr-catalog-item.active .mpr-catalog-item__icon {
+      background: rgba(59,130,246,.15);
+    }
+
+    .mpr-catalog-item__label {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .mpr-catalog-item__desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      line-height: 1.35;
+    }
+
+    .mpr-catalog-item.active .mpr-catalog-item__desc { color: var(--accent); opacity: .75; }
+
+    .mpr-main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .mpr-header {
+      padding: 18px 24px 14px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .mpr-header h2 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .mpr-header p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .mpr-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border-soft);
+      background: var(--bg-card-soft);
+      align-items: center;
+    }
+
+    .mpr-filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .mpr-filter-group label { font-weight: 600; white-space: nowrap; }
+
+    .mpr-filter-group input,
+    .mpr-filter-group select {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      color: var(--text-primary);
+      font-size: 12px;
+    }
+
+    .mpr-filter-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .mpr-filter-chip {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-elevated);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .mpr-filter-chip.active {
+      background: var(--accent-soft, rgba(59,130,246,.12));
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .mpr-preview {
+      flex: 1;
+      padding: 20px 24px;
+      overflow-y: auto;
+      max-height: 520px;
+    }
+
+    .mpr-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-top: 1px solid var(--border-soft);
+      background: var(--bg-card-soft);
+    }
+
+    .mpr-footer__meta {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .mpr-footer__actions { display: flex; gap: 10px; }
+
+    /* KPI row */
+    .mpr-kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .mpr-kpi {
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+
+    .mpr-kpi__label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .mpr-kpi__value {
+      font-size: 24px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mpr-kpi__sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Charts */
+    .mpr-charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .mpr-chart-card {
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+
+    .mpr-chart-card h3 {
+      margin: 0 0 12px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .mpr-donut-wrap { display: flex; align-items: center; gap: 20px; }
+    .mpr-donut-legend { font-size: 12px; }
+    .mpr-donut-legend div { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .mpr-donut-legend span:first-child {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+
+    /* Status groups */
+    .mpr-status-group { margin-bottom: 20px; }
+
+    .mpr-status-group__header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 2px solid var(--border-soft);
+      margin-bottom: 8px;
+    }
+
+    .mpr-status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+
+    .mpr-status-group__title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .mpr-status-group__count {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .mpr-category-section { margin-bottom: 12px; padding-left: 20px; }
+
+    .mpr-category-section__header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    .mpr-skill-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .mpr-skill-table th {
+      text-align: left;
+      padding: 8px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .mpr-skill-table td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border-soft);
+      color: var(--text-secondary);
+      vertical-align: middle;
+    }
+
+    .mpr-skill-table tr:hover td { background: var(--bg-elevated); }
+
+    .mpr-progress-bar {
+      height: 6px;
+      background: var(--bg-elevated);
+      border-radius: 3px;
+      overflow: hidden;
+      min-width: 80px;
+    }
+
+    .mpr-progress-bar__fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 3px;
+    }
+
+    .mpr-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .mpr-badge--foundational { background: rgba(34,197,94,.12); color: #22c55e; }
+    .mpr-badge--core { background: rgba(59,130,246,.12); color: #3b82f6; }
+    .mpr-badge--advanced { background: rgba(168,85,247,.12); color: #a855f7; }
+    .mpr-badge--ai { background: rgba(245,158,11,.12); color: #f59e0b; }
+
+    /* Activity timeline */
+    .mpr-activity-skill {
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+
+    .mpr-activity-skill__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg-card-soft);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .mpr-activity-skill__name { font-size: 14px; font-weight: 700; }
+    .mpr-activity-skill__meta { font-size: 11px; color: var(--text-muted); }
+
+    .mpr-timeline { padding: 8px 16px 12px; }
+
+    .mpr-timeline-item {
+      display: grid;
+      grid-template-columns: 100px 120px 1fr;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-soft);
+      font-size: 12px;
+    }
+
+    .mpr-timeline-item:last-child { border-bottom: 0; }
+
+    .mpr-timeline-item__time { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+    .mpr-event-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .mpr-event-badge--complete { background: rgba(34,197,94,.12); color: #22c55e; }
+    .mpr-event-badge--status { background: rgba(59,130,246,.12); color: #3b82f6; }
+    .mpr-event-badge--focus { background: rgba(6,182,212,.12); color: #06b6d4; }
+    .mpr-event-badge--added { background: rgba(168,85,247,.12); color: #a855f7; }
+
+    /* Stagnation */
+    .mpr-stale-alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      background: rgba(245,158,11,.08);
+      border: 1px solid rgba(245,158,11,.25);
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .mpr-stale-alert strong { color: #f59e0b; }
+
+    .mpr-reco-card {
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-top: 20px;
+    }
+
+    .mpr-reco-card h3 {
+      margin: 0 0 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .mpr-reco-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .mpr-reco-list li {
+      padding: 8px 0 8px 20px;
+      position: relative;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .mpr-reco-list li:last-child { border-bottom: 0; }
+
+    .mpr-reco-list li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* AI Summary */
+    .mpr-ai-content {
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--text-secondary);
+    }
+
+    .mpr-ai-content h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 24px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .mpr-ai-content h2:first-child { margin-top: 0; }
+
+    .mpr-ai-content ul {
+      margin: 8px 0;
+      padding-left: 1.2em;
+    }
+
+    .mpr-ai-content li { margin-bottom: 6px; }
+
+    .mpr-ai-loading {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-muted);
+    }
+
+    .mpr-ai-loading__spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-soft);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      animation: mpr-spin 0.8s linear infinite;
+    }
+
+    @keyframes mpr-spin { to { transform: rotate(360deg); } }
+
+    /* PDF preview */
+    .mpr-pdf-page {
+      background: #fff;
+      color: #1a1a2e;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 56px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.35);
+      border-radius: 2px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 11pt;
+      line-height: 1.5;
+    }
+
+    .mpr-pdf-page h1 {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 22pt;
+      color: #1e40af;
+      margin: 0 0 4px;
+      border-bottom: 2px solid #1e40af;
+      padding-bottom: 8px;
+    }
+
+    .mpr-pdf-page .pdf-meta {
+      font-family: -apple-system, sans-serif;
+      font-size: 9pt;
+      color: #64748b;
+      margin-bottom: 24px;
+    }
+
+    .mpr-pdf-page h2 {
+      font-family: -apple-system, sans-serif;
+      font-size: 13pt;
+      color: #1e40af;
+      margin-top: 20px;
+    }
+
+    .mpr-pdf-page table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: -apple-system, sans-serif;
+      font-size: 9pt;
+      margin: 12px 0;
+    }
+
+    .mpr-pdf-page th, .mpr-pdf-page td {
+      border: 1px solid #e2e8f0;
+      padding: 6px 8px;
+      text-align: left;
+    }
+
+    .mpr-pdf-page th { background: #f1f5f9; font-weight: 700; }
+
+    .mpr-pdf-page .pdf-footer {
+      margin-top: 32px;
+      padding-top: 12px;
+      border-top: 1px solid #e2e8f0;
+      font-family: -apple-system, sans-serif;
+      font-size: 8pt;
+      color: #94a3b8;
+      text-align: center;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 100;
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-soft);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 900px) {
+      .mpr-shell { grid-template-columns: 1fr; }
+      .mpr-sidebar { border-right: 0; border-bottom: 1px solid var(--border-soft); }
+      .mpr-kpi-row { grid-template-columns: repeat(2, 1fr); }
+      .mpr-charts-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="mockup-page">
+  <button class="theme-toggle" type="button" onclick="toggleTheme()">Toggle light/dark</button>
+
+  <div class="mockup-banner">
+    <h1>My Plan — Reporting Module Mockup</h1>
+    <p>
+      Interactive wireframes for design review. Sample data uses Bob (LANSW Shift-2, 18 skills).
+      Open <code>docs/design/my-plan-reporting-design.md</code> for architecture and implementation plan.
+    </p>
+    <nav class="mockup-nav" aria-label="Mockup screens">
+      <button type="button" class="active" data-screen="dashboard">1. Dashboard</button>
+      <button type="button" data-screen="landscape">2. Skills Landscape</button>
+      <button type="button" data-screen="activity">3. Activity History</button>
+      <button type="button" data-screen="stagnation">4. Stagnation / Focus</button>
+      <button type="button" data-screen="ai">5. AI Summary</button>
+      <button type="button" data-screen="pdf">6. PDF Preview</button>
+    </nav>
+  </div>
+
+  <!-- Screen 1: Dashboard shell (Landscape selected by default) -->
+  <section id="screen-dashboard" class="mockup-screen active">
+    <div class="mpr-shell">
+      <aside class="mpr-sidebar">
+        <div class="mpr-sidebar__back">← Back to My Plan</div>
+        <div class="mpr-sidebar__title">Report catalog</div>
+        <button type="button" class="mpr-catalog-item active">
+          <span class="mpr-catalog-item__icon">🗺</span>
+          <span>
+            <div class="mpr-catalog-item__label">Skills Landscape</div>
+            <div class="mpr-catalog-item__desc">Status × category snapshot</div>
+          </span>
+        </button>
+        <button type="button" class="mpr-catalog-item">
+          <span class="mpr-catalog-item__icon">📋</span>
+          <span>
+            <div class="mpr-catalog-item__label">Activity History</div>
+            <div class="mpr-catalog-item__desc">Audit trail by date range</div>
+          </span>
+        </button>
+        <button type="button" class="mpr-catalog-item">
+          <span class="mpr-catalog-item__icon">⏸</span>
+          <span>
+            <div class="mpr-catalog-item__label">Stagnation / Focus</div>
+            <div class="mpr-catalog-item__desc">Skills needing attention</div>
+          </span>
+        </button>
+        <button type="button" class="mpr-catalog-item">
+          <span class="mpr-catalog-item__icon">✨</span>
+          <span>
+            <div class="mpr-catalog-item__label">AI Development Summary</div>
+            <div class="mpr-catalog-item__desc">Personal growth review</div>
+          </span>
+        </button>
+      </aside>
+      <div class="mpr-main">
+        <header class="mpr-header">
+          <h2>Skills Landscape</h2>
+          <p>Current snapshot of your development plan — grouped by status and category.</p>
+        </header>
+        <div class="mpr-filters">
+          <div class="mpr-filter-group">
+            <label>Categories</label>
+            <div class="mpr-filter-chips">
+              <span class="mpr-filter-chip active">All</span>
+              <span class="mpr-filter-chip active">Foundational</span>
+              <span class="mpr-filter-chip active">Core</span>
+              <span class="mpr-filter-chip active">Advanced</span>
+              <span class="mpr-filter-chip active">AI & Future</span>
+            </div>
+          </div>
+          <div class="mpr-filter-group">
+            <label>Status</label>
+            <div class="mpr-filter-chips">
+              <span class="mpr-filter-chip active">All</span>
+              <span class="mpr-filter-chip active">Developing</span>
+              <span class="mpr-filter-chip active">Planned</span>
+              <span class="mpr-filter-chip active">Mastered</span>
+            </div>
+          </div>
+        </div>
+        <div class="mpr-preview">
+          <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px;">
+            Select a report from the catalog. Preview renders here after <strong>Generate Preview</strong>.
+            See dedicated screens 2–5 for full report layouts.
+          </p>
+          <div class="mpr-kpi-row">
+            <div class="mpr-kpi"><div class="mpr-kpi__label">Total skills</div><div class="mpr-kpi__value">18</div></div>
+            <div class="mpr-kpi"><div class="mpr-kpi__label">Developing</div><div class="mpr-kpi__value" style="color:var(--status-developing-fg)">13</div></div>
+            <div class="mpr-kpi"><div class="mpr-kpi__label">Avg completion</div><div class="mpr-kpi__value">62%</div></div>
+            <div class="mpr-kpi"><div class="mpr-kpi__label">Mastered</div><div class="mpr-kpi__value" style="color:var(--status-mastered-fg)">4</div></div>
+          </div>
+        </div>
+        <footer class="mpr-footer">
+          <span class="mpr-footer__meta">Filters: All categories · All statuses</span>
+          <div class="mpr-footer__actions">
+            <button type="button" class="btn btn-secondary btn-sm">Generate Preview</button>
+            <button type="button" class="btn btn-primary btn-sm">Export PDF</button>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen 2: Skills Landscape full preview -->
+  <section id="screen-landscape" class="mockup-screen">
+    <div class="mpr-shell">
+      <aside class="mpr-sidebar">
+        <div class="mpr-sidebar__back">← Back to My Plan</div>
+        <div class="mpr-sidebar__title">Report catalog</div>
+        <button type="button" class="mpr-catalog-item active">
+          <span class="mpr-catalog-item__icon">🗺</span>
+          <span><div class="mpr-catalog-item__label">Skills Landscape</div></span>
+        </button>
+      </aside>
+      <div class="mpr-main">
+        <header class="mpr-header">
+          <h2>Skills Landscape</h2>
+          <p>Bob · TAC-ENT-LANSW-SHIFT2 · Generated Jun 4, 2026</p>
+        </header>
+        <div class="mpr-preview" style="max-height:none;">
+          <div class="mpr-kpi-row">
+            <div class="mpr-kpi"><div class="mpr-kpi__label">Total</div><div class="mpr-kpi__value">18</div></div>
+            <div class="mpr-kpi"><div class="mpr-kpi__label">Developing</div><div class="mpr-kpi__value">13</div></div>
+            <div class="mpr-kpi"><div class="mpr-kpi__label">Planned</div><div class="mpr-kpi__value">1</div></div>
+            <div class="mpr-kpi"><div class="mpr-kpi__label">Mastered</div><div class="mpr-kpi__value">4</div></div>
+          </div>
+          <div class="mpr-charts-row">
+            <div class="mpr-chart-card">
+              <h3>Status distribution</h3>
+              <div class="mpr-donut-wrap">
+                <svg width="100" height="100" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#1e293b" stroke-width="16"/>
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#3b82f6" stroke-width="16"
+                    stroke-dasharray="181 251" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#22c55e" stroke-width="16"
+                    stroke-dasharray="56 251" stroke-dashoffset="-181" transform="rotate(-90 50 50)"/>
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#94a3b8" stroke-width="16"
+                    stroke-dasharray="14 251" stroke-dashoffset="-237" transform="rotate(-90 50 50)"/>
+                </svg>
+                <div class="mpr-donut-legend">
+                  <div><span style="background:#3b82f6"></span> Developing (13)</div>
+                  <div><span style="background:#22c55e"></span> Mastered (4)</div>
+                  <div><span style="background:#94a3b8"></span> Planned (1)</div>
+                </div>
+              </div>
+            </div>
+            <div class="mpr-chart-card">
+              <h3>Completion distribution</h3>
+              <svg width="100%" height="80" viewBox="0 0 320 80">
+                <rect x="10" y="50" width="50" height="25" fill="#64748b" rx="2"/>
+                <rect x="70" y="35" width="50" height="40" fill="#3b82f6" rx="2"/>
+                <rect x="130" y="20" width="50" height="55" fill="#3b82f6" rx="2"/>
+                <rect x="190" y="10" width="50" height="65" fill="#22c55e" rx="2"/>
+                <rect x="250" y="45" width="50" height="30" fill="#22c55e" rx="2"/>
+                <text x="35" y="78" fill="#94a3b8" font-size="9" text-anchor="middle">0-25</text>
+                <text x="95" y="78" fill="#94a3b8" font-size="9" text-anchor="middle">26-50</text>
+                <text x="155" y="78" fill="#94a3b8" font-size="9" text-anchor="middle">51-75</text>
+                <text x="215" y="78" fill="#94a3b8" font-size="9" text-anchor="middle">76-99</text>
+                <text x="275" y="78" fill="#94a3b8" font-size="9" text-anchor="middle">100%</text>
+              </svg>
+            </div>
+          </div>
+
+          <div class="mpr-status-group">
+            <div class="mpr-status-group__header">
+              <span class="mpr-status-dot" style="background:var(--status-developing-fg)"></span>
+              <span class="mpr-status-group__title">Developing</span>
+              <span class="mpr-status-group__count">13 skills</span>
+            </div>
+            <div class="mpr-category-section">
+              <div class="mpr-category-section__header">Foundational · 2</div>
+              <table class="mpr-skill-table">
+                <thead>
+                  <tr>
+                    <th>Skill</th><th>Completion</th><th>Focus</th><th>Actions</th><th>Last activity</th><th>Category</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>VLANs, Trunking & VTP</strong></td>
+                    <td><div class="mpr-progress-bar"><div class="mpr-progress-bar__fill" style="width:72%"></div></div> 72%</td>
+                    <td>Exposure</td><td>31</td><td>May 28, 2026</td>
+                    <td><span class="mpr-badge mpr-badge--foundational">Foundational</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Spanning Tree: STP, RSTP & MST</strong></td>
+                    <td><div class="mpr-progress-bar"><div class="mpr-progress-bar__fill" style="width:18%"></div></div> 18%</td>
+                    <td>Education</td><td>2</td><td>Apr 12, 2026</td>
+                    <td><span class="mpr-badge mpr-badge--foundational">Foundational</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="mpr-category-section">
+              <div class="mpr-category-section__header">Core · 6</div>
+              <table class="mpr-skill-table">
+                <thead>
+                  <tr><th>Skill</th><th>Completion</th><th>Focus</th><th>Actions</th><th>Last activity</th><th>Category</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Catalyst 9000 IOS-XE Operations</strong></td>
+                    <td><div class="mpr-progress-bar"><div class="mpr-progress-bar__fill" style="width:58%"></div></div> 58%</td>
+                    <td>Exposure</td><td>18</td><td>Jun 1, 2026</td>
+                    <td><span class="mpr-badge mpr-badge--core">Core</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="mpr-status-group">
+            <div class="mpr-status-group__header">
+              <span class="mpr-status-dot" style="background:var(--status-mastered-fg)"></span>
+              <span class="mpr-status-group__title">Mastered</span>
+              <span class="mpr-status-group__count">4 skills</span>
+            </div>
+            <div class="mpr-category-section">
+              <div class="mpr-category-section__header">Foundational · 1</div>
+              <table class="mpr-skill-table">
+                <tbody>
+                  <tr>
+                    <td><strong>Layer 2 Switching Fundamentals</strong></td>
+                    <td><div class="mpr-progress-bar"><div class="mpr-progress-bar__fill" style="width:100%"></div></div> 100%</td>
+                    <td>Experience</td><td>42</td><td>May 15, 2026</td>
+                    <td><span class="mpr-badge mpr-badge--foundational">Foundational</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <footer class="mpr-footer">
+          <span class="mpr-footer__meta">18 skills · Avg 62% complete</span>
+          <div class="mpr-footer__actions">
+            <button type="button" class="btn btn-primary btn-sm">Export PDF</button>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen 3: Activity History -->
+  <section id="screen-activity" class="mockup-screen">
+    <div class="mpr-shell">
+      <aside class="mpr-sidebar">
+        <div class="mpr-sidebar__back">← Back to My Plan</div>
+        <button type="button" class="mpr-catalog-item active">
+          <span class="mpr-catalog-item__icon">📋</span>
+          <span><div class="mpr-catalog-item__label">Activity History</div></span>
+        </button>
+      </aside>
+      <div class="mpr-main">
+        <header class="mpr-header">
+          <h2>Activity History</h2>
+          <p>May 1 – Jun 4, 2026 · 47 events across 8 skills</p>
+        </header>
+        <div class="mpr-filters">
+          <div class="mpr-filter-group">
+            <label>From</label><input type="date" value="2026-05-01">
+          </div>
+          <div class="mpr-filter-group">
+            <label>To</label><input type="date" value="2026-06-04">
+          </div>
+          <div class="mpr-filter-group">
+            <label>Activity type</label>
+            <select><option>All types</option><option>Action completed</option><option>Status changed</option></select>
+          </div>
+          <div class="mpr-filter-group">
+            <label>Sort</label>
+            <select><option>Newest first</option><option>Oldest first</option></select>
+          </div>
+        </div>
+        <div class="mpr-preview" style="max-height:none;">
+          <div class="mpr-activity-skill">
+            <div class="mpr-activity-skill__header">
+              <div>
+                <div class="mpr-activity-skill__name">VLANs, Trunking & VTP</div>
+                <div class="mpr-activity-skill__meta">Foundational · Developing · 12 events</div>
+              </div>
+            </div>
+            <div class="mpr-timeline">
+              <div class="mpr-timeline-item">
+                <span class="mpr-timeline-item__time">May 28 14:22</span>
+                <span><span class="mpr-event-badge mpr-event-badge--complete">Completed</span></span>
+                <span>Marked complete: <em>802.1Q trunk lab workbook</em> · Education → complete</span>
+              </div>
+              <div class="mpr-timeline-item">
+                <span class="mpr-timeline-item__time">May 22 09:15</span>
+                <span><span class="mpr-event-badge mpr-event-badge--focus">Focus</span></span>
+                <span>Focus area: Education → <strong>Exposure</strong></span>
+              </div>
+              <div class="mpr-timeline-item">
+                <span class="mpr-timeline-item__time">May 18 16:40</span>
+                <span><span class="mpr-event-badge mpr-event-badge--status">Status</span></span>
+                <span>Status: Planned → <strong>Developing</strong></span>
+              </div>
+            </div>
+          </div>
+          <div class="mpr-activity-skill">
+            <div class="mpr-activity-skill__header">
+              <div>
+                <div class="mpr-activity-skill__name">Layer 2 Switching Fundamentals</div>
+                <div class="mpr-activity-skill__meta">Foundational · Mastered · 6 events</div>
+              </div>
+            </div>
+            <div class="mpr-timeline">
+              <div class="mpr-timeline-item">
+                <span class="mpr-timeline-item__time">May 15 11:00</span>
+                <span><span class="mpr-event-badge mpr-event-badge--status">Status</span></span>
+                <span>Status: Developing → <strong>Mastered</strong></span>
+              </div>
+              <div class="mpr-timeline-item">
+                <span class="mpr-timeline-item__time">May 14 08:30</span>
+                <span><span class="mpr-event-badge mpr-event-badge--complete">Completed</span></span>
+                <span>Marked complete: <em>Campus switching mastery milestone</em></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer class="mpr-footer">
+          <span class="mpr-footer__meta">Period: May 1 – Jun 4, 2026</span>
+          <div class="mpr-footer__actions">
+            <button type="button" class="btn btn-primary btn-sm">Export PDF</button>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen 4: Stagnation -->
+  <section id="screen-stagnation" class="mockup-screen">
+    <div class="mpr-shell">
+      <aside class="mpr-sidebar">
+        <div class="mpr-sidebar__back">← Back to My Plan</div>
+        <button type="button" class="mpr-catalog-item active">
+          <span class="mpr-catalog-item__icon">⏸</span>
+          <span><div class="mpr-catalog-item__label">Stagnation / Focus</div></span>
+        </button>
+      </aside>
+      <div class="mpr-main">
+        <header class="mpr-header">
+          <h2>Stagnation / Focus Report</h2>
+          <p>Developing skills with no updates in the selected period.</p>
+        </header>
+        <div class="mpr-filters">
+          <div class="mpr-filter-group">
+            <label>No updates for</label>
+            <div class="mpr-filter-chips">
+              <span class="mpr-filter-chip">30 days</span>
+              <span class="mpr-filter-chip active">60 days</span>
+              <span class="mpr-filter-chip">90 days</span>
+            </div>
+          </div>
+        </div>
+        <div class="mpr-preview" style="max-height:none;">
+          <div class="mpr-stale-alert">
+            <span style="font-size:20px">⚠</span>
+            <div><strong>3 skills</strong> in Developing status have had no activity in the last <strong>60 days</strong>. Consider revisiting these to maintain momentum.</div>
+          </div>
+          <table class="mpr-skill-table">
+            <thead>
+              <tr>
+                <th>Skill</th><th>Completion</th><th>Focus</th><th>Last activity</th><th>Open actions</th><th>Days stale</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Spanning Tree: STP, RSTP & MST</strong></td>
+                <td>18%</td><td>Education</td><td>Apr 12, 2026</td><td>14</td>
+                <td style="color:#f59e0b;font-weight:700">53</td>
+              </tr>
+              <tr>
+                <td><strong>Multicast on Campus (IGMP/PIM-SM)</strong></td>
+                <td>41%</td><td>Exposure</td><td>Mar 28, 2026</td><td>9</td>
+                <td style="color:#f59e0b;font-weight:700">68</td>
+              </tr>
+              <tr>
+                <td><strong>DHCP Snooping & DAI</strong></td>
+                <td>55%</td><td>Exposure</td><td>Apr 2, 2026</td><td>6</td>
+                <td style="color:#f59e0b;font-weight:700">63</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="mpr-reco-card">
+            <h3>Suggested next steps</h3>
+            <ul class="mpr-reco-list">
+              <li><strong>DHCP Snooping & DAI</strong> is closest to completion (55%) — a focused session could move it toward mastery.</li>
+              <li><strong>Spanning Tree</strong> has the most open actions (14) — prioritize completing 2–3 Education items before adding new ones.</li>
+              <li>All three skills are in Exposure or Education — consider scheduling lab time this week to rebuild consistency.</li>
+            </ul>
+          </div>
+        </div>
+        <footer class="mpr-footer">
+          <span class="mpr-footer__meta">Threshold: 60 days · Status: Developing only</span>
+          <div class="mpr-footer__actions">
+            <button type="button" class="btn btn-primary btn-sm">Export PDF</button>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen 5: AI Summary -->
+  <section id="screen-ai" class="mockup-screen">
+    <div class="mpr-shell">
+      <aside class="mpr-sidebar">
+        <div class="mpr-sidebar__back">← Back to My Plan</div>
+        <button type="button" class="mpr-catalog-item active">
+          <span class="mpr-catalog-item__icon">✨</span>
+          <span><div class="mpr-catalog-item__label">AI Development Summary</div></span>
+        </button>
+      </aside>
+      <div class="mpr-main">
+        <header class="mpr-header">
+          <h2>AI Development Summary</h2>
+          <p>Personal growth review · May 1 – Jun 4, 2026</p>
+        </header>
+        <div class="mpr-filters">
+          <div class="mpr-filter-group"><label>From</label><input type="date" value="2026-05-01"></div>
+          <div class="mpr-filter-group"><label>To</label><input type="date" value="2026-06-04"></div>
+          <button type="button" class="btn btn-primary btn-sm">Generate Summary</button>
+        </div>
+        <div class="mpr-preview" style="max-height:none;">
+          <div class="mpr-ai-content">
+            <h2>Executive Summary</h2>
+            <p>Over the past five weeks you've maintained steady progress across your LAN switching portfolio. You completed <strong>Layer 2 Switching Fundamentals</strong> and logged 47 development activities — with particularly strong momentum in VLAN/trunking and Catalyst 9000 operations. Your focus has shifted appropriately toward Exposure-level work on several Core skills.</p>
+
+            <h2>Achievements</h2>
+            <ul>
+              <li>Mastered <strong>Layer 2 Switching Fundamentals</strong> with full 3E completion and a documented mastery milestone.</li>
+              <li>Completed 23 catalog and personal learning items across 8 skills.</li>
+              <li>Advanced focus area on <strong>VLANs, Trunking & VTP</strong> from Education to Exposure — showing readiness for hands-on lab work.</li>
+            </ul>
+
+            <h2>Growth Areas</h2>
+            <ul>
+              <li><strong>Catalyst 9000 IOS-XE Operations</strong> — consistent weekly activity; 58% complete with balanced Education/Exposure progress.</li>
+              <li><strong>VLANs, Trunking & VTP</strong> — 72% complete; your lab-first approach (pyATS regression notes) is building strong Exposure evidence.</li>
+            </ul>
+
+            <h2>Areas Requiring Attention</h2>
+            <ul>
+              <li><strong>Spanning Tree</strong>, <strong>Multicast</strong>, and <strong>DHCP Snooping</strong> haven't seen updates in 50+ days — not a setback, but an opportunity to re-prioritize.</li>
+              <li>Experience-level items remain untouched on 4 developing skills — consider advancing focus once Exposure is ≥70% complete.</li>
+            </ul>
+
+            <h2>Recommended Next Steps</h2>
+            <ul>
+              <li>Schedule 2 hours this week for <strong>DHCP Snooping & DAI</strong> — you're 55% done and close to a mastery push.</li>
+              <li>Complete 3 open Education items on <strong>Spanning Tree</strong> to rebuild rhythm before advancing focus.</li>
+              <li>Add one personal Experience item to <strong>Catalyst 9000</strong> — e.g., a customer-facing escalation shadow — to diversify your evidence portfolio.</li>
+            </ul>
+          </div>
+        </div>
+        <footer class="mpr-footer">
+          <span class="mpr-footer__meta">Generated Jun 4, 2026 · Supportive self-reflection mode</span>
+          <div class="mpr-footer__actions">
+            <button type="button" class="btn btn-primary btn-sm">Export PDF</button>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen 6: PDF preview -->
+  <section id="screen-pdf" class="mockup-screen">
+    <div style="padding:0 24px 40px;">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;max-width:720px;">
+        Print-style PDF output (WeasyPrint). Shown here for Skills Landscape; other report types use the same header/footer template.
+      </p>
+      <div class="mpr-pdf-page">
+        <h1>Skills Landscape Report</h1>
+        <div class="pdf-meta">
+          Engineer: Bob · TAC-ENT-LANSW-SHIFT2<br>
+          Generated: June 4, 2026 12:00 UTC · By Bob<br>
+          Filters: All categories · All statuses
+        </div>
+
+        <h2>Summary</h2>
+        <table>
+          <tr><th>Total skills</th><th>Developing</th><th>Planned</th><th>Mastered</th><th>Avg completion</th></tr>
+          <tr><td>18</td><td>13</td><td>1</td><td>4</td><td>62%</td></tr>
+        </table>
+
+        <h2>Developing — Foundational</h2>
+        <table>
+          <tr><th>Skill</th><th>Completion</th><th>Focus</th><th>Actions</th><th>Last activity</th></tr>
+          <tr><td>VLANs, Trunking & VTP</td><td>72%</td><td>Exposure</td><td>31</td><td>2026-05-28</td></tr>
+          <tr><td>Spanning Tree: STP, RSTP & MST</td><td>18%</td><td>Education</td><td>2</td><td>2026-04-12</td></tr>
+        </table>
+
+        <h2>Developing — Core</h2>
+        <table>
+          <tr><th>Skill</th><th>Completion</th><th>Focus</th><th>Actions</th><th>Last activity</th></tr>
+          <tr><td>Catalyst 9000 IOS-XE Operations</td><td>58%</td><td>Exposure</td><td>18</td><td>2026-06-01</td></tr>
+        </table>
+
+        <h2>Mastered — Foundational</h2>
+        <table>
+          <tr><th>Skill</th><th>Completion</th><th>Focus</th><th>Actions</th><th>Last activity</th></tr>
+          <tr><td>Layer 2 Switching Fundamentals</td><td>100%</td><td>Experience</td><td>42</td><td>2026-05-15</td></tr>
+        </table>
+
+        <div class="pdf-footer">
+          MatrixPro · Confidential · Page 1 of 3 · matrixpro.local
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll('.mockup-nav button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mockup-nav button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.mockup-screen').forEach(s => s.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('screen-' + btn.dataset.screen).classList.add('active');
+      });
+    });
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      html.dataset.theme = html.dataset.theme === 'light' ? 'dark' : 'light';
+    }
+  </script>
+</body>
+</html>

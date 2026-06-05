@@ -65,6 +65,107 @@ def _ensure_skills_columns(conn):
         ))
 
 
+_FTS_TRIGGERS = (
+    "user_content_fts_insert",
+    "user_content_fts_update",
+    "user_content_fts_delete",
+)
+
+
+def _drop_fts_triggers(conn):
+    for trigger in _FTS_TRIGGERS:
+        conn.execute(text(f"DROP TRIGGER IF EXISTS {trigger};"))
+
+
+def _create_fts_triggers(conn):
+    conn.execute(text("""
+        CREATE TRIGGER IF NOT EXISTS user_content_fts_insert
+        AFTER INSERT ON user_level_content BEGIN
+            INSERT INTO user_content_fts(rowid, title, description)
+            VALUES (new.id, new.title, new.description);
+        END;
+    """))
+    conn.execute(text("""
+        CREATE TRIGGER IF NOT EXISTS user_content_fts_update
+        AFTER UPDATE ON user_level_content BEGIN
+            INSERT INTO user_content_fts(user_content_fts, rowid, title, description)
+            VALUES('delete', old.id, old.title, old.description);
+            INSERT INTO user_content_fts(rowid, title, description)
+            VALUES (new.id, new.title, new.description);
+        END;
+    """))
+    conn.execute(text("""
+        CREATE TRIGGER IF NOT EXISTS user_content_fts_delete
+        AFTER DELETE ON user_level_content BEGIN
+            INSERT INTO user_content_fts(user_content_fts, rowid, title, description)
+            VALUES('delete', old.id, old.title, old.description);
+        END;
+    """))
+
+
+def _fts_triggers_healthy(conn) -> bool:
+    """Probe FTS sync by running a no-op UPDATE inside a savepoint."""
+    row_id = conn.execute(text("SELECT id FROM user_level_content LIMIT 1")).scalar()
+    if row_id is None:
+        return True
+    try:
+        conn.execute(text("SAVEPOINT fts_health_probe"))
+        conn.execute(
+            text("UPDATE user_level_content SET updated_at = updated_at WHERE id = :id"),
+            {"id": row_id},
+        )
+        conn.execute(text("ROLLBACK TO SAVEPOINT fts_health_probe"))
+        conn.execute(text("RELEASE SAVEPOINT fts_health_probe"))
+        return True
+    except Exception as exc:
+        logger.warning("user_content_fts health probe failed: %s", exc)
+        try:
+            conn.execute(text("ROLLBACK TO SAVEPOINT fts_health_probe"))
+            conn.execute(text("RELEASE SAVEPOINT fts_health_probe"))
+        except Exception:
+            pass
+        return False
+
+
+def rebuild_user_content_fts(conn=None):
+    """
+    Drop and recreate the FTS5 index from user_level_content.
+
+    Use when SQLite reports 'database disk image is malformed' on
+    user_level_content writes (corrupt FTS segment; base table is usually fine).
+    """
+    own_conn = conn is None
+    if own_conn:
+        conn = engine.connect()
+
+    try:
+        logger.info("Rebuilding user_content_fts (drop triggers → drop index → backfill)...")
+        _drop_fts_triggers(conn)
+        conn.execute(text("DROP TABLE IF EXISTS user_content_fts;"))
+        conn.execute(text("""
+            CREATE VIRTUAL TABLE user_content_fts USING fts5(
+                title,
+                description,
+                content='user_level_content',
+                content_rowid='id',
+                tokenize = 'trigram case_sensitive 0'
+            );
+        """))
+        ulc_count = conn.execute(text("SELECT COUNT(*) FROM user_level_content")).scalar() or 0
+        if ulc_count:
+            conn.execute(text(
+                "INSERT INTO user_content_fts(rowid, title, description) "
+                "SELECT id, title, description FROM user_level_content"
+            ))
+        _create_fts_triggers(conn)
+        if own_conn:
+            conn.commit()
+        logger.info("✅ user_content_fts rebuilt (%s rows indexed)", ulc_count)
+    finally:
+        if own_conn:
+            conn.close()
+
+
 def run_migrations():
     """Execute all pending migrations idempotently."""
     with engine.connect() as conn:
@@ -114,29 +215,7 @@ def run_migrations():
         ))
 
         logger.info("Creating FTS5 sync triggers...")
-        conn.execute(text("""
-            CREATE TRIGGER IF NOT EXISTS user_content_fts_insert
-            AFTER INSERT ON user_level_content BEGIN
-                INSERT INTO user_content_fts(rowid, title, description)
-                VALUES (new.id, new.title, new.description);
-            END;
-        """))
-        conn.execute(text("""
-            CREATE TRIGGER IF NOT EXISTS user_content_fts_update
-            AFTER UPDATE ON user_level_content BEGIN
-                INSERT INTO user_content_fts(user_content_fts, rowid, title, description)
-                VALUES('delete', old.id, old.title, old.description);
-                INSERT INTO user_content_fts(rowid, title, description)
-                VALUES (new.id, new.title, new.description);
-            END;
-        """))
-        conn.execute(text("""
-            CREATE TRIGGER IF NOT EXISTS user_content_fts_delete
-            AFTER DELETE ON user_level_content BEGIN
-                INSERT INTO user_content_fts(user_content_fts, rowid, title, description)
-                VALUES('delete', old.id, old.title, old.description);
-            END;
-        """))
+        _create_fts_triggers(conn)
 
         logger.info("Backfilling FTS5 index for pre-existing rows (if empty)...")
         fts_count = conn.execute(text("SELECT COUNT(*) FROM user_content_fts")).scalar()
@@ -148,6 +227,10 @@ def run_migrations():
                 "SELECT id, title, description FROM user_level_content"
             ))
 
+        if not _fts_triggers_healthy(conn):
+            logger.warning("user_content_fts index is corrupt — auto-rebuilding...")
+            rebuild_user_content_fts(conn)
+
         conn.commit()
         logger.info("✅ All migrations completed successfully")
 
@@ -157,12 +240,7 @@ def rollback_migrations():
     with engine.connect() as conn:
         logger.info("Rolling back migrations...")
 
-        for trigger in (
-            "user_content_fts_insert",
-            "user_content_fts_update",
-            "user_content_fts_delete",
-        ):
-            conn.execute(text(f"DROP TRIGGER IF EXISTS {trigger};"))
+        _drop_fts_triggers(conn)
 
         conn.execute(text("DROP TABLE IF EXISTS user_content_fts;"))
 
@@ -184,5 +262,10 @@ def rollback_migrations():
 
 
 if __name__ == "__main__":
+    import sys
+
     logging.basicConfig(level=logging.INFO)
-    run_migrations()
+    if "--repair-fts" in sys.argv:
+        rebuild_user_content_fts()
+    else:
+        run_migrations()

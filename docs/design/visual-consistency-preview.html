@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Visual Consistency Preview (Before / After)</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=preview">
+  <style>
+    /* Preview shell only — not shipped to production */
+    .preview-shell {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+
+    .preview-banner {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+      margin-bottom: 32px;
+    }
+
+    .preview-banner h1 {
+      font-size: clamp(24px, 3vw, 32px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .preview-banner p {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.6;
+      max-width: 72ch;
+    }
+
+    .preview-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 20px;
+    }
+
+    .preview-section {
+      margin-bottom: 48px;
+    }
+
+    .preview-section__title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .preview-section__heading {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .preview-section__desc {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 20px;
+      max-width: 70ch;
+      line-height: 1.55;
+    }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .compare-grid { grid-template-columns: 1fr; }
+    }
+
+    .compare-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .compare-panel__label {
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .compare-panel__label--before {
+      background: rgba(239, 68, 68, 0.08);
+      color: #f87171;
+    }
+
+    .compare-panel__label--after {
+      background: rgba(34, 197, 94, 0.08);
+      color: #4ade80;
+    }
+
+    .compare-panel__body {
+      padding: 20px;
+    }
+
+    /* ─── Proposed tokens (preview-only until approved) ─── */
+    .proposed-tokens {
+      --status-planned-fg:     #94a3b8;
+      --status-planned-bg:     rgba(148, 163, 184, 0.15);
+      --status-planned-border: rgba(148, 163, 184, 0.35);
+      --status-developing-fg:  #00AEEF;
+      --status-developing-bg:  rgba(0, 174, 239, 0.15);
+      --status-developing-border: rgba(0, 174, 239, 0.35);
+      --status-mastered-fg:    #22c55e;
+      --status-mastered-bg:    rgba(34, 197, 94, 0.15);
+      --status-mastered-border: rgba(34, 197, 94, 0.35);
+      --brand-gradient: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%);
+      --bg-hover: rgba(255, 255, 255, 0.04);
+    }
+
+    [data-theme="light"] .proposed-tokens {
+      --status-planned-fg:     #64748b;
+      --status-planned-bg:     rgba(100, 116, 139, 0.12);
+      --status-planned-border: rgba(100, 116, 139, 0.35);
+      --status-developing-fg:  #0072FF;
+      --status-developing-bg:  rgba(0, 114, 255, 0.1);
+      --status-developing-border: rgba(0, 114, 255, 0.35);
+      --status-mastered-fg:    #16a34a;
+      --status-mastered-bg:    rgba(22, 163, 74, 0.12);
+      --status-mastered-border: rgba(22, 163, 74, 0.35);
+      --bg-hover: rgba(0, 0, 0, 0.04);
+    }
+
+    /* Current (broken) status chips — mirrors production inconsistency */
+    .chip-current--modal-dev   { background: rgba(59,130,246,.15); color: #3b82f6; border: 1px solid rgba(59,130,246,.35); }
+    .chip-current--modal-plan  { background: rgba(245,158,11,.15); color: #f59e0b; border: 1px solid rgba(245,158,11,.35); }
+    .chip-current--explorer-plan { background: rgba(6,182,212,.15); color: #06b6d4; border: 1px solid rgba(6,182,212,.35); }
+    .chip-current--explorer-dev  { background: rgba(245,158,11,.15); color: #f59e0b; border: 1px solid rgba(245,158,11,.35); }
+    .chip-current--overview-dev  { background: rgba(245,158,11,.15); color: #f59e0b; border: 1px solid rgba(245,158,11,.35); }
+    .chip-current--overview-plan { background: rgba(59,130,246,.15); color: #3b82f6; border: 1px solid rgba(59,130,246,.35); }
+
+    /* Proposed unified status chip */
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .status-chip--planned    { background: var(--status-planned-bg);    color: var(--status-planned-fg);    border-color: var(--status-planned-border); }
+    .status-chip--developing { background: var(--status-developing-bg); color: var(--status-developing-fg); border-color: var(--status-developing-border); }
+    .status-chip--mastered   { background: var(--status-mastered-bg);   color: var(--status-mastered-fg);   border-color: var(--status-mastered-border); }
+
+    .status-chip--solid.status-chip--planned    { background: var(--status-planned-fg);    color: #fff; border-color: transparent; }
+    .status-chip--solid.status-chip--developing { background: var(--status-developing-fg); color: #fff; border-color: transparent; }
+    .status-chip--solid.status-chip--mastered   { background: var(--status-mastered-fg);   color: #fff; border-color: transparent; }
+    [data-theme="light"] .status-chip--solid.status-chip--planned { color: #fff; }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .chip-row:last-child { margin-bottom: 0; }
+
+    .chip-row__label {
+      width: 100%;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    /* Token swatch grid */
+    .token-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .token-swatch {
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--bg-card-soft);
+    }
+
+    .token-swatch__color {
+      height: 48px;
+    }
+
+    .token-swatch__meta {
+      padding: 8px 10px;
+      font-size: 11px;
+    }
+
+    .token-swatch__name {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .token-swatch__hex {
+      color: var(--text-muted);
+      font-family: ui-monospace, monospace;
+    }
+
+    /* Sidebar mock */
+    .sidebar-mock {
+      width: 220px;
+      background: var(--sidebar-gradient);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-btn-mock {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: none;
+      border-left: 3px solid transparent;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: default;
+      text-align: left;
+    }
+
+    .nav-btn-mock .count {
+      margin-left: auto;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--bg-elevated);
+      color: var(--text-muted);
+    }
+
+    /* BEFORE: all active items use generic accent (current bug) */
+    .nav-btn-mock--current.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-left-color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* AFTER: per-status colors */
+    .nav-btn-mock--proposed.active[data-status="planned"] {
+      background: var(--status-planned-bg);
+      color: var(--status-planned-fg);
+      border-left-color: var(--status-planned-fg);
+      font-weight: 600;
+    }
+    .nav-btn-mock--proposed.active[data-status="developing"] {
+      background: var(--status-developing-bg);
+      color: var(--status-developing-fg);
+      border-left-color: var(--status-developing-fg);
+      font-weight: 600;
+    }
+    .nav-btn-mock--proposed.active[data-status="mastered"] {
+      background: var(--status-mastered-bg);
+      color: var(--status-mastered-fg);
+      border-left-color: var(--status-mastered-fg);
+      font-weight: 600;
+    }
+
+    .nav-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .nav-icon--planned    { background: linear-gradient(135deg, #94a3b8, #64748b); }
+    .nav-icon--developing { background: linear-gradient(135deg, #00AEEF, #0072FF); }
+    .nav-icon--mastered   { background: linear-gradient(135deg, #22c55e, #16a34a); }
+
+    /* Modal status selector mock */
+    .status-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .status-btn-mock {
+      padding: 7px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-soft);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: default;
+    }
+
+    .status-btn-mock.active { color: #fff; box-shadow: var(--shadow-sm); }
+
+    /* Current modal colors */
+    .status-btn-mock--current.active[data-status="developing"] { background: var(--accent); border-color: var(--accent); }
+    .status-btn-mock--current.active[data-status="planned"]    { background: var(--warning); border-color: var(--warning); color: #000; }
+    .status-btn-mock--current.active[data-status="mastered"]   { background: var(--success); border-color: var(--success); }
+
+    /* Proposed modal colors */
+    .status-btn-mock--proposed.active[data-status="planned"]    { background: var(--status-planned-fg); border-color: var(--status-planned-fg); }
+    .status-btn-mock--proposed.active[data-status="developing"] { background: var(--status-developing-fg); border-color: var(--status-developing-fg); }
+    .status-btn-mock--proposed.active[data-status="mastered"]   { background: var(--status-mastered-fg); border-color: var(--status-mastered-fg); }
+
+    /* Home CTA compare */
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .cta-current {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #00AEEF;
+      color: #fff;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    /* Unified filter chip (proposed) */
+    .filter-chip-unified {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      cursor: default;
+    }
+
+    .filter-chip-unified.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+
+    .filter-chip-unified.active::after {
+      content: "✓";
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .filter-chip-unified--sidebar {
+      border-radius: var(--radius-md);
+      width: 100%;
+      justify-content: flex-start;
+      border-left: 3px solid transparent;
+    }
+
+    .filter-chip-unified--sidebar.active {
+      box-shadow: none;
+      border-left-color: var(--accent);
+    }
+
+    .filter-chip-unified--sidebar.active::after { content: none; }
+
+    .scope-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .scope-table th,
+    .scope-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-soft);
+      text-align: left;
+    }
+
+    .scope-table th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      background: var(--bg-card-soft);
+    }
+
+    .note-box {
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .note-box strong { color: var(--text-primary); }
+  </style>
+</head>
+<body class="proposed-tokens">
+  <div class="preview-shell">
+    <div class="preview-banner">
+      <h1>Visual Consistency Preview</h1>
+      <p>
+        Interactive mockup of the proposed unification — <strong>no production code has been changed</strong>.
+        Toggle light/dark to evaluate both themes. Compare “Before (today)” panels against “After (proposed)”
+        before deciding whether to implement.
+      </p>
+      <div class="preview-toolbar">
+        <button type="button" class="btn btn-secondary btn-sm" id="themeToggle">Switch to Light Theme</button>
+        <span style="font-size:13px;color:var(--text-muted)">Open this file in a browser while logged out — it is standalone.</span>
+      </div>
+    </div>
+
+    <!-- §1 Tokens -->
+    <section class="preview-section">
+      <div class="preview-section__title">Proposed tokens</div>
+      <h2 class="preview-section__heading">Canonical status + brand colors</h2>
+      <p class="preview-section__desc">
+        Three new CSS custom properties per status (foreground, soft background, border) used everywhere.
+        Interactive UI keeps <code>--accent</code> (#3b82f6); hero titles keep the Cisco gradient as
+        <code>--brand-gradient</code> only — not mixed into status semantics.
+      </p>
+      <div class="token-grid">
+        <div class="token-swatch">
+          <div class="token-swatch__color" style="background:#94a3b8"></div>
+          <div class="token-swatch__meta">
+            <div class="token-swatch__name">Planned</div>
+            <div class="token-swatch__hex">slate · queued</div>
+          </div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-swatch__color" style="background:#00AEEF"></div>
+          <div class="token-swatch__meta">
+            <div class="token-swatch__name">Developing</div>
+            <div class="token-swatch__hex">Cisco cyan · active</div>
+          </div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-swatch__color" style="background:#22c55e"></div>
+          <div class="token-swatch__meta">
+            <div class="token-swatch__name">Mastered</div>
+            <div class="token-swatch__hex">green · complete</div>
+          </div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-swatch__color" style="background:linear-gradient(90deg,#00C6FF,#0072FF)"></div>
+          <div class="token-swatch__meta">
+            <div class="token-swatch__name">Brand gradient</div>
+            <div class="token-swatch__hex">hero titles only</div>
+          </div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-swatch__color" style="background:#3b82f6"></div>
+          <div class="token-swatch__meta">
+            <div class="token-swatch__name">Accent (unchanged)</div>
+            <div class="token-swatch__hex">buttons · focus · links</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- §2 Status chips cross-surface -->
+    <section class="preview-section">
+      <div class="preview-section__title">Status colors</div>
+      <h2 class="preview-section__heading">Same status → same color everywhere</h2>
+      <p class="preview-section__desc">
+        Today, “Planned” is amber on the skill modal, cyan on Skill Explorer, and blue on the My Plan overview panel.
+        After unification, all surfaces use the same chip.
+      </p>
+      <div class="compare-grid">
+        <div class="compare-panel">
+          <div class="compare-panel__label compare-panel__label--before">Before — inconsistent per surface</div>
+          <div class="compare-panel__body">
+            <div class="chip-row">
+              <div class="chip-row__label">Skill modal</div>
+              <span class="status-chip chip-current--modal-plan">Planned</span>
+              <span class="status-chip chip-current--modal-dev">Developing</span>
+              <span class="status-chip chip-current--modal-dev" style="background:rgba(34,197,94,.15);color:#22c55e;border-color:rgba(34,197,94,.35)">Mastered</span>
+            </div>
+            <div class="chip-row">
+              <div class="chip-row__label">Skill Explorer</div>
+              <span class="status-chip chip-current--explorer-plan">Planned</span>
+              <span class="status-chip chip-current--explorer-dev">Developing</span>
+              <span class="status-chip" style="background:rgba(34,197,94,.15);color:#22c55e;border-color:rgba(34,197,94,.35)">Mastered</span>
+            </div>
+            <div class="chip-row">
+              <div class="chip-row__label">My Plan overview (sidebar panel)</div>
+              <span class="status-chip chip-current--overview-plan">Planned</span>
+              <span class="status-chip chip-current--overview-dev">Developing</span>
+              <span class="status-chip" style="background:rgba(34,197,94,.15);color:#22c55e;border-color:rgba(34,197,94,.35)">Mastered</span>
+            </div>
+          </div>
+        </div>
+        <div class="compare-panel">
+          <div class="compare-panel__label compare-panel__label--after">After — unified chips</div>
+          <div class="compare-panel__body">
+            <div class="chip-row">
+              <div class="chip-row__label">All surfaces (modal, explorer, my-team, overview…)</div>
+              <span class="status-chip status-chip--planned">Planned</span>
+              <span class="status-chip status-chip--developing">Developing</span>
+              <span class="status-chip status-chip--mastered">Mastered</span>
+            </div>
+            <div class="chip-row">
+              <div class="chip-row__label">Solid variant (modal active selector)</div>
+              <span class="status-chip status-chip--solid status-chip--planned">Planned</span>
+              <span class="status-chip status-chip--solid status-chip--developing">Developing</span>
+              <span class="status-chip status-chip--solid status-chip--mastered">Mastered</span>
+            </div>
+            <div class="note-box" style="margin-top:8px">
+              <strong>Aligns with</strong> My Plan section card icons (slate / cyan / green) and fixes the dead sidebar CSS selectors.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- §3 My Plan sidebar -->
+    <section class="preview-section">
+      <div class="preview-section__title">My Plan sidebar</div>
+      <h2 class="preview-section__heading">Per-section nav highlight</h2>
+      <p class="preview-section__desc">
+        CSS targets <code>in_development</code> / <code>in_pipeline</code> but JS sets
+        <code>developing</code> / <code>planned</code> / <code>mastered</code> — so every active item is generic blue today.
+      </p>
+      <div class="compare-grid">
+        <div class="compare-panel">
+          <div class="compare-panel__label compare-panel__label--before">Before — all sections blue when active</div>
+          <div class="compare-panel__body">
+            <nav class="sidebar-mock">
+              <button type="button" class="nav-btn-mock nav-btn-mock--current active" data-status="developing">
+                <span class="nav-icon nav-icon--developing"></span> Developing <span class="count">13</span>
+              </button>
+              <button type="button" class="nav-btn-mock nav-btn-mock--current" data-status="planned">
+                <span class="nav-icon nav-icon--planned"></span> Planned <span class="count">1</span>
+              </button>
+              <button type="button" class="nav-btn-mock nav-btn-mock--current" data-status="mastered">
+                <span class="nav-icon nav-icon--mastered"></span> Mastered <span class="count">4</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+        <div class="compare-panel">
+          <div class="compare-panel__label compare-panel__label--after">After — status-colored active state</div>
+          <div class="compare-panel__body">
+            <nav class="sidebar-mock">
+              <button type="button" class="nav-btn-mock nav-btn-mock--proposed active" data-status="developing">
+                <span class="nav-icon nav-icon--developing"></span> Developing <span class="count">13</span>
+              </button>
+              <button type="button" class="nav-btn-mock nav-btn-mock--proposed" data-status="planned">
+                <span class="nav-icon nav-icon--planned"></span> Planned <span class="count">1</span>
+              </button>
+              <button type="button" class="nav-btn-mock nav-btn-mock--proposed" data-status="mastered">
+                <span class="nav-icon nav-icon--mastered"></span> Mastered <span class="count">4</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- §4 Modal status selector -->
+    <section class="preview-section">
+      <div class="preview-section__title">Skill detail modal</div>
+      <h2 class="preview-section__heading">Status selector buttons</h2>
+      <div class="compare-grid">
+        <div class="compare-panel">
+          <div class="compare-panel__label compare-panel__label--before">Before — Developing = blue accent</div>
+          <div class="compare-panel__body">
+            <div class="status-selector">
+              <span class="status-btn-mock status-btn-mock--current" data-status="planned">Planned</span>
+              <span class="status-btn-mock status-btn-mock--current active" data-status="developing">Developing</span>
+              <span class="status-btn-mock status-btn-mock--current" data-status="mastered">Mastered</span>
+            </div>
+          </div>
+        </div>
+        <div class="compare-panel">
+          <div class="compare-panel__label compare-panel__label--after">After — matches chips + card icons</div>
+          <div class="compare-panel__body">
+            <div class="status-selector">
+              <span class="status-btn-mock status-btn-mock--proposed" data-status="planned">Planned</span>
+              <span class="status-btn-mock status-btn-mock--proposed active" data-status="developing">Developing</span>
+              <span class="status-btn-mock status-btn-mock--proposed" data-status="mastered">Mastered</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- §5 Home CTA -->
+    <section class="preview-section">
+      <div class="preview-section__title">Home page</div>
+      <h2 class="preview-section__heading">CTA buttons join the global system</h2>
+      <p class="preview-section__desc">
+        Home currently uses inline flat cyan rectangles (8px radius). Proposed: reuse
+        <code>.btn.btn-primary</code> pill buttons from the rest of the app. Hero gradient title stays.
+      </p>
+      <div class="compare-grid">
+        <div class="compare-panel">
+          <div class="compare-panel__label compare-panel__label--before">Before — one-off inline CTA</div>
+          <div class="compare-panel__body">
+            <div class="cta-row">
+              <a class="cta-current" href="#">Go to My Plan →</a>
+            </div>
+          </div>
+        </div>
+        <div class="compare-panel">
+          <div class="compare-panel__label compare-panel__label--after">After — shared .btn-primary</div>
+          <div class="compare-panel__body">
+            <div class="cta-row">
+              <a class="btn btn-primary" href="#">Go to My Plan →</a>
+              <a class="btn btn-secondary" href="#">Browse Catalog</a>
+            </div>
+            <p style="margin-top:14px;font-size:14px;color:var(--text-muted)">
+              Hero title unchanged:
+              <span class="mp-title-gradient" style="font-weight:700">for TAC Engineers</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- §6 Filter chips -->
+    <section class="preview-section">
+      <div class="preview-section__title">Filter chips</div>
+      <h2 class="preview-section__heading">Two layouts, one active-state language</h2>
+      <p class="preview-section__desc">
+        Horizontal pickers (Catalog edit, Library discover) use accent-soft + ✓.
+        Sidebar filters (My Plan categories) use left accent bar without checkmark.
+        Shape differs by context; active color language is the same.
+      </p>
+      <div class="compare-grid">
+        <div class="compare-panel">
+          <div class="compare-panel__label compare-panel__label--before">Before — 5 different active styles</div>
+          <div class="compare-panel__body">
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Catalog category picker vs My Plan sidebar vs shift buttons — all feel like different components.</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+              <span class="mp-filter-chip active">Core</span>
+              <span class="mp-filter-chip">Advanced</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;max-width:200px">
+              <span class="mp-filter-chip mp-filter-chips--inline active" style="display:flex;min-width:150px">Core</span>
+              <span class="mp-filter-chip mp-filter-chips--inline" style="display:flex;min-width:150px">Advanced</span>
+            </div>
+          </div>
+        </div>
+        <div class="compare-panel">
+          <div class="compare-panel__label compare-panel__label--after">After — unified tokens, two layouts</div>
+          <div class="compare-panel__body">
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Horizontal (with ✓)</p>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+              <span class="filter-chip-unified active">Core</span>
+              <span class="filter-chip-unified">Advanced</span>
+              <span class="filter-chip-unified">Foundational</span>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Sidebar (left bar, no ✓)</p>
+            <div style="display:flex;flex-direction:column;gap:6px;max-width:200px">
+              <span class="filter-chip-unified filter-chip-unified--sidebar active">Core</span>
+              <span class="filter-chip-unified filter-chip-unified--sidebar">Advanced</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- §7 Scope -->
+    <section class="preview-section">
+      <div class="preview-section__title">Implementation scope</div>
+      <h2 class="preview-section__heading">What would change if you approve</h2>
+      <table class="scope-table">
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Files touched (approx.)</th>
+            <th>Risk</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Status tokens + CSS selectors fix</td>
+            <td><code>style.css</code>, <code>skill-explorer.js</code>, <code>my-plan.js</code>, <code>my-team.js</code></td>
+            <td>Low — mostly token swap</td>
+          </tr>
+          <tr>
+            <td>Home CTA → .btn-primary</td>
+            <td><code>home.js</code></td>
+            <td>Low</td>
+          </tr>
+          <tr>
+            <td>Filter chip CSS consolidation</td>
+            <td><code>style.css</code>, <code>catalog.js</code> (class names only)</td>
+            <td>Medium — visual QA on Catalog + My Plan</td>
+          </tr>
+          <tr>
+            <td>Define <code>--bg-hover</code></td>
+            <td><code>style.css</code></td>
+            <td>Low</td>
+          </tr>
+          <tr>
+            <td>Stats typography normalization</td>
+            <td><code>style.css</code>, optional page tweaks</td>
+            <td>Low — cosmetic</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note-box" style="margin-top:16px">
+        <strong>Not in this proposal:</strong> modal background unification, Settings page width (1200→1400),
+        or removing inline proficiency colors on progress rings — those can be a follow-up pass.
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const btn = document.getElementById('themeToggle');
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      root.setAttribute('data-theme', next);
+      btn.textContent = next === 'light' ? 'Switch to Dark Theme' : 'Switch to Light Theme';
+    });
+  </script>
+</body>
+</html>

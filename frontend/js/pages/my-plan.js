@@ -6,6 +6,8 @@ import { showModal, showConfirm } from '../components/modal.js';
 import { el } from '../utils/dom.js';
 import { getSkillIconSVG } from '../components/icons.js';
 import { openLibraryModal } from '../components/library-modal.js';
+import { openReportingModal } from './my-plan-reports.js?v=3';
+import { renderDescription } from '../components/markdown-editor.js';
 
 let _container = null;
 let _engineerId = null;
@@ -230,7 +232,11 @@ function buildPageShell(container, params) {
 
   const reportBtn = el('button', { className: 'btn btn-secondary btn--sidebar' });
   reportBtn.innerHTML = SVG_ICONS.fileText + '<span>Reporting</span>';
-  reportBtn.addEventListener('click', openReportingModal);
+  reportBtn.addEventListener('click', () => {
+    const user = Store.get('user');
+    const name = _planData?.engineer_name || user?.name || '';
+    openReportingModal(_engineerId, name);
+  });
   actionContainer.appendChild(reportBtn);
 
   sidebar.appendChild(actionContainer);
@@ -1005,168 +1011,111 @@ function showCardActionsMenu(e, planSkill, currentStatus) {
 function openEditSkillModal(planSkill) {
   const root = document.getElementById('modalRoot');
 
+  const LEVEL_CONFIG = [
+    { key: 'education', level: 1, label: 'Education' },
+    { key: 'exposure', level: 2, label: 'Exposure' },
+    { key: 'experience', level: 3, label: 'Experience' },
+  ];
+  const LEVEL_MAP = { 1: 'education', 2: 'exposure', 3: 'experience' };
+  const FOCUS_ORDER = ['education', 'exposure', 'experience'];
+  const FOCUS_TO_LEVEL = { education: 1, exposure: 2, experience: 3 };
+  const FOCUS_TREE_DEFAULTS = {
+    education: {
+      education: { visible: true, expanded: true, canToggle: false, isFocus: true },
+      exposure: { visible: false },
+      experience: { visible: false },
+    },
+    exposure: {
+      education: { visible: true, expanded: false, canToggle: true, isFocus: false },
+      exposure: { visible: true, expanded: true, canToggle: false, isFocus: true },
+      experience: { visible: false },
+    },
+    experience: {
+      education: { visible: true, expanded: false, canToggle: true, isFocus: false },
+      exposure: { visible: true, expanded: false, canToggle: true, isFocus: false },
+      experience: { visible: true, expanded: true, canToggle: false, isFocus: true },
+    },
+  };
+
   const overlay = el('div', { className: 'modal-overlay' });
-  const modal = el('div', { className: 'modal skill-detail-modal mp-plan-modal' });
+  const modal = el('div', { className: 'modal skill-detail-modal mp-plan-modal sdm-plan-modal' });
   modal.setAttribute('role', 'dialog');
   modal.setAttribute('aria-modal', 'true');
   modal.setAttribute('aria-label', `${planSkill.skill_name || 'Skill'} — Details`);
 
-  const header = el('div', { className: 'modal-header' });
-  const titleEl = el('h3', { className: 'modal-title' });
+  const body = el('div', { className: 'modal-body sdm-modal-body' });
+
+  /* ── Header ─────────────────────────────────────────────────────────── */
+  const headerBlock = el('header', { className: 'sdm-header' });
+  const headerTop = el('div', { className: 'sdm-header__top' });
+  const titleEl = el('h1', { className: 'sdm-header__title' });
   titleEl.textContent = planSkill.skill_name || 'Skill Details';
-  const closeBtn = el('button', { className: 'modal-close', 'aria-label': 'Close' });
+
+  const headerActions = el('div', { className: 'sdm-header__actions' });
+
+  const resyncBtn = el('button', {
+    className: 'btn btn-secondary btn-sm sdm-resync-btn',
+    'aria-label': 'Re-sync from catalog',
+    title: 'Re-sync hidden items from catalog',
+  });
+  resyncBtn.innerHTML = SVG_ICONS.refresh;
+
+  const closeBtn = el('button', { className: 'sdm-close', 'aria-label': 'Close' });
   closeBtn.textContent = '\u2715';
-  header.appendChild(titleEl);
-  header.appendChild(closeBtn);
-  modal.appendChild(header);
 
-  const body = el('div', { className: 'modal-body' });
+  headerActions.appendChild(resyncBtn);
+  headerActions.appendChild(closeBtn);
+  headerTop.appendChild(titleEl);
+  headerTop.appendChild(headerActions);
+  headerBlock.appendChild(headerTop);
 
-  const topRow = el('div', { className: 'mp-modal-top-row' });
-
-  const formCol = el('div', { className: 'mp-modal-form-col' });
-
-  const statusGroup = el('div', { className: 'form-group' });
-  const statusLabel = el('label', { className: 'form-label' });
-  statusLabel.textContent = 'Status';
-  const statusSelector = el('div', { className: 'mp-modal-status-selector' });
-  let currentStatus = planSkill.status;
-
-  const statusOptions = [
-    { value: 'planned', label: 'Planned', icon: SVG_ICONS.layers },
-    { value: 'developing', label: 'Developing', icon: SVG_ICONS.wrench },
-    { value: 'mastered', label: 'Mastered', icon: SVG_ICONS.shield },
-  ];
-
-  statusOptions.forEach(({ value, label, icon }) => {
-    const btn = el('button', { className: 'mp-modal-status-btn', 'data-status': value });
-    if (currentStatus === value) btn.classList.add('active');
-    
-    const iconSpan = el('span', { className: 'mp-icon' });
-    iconSpan.innerHTML = icon;
-    btn.appendChild(iconSpan);
-    
-    const textSpan = el('span');
-    textSpan.textContent = label;
-    btn.appendChild(textSpan);
-    
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      currentStatus = value;
-      statusSelector.querySelectorAll('.mp-modal-status-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.status === value);
-      });
+  if (planSkill.is_orphaned) {
+    const orphanBadge = el('div', {
+      className: 'mp-card__orphan-badge sdm-orphan-badge',
+      title: 'This skill was removed from the catalog. Your progress and training logs are preserved.',
     });
-    
-    statusSelector.appendChild(btn);
-  });
-  
-  statusGroup.appendChild(statusLabel);
-  statusGroup.appendChild(statusSelector);
-  formCol.appendChild(statusGroup);
+    orphanBadge.textContent = 'Personal — removed from catalog';
+    headerBlock.appendChild(orphanBadge);
+  }
 
-  const levelGroup = el('div', { className: 'form-group' });
-  const levelLabel = el('label', { className: 'form-label' });
-  levelLabel.textContent = 'Focus Area';
-  const levelSelector = el('div', { className: 'mp-modal-prof-selector' });
-  let currentLevel = planSkill.focus_area || '';
+  const notesText = (planSkill.notes || '').trim();
+  const notesEl = el('p', { className: 'sdm-notes' });
+  if (notesText) {
+    notesEl.textContent = notesText;
+  } else {
+    notesEl.classList.add('sdm-notes--empty');
+  }
 
-  const levelOptions = [
-    { value: 'education', label: 'Education', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
-    { value: 'exposure', label: 'Exposure', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
-    { value: 'experience', label: 'Experience', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
-  ];
+  const notesToggle = el('button', { type: 'button', className: 'sdm-notes-toggle' });
+  notesToggle.textContent = 'Show more';
+  notesToggle.hidden = true;
 
-  levelOptions.forEach(({ value, label, icon }) => {
-    const btn = el('button', { className: 'mp-modal-prof-btn', 'data-level': value });
-    if (currentLevel === value) btn.classList.add('active');
-    
-    if (icon) {
-      const iconSpan = el('span', { className: 'mp-icon' });
-      iconSpan.innerHTML = icon;
-      btn.appendChild(iconSpan);
+  let notesExpanded = false;
+  function updateNotesDisplay() {
+    if (!notesText) {
+      notesToggle.hidden = true;
+      return;
     }
-    
-    const textSpan = el('span');
-    textSpan.textContent = label;
-    btn.appendChild(textSpan);
-    
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (currentLevel === value) {
-        currentLevel = '';
-        btn.classList.remove('active');
-      } else {
-        currentLevel = value;
-        levelSelector.querySelectorAll('.mp-modal-prof-btn').forEach(b => {
-          b.classList.toggle('active', b.dataset.level === value);
-        });
-      }
-      refreshContent();
-    });
-    
-    levelSelector.appendChild(btn);
+    notesEl.textContent = notesText;
+    const lineOverflow = notesText.length > 140;
+    notesToggle.hidden = !lineOverflow;
+    notesToggle.classList.toggle('visible', lineOverflow);
+    notesToggle.textContent = notesExpanded ? 'Show less' : 'Show more';
+    notesEl.classList.toggle('sdm-notes--long', notesExpanded);
+  }
+  updateNotesDisplay();
+
+  notesToggle.addEventListener('click', () => {
+    notesExpanded = !notesExpanded;
+    updateNotesDisplay();
   });
 
-  levelGroup.appendChild(levelLabel);
-  levelGroup.appendChild(levelSelector);
-  formCol.appendChild(levelGroup);
-
-  const profLevelGroup = el('div', { className: 'form-group' });
-  const profLevelLabel = el('label', { className: 'form-label' });
-  profLevelLabel.textContent = 'Skill Proficiency Level';
-  const profLevelSelector = el('div', { className: 'mp-modal-proflevel-selector' });
-  let currentProfLevel = String(planSkill.proficiency_level ?? '');
-
-  const profLevelOptions = [
-    { value: '1', label: '1', tooltip: 'Beginner' },
-    { value: '2', label: '2', tooltip: 'Working Knowledge' },
-    { value: '3', label: '3', tooltip: 'Intermediate' },
-    { value: '4', label: '4', tooltip: 'Advanced' },
-    { value: '5', label: '5', tooltip: 'Expert' },
-  ];
-
-  profLevelOptions.forEach(({ value, label, tooltip }) => {
-    const btn = el('button', { className: 'mp-proflevel-btn', 'data-level': value, title: `${label} — ${tooltip}` });
-    if (currentProfLevel === value) btn.classList.add('active');
-    btn.textContent = label;
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (currentProfLevel === value) {
-        currentProfLevel = '';
-        btn.classList.remove('active');
-      } else {
-        currentProfLevel = value;
-        profLevelSelector.querySelectorAll('.mp-proflevel-btn').forEach(b => {
-          b.classList.toggle('active', b.dataset.level === value);
-        });
-      }
-    });
-    profLevelSelector.appendChild(btn);
-  });
-
-  profLevelGroup.appendChild(profLevelLabel);
-  profLevelGroup.appendChild(profLevelSelector);
-  formCol.appendChild(profLevelGroup);
-
-  const notesGroup = el('div', { className: 'form-group' });
-  const notesLabel = el('label', { className: 'form-label' });
-  notesLabel.textContent = 'Notes';
-  const notesTextarea = el('textarea', {
-    placeholder: 'Add notes, resources, or progress comments...',
-    rows: '3',
-  });
-  notesTextarea.value = planSkill.notes || '';
-  notesGroup.appendChild(notesLabel);
-  notesGroup.appendChild(notesTextarea);
-  formCol.appendChild(notesGroup);
+  headerBlock.appendChild(notesEl);
+  headerBlock.appendChild(notesToggle);
 
   const categories = Array.isArray(planSkill.categories) ? planSkill.categories : [];
   if (categories.length) {
-    const catGroup = el('div', { className: 'form-group mp-modal-categories' });
-    const catLabel = el('label', { className: 'form-label' });
-    catLabel.textContent = 'Categories';
-    const catChips = el('div', { className: 'mp-modal-category-chips' });
+    const catRow = el('div', { className: 'sdm-header-categories' });
     const editIconMap = {
       foundational: 'seedling',
       core: 'diamond',
@@ -1176,52 +1125,735 @@ function openEditSkillModal(planSkill) {
     };
     categories.forEach(cat => {
       const chip = el('span', { className: 'mp-modal-category-chip' });
-      const iconName = editIconMap[cat.slug] || 'layers';
-      const ic = svgIcon(iconName, '14px');
+      const ic = svgIcon(editIconMap[cat.slug] || 'layers', '14px');
       ic.classList.add('mp-modal-category-chip__icon');
       chip.appendChild(ic);
       const name = el('span', { className: 'mp-modal-category-chip__name' });
       name.textContent = cat.name;
       chip.appendChild(name);
-      catChips.appendChild(chip);
+      catRow.appendChild(chip);
     });
-    catGroup.appendChild(catLabel);
-    catGroup.appendChild(catChips);
-    formCol.appendChild(catGroup);
+    headerBlock.appendChild(catRow);
   }
 
-  topRow.appendChild(formCol);
+  /* ── Compact controls row ───────────────────────────────────────────── */
+  const controlsRow = el('div', { className: 'sdm-controls' });
 
-  const overallProgressEl = el('div', { className: 'mp-modal-overall-progress' });
-  const overallLabel = el('div', { className: 'mp-modal-progress-label' });
-  overallLabel.textContent = 'Overall Progress';
-  const overallBarWrap = el('div', { className: 'mp-modal-progress-bar-wrap' });
-  const overallBar = el('div', { className: 'mp-modal-progress-bar' });
-  const overallText = el('span', { className: 'mp-modal-progress-text' });
-  overallText.textContent = '—';
-  overallBarWrap.appendChild(overallBar);
-  overallProgressEl.appendChild(overallLabel);
-  overallProgressEl.appendChild(overallBarWrap);
-  overallProgressEl.appendChild(overallText);
-  formCol.appendChild(overallProgressEl);
+  const statusWrap = el('div', { className: 'sdm-control' });
+  const statusLabel = el('label', { for: 'sdm-status-select' });
+  statusLabel.textContent = 'Status';
+  const statusSelect = el('select', { id: 'sdm-status-select' });
+  [
+    { value: 'planned', label: 'Planned' },
+    { value: 'developing', label: 'Developing' },
+    { value: 'mastered', label: 'Mastered' },
+  ].forEach(({ value, label }) => {
+    const opt = el('option', { value });
+    opt.textContent = label;
+    statusSelect.appendChild(opt);
+  });
+  statusWrap.appendChild(statusLabel);
+  statusWrap.appendChild(statusSelect);
 
-  const contentCol = el('div', { className: 'mp-modal-content-col' });
+  const focusWrap = el('div', { className: 'sdm-control' });
+  const focusLabel = el('label', { for: 'sdm-focus-select' });
+  focusLabel.textContent = 'Focus area';
+  const focusSelect = el('select', { id: 'sdm-focus-select' });
+  LEVEL_CONFIG.forEach(({ key, label }) => {
+    const opt = el('option', { value: key });
+    opt.textContent = label;
+    focusSelect.appendChild(opt);
+  });
+  focusWrap.appendChild(focusLabel);
+  focusWrap.appendChild(focusSelect);
 
-  const LEVEL_CONFIG = [
-    { key: 'education', level: 1, label: 'Education', chipClass: 'chip-education', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
-    { key: 'exposure', level: 2, label: 'Exposure', chipClass: 'chip-exposure', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
-    { key: 'experience', level: 3, label: 'Experience', chipClass: 'chip-experience', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
-  ];
+  const profWrap = el('div', { className: 'sdm-control' });
+  const profLabel = el('label', { for: 'sdm-prof-select' });
+  profLabel.textContent = 'Skill proficiency';
+  const profSelect = el('select', { id: 'sdm-prof-select' });
+  const profEmpty = el('option', { value: '' });
+  profEmpty.textContent = 'Not set';
+  profSelect.appendChild(profEmpty);
+  [
+    { value: '1', label: '1 — Beginner' },
+    { value: '2', label: '2 — Working knowledge' },
+    { value: '3', label: '3 — Intermediate' },
+    { value: '4', label: '4 — Advanced' },
+    { value: '5', label: '5 — Expert' },
+  ].forEach(({ value, label }) => {
+    const opt = el('option', { value });
+    opt.textContent = label;
+    profSelect.appendChild(opt);
+  });
+  profWrap.appendChild(profLabel);
+  profWrap.appendChild(profSelect);
 
-  const LEVEL_MAP = { 1: 'education', 2: 'exposure', 3: 'experience' };
+  const progressWrap = el('div', { className: 'sdm-control sdm-controls__progress' });
+  const progressLabel = el('label');
+  progressLabel.textContent = 'Overall progress';
+  const progressRow = el('div', { className: 'sdm-progress-row' });
+  const progressBarWrap = el('div', { className: 'sdm-progress-bar-wrap' });
+  const progressBar = el('div', { className: 'sdm-progress-bar' });
+  const progressText = el('span', { className: 'sdm-progress-text' });
+  progressText.textContent = '—';
+  progressBarWrap.appendChild(progressBar);
+  progressRow.appendChild(progressBarWrap);
+  progressRow.appendChild(progressText);
+  progressWrap.appendChild(progressLabel);
+  progressWrap.appendChild(progressRow);
 
-  const contentTitle = el('div', { className: 'mp-modal-content-title' });
-  contentTitle.textContent = 'Learning Content';
+  controlsRow.appendChild(statusWrap);
+  controlsRow.appendChild(focusWrap);
+  controlsRow.appendChild(profWrap);
+  controlsRow.appendChild(progressWrap);
+  headerBlock.appendChild(controlsRow);
+  body.appendChild(headerBlock);
 
-  const resyncBtn = el('button', { className: 'btn btn-secondary btn-sm mp-resync-btn', 'aria-label': 'Re-sync from catalog', title: 'Re-sync hidden items from catalog' });
-  resyncBtn.innerHTML = SVG_ICONS.refresh;
+  /* ── Master–detail main area ────────────────────────────────────────── */
+  const mainArea = el('div', { className: 'sdm-main' });
+
+  const listCol = el('div', { className: 'sdm-list-col' });
+  const listScroll = el('div', { className: 'sdm-list-scroll' });
+  const listFooter = el('div', { className: 'sdm-list-footer' });
+  const addMyItemBtn = el('button', { type: 'button', className: 'btn btn-secondary sdm-add-btn' });
+  addMyItemBtn.textContent = '+ Add My Item';
+  listFooter.appendChild(addMyItemBtn);
+  listCol.appendChild(listScroll);
+  listCol.appendChild(listFooter);
+
+  const readerCol = el('div', { className: 'sdm-reader-col' });
+  const readerToolbar = el('div', { className: 'sdm-reader-toolbar' });
+  const readerToolbarLeft = el('div', { className: 'sdm-reader-toolbar__left' });
+
+  const completeBtn = el('button', { type: 'button', className: 'sdm-complete-btn' });
+  const completeIcon = el('span', { className: 'sdm-complete-btn__icon' });
+  completeIcon.innerHTML = SVG_ICONS.circle;
+  const completeLabel = el('span');
+  completeLabel.textContent = 'Mark complete';
+  completeBtn.appendChild(completeIcon);
+  completeBtn.appendChild(completeLabel);
+  readerToolbarLeft.appendChild(completeBtn);
+
+  const readerActions = el('div', { className: 'sdm-reader-actions' });
+  readerToolbarLeft.appendChild(readerActions);
+
+  const readerMeta = el('div', { className: 'sdm-reader-meta' });
+  readerToolbar.appendChild(readerToolbarLeft);
+  readerToolbar.appendChild(readerMeta);
+
+  const readerScroll = el('div', { className: 'sdm-reader-scroll' });
+  const readerContent = el('div', { className: 'sdm-reader-content' });
+  readerScroll.appendChild(readerContent);
+  readerCol.appendChild(readerToolbar);
+  readerCol.appendChild(readerScroll);
+
+  mainArea.appendChild(listCol);
+  mainArea.appendChild(readerCol);
+  body.appendChild(mainArea);
+
+  /* ── Training log strip ─────────────────────────────────────────────── */
+  const logPanel = el('div', { className: 'sdm-log' });
+  const logToggle = el('button', { type: 'button', className: 'sdm-log__toggle', 'aria-expanded': 'false' });
+  const logTitle = el('span', { className: 'sdm-log__title' });
+  logTitle.textContent = 'Training log';
+  const logCountBadge = el('span', { className: 'sdm-log__count' });
+  const logChevron = el('span', { className: 'sdm-log__chevron', 'aria-hidden': 'true' });
+  logChevron.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>';
+  logToggle.appendChild(logTitle);
+  logToggle.appendChild(logCountBadge);
+  logToggle.appendChild(logChevron);
+
+  const logBody = el('div', { className: 'sdm-log__body' });
+  const logListEl = el('div', { className: 'sdm-log__list' });
+  logBody.appendChild(logListEl);
+  logPanel.appendChild(logToggle);
+  logPanel.appendChild(logBody);
+  body.appendChild(logPanel);
+
+  modal.appendChild(body);
+
+  const footer = el('div', { className: 'modal-footer sdm-footer' });
+  const footerStatus = el('span', { className: 'sdm-footer__status' });
+  footerStatus.textContent = 'No pending changes';
+  const discardBtn = el('button', { type: 'button', className: 'btn btn-secondary' });
+  discardBtn.textContent = 'Discard';
+  const saveBtn = el('button', { type: 'button', className: 'btn btn-primary' });
+  saveBtn.textContent = 'Save skill details';
+  saveBtn.disabled = true;
+  footer.appendChild(footerStatus);
+  footer.appendChild(discardBtn);
+  footer.appendChild(saveBtn);
+  modal.appendChild(footer);
+
+  overlay.appendChild(modal);
+  root.appendChild(overlay);
+
+  requestAnimationFrame(() => {
+    overlay.classList.add('open');
+    closeBtn.focus();
+  });
+
+  /* ── State ──────────────────────────────────────────────────────────── */
+  let allContentItems = [];
+  let selectedItemKey = null;
+  let visibleLogCount = 5;
+  let contentLoading = true;
+  let manualExpanded = {};
+
+  const saved = {
+    status: planSkill.status,
+    focus: planSkill.focus_area || 'education',
+    prof: String(planSkill.proficiency_level ?? ''),
+    completions: {},
+  };
+
+  const pending = {
+    status: saved.status,
+    focus: saved.focus,
+    prof: saved.prof,
+    completions: {},
+  };
+
+  statusSelect.value = pending.status;
+  focusSelect.value = pending.focus;
+  profSelect.value = pending.prof;
+
+  function itemKey(item) {
+    return `${item.is_user_content ? 'u' : 'c'}-${item.id}`;
+  }
+
+  function resetTreeForFocus() {
+    manualExpanded = {};
+  }
+
+  function getSectionTreeState(sectionKey) {
+    const def = FOCUS_TREE_DEFAULTS[pending.focus]?.[sectionKey];
+    if (!def?.visible) return null;
+    const expanded = def.canToggle
+      ? (manualExpanded[sectionKey] ?? def.expanded)
+      : def.expanded;
+    return { ...def, expanded };
+  }
+
+  function visibleSectionKeys() {
+    return FOCUS_ORDER.filter(key => getSectionTreeState(key));
+  }
+
+  function visibleItems() {
+    return allContentItems
+      .filter(item => visibleSectionKeys().includes(LEVEL_MAP[item.level]))
+      .slice()
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || a.id - b.id);
+  }
+
+  function selectableItems() {
+    return allContentItems
+      .filter(item => {
+        const state = getSectionTreeState(LEVEL_MAP[item.level]);
+        return state && state.expanded;
+      })
+      .slice()
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || a.id - b.id);
+  }
+
+  function ensureSelectedItemVisible() {
+    if (selectedItemKey && selectableItems().some(i => itemKey(i) === selectedItemKey)) {
+      return;
+    }
+    const first = selectableItems()[0];
+    selectedItemKey = first ? itemKey(first) : null;
+  }
+
+  function isCompletionDirty(key) {
+    return pending.completions[key] !== saved.completions[key];
+  }
+
+  function isDirty() {
+    if (pending.status !== saved.status) return true;
+    if (pending.focus !== saved.focus) return true;
+    if (pending.prof !== saved.prof) return true;
+    return allContentItems.some(item => isCompletionDirty(itemKey(item)));
+  }
+
+  function updateDirtyUI() {
+    const dirty = isDirty();
+    modal.classList.toggle('dirty', dirty);
+    saveBtn.disabled = !dirty;
+    footerStatus.textContent = dirty
+      ? 'Pending changes — click Save skill details to apply'
+      : 'No pending changes';
+
+    statusSelect.classList.toggle('pending', pending.status !== saved.status);
+    focusSelect.classList.toggle('pending', pending.focus !== saved.focus);
+    profSelect.classList.toggle('pending', pending.prof !== saved.prof);
+  }
+
+  function updateProgress() {
+    const items = visibleItems();
+    const done = items.filter(item => pending.completions[itemKey(item)]).length;
+    const total = items.length;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+    progressBar.style.width = `${pct}%`;
+    progressText.textContent = total > 0 ? `${done} / ${total}` : '—';
+  }
+
+  function getSelectedItem() {
+    if (!selectedItemKey) return null;
+    return allContentItems.find(item => itemKey(item) === selectedItemKey) || null;
+  }
+
+  function renderList() {
+    listScroll.innerHTML = '';
+
+    if (contentLoading) {
+      const sk = el('div', { className: 'skeleton-list' });
+      for (let i = 0; i < 4; i++) sk.appendChild(el('div', { className: 'skeleton skeleton-row' }));
+      listScroll.appendChild(sk);
+      return;
+    }
+
+    const itemsBySection = {};
+    visibleSectionKeys().forEach(key => { itemsBySection[key] = []; });
+    visibleItems().forEach(item => {
+      const key = LEVEL_MAP[item.level];
+      if (itemsBySection[key]) itemsBySection[key].push(item);
+    });
+
+    let hasAny = false;
+    visibleSectionKeys().forEach(secKey => {
+      const items = itemsBySection[secKey];
+      if (!items.length) return;
+      hasAny = true;
+
+      const state = getSectionTreeState(secKey);
+      const cfg = LEVEL_CONFIG.find(l => l.key === secKey);
+      const sectionClasses = ['sdm-tree-section'];
+      if (!state.expanded) sectionClasses.push('sdm-tree-section--collapsed');
+      if (!state.canToggle) sectionClasses.push('sdm-tree-section--locked');
+      if (state.isFocus) sectionClasses.push('sdm-tree-section--focus');
+
+      const section = el('div', { className: sectionClasses.join(' ') });
+
+      const hdr = el('button', {
+        type: 'button',
+        className: 'sdm-tree-section__header',
+        'aria-expanded': String(state.expanded),
+      });
+      const toggleGlyph = el('span', { className: 'sdm-tree-section__toggle', 'aria-hidden': 'true' });
+      toggleGlyph.textContent = state.expanded ? '\u2212' : '+';
+      const hdrLabel = el('span', { className: 'sdm-tree-section__label' });
+      hdrLabel.textContent = cfg.label;
+      const done = items.filter(i => pending.completions[itemKey(i)]).length;
+      const hdrCount = el('span', { className: 'sdm-tree-section__count' });
+      hdrCount.textContent = `${done}/${items.length}`;
+      hdr.appendChild(toggleGlyph);
+      hdr.appendChild(hdrLabel);
+      hdr.appendChild(hdrCount);
+
+      hdr.addEventListener('click', () => {
+        const current = getSectionTreeState(secKey);
+        if (!current?.canToggle) return;
+        manualExpanded[secKey] = !current.expanded;
+        ensureSelectedItemVisible();
+        renderList();
+        renderReader();
+      });
+
+      section.appendChild(hdr);
+
+      const body = el('div', { className: 'sdm-tree-section__body' });
+
+      items.forEach(item => {
+        const key = itemKey(item);
+        const row = el('div', {
+          className: 'sdm-list-item'
+            + (key === selectedItemKey ? ' active' : '')
+            + (isCompletionDirty(key) ? ' pending-complete' : '')
+            + (pending.completions[key] ? ' completed' : ''),
+        });
+
+        const check = el('button', {
+          type: 'button',
+          className: 'sdm-list-check' + (pending.completions[key] ? ' done' : ''),
+          'aria-label': 'Toggle completion (pending until save)',
+        });
+        check.innerHTML = pending.completions[key] ? SVG_ICONS.circleCheck : SVG_ICONS.circle;
+        check.addEventListener('click', (e) => {
+          e.stopPropagation();
+          pending.completions[key] = !pending.completions[key];
+          updateProgress();
+          renderList();
+          if (selectedItemKey === key) renderReader();
+          updateDirtyUI();
+        });
+
+        const textWrap = el('button', { type: 'button', className: 'sdm-list-item__body' });
+        const titleSpan = el('span', { className: 'sdm-list-item__title' });
+        titleSpan.textContent = item.title || 'Untitled';
+        const metaSpan = el('span', { className: 'sdm-list-item__meta' });
+        const metaParts = [item.type || 'resource'];
+        if (item.is_user_content) metaParts.push('My item');
+        metaSpan.textContent = metaParts.join(' · ');
+        textWrap.appendChild(titleSpan);
+        textWrap.appendChild(metaSpan);
+        textWrap.addEventListener('click', () => {
+          selectedItemKey = key;
+          renderList();
+          renderReader();
+        });
+
+        row.appendChild(check);
+        row.appendChild(textWrap);
+        body.appendChild(row);
+      });
+
+      section.appendChild(body);
+      listScroll.appendChild(section);
+    });
+
+    if (!hasAny) {
+      const empty = el('div', { className: 'empty-state empty-state--compact' });
+      empty.textContent = 'No content items for the selected focus area.';
+      listScroll.appendChild(empty);
+    }
+
+    ensureSelectedItemVisible();
+  }
+
+  function renderReaderActions(item) {
+    readerActions.innerHTML = '';
+    if (!item) return;
+
+    const isUserItem = !!item.is_user_content;
+
+    if (isUserItem) {
+      const editBtn = el('button', {
+        type: 'button',
+        className: 'btn btn-secondary btn-sm',
+        'aria-label': 'Edit item',
+        title: 'Edit',
+      });
+      editBtn.innerHTML = SVG_ICONS.pencil;
+      editBtn.addEventListener('click', () => {
+        const levelKey = LEVEL_MAP[item.level] || 'education';
+        openLibraryModal({ mode: 'edit', item, planSkill, engineerId: _engineerId, levelKey }, () => refreshContent());
+      });
+
+      const delBtn = el('button', {
+        type: 'button',
+        className: 'btn btn-danger btn-sm',
+        'aria-label': 'Delete item',
+        title: 'Delete',
+      });
+      delBtn.textContent = '\u2715';
+      delBtn.addEventListener('click', async () => {
+        const confirmed = await showConfirm(`Delete "${item.title}"? This cannot be undone.`, true);
+        if (!confirmed) return;
+        try {
+          await api.del(`/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${item.id}`);
+          showToast('Item deleted', 'success');
+          refreshContent();
+        } catch (err) {
+          showToast(err.message || 'Failed to delete item', 'error');
+        }
+      });
+
+      readerActions.appendChild(editBtn);
+      readerActions.appendChild(delBtn);
+    } else {
+      const notesBtn = el('button', { type: 'button', className: 'btn btn-secondary btn-sm' });
+      notesBtn.textContent = item.has_override ? 'Edit My Notes' : 'Add My Notes';
+      notesBtn.addEventListener('click', () => {
+        openOverrideEditor(item, planSkill, () => refreshContent());
+      });
+
+      const hideBtn = el('button', {
+        type: 'button',
+        className: 'btn btn-secondary btn-sm',
+        'aria-label': 'Hide item',
+        title: 'Hide from my view',
+      });
+      hideBtn.textContent = '\u2715';
+      hideBtn.addEventListener('click', async () => {
+        const confirmed = await showConfirm(
+          `Hide "${item.title}" from your view? You can restore it later with the re-sync button.`,
+          true,
+        );
+        if (!confirmed) return;
+        hideBtn.disabled = true;
+        try {
+          await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/content/${item.id}/hide`, {});
+          showToast('Item hidden', 'success');
+          refreshContent();
+        } catch (err) {
+          showToast(err.message || 'Failed to hide item', 'error');
+        } finally {
+          hideBtn.disabled = false;
+        }
+      });
+
+      readerActions.appendChild(notesBtn);
+      readerActions.appendChild(hideBtn);
+    }
+  }
+
+  function renderReader() {
+    readerContent.innerHTML = '';
+    readerActions.innerHTML = '';
+    const item = getSelectedItem();
+
+    if (!item || contentLoading || !selectableItems().some(i => itemKey(i) === selectedItemKey)) {
+      readerToolbar.hidden = true;
+      readerContent.innerHTML = '<p class="sdm-reader-empty">Select an item to view content.</p>';
+      return;
+    }
+
+    readerToolbar.hidden = false;
+    const key = itemKey(item);
+    const done = !!pending.completions[key];
+    const dirty = isCompletionDirty(key);
+    const cfg = LEVEL_CONFIG.find(l => l.level === item.level) || LEVEL_CONFIG[0];
+
+    completeBtn.className = 'sdm-complete-btn'
+      + (done ? ' done' : '')
+      + (dirty ? ' pending' : '');
+    completeIcon.innerHTML = done ? SVG_ICONS.circleCheck : SVG_ICONS.circle;
+    completeLabel.textContent = done
+      ? (dirty ? 'Complete (unsaved)' : 'Completed')
+      : 'Mark complete';
+
+    readerMeta.innerHTML = '';
+    const metaLine = el('span');
+    metaLine.textContent = `${cfg.label} · ${item.type || 'resource'}`;
+    readerMeta.appendChild(metaLine);
+    if (dirty) {
+      const pendingHint = el('span', { className: 'sdm-reader-meta__pending' });
+      pendingHint.textContent = 'Change pending save';
+      readerMeta.appendChild(pendingHint);
+    }
+    if (item.completed_at && done) {
+      const dateLine = el('span', { className: 'sdm-reader-meta__date' });
+      dateLine.textContent = formatDate(item.completed_at);
+      readerMeta.appendChild(dateLine);
+    }
+
+    renderReaderActions(item);
+
+    const titleH = el('h2', { className: 'sdm-reader-title' });
+    titleH.textContent = item.title || 'Untitled';
+    readerContent.appendChild(titleH);
+
+    if (item.is_user_content) {
+      const prose = el('div', { className: 'sdm-reader-prose' });
+      prose.innerHTML = renderDescription(item.description, item.description_format || 'markdown');
+      readerContent.appendChild(prose);
+    } else if (item.description) {
+      const prose = el('div', { className: 'sdm-reader-prose' });
+      prose.innerHTML = item.override_description || item.description;
+      readerContent.appendChild(prose);
+    }
+
+    if (item.url) {
+      const link = el('a', {
+        className: 'skill-detail-accordion-link sdm-reader-link',
+        href: item.url,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      });
+      link.textContent = 'Open resource';
+      readerContent.appendChild(link);
+    }
+
+    if (item.is_user_content) {
+      const badge = el('span', { className: 'mp-user-content-badge' });
+      badge.textContent = 'My item';
+      readerContent.appendChild(badge);
+    } else if (item.has_override) {
+      const badge = el('span', { className: 'mp-override-badge' });
+      badge.textContent = 'Modified';
+      readerContent.appendChild(badge);
+    }
+  }
+
+  function renderLogList() {
+    logListEl.innerHTML = '';
+    const currentLogs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
+    logCountBadge.textContent = `${currentLogs.length} ${currentLogs.length === 1 ? 'entry' : 'entries'}`;
+
+    if (!currentLogs.length) {
+      const emptyLog = el('div', { className: 'empty-state empty-state--compact' });
+      emptyLog.textContent = 'No training log entries yet.';
+      logListEl.appendChild(emptyLog);
+      return;
+    }
+
+    const reversedLogs = currentLogs.slice().reverse();
+    reversedLogs.slice(0, visibleLogCount).forEach(log => {
+      logListEl.appendChild(buildTrainingLogEntry(log));
+    });
+
+    if (currentLogs.length > visibleLogCount) {
+      const remaining = currentLogs.length - visibleLogCount;
+      const moreBtn = el('button', { type: 'button', className: 'btn btn-secondary btn-sm sdm-log-more' });
+      moreBtn.textContent = `Show more (${remaining} remaining)`;
+      moreBtn.addEventListener('click', () => {
+        visibleLogCount += 5;
+        renderLogList();
+      });
+      logListEl.appendChild(moreBtn);
+    }
+  }
+
+  function syncCompletionStateFromItems() {
+    allContentItems.forEach(item => {
+      const key = itemKey(item);
+      saved.completions[key] = !!item.completed;
+    });
+    pending.completions = { ...saved.completions };
+  }
+
+  function refreshContent() {
+    contentLoading = true;
+    selectedItemKey = selectedItemKey;
+    renderList();
+    renderReader();
+
+    api.get(`/api/plans/${_engineerId}/skills/${planSkill.id}/content`).then(data => {
+      contentLoading = false;
+      allContentItems = (Array.isArray(data.items) ? data.items : [])
+        .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3, 4, 5].includes(item.level));
+
+      syncCompletionStateFromItems();
+
+      if (!selectedItemKey) {
+        const first = visibleItems()[0];
+        selectedItemKey = first ? itemKey(first) : null;
+      }
+
+      renderList();
+      renderReader();
+      updateProgress();
+      updateDirtyUI();
+    }).catch(() => {
+      contentLoading = false;
+      listScroll.innerHTML = '';
+      const errEl = el('div', { className: 'empty-state empty-state--compact' });
+      errEl.textContent = 'Unable to load content.';
+      listScroll.appendChild(errEl);
+      readerToolbar.hidden = true;
+      readerContent.innerHTML = '<p class="sdm-reader-empty">Unable to load content.</p>';
+    });
+  }
+
+  function discardChanges() {
+    pending.status = saved.status;
+    pending.focus = saved.focus;
+    pending.prof = saved.prof;
+    pending.completions = { ...saved.completions };
+    statusSelect.value = saved.status;
+    focusSelect.value = saved.focus;
+    profSelect.value = saved.prof;
+    updateDirtyUI();
+    renderList();
+    renderReader();
+    updateProgress();
+  }
+
+  function closeModal() {
+    overlay.classList.remove('open');
+    setTimeout(() => overlay.remove(), 200);
+    document.removeEventListener('keydown', onKeyDown);
+    renderSections();
+  }
+
+  async function doSave() {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      await api.put(`/api/plans/${_engineerId}/skills/${planSkill.id}`, {
+        status: pending.status,
+        proficiency_level: pending.prof ? Number(pending.prof) : null,
+        focus_area: pending.focus,
+        notes: planSkill.notes || null,
+      });
+
+      for (const item of allContentItems) {
+        const key = itemKey(item);
+        if (pending.completions[key] === saved.completions[key]) continue;
+
+        const endpoint = item.is_user_content
+          ? `/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${item.id}/complete`
+          : `/api/plans/${_engineerId}/skills/${planSkill.id}/content/${item.id}/complete`;
+        await api.post(endpoint, {});
+      }
+
+      showToast('Skill details saved', 'success');
+      await reloadPlan();
+      closeModal();
+    } catch (err) {
+      showToast(err.message || 'Failed to save changes', 'error');
+      saveBtn.disabled = !isDirty();
+      saveBtn.textContent = 'Save skill details';
+    }
+  }
+
+  function onKeyDown(e) {
+    if (e.key === 'Escape') {
+      if (isDirty()) {
+        showToast('Save or discard pending changes before closing', 'warning');
+        return;
+      }
+      closeModal();
+    }
+  }
+
+  statusSelect.addEventListener('change', () => {
+    pending.status = statusSelect.value;
+    updateDirtyUI();
+  });
+
+  focusSelect.addEventListener('change', () => {
+    pending.focus = focusSelect.value;
+    resetTreeForFocus();
+    renderList();
+    renderReader();
+    updateProgress();
+    updateDirtyUI();
+  });
+
+  profSelect.addEventListener('change', () => {
+    pending.prof = profSelect.value;
+    updateDirtyUI();
+  });
+
+  completeBtn.addEventListener('click', () => {
+    const item = getSelectedItem();
+    if (!item) return;
+    const key = itemKey(item);
+    pending.completions[key] = !pending.completions[key];
+    updateProgress();
+    renderList();
+    renderReader();
+    updateDirtyUI();
+  });
+
+  addMyItemBtn.addEventListener('click', () => {
+    const levelKey = pending.focus || 'education';
+    const level = FOCUS_TO_LEVEL[levelKey] || 1;
+    openLibraryModal({ mode: 'create', planSkill, engineerId: _engineerId, levelKey, level }, () => refreshContent());
+  });
+
+  logToggle.addEventListener('click', () => {
+    const open = logPanel.classList.toggle('open');
+    logToggle.setAttribute('aria-expanded', String(open));
+  });
+
   resyncBtn.addEventListener('click', async () => {
-    const confirmed = await showConfirm('Restore all hidden catalog items for this skill? This will bring back any items you previously dismissed.', true);
+    const confirmed = await showConfirm(
+      'Restore all hidden catalog items for this skill? This will bring back any items you previously dismissed.',
+      true,
+    );
     if (!confirmed) return;
     resyncBtn.disabled = true;
     try {
@@ -1235,519 +1867,34 @@ function openEditSkillModal(planSkill) {
     }
   });
 
-  const logToggleBtn = el('button', { className: 'mp-modal-log-toggle-btn', title: 'Toggle Training Log' });
-  logToggleBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
-  const logToggleBtnCount = el('span');
-  const initialLogs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
-  logToggleBtnCount.textContent = String(initialLogs.length);
-  logToggleBtn.appendChild(logToggleBtnCount);
-
-  logToggleBtn.addEventListener('click', () => {
-    logCol.classList.toggle('mp-modal-log-col--hidden');
-    logToggleBtn.classList.toggle('active');
-  });
-
-  const contentTitleRow = el('div', { className: 'mp-modal-content-title-row' });
-  contentTitleRow.appendChild(contentTitle);
-  contentTitleRow.appendChild(logToggleBtn);
-  contentTitleRow.appendChild(resyncBtn);
-  contentCol.appendChild(contentTitleRow);
-
-  const tabBar = el('div', { className: 'skill-detail-tabs', role: 'tablist', 'aria-label': 'Content level tabs' });
-  const tabButtons = {};
-  const tabPanels = {};
-  const tabPanelsWrap = el('div', { className: 'mp-modal-tab-panels-wrap' });
-
-  LEVEL_CONFIG.forEach(({ key, label, icon }) => {
-    const tabBtn = el('button', { className: 'skill-detail-tab', 'data-tab': key, role: 'tab', 'aria-selected': 'false', 'aria-controls': `mp-panel-${key}` });
-    
-    const iconSpan = el('span', { className: 'skill-detail-tab-icon' });
-    iconSpan.innerHTML = icon;
-    tabBtn.appendChild(iconSpan);
-
-    const tabLabel = el('span');
-    tabLabel.textContent = label;
-    const tabCount = el('span', { className: 'skill-detail-tab-count' });
-    tabCount.textContent = '0';
-    const tabProgress = el('span', { className: 'mp-tab-progress-indicator' });
-    
-    tabBtn.appendChild(tabLabel);
-    tabBtn.appendChild(tabCount);
-    tabBtn.appendChild(tabProgress);
-    tabBar.appendChild(tabBtn);
-    tabButtons[key] = tabBtn;
-
-    const panel = el('div', { className: 'skill-detail-tab-panel', 'data-panel': key, role: 'tabpanel', id: `mp-panel-${key}` });
-    tabPanelsWrap.appendChild(panel);
-    tabPanels[key] = panel;
-  });
-
-  contentCol.appendChild(tabBar);
-  contentCol.appendChild(tabPanelsWrap);
-  topRow.appendChild(contentCol);
-
-  const logCol = el('div', { className: 'mp-modal-log-col mp-modal-log-col--hidden' });
-  const logSection = el('div', { className: 'mp-modal-log-section' });
-  const logToggle = el('div', { className: 'mp-modal-log-toggle', style: 'cursor: default' });
-  const logToggleText = el('span');
-  logToggleText.textContent = 'Training Log';
-  const logToggleCount = el('span', { className: 'mp-modal-log-count' });
-  const logs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
-  logToggleCount.textContent = String(logs.length);
-  logToggle.appendChild(logToggleText);
-  logToggle.appendChild(logToggleCount);
-  logSection.appendChild(logToggle);
-
-  const logBody = el('div', { className: 'mp-modal-log-body' });
-  const logListEl = el('div', { className: 'mp-edit-log-list' });
-
-  let visibleLogCount = 5;
-
-  function renderLogList() {
-    logListEl.innerHTML = '';
-    const currentLogs = Array.isArray(planSkill.training_logs) ? planSkill.training_logs : [];
-    logToggleCount.textContent = String(currentLogs.length);
-    logToggleBtnCount.textContent = String(currentLogs.length);
-    if (currentLogs.length === 0) {
-      const emptyLog = el('div', { className: 'empty-state empty-state--compact' });
-      emptyLog.textContent = 'No training log entries yet.';
-      logListEl.appendChild(emptyLog);
-    } else {
-      const reversedLogs = currentLogs.slice().reverse();
-      reversedLogs.slice(0, visibleLogCount).forEach(log => {
-        logListEl.appendChild(buildTrainingLogEntry(log));
-      });
-      if (currentLogs.length > visibleLogCount) {
-        const remaining = currentLogs.length - visibleLogCount;
-        const moreBtn = el('button', { className: 'btn btn-secondary btn-sm mp-log-more' });
-        moreBtn.textContent = `Show more (${remaining} remaining)`;
-        moreBtn.addEventListener('click', () => {
-          visibleLogCount += 5;
-          renderLogList();
-        });
-        logListEl.appendChild(moreBtn);
-      }
-    }
-  }
-  renderLogList();
-
-  logBody.appendChild(logListEl);
-  logSection.appendChild(logBody);
-  logSection.classList.add('expanded');
-  logCol.appendChild(logSection);
-  topRow.appendChild(logCol);
-
-  body.appendChild(topRow);
-
-  modal.appendChild(body);
-
-  const footer = el('div', { className: 'modal-footer' });
-  const cancelFooterBtn = el('button', { className: 'btn btn-secondary' });
-  cancelFooterBtn.textContent = 'Close';
-  const saveBtn = el('button', { className: 'btn btn-primary' });
-  saveBtn.textContent = 'Save Changes';
-  footer.appendChild(cancelFooterBtn);
-  footer.appendChild(saveBtn);
-  modal.appendChild(footer);
-
-  overlay.appendChild(modal);
-  root.appendChild(overlay);
-
-  requestAnimationFrame(() => {
-    overlay.classList.add('open');
-    closeBtn.focus();
-  });
-
-  function activateTab(key) {
-    LEVEL_CONFIG.forEach(({ key: k }) => {
-      tabButtons[k].classList.toggle('active', k === key);
-      tabButtons[k].setAttribute('aria-selected', String(k === key));
-      tabPanels[k].classList.toggle('active', k === key);
-    });
-  }
-
-  LEVEL_CONFIG.forEach(({ key }) => {
-    tabButtons[key].addEventListener('click', () => activateTab(key));
-  });
-
-  let allContentItems = [];
-
-  function updateProgressDisplay() {
-    let totalAll = 0;
-    let completedAll = 0;
-    LEVEL_CONFIG.forEach(({ key }) => {
-      const items = allContentItems.filter(i => LEVEL_MAP[i.level] === key);
-      const done = items.filter(i => i.completed).length;
-      const total = items.length;
-      totalAll += total;
-      completedAll += done;
-
-      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-      const indicator = tabButtons[key].querySelector('.mp-tab-progress-indicator');
-      if (indicator) {
-        indicator.textContent = total > 0 ? `${done}/${total}` : '';
-        indicator.style.opacity = total > 0 ? '1' : '0';
-      }
-    });
-
-    const overallPct = totalAll > 0 ? Math.round((completedAll / totalAll) * 100) : 0;
-    overallBar.style.width = `${overallPct}%`;
-    overallText.textContent = totalAll > 0 ? `${completedAll} / ${totalAll} (${overallPct}%)` : 'No content items';
-  }
-
-  function renderPanelContent(key, items) {
-    const panel = tabPanels[key];
-    panel.innerHTML = '';
-
-    const sorted = items.slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || a.id - b.id);
-    tabButtons[key].querySelector('.skill-detail-tab-count').textContent = String(sorted.length);
-
-    if (!sorted.length) {
-      const empty = el('div', { className: 'empty-state empty-state--compact' });
-      empty.textContent = 'No content items for this level.';
-      panel.appendChild(empty);
-    }
-
-    let openItem = null;
-
-    sorted.forEach(item => {
-      const isUserItem = !!item.is_user_content;
-      const accItem = el('div', { className: `skill-detail-accordion-item${item.completed ? ' completed' : ''}${isUserItem ? ' user-content-item' : ''}` });
-      accItem.dataset.itemId = item.id;
-      if (isUserItem) accItem.dataset.userContent = 'true';
-
-      const trigger = el('button', { className: 'skill-detail-accordion-trigger' });
-
-      const checkbox = el('span', {
-        className: `mp-content-checkbox${item.completed ? ' checked' : ''}`,
-        role: 'checkbox',
-        'aria-checked': String(item.completed),
-        'aria-label': `Mark "${item.title}" as completed`,
-        tabIndex: 0,
-      });
-      checkbox.innerHTML = item.completed ? SVG_ICONS.circleCheck : SVG_ICONS.circle;
-      let _checkBusy = false;
-      const toggleCheck = async (e) => {
-        e.stopPropagation();
-        if (_checkBusy) return;
-        _checkBusy = true;
-        checkbox.classList.add('busy');
-        try {
-          const endpoint = isUserItem
-            ? `/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${item.id}/complete`
-            : `/api/plans/${_engineerId}/skills/${planSkill.id}/content/${item.id}/complete`;
-          const resp = await api.post(endpoint, {});
-          item.completed = resp.completed;
-          item.completed_at = resp.completed_at;
-          checkbox.innerHTML = item.completed ? SVG_ICONS.circleCheck : SVG_ICONS.circle;
-          checkbox.classList.toggle('checked', item.completed);
-          checkbox.setAttribute('aria-checked', String(item.completed));
-          accItem.classList.toggle('completed', item.completed);
-          updateProgressDisplay();
-
-          const freshPlan = await api.get(`/api/plans/${_engineerId}`);
-          _planData = freshPlan;
-          const freshSkill = (freshPlan.skills || []).find(s => s.id === planSkill.id);
-          if (freshSkill) planSkill.training_logs = freshSkill.training_logs;
-          renderLogList();
-        } catch (err) {
-          showToast(err.message || 'Failed to toggle completion', 'error');
-        } finally {
-          _checkBusy = false;
-          checkbox.classList.remove('busy');
-        }
-      };
-      checkbox.addEventListener('click', toggleCheck);
-      checkbox.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleCheck(e); } });
-      trigger.appendChild(checkbox);
-
-      const levelCfg = LEVEL_CONFIG.find(l => l.key === key);
-      const typeChip = el('span', { className: `triage-chip ${levelCfg.chipClass} chip-sm` });
-      typeChip.textContent = item.type || 'resource';
-      trigger.appendChild(typeChip);
-
-      const titleSpan = el('span', { className: 'skill-detail-accordion-title' });
-      titleSpan.textContent = item.title || 'Untitled';
-      trigger.appendChild(titleSpan);
-
-      if (isUserItem) {
-        const userBadge = el('span', { className: 'mp-user-content-badge' });
-        userBadge.textContent = 'My Item';
-        trigger.appendChild(userBadge);
-      } else if (item.has_override) {
-        const badge = el('span', { className: 'mp-override-badge' });
-        badge.textContent = 'Modified';
-        trigger.appendChild(badge);
-      }
-
-      if (item.completed && item.completed_at) {
-        const doneDate = el('span', { className: 'mp-completed-date' });
-        doneDate.textContent = formatDate(item.completed_at);
-        trigger.appendChild(doneDate);
-      }
-
-      /* Edit / Delete actions for user items */
-      if (isUserItem) {
-        const actions = el('span', { className: 'accordion-admin-actions' });
-        const editBtn = el('button', { className: 'btn btn-secondary accordion-action-btn', 'aria-label': 'Edit item', title: 'Edit' });
-        editBtn.innerHTML = SVG_ICONS.pencil;
-        editBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openLibraryModal({ mode: 'edit', item, planSkill, engineerId: _engineerId, levelKey: key }, () => refreshContent());
-        });
-        const delBtn = el('button', { className: 'btn btn-danger accordion-action-btn', 'aria-label': 'Delete item', title: 'Delete' });
-        delBtn.textContent = '✕';
-        delBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const confirmed = await showConfirm(`Delete "${item.title}"? This cannot be undone.`, true);
-          if (!confirmed) return;
-          try {
-            await api.del(`/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${item.id}`);
-            showToast('Item deleted', 'success');
-            refreshContent();
-          } catch (err) {
-            showToast(err.message || 'Failed to delete item', 'error');
-          }
-        });
-        actions.appendChild(editBtn);
-        actions.appendChild(delBtn);
-        trigger.appendChild(actions);
-      } else {
-        const hideBtn = el('button', { className: 'btn btn-secondary accordion-action-btn mp-hide-item-btn', 'aria-label': 'Hide item', title: 'Hide from my view' });
-        hideBtn.textContent = '✕';
-        hideBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const confirmed = await showConfirm(`Hide "${item.title}" from your view? You can restore it later with the re-sync button.`, true);
-          if (!confirmed) return;
-          hideBtn.disabled = true;
-          try {
-            await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/content/${item.id}/hide`, {});
-            showToast('Item hidden', 'success');
-            refreshContent();
-          } catch (err) {
-            showToast(err.message || 'Failed to hide item', 'error');
-          } finally {
-            hideBtn.disabled = false;
-          }
-        });
-        const actions = el('span', { className: 'accordion-admin-actions' });
-        actions.appendChild(hideBtn);
-        trigger.appendChild(actions);
-      }
-
-      const chevron = el('span', { className: 'skill-detail-accordion-chevron', 'aria-hidden': 'true' });
-      trigger.appendChild(chevron);
-
-      const accBody = el('div', { className: 'skill-detail-accordion-body' });
-      const bodyInner = el('div', { className: 'skill-detail-accordion-body-inner' });
-
-      if (item.description) {
-        const descEl = el('div');
-        descEl.innerHTML = item.description;
-        bodyInner.appendChild(descEl);
-      }
-
-      if (item.url) {
-        const link = el('a', { className: 'skill-detail-accordion-link', href: item.url, target: '_blank', rel: 'noopener noreferrer' });
-        link.textContent = 'Open Resource';
-        bodyInner.appendChild(link);
-      }
-
-      /* "Add My Notes" only for catalog items */
-      if (!isUserItem) {
-        const editOverrideBtn = el('button', { className: 'btn btn-secondary btn-sm mp-override-btn' });
-        editOverrideBtn.textContent = item.has_override ? 'Edit My Notes' : 'Add My Notes';
-        editOverrideBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openOverrideEditor(item, planSkill, () => {
-            refreshContent();
-          });
-        });
-        bodyInner.appendChild(editOverrideBtn);
-      }
-
-      accBody.appendChild(bodyInner);
-      accItem.appendChild(trigger);
-      accItem.appendChild(accBody);
-      panel.appendChild(accItem);
-
-      trigger.addEventListener('click', (e) => {
-        if (e.target.closest('.mp-content-checkbox') || e.target.closest('.accordion-admin-actions')) return;
-        if (accItem === openItem) {
-          accItem.classList.remove('open');
-          openItem = null;
-        } else {
-          if (openItem) openItem.classList.remove('open');
-          accItem.classList.add('open');
-          openItem = accItem;
-        }
-      });
-    });
-
-    /* "Add My Item" button at bottom of each tab panel */
-    const levelCfg = LEVEL_CONFIG.find(l => l.key === key);
-    const addMyItemBtn = el('button', { className: 'btn btn-secondary content-add-btn mp-add-my-item-btn' });
-    addMyItemBtn.textContent = `+ Add My ${levelCfg.label} Item`;
-    addMyItemBtn.addEventListener('click', () => {
-      openLibraryModal({ mode: 'create', planSkill, engineerId: _engineerId, levelKey: key, level: levelCfg.level }, () => refreshContent());
-    });
-    panel.appendChild(addMyItemBtn);
-  }
-
-  function refreshContent() {
-    LEVEL_CONFIG.forEach(({ key }) => {
-      tabPanels[key].innerHTML = '';
-      const sk = el('div', { className: 'skeleton-list' });
-      for (let i = 0; i < 2; i++) {
-        sk.appendChild(el('div', { className: 'skeleton skeleton-row' }));
-      }
-      tabPanels[key].appendChild(sk);
-    });
-
-    api.get(`/api/plans/${_engineerId}/skills/${planSkill.id}/content`).then(data => {
-      if (skeletonEl.parentNode) skeletonEl.remove();
-      allContentItems = (Array.isArray(data.items) ? data.items : [])
-        .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3, 4, 5].includes(item.level));
-      const focusLevelNum = { education: 1, exposure: 2, experience: 3 }[currentLevel] || null;
-
-      const groups = { education: [], exposure: [], experience: [] };
-      allContentItems.forEach(item => {
-        const key = LEVEL_MAP[item.level];
-        if (key) groups[key].push(item);
-      });
-
-      LEVEL_CONFIG.forEach(({ key, level }) => {
-        const isVisible = !focusLevelNum || level <= focusLevelNum;
-        tabButtons[key].style.display = isVisible ? '' : 'none';
-        tabPanels[key].style.display = isVisible ? '' : 'none';
-        if (isVisible) {
-          renderPanelContent(key, groups[key]);
-        }
-      });
-
-      const visibleTabs = LEVEL_CONFIG.filter(({ level }) => !focusLevelNum || level <= focusLevelNum);
-      const firstWithContent = visibleTabs.find(({ key }) => groups[key].length > 0);
-      activateTab(firstWithContent ? firstWithContent.key : (visibleTabs[0]?.key || 'education'));
-
-      updateProgressDisplay();
-    }).catch(() => {
-      if (skeletonEl.parentNode) skeletonEl.remove();
-      LEVEL_CONFIG.forEach(({ key }) => {
-        tabPanels[key].innerHTML = '';
-        const errEl = el('div', { className: 'empty-state empty-state--compact' });
-        errEl.textContent = 'Unable to load content.';
-        tabPanels[key].appendChild(errEl);
-      });
-    });
-  }
-
-  const skeletonEl = el('div', { className: 'skill-detail-skeleton' });
-  for (let i = 0; i < 3; i++) {
-    skeletonEl.appendChild(el('div', { className: 'skeleton skeleton-row' }));
-  }
-  tabPanelsWrap.appendChild(skeletonEl);
-
-  refreshContent();
-
-  const initialStatus = planSkill.status;
-  const initialLevel = planSkill.focus_area || '';
-  const initialProfLevel = String(planSkill.proficiency_level ?? '');
-  const initialNotes = planSkill.notes || '';
-
-  function isDirty() {
-    return currentStatus !== initialStatus || currentLevel !== initialLevel || currentProfLevel !== initialProfLevel || notesTextarea.value !== initialNotes;
-  }
-
-  function closeModal() {
-    overlay.classList.remove('open');
-    setTimeout(() => overlay.remove(), 200);
-    document.removeEventListener('keydown', onKeyDown);
-    renderSections();
-  }
-
-  async function doSave() {
-    const newStatus = currentStatus;
-    const newLevel = currentProfLevel ? Number(currentProfLevel) : null;
-    const newNotes = notesTextarea.value.trim();
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving...';
-
-    try {
-      await api.put(`/api/plans/${_engineerId}/skills/${planSkill.id}`, {
-        status: newStatus,
-        proficiency_level: newLevel,
-        focus_area: currentLevel || '',
-        notes: newNotes || null,
-      });
-      showToast('Skill updated', 'success');
-      await reloadPlan();
-      closeModal();
-    } catch (err) {
-      showToast(err.message || 'Failed to save changes', 'error');
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save Changes';
-    }
-  }
-
-  function onKeyDown(e) {
-    if (e.key === 'Escape') {
-      if (isDirty()) return;
-      closeModal();
-    }
-    if (e.key === 'Tab') {
-      const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey) {
-        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
-      } else {
-        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
-      }
-    }
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      const focused = document.activeElement;
-      const currentTab = focused?.dataset?.tab;
-      const visibleKeys = LEVEL_CONFIG.filter(({ level }) => {
-        const fl = { education: 1, exposure: 2, experience: 3 }[currentLevel] || null;
-        return !fl || level <= fl;
-      }).map(l => l.key);
-      if (currentTab && visibleKeys.includes(currentTab)) {
-        const idx = visibleKeys.indexOf(currentTab);
-        const next = e.key === 'ArrowRight' ? (idx + 1) % visibleKeys.length : (idx - 1 + visibleKeys.length) % visibleKeys.length;
-        activateTab(visibleKeys[next]);
-        tabButtons[visibleKeys[next]].focus();
-        e.preventDefault();
-      }
-    }
-  }
-
-  document.addEventListener('keydown', onKeyDown);
-
   saveBtn.addEventListener('click', doSave);
+
+  discardBtn.addEventListener('click', async () => {
+    if (!isDirty()) return;
+    const confirmed = await showConfirm('Discard all pending changes?', true);
+    if (confirmed) discardChanges();
+  });
 
   closeBtn.addEventListener('click', async () => {
     if (isDirty()) {
-      const save = await showConfirm('You have unsaved changes. Save before closing?');
-      if (save) { await doSave(); return; }
-    }
-    closeModal();
-  });
-
-  cancelFooterBtn.addEventListener('click', async () => {
-    if (isDirty()) {
-      const save = await showConfirm('You have unsaved changes. Save before closing?');
-      if (save) { await doSave(); return; }
+      const action = await showConfirm('You have unsaved changes. Save before closing?');
+      if (action) { await doSave(); return; }
+      const discard = await showConfirm('Discard pending changes and close?', true);
+      if (!discard) return;
+      discardChanges();
     }
     closeModal();
   });
 
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) {
-      if (!isDirty()) closeModal();
-    }
+    if (e.target === overlay && !isDirty()) closeModal();
   });
+
+  document.addEventListener('keydown', onKeyDown);
+
+  renderLogList();
+  refreshContent();
+  updateDirtyUI();
 }
 
 function openOverrideEditor(item, planSkill, onSaved) {
@@ -1842,46 +1989,69 @@ function openOverrideEditor(item, planSkill, onSaved) {
   });
 }
 
+const TRAINING_LOG_BADGE_LABELS = {
+  completed: 'Completed',
+  incomplete: 'Incomplete',
+  added: 'Added',
+  updated: 'Updated',
+  removed: 'Removed',
+  moved: 'Moved',
+};
+
+function parseTrainingLogTitle(rawTitle) {
+  const title = (rawTitle || '').trim();
+  const patterns = [
+    { re: /^uncompleted:\s*(.+)$/i, action: 'incomplete' },
+    { re: /^marked incomplete:\s*(.+)$/i, action: 'incomplete' },
+    { re: /^completed:\s*(.+)$/i, action: 'completed' },
+    { re: /^marked complete:\s*(.+)$/i, action: 'completed' },
+  ];
+  for (const { re, action } of patterns) {
+    const match = title.match(re);
+    if (match) return { action, label: match[1].trim() };
+  }
+  return { action: null, label: title || 'Untitled' };
+}
+
+function inferTrainingLogBadge(log) {
+  const parsed = parseTrainingLogTitle(log.title);
+  if (parsed.action) return parsed.action;
+
+  const title = (log.title || '').toLowerCase();
+  if (title.includes('moved from') || title.startsWith('moved')) return 'moved';
+  if (title.startsWith('added') || title.includes('imported')) return 'added';
+  if (title.startsWith('hidden') || title.startsWith('removed') || title.startsWith('deleted')) return 'removed';
+  if (title.startsWith('updated') || title.includes('override')) return 'updated';
+  return 'updated';
+}
+
 function buildTrainingLogEntry(log) {
-  const entry = el('div', { className: 'mt-activity-item' });
+  const parsed = parseTrainingLogTitle(log.title);
+  const badgeType = parsed.action || inferTrainingLogBadge(log);
+  const entry = el('div', { className: 'sdm-log-entry' });
 
-  const bodyEl = el('div', { className: 'mt-activity-body' });
+  const badge = el('span', { className: `sdm-log-badge sdm-log-badge--${badgeType}` });
+  badge.textContent = TRAINING_LOG_BADGE_LABELS[badgeType] || badgeType;
+  entry.appendChild(badge);
 
-  const textEl = el('div', { className: 'mt-activity-text' });
-  
+  const textWrap = el('div', { className: 'sdm-log-entry__text' });
   const titleEl = el('strong');
-  titleEl.textContent = log.title || 'Untitled';
-  textEl.appendChild(titleEl);
+  titleEl.textContent = parsed.label;
+  textWrap.appendChild(titleEl);
 
-  const typeBadge = el('span', { className: 'triage-chip triage-signal chip-sm' });
-  typeBadge.style.cssText = 'font-size: 11px; margin-left: 6px; padding: 2px 6px;';
-  typeBadge.textContent = log.type || 'entry';
-  textEl.appendChild(typeBadge);
-
-  bodyEl.appendChild(textEl);
-
-  const metaEl = el('div', { className: 'mt-activity-meta' });
-  
   if (log.completed_at) {
-    const timeEl = el('span', { className: 'mt-activity-time' });
+    const timeEl = el('span', { className: 'sdm-log-entry__time' });
     timeEl.textContent = formatDate(log.completed_at);
-    metaEl.appendChild(timeEl);
+    textWrap.appendChild(timeEl);
   }
 
   if (log.notes) {
-    if (log.completed_at) {
-      const sep = el('span');
-      sep.textContent = ' • ';
-      metaEl.appendChild(sep);
-    }
-    const notesEl = el('span');
+    const notesEl = el('span', { className: 'sdm-log-entry__time' });
     notesEl.textContent = log.notes;
-    metaEl.appendChild(notesEl);
+    textWrap.appendChild(notesEl);
   }
 
-  bodyEl.appendChild(metaEl);
-  entry.appendChild(bodyEl);
-
+  entry.appendChild(textWrap);
   return entry;
 }
 
@@ -2086,259 +2256,6 @@ function openOwnSkillModal() {
   });
 }
 
-function openReportingModal() {
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-  const bodyEl = el('div');
-
-  const timeframeRow = el('div');
-  timeframeRow.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;';
-
-  const timeframeLabel = el('span');
-  timeframeLabel.textContent = 'Time Frame:';
-  timeframeLabel.style.cssText = 'font-size:13px;color:var(--text-muted);font-weight:600;white-space:nowrap;';
-
-  const fromLabel = el('label');
-  fromLabel.textContent = 'From';
-  fromLabel.style.cssText = 'font-size:13px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;';
-  const fromInput = el('input', { type: 'date' });
-  fromInput.value = thirtyDaysAgo;
-  fromInput.style.cssText = 'background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-size:13px;';
-  fromLabel.appendChild(fromInput);
-
-  const toLabel = el('label');
-  toLabel.textContent = 'To';
-  toLabel.style.cssText = 'font-size:13px;color:var(--text-secondary);display:flex;align-items:center;gap:6px;';
-  const toInput = el('input', { type: 'date' });
-  toInput.value = todayStr;
-  toInput.style.cssText = 'background:var(--bg-elevated);border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-size:13px;';
-  toLabel.appendChild(toInput);
-
-  timeframeRow.appendChild(timeframeLabel);
-  timeframeRow.appendChild(fromLabel);
-  timeframeRow.appendChild(toLabel);
-  bodyEl.appendChild(timeframeRow);
-
-  const tabBar = el('div', { className: 'skill-detail-tabs', role: 'tablist', 'aria-label': 'Reporting tabs' });
-  const changeLogsTab = el('button', { className: 'skill-detail-tab active', role: 'tab', 'aria-selected': 'true' });
-  changeLogsTab.textContent = 'Change Logs';
-  const skillsOverviewTab = el('button', { className: 'skill-detail-tab', role: 'tab', 'aria-selected': 'false' });
-  skillsOverviewTab.textContent = 'Skills Overview';
-  tabBar.appendChild(changeLogsTab);
-  tabBar.appendChild(skillsOverviewTab);
-  bodyEl.appendChild(tabBar);
-
-  const contentArea = el('div');
-  contentArea.style.cssText = 'margin-top:12px;';
-  bodyEl.appendChild(contentArea);
-
-  const changeLogsPanel = el('div', { className: 'skill-detail-tab-panel' });
-
-  async function renderChangeLogs() {
-    const fromDate = fromInput.value;
-    const toDate = toInput.value;
-    changeLogsPanel.innerHTML = '';
-
-    const loadingMsg = el('div', { className: 'empty-state empty-state--compact' });
-    loadingMsg.textContent = 'Loading…';
-    changeLogsPanel.appendChild(loadingMsg);
-
-    try {
-      const logs = await api.get(`/api/export/plans/${_engineerId}/change-logs?from_date=${fromDate}&to_date=${toDate}`);
-      changeLogsPanel.innerHTML = '';
-
-      const listWrap = el('div');
-      listWrap.style.cssText = 'max-height:320px;overflow-y:auto;border:1px solid var(--border-soft);border-radius:var(--radius-md);margin-bottom:12px;';
-
-      if (!Array.isArray(logs) || logs.length === 0) {
-        const empty = el('div', { className: 'empty-state empty-state--compact' });
-        empty.textContent = 'No change logs found for this period.';
-        empty.style.padding = '24px';
-        listWrap.appendChild(empty);
-      } else {
-        logs.forEach(log => {
-          const entry = el('div');
-          entry.style.cssText = 'padding:10px 12px;border-bottom:1px solid var(--border-soft);display:flex;gap:12px;align-items:flex-start;';
-
-          const tsCol = el('div');
-          tsCol.style.cssText = 'min-width:110px;font-size:12px;color:var(--text-muted);padding-top:2px;white-space:nowrap;';
-          tsCol.textContent = formatDate(log.timestamp);
-
-          const mainCol = el('div');
-          mainCol.style.cssText = 'flex:1;';
-
-          const skillName = el('div');
-          skillName.style.cssText = 'font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:2px;';
-          skillName.textContent = log.skill_name || '—';
-
-          const desc = el('div');
-          desc.style.cssText = 'font-size:13px;color:var(--text-secondary);';
-          desc.textContent = log.description || '';
-
-          const typeBadge = el('span', { className: 'triage-chip' });
-          typeBadge.style.cssText = 'font-size:11px;margin-left:6px;';
-          typeBadge.textContent = log.type === 'training_log' ? 'Training' : 'Audit';
-          typeBadge.style.background = log.type === 'training_log' ? 'rgba(6,182,212,.12)' : 'rgba(168,85,247,.12)';
-          typeBadge.style.color = log.type === 'training_log' ? 'var(--info)' : 'var(--purple)';
-          typeBadge.style.border = log.type === 'training_log' ? '1px solid rgba(6,182,212,.3)' : '1px solid rgba(168,85,247,.3)';
-
-          skillName.appendChild(typeBadge);
-          mainCol.appendChild(skillName);
-          mainCol.appendChild(desc);
-          entry.appendChild(tsCol);
-          entry.appendChild(mainCol);
-          listWrap.appendChild(entry);
-        });
-      }
-
-      changeLogsPanel.appendChild(listWrap);
-
-      const exportPdfBtn = el('button', { className: 'btn btn-primary btn-sm' });
-      exportPdfBtn.textContent = 'Export to PDF';
-      exportPdfBtn.addEventListener('click', () => {
-        const fd = fromInput.value;
-        const td = toInput.value;
-        downloadExport(`/api/export/plans/${_engineerId}/change-logs/pdf?from_date=${fd}&to_date=${td}`, 'change_logs.pdf');
-      });
-      changeLogsPanel.appendChild(exportPdfBtn);
-    } catch (err) {
-      changeLogsPanel.innerHTML = '';
-      const errEl = el('div', { className: 'empty-state empty-state--compact' });
-      errEl.textContent = err.message || 'Failed to load change logs.';
-      changeLogsPanel.appendChild(errEl);
-    }
-  }
-
-  const skillsOverviewPanel = el('div', { className: 'skill-detail-tab-panel' });
-  skillsOverviewPanel.style.display = 'none';
-
-  async function renderSkillsOverview() {
-    skillsOverviewPanel.innerHTML = '';
-
-    const loadingMsg = el('div', { className: 'empty-state empty-state--compact' });
-    loadingMsg.textContent = 'Loading…';
-    skillsOverviewPanel.appendChild(loadingMsg);
-
-    try {
-      const data = await api.get(`/api/export/plans/${_engineerId}/skills-overview`);
-      skillsOverviewPanel.innerHTML = '';
-
-      const groups = [
-        { key: 'developing', label: 'Developing', color: 'var(--warning)' },
-        { key: 'planned', label: 'Planned', color: 'var(--accent)' },
-        { key: 'mastered', label: 'Mastered', color: 'var(--success)' },
-      ];
-
-      const listWrap = el('div');
-      listWrap.style.cssText = 'max-height:320px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:12px;';
-
-      groups.forEach(({ key, label, color }) => {
-        const skills = Array.isArray(data[key]) ? data[key] : [];
-        const groupEl = el('div');
-        groupEl.style.cssText = 'border:1px solid var(--border-soft);border-radius:var(--radius-md);overflow:hidden;';
-
-        const groupHeader = el('div');
-        groupHeader.style.cssText = `display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg-elevated);border-bottom:1px solid var(--border-soft);`;
-        const dot = el('span');
-        dot.style.cssText = `width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0;`;
-        const headerText = el('span');
-        headerText.style.cssText = 'font-size:13px;font-weight:700;color:var(--text-primary);';
-        headerText.textContent = label;
-        const countBadge = el('span');
-        countBadge.style.cssText = 'font-size:12px;color:var(--text-muted);margin-left:4px;';
-        countBadge.textContent = `(${skills.length})`;
-        groupHeader.appendChild(dot);
-        groupHeader.appendChild(headerText);
-        groupHeader.appendChild(countBadge);
-        groupEl.appendChild(groupHeader);
-
-        if (skills.length === 0) {
-          const emptyRow = el('div');
-          emptyRow.style.cssText = 'padding:10px 14px;font-size:13px;color:var(--text-muted);font-style:italic;';
-          emptyRow.textContent = 'No skills in this category.';
-          groupEl.appendChild(emptyRow);
-        } else {
-          skills.forEach(skill => {
-            const row = el('div');
-            row.style.cssText = 'padding:8px 14px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:8px;';
-            const name = el('span');
-            name.style.cssText = 'font-size:13px;color:var(--text-secondary);';
-            name.textContent = skill.skill_name || skill;
-            row.appendChild(name);
-            if (skill.proficiency_level) {
-              const lvl = el('span');
-              lvl.style.cssText = 'font-size:11px;color:var(--text-muted);margin-left:auto;';
-              lvl.textContent = `Level ${skill.proficiency_level}`;
-              row.appendChild(lvl);
-            }
-            groupEl.appendChild(row);
-          });
-        }
-
-        listWrap.appendChild(groupEl);
-      });
-
-      skillsOverviewPanel.appendChild(listWrap);
-
-      const exportPdfBtn = el('button', { className: 'btn btn-primary btn-sm' });
-      exportPdfBtn.textContent = 'Export to PDF';
-      exportPdfBtn.addEventListener('click', () => {
-        downloadExport(`/api/export/plans/${_engineerId}/skills-overview/pdf`, 'skills_overview.pdf');
-      });
-      skillsOverviewPanel.appendChild(exportPdfBtn);
-    } catch (err) {
-      skillsOverviewPanel.innerHTML = '';
-      const errEl = el('div', { className: 'empty-state empty-state--compact' });
-      errEl.textContent = err.message || 'Failed to load skills overview.';
-      skillsOverviewPanel.appendChild(errEl);
-    }
-  }
-
-  contentArea.appendChild(changeLogsPanel);
-  contentArea.appendChild(skillsOverviewPanel);
-
-  function activateTab(tab) {
-    if (tab === 'change-logs') {
-      changeLogsTab.classList.add('active');
-      changeLogsTab.setAttribute('aria-selected', 'true');
-      skillsOverviewTab.classList.remove('active');
-      skillsOverviewTab.setAttribute('aria-selected', 'false');
-      changeLogsPanel.style.display = '';
-      skillsOverviewPanel.style.display = 'none';
-      renderChangeLogs();
-    } else {
-      skillsOverviewTab.classList.add('active');
-      skillsOverviewTab.setAttribute('aria-selected', 'true');
-      changeLogsTab.classList.remove('active');
-      changeLogsTab.setAttribute('aria-selected', 'false');
-      skillsOverviewPanel.style.display = '';
-      changeLogsPanel.style.display = 'none';
-      renderSkillsOverview();
-    }
-  }
-
-  changeLogsTab.addEventListener('click', () => activateTab('change-logs'));
-  skillsOverviewTab.addEventListener('click', () => activateTab('skills-overview'));
-
-  fromInput.addEventListener('change', () => {
-    if (changeLogsPanel.style.display !== 'none') renderChangeLogs();
-  });
-  toInput.addEventListener('change', () => {
-    if (changeLogsPanel.style.display !== 'none') renderChangeLogs();
-  });
-
-  showModal({
-    title: 'Reporting',
-    body: bodyEl,
-    modalClass: 'modal-wide',
-    confirmText: 'Close',
-    cancelText: '',
-    onConfirm: () => {},
-  });
-
-  renderChangeLogs();
-}
 
 function showPermissionError(msg) {
   const contentEl = _container.querySelector('.mp-plan-content');

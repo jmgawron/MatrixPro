@@ -954,7 +954,7 @@ def toggle_content_completion(
         if data.notes is not None:
             existing.notes = data.notes
 
-    log_action = "completed" if existing.completed else "uncompleted"
+    log_action = "Marked complete" if existing.completed else "Marked incomplete"
     log_entry = PlanSkillTrainingLog(
         plan_skill_id=plan_skill_id,
         title=f"{log_action}: {content.title}",
@@ -1305,7 +1305,7 @@ def toggle_user_content_completion(
     item.completed_at = now if item.completed else None
     item.updated_at = now
 
-    log_action = "completed" if item.completed else "uncompleted"
+    log_action = "Marked complete" if item.completed else "Marked incomplete"
     log_entry = PlanSkillTrainingLog(
         plan_skill_id=plan_skill_id,
         title=f"{log_action}: {item.title[:80]}",

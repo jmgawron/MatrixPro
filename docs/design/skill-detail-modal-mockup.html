@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Skill Details Modal Mockup v3 (3E Tree)</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-v3-tree">
+  <style>
+    body.mockup-page { margin: 0; min-height: 100vh; background: var(--bg-page); }
+
+    .mockup-backdrop {
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .mockup-banner {
+      width: 100%;
+      max-width: 1240px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+    }
+
+    .mockup-banner h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .mockup-banner p {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      max-width: 90ch;
+    }
+
+    .mockup-banner ul {
+      margin: 8px 0 12px;
+      padding-left: 1.2em;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .mockup-banner__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .mockup-context {
+      width: 100%;
+      max-width: 1240px;
+      opacity: 0.3;
+      pointer-events: none;
+      filter: blur(1px);
+    }
+
+    .mockup-context__grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .mockup-context__card {
+      background: var(--bg-card-gradient);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* ── Modal ─────────────────────────────────────────────────────────── */
+    .sdm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 100;
+    }
+
+    .sdm-modal {
+      width: 100%;
+      max-width: 1200px;
+      height: min(calc(100vh - 32px), 880px);
+      background: var(--bg-panel);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sdm-modal.dirty .sdm-footer__status {
+      color: var(--warning);
+    }
+
+    /* Header block */
+    .sdm-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border-soft);
+      flex-shrink: 0;
+    }
+
+    .sdm-header__top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .sdm-header__title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .sdm-close {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+    }
+
+    .sdm-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+    /* Read-only notes under title */
+    .sdm-notes {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--text-secondary);
+      margin: 0 0 12px;
+      max-height: 4.65em;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .sdm-notes:empty::before {
+      content: 'No notes for this skill.';
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .sdm-notes--long {
+      max-height: none;
+    }
+
+    .sdm-notes-toggle {
+      border: none;
+      background: none;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+      margin: -4px 0 10px;
+      display: none;
+    }
+
+    .sdm-notes-toggle.visible { display: inline-block; }
+
+    /* Compact skill controls row */
+    .sdm-controls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(140px, 1.2fr);
+      gap: 10px 14px;
+      align-items: end;
+      padding: 10px 12px;
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+    }
+
+    @media (max-width: 900px) {
+      .sdm-controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .sdm-controls__progress { grid-column: 1 / -1; }
+    }
+
+    .sdm-control label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .sdm-control select {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      background: var(--bg-input);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+
+    .sdm-control select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+
+    .sdm-control select.pending {
+      border-color: var(--warning);
+      box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.25);
+    }
+
+    .sdm-controls__progress label { margin-bottom: 4px; }
+
+    .sdm-progress-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sdm-progress-bar-wrap {
+      flex: 1;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--bg-elevated);
+      overflow: hidden;
+    }
+
+    .sdm-progress-bar {
+      height: 100%;
+      width: 44%;
+      background: linear-gradient(90deg, var(--success), #34d399, var(--info));
+      border-radius: 999px;
+      transition: width 0.3s ease;
+    }
+
+    .sdm-progress-text {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Main master-detail */
+    .sdm-main {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(250px, 30%) minmax(0, 1fr);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    @media (max-width: 900px) {
+      .sdm-main {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(160px, 32%) minmax(0, 1fr);
+      }
+    }
+
+    .sdm-list-col {
+      border-right: 1px solid var(--border-soft);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--bg-card-soft);
+    }
+
+    .sdm-list-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 8px;
+    }
+
+    .sdm-section { margin-bottom: 6px; }
+
+    /* ── 3E tree sections (v3) ─────────────────────────────────────────── */
+    .sdm-tree-section {
+      margin-bottom: 4px;
+      border-radius: var(--radius-md);
+    }
+
+    .sdm-tree-section--focus {
+      background: rgba(59, 130, 246, 0.06);
+      outline: 1px solid rgba(59, 130, 246, 0.18);
+    }
+
+    .sdm-tree-section__header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 8px 8px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      color: var(--text-secondary);
+      border-radius: var(--radius-md);
+      transition: background var(--transition);
+    }
+
+    .sdm-tree-section__header:hover {
+      background: var(--bg-hover);
+    }
+
+    .sdm-tree-section--focus .sdm-tree-section__header {
+      color: var(--text-primary);
+    }
+
+    .sdm-tree-section__toggle {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--text-muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .sdm-tree-section--locked .sdm-tree-section__toggle {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .sdm-tree-section__label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .sdm-tree-section__count {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-muted);
+    }
+
+    .sdm-tree-section__body {
+      padding: 0 0 4px 28px;
+    }
+
+    .sdm-tree-section--collapsed .sdm-tree-section__body {
+      display: none;
+    }
+
+    [data-theme="light"] .sdm-tree-section--focus {
+      background: rgba(59, 130, 246, 0.05);
+      outline-color: rgba(59, 130, 246, 0.22);
+    }
+
+    .sdm-section__header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .sdm-section__count {
+      margin-left: auto;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sdm-list-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      color: var(--text-primary);
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .sdm-list-item:hover { background: var(--bg-hover); }
+
+    .sdm-list-item.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
+
+    .sdm-list-item.pending-complete {
+      outline: 1px dashed var(--warning);
+      outline-offset: -1px;
+    }
+
+    .sdm-list-check {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      border: none;
+      background: none;
+      padding: 0;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .sdm-list-check.done { color: var(--success); }
+
+    .sdm-list-check svg { width: 18px; height: 18px; display: block; }
+
+    .sdm-list-item__title {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .sdm-list-item__meta {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .sdm-list-footer {
+      padding: 10px;
+      border-top: 1px solid var(--border-soft);
+      flex-shrink: 0;
+    }
+
+    .sdm-add-btn { width: 100%; }
+
+    .sdm-reader-col {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--bg-panel);
+    }
+
+    .sdm-reader-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-soft);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .sdm-complete-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    .sdm-complete-btn.done { background: rgba(34,197,94,.12); border-color: var(--success); color: var(--success); }
+    .sdm-complete-btn.pending { border-color: var(--warning); color: var(--warning); }
+
+    .sdm-reader-meta { font-size: 12px; color: var(--text-muted); text-align: right; }
+
+    .sdm-reader-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px 28px;
+    }
+
+    .sdm-reader-content { max-width: 65ch; }
+
+    .sdm-reader-prose {
+      font-size: 15px;
+      line-height: 1.65;
+      color: var(--text-secondary);
+    }
+
+    .sdm-reader-prose h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 20px 0 8px;
+    }
+
+    .sdm-reader-prose p { margin: 0 0 14px; }
+
+    .sdm-reader-prose ul { margin: 0 0 14px; padding-left: 1.4em; }
+
+    /* Training log */
+    .sdm-log {
+      flex-shrink: 0;
+      background: var(--bg-card-soft);
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .sdm-log__toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      color: var(--text-secondary);
+    }
+
+    .sdm-log__toggle:hover { background: var(--bg-hover); }
+
+    .sdm-log__title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .sdm-log__count {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: var(--bg-elevated);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sdm-log__chevron {
+      margin-left: auto;
+      transition: transform var(--transition);
+    }
+
+    .sdm-log.open .sdm-log__chevron { transform: rotate(180deg); }
+
+    .sdm-log__body {
+      display: none;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 0 20px 12px;
+    }
+
+    .sdm-log.open .sdm-log__body { display: block; }
+
+    .sdm-log-entry {
+      display: flex;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-soft);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .sdm-log-entry:last-child { border-bottom: none; }
+
+    .sdm-log-badge {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      height: fit-content;
+    }
+
+    .sdm-log-badge--completed { background: rgba(34,197,94,.15); color: var(--success); }
+    .sdm-log-badge--added     { background: rgba(59,130,246,.15); color: var(--accent); }
+    .sdm-log-badge--updated   { background: rgba(168,85,247,.15); color: var(--purple); }
+    .sdm-log-badge--removed   { background: rgba(239,68,68,.12); color: var(--danger); }
+    .sdm-log-badge--moved     { background: rgba(245,158,11,.15); color: var(--warning); }
+
+    .sdm-log-entry__text { color: var(--text-secondary); flex: 1; min-width: 0; }
+    .sdm-log-entry__text strong { color: var(--text-primary); font-weight: 600; }
+    .sdm-log-entry__time { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .sdm-log-more {
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    /* Footer */
+    .sdm-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--border-soft);
+      flex-shrink: 0;
+    }
+
+    .sdm-footer__status {
+      margin-right: auto;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .sdm-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-soft);
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      transition: transform 0.25s, opacity 0.25s;
+      z-index: 200;
+    }
+
+    .sdm-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .sdm-toast.warn { border-color: rgba(245,158,11,.4); color: var(--warning); }
+    .sdm-toast.success { border-color: rgba(34,197,94,.4); color: var(--success); }
+  </style>
+</head>
+<body class="mockup-page">
+  <div class="mockup-backdrop">
+    <div class="mockup-banner">
+      <h2>Skill Details Modal — 3E Expandable Tree (v3)</h2>
+      <p>Left panel uses <strong>+/− tree sections</strong> driven by <strong>Focus area</strong>. Change the focus dropdown to see Education-only, Exposure (+ collapsed Education header), or full Experience tree. Collapsed ancestor sections can be manually expanded with <strong>+</strong>.</p>
+      <ul>
+        <li><strong>Education</strong> focus → only Education expanded; Exposure &amp; Experience hidden.</li>
+        <li><strong>Exposure</strong> focus → Education collapsed header + Exposure expanded; Experience hidden.</li>
+        <li><strong>Experience</strong> focus → all three headers; Education &amp; Exposure collapsed; Experience expanded.</li>
+      </ul>
+      <p><em>Production today still uses cumulative list filtering (v2). This mockup previews the tree enhancement — approve before implementation.</em></p>
+      <div class="mockup-banner__actions">
+        <button type="button" class="btn btn-secondary btn-sm" id="themeToggle">Light theme</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="resetBtn">Reset demo</button>
+      </div>
+    </div>
+    <div class="mockup-context" aria-hidden="true">
+      <div class="mockup-context__grid">
+        <div class="mockup-context__card">Developing · 13 skills</div>
+        <div class="mockup-context__card">Planned · 1 skill</div>
+        <div class="mockup-context__card">Mastered · 4 skills</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sdm-overlay" id="modalOverlay">
+    <div class="sdm-modal" id="modal" role="dialog" aria-modal="true">
+      <header class="sdm-header">
+        <div class="sdm-header__top">
+          <h1 class="sdm-header__title">VLANs, Trunking &amp; VTP</h1>
+          <button type="button" class="sdm-close" id="closeHint" aria-label="Close">✕</button>
+        </div>
+        <p class="sdm-notes" id="notesDisplay"></p>
+        <button type="button" class="sdm-notes-toggle" id="notesToggle" hidden>Show more</button>
+
+        <div class="sdm-controls">
+          <div class="sdm-control">
+            <label for="statusSelect">Status</label>
+            <select id="statusSelect">
+              <option value="planned">Planned</option>
+              <option value="developing" selected>Developing</option>
+              <option value="mastered">Mastered</option>
+            </select>
+          </div>
+          <div class="sdm-control">
+            <label for="focusSelect">Focus area</label>
+            <select id="focusSelect">
+              <option value="education">Education</option>
+              <option value="exposure" selected>Exposure</option>
+              <option value="experience">Experience</option>
+            </select>
+          </div>
+          <div class="sdm-control">
+            <label for="profSelect">Skill proficiency</label>
+            <select id="profSelect">
+              <option value="">—</option>
+              <option value="1">1 — Beginner</option>
+              <option value="2">2 — Working</option>
+              <option value="3" selected>3 — Intermediate</option>
+              <option value="4">4 — Advanced</option>
+              <option value="5">5 — Expert</option>
+            </select>
+          </div>
+          <div class="sdm-control sdm-controls__progress">
+            <label>Overall progress</label>
+            <div class="sdm-progress-row">
+              <div class="sdm-progress-bar-wrap"><div class="sdm-progress-bar" id="progressBar"></div></div>
+              <span class="sdm-progress-text" id="progressText">4 / 9</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="sdm-main">
+        <aside class="sdm-list-col">
+          <div class="sdm-list-scroll" id="listScroll"></div>
+          <div class="sdm-list-footer">
+            <button type="button" class="btn btn-secondary btn-sm sdm-add-btn" id="addMyItemBtn">+ Add My Item</button>
+          </div>
+        </aside>
+        <section class="sdm-reader-col">
+          <div class="sdm-reader-toolbar" id="readerToolbar" hidden>
+            <button type="button" class="sdm-complete-btn" id="completeBtn">
+              <span id="completeIcon"></span>
+              <span id="completeLabel">Mark complete</span>
+            </button>
+            <div class="sdm-reader-meta" id="readerMeta"></div>
+          </div>
+          <div class="sdm-reader-scroll">
+            <div class="sdm-reader-content" id="readerContent"></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="sdm-log" id="logPanel">
+        <button type="button" class="sdm-log__toggle" id="logToggle">
+          <span class="sdm-log__title">Training log</span>
+          <span class="sdm-log__count" id="logCountBadge">24 entries</span>
+          <svg class="sdm-log__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="sdm-log__body" id="logBody"></div>
+      </div>
+
+      <footer class="sdm-footer">
+        <span class="sdm-footer__status" id="footerStatus">No pending changes</span>
+        <button type="button" class="btn btn-secondary" id="discardBtn">Discard</button>
+        <button type="button" class="btn btn-primary" id="saveBtn" disabled>Save skill details</button>
+      </footer>
+    </div>
+  </div>
+
+  <div class="sdm-toast" id="toast" role="status"></div>
+
+  <script>
+    const SVG = {
+      circle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>',
+      check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>',
+    };
+
+    const NOTES_TEXT = 'Focus on DTP mismatches and VTP v3 — common on Shift-2 escalations. When trunk issues recur, capture show interfaces trunk and show dtp interface before any change window. Hand off topology UUID to the next engineer.';
+
+    const FOCUS_ORDER = ['education', 'exposure', 'experience'];
+    const FOCUS_LABELS = { education: 'Education', exposure: 'Exposure', experience: 'Experience' };
+
+    const ITEMS = [
+      { id: 'e1', section: 'education', type: 'course', title: 'Catalyst VLAN Fundamentals (OCW)', savedCompleted: true },
+      { id: 'e2', section: 'education', type: 'reading', title: '802.1Q Tagging — Deep Reference', savedCompleted: true },
+      { id: 'e3', section: 'education', type: 'link', title: "Bob's lab notebook — VLAN repro recipes", savedCompleted: false, mine: true },
+      { id: 'x1', section: 'exposure', type: 'action', title: 'Co-pilot 3 customer VLAN trunk SRs', savedCompleted: true },
+      { id: 'x2', section: 'exposure', type: 'certification', title: 'CCNP ENCOR — VLAN chapter lab', savedCompleted: false },
+      { id: 'x3', section: 'exposure', type: 'action', title: 'DTP & Trunk Troubleshooting Playbook', savedCompleted: false },
+      { id: 'p1', section: 'experience', type: 'action', title: 'Own a sev-2 VLAN outage end-to-end', savedCompleted: false },
+      { id: 'p2', section: 'experience', type: 'action', title: 'VTP v3 domain migration — lead cutover', savedCompleted: false },
+      { id: 'p3', section: 'experience', type: 'reading', title: 'Design review: campus segmentation blueprint', savedCompleted: false },
+    ];
+
+    const LONG_BODY = `
+      <div class="sdm-reader-prose">
+        <p>Systematic isolation of DTP mismatches, native VLAN inconsistencies, and allowed-list pruning — common root causes on Catalyst 9k trunk escalations.</p>
+        <h3>Phase 1 — Baseline collection</h3>
+        <p>Collect <code>show interfaces trunk</code>, <code>show dtp interface</code>, and <code>show spanning-tree vlan</code> for every hop before any change.</p>
+        <h3>Phase 2 — Controlled reproduction</h3>
+        <p>Mirror customer port modes in CML: desirable/auto/on/nonegotiate. Capture SPAN on the uplink and verify 802.1Q tags.</p>
+        <ul><li>DTP auto on both sides will not form a trunk.</li><li>Native VLAN mismatch black-holes untagged flows.</li><li>Pruning can hide VLANs from forwarding tables.</li></ul>
+        <h3>Phase 3 — Remediation</h3>
+        <p>Prefer explicit <code>switchport mode trunk</code> and <code>switchport nonegotiate</code> on critical uplinks when policy allows.</p>
+        <h3>Phase 4 — Validation</h3>
+        <p>Confirm bi-directional MAC learning per VLAN, verify STP root, attach show-tech to the SR. Document topology UUID for the next shift.</p>
+        <p>Additional runbook prose demonstrates scroll in the reading pane without height caps — suitable for full-page lab guides and customer-facing RCA templates.</p>
+      </div>`;
+
+    const LOG_TYPES = ['completed', 'added', 'updated', 'removed', 'moved'];
+    const LOG_TITLES = {
+      completed: 'Marked "Co-pilot 3 customer VLAN trunk SRs" complete',
+      added: 'Added personal item: Bob\'s lab notebook',
+      updated: 'Updated proficiency to level 3',
+      removed: 'Hidden catalog item: Legacy VTP v1 guide',
+      moved: 'Moved skill from Planned to Developing',
+    };
+
+    function generateLogs(n) {
+      const logs = [];
+      for (let i = 0; i < n; i++) {
+        const type = LOG_TYPES[i % LOG_TYPES.length];
+        const d = new Date();
+        d.setDate(d.getDate() - i * 3);
+        logs.push({
+          id: i + 1,
+          type,
+          title: LOG_TITLES[type] + (i > 4 ? ` (#${i + 1})` : ''),
+          time: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+        });
+      }
+      return logs;
+    }
+
+    const ALL_LOGS = generateLogs(24);
+    let logVisible = 5;
+
+    const saved = {
+      status: 'developing',
+      focus: 'exposure',
+      prof: '3',
+      items: Object.fromEntries(ITEMS.map(i => [i.id, i.savedCompleted])),
+    };
+
+    const pending = {
+      status: 'developing',
+      focus: 'exposure',
+      prof: '3',
+      items: { ...saved.items },
+    };
+
+    let selectedId = 'x3';
+    let notesExpanded = false;
+
+    const els = {
+      modal: document.getElementById('modal'),
+      notesDisplay: document.getElementById('notesDisplay'),
+      notesToggle: document.getElementById('notesToggle'),
+      statusSelect: document.getElementById('statusSelect'),
+      focusSelect: document.getElementById('focusSelect'),
+      profSelect: document.getElementById('profSelect'),
+      progressBar: document.getElementById('progressBar'),
+      progressText: document.getElementById('progressText'),
+      listScroll: document.getElementById('listScroll'),
+      readerContent: document.getElementById('readerContent'),
+      readerToolbar: document.getElementById('readerToolbar'),
+      readerMeta: document.getElementById('readerMeta'),
+      completeBtn: document.getElementById('completeBtn'),
+      completeIcon: document.getElementById('completeIcon'),
+      completeLabel: document.getElementById('completeLabel'),
+      logCountBadge: document.getElementById('logCountBadge'),
+      logBody: document.getElementById('logBody'),
+      footerStatus: document.getElementById('footerStatus'),
+      saveBtn: document.getElementById('saveBtn'),
+      toast: document.getElementById('toast'),
+    };
+
+    function toast(msg, type = '') {
+      els.toast.textContent = msg;
+      els.toast.className = 'sdm-toast show ' + type;
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => { els.toast.className = 'sdm-toast'; }, 2600);
+    }
+
+    const FOCUS_TREE_DEFAULTS = {
+      education: {
+        education: { visible: true, expanded: true, canToggle: false, isFocus: true },
+        exposure: { visible: false },
+        experience: { visible: false },
+      },
+      exposure: {
+        education: { visible: true, expanded: false, canToggle: true, isFocus: false },
+        exposure: { visible: true, expanded: true, canToggle: false, isFocus: true },
+        experience: { visible: false },
+      },
+      experience: {
+        education: { visible: true, expanded: false, canToggle: true, isFocus: false },
+        exposure: { visible: true, expanded: false, canToggle: true, isFocus: false },
+        experience: { visible: true, expanded: true, canToggle: false, isFocus: true },
+      },
+    };
+
+    /** Manual expand overrides for collapsible ancestor sections (Experience focus). */
+    let manualExpanded = {};
+
+    function resetTreeForFocus() {
+      manualExpanded = {};
+    }
+
+    function getSectionTreeState(sectionKey) {
+      const def = FOCUS_TREE_DEFAULTS[pending.focus]?.[sectionKey];
+      if (!def?.visible) return null;
+      const expanded = def.canToggle
+        ? (manualExpanded[sectionKey] ?? def.expanded)
+        : def.expanded;
+      return { ...def, expanded };
+    }
+
+    function visibleSectionKeys() {
+      return FOCUS_ORDER.filter(key => getSectionTreeState(key));
+    }
+
+    function visibleItems() {
+      return ITEMS.filter(item => visibleSectionKeys().includes(item.section));
+    }
+
+    function selectableItems() {
+      return ITEMS.filter(item => {
+        const state = getSectionTreeState(item.section);
+        return state && state.expanded;
+      });
+    }
+
+    function isItemDirty(id) {
+      return pending.items[id] !== saved.items[id];
+    }
+
+    function isDirty() {
+      if (pending.status !== saved.status) return true;
+      if (pending.focus !== saved.focus) return true;
+      if (pending.prof !== saved.prof) return true;
+      return ITEMS.some(i => isItemDirty(i.id));
+    }
+
+    function updateDirtyUI() {
+      const dirty = isDirty();
+      els.modal.classList.toggle('dirty', dirty);
+      els.saveBtn.disabled = !dirty;
+      els.footerStatus.textContent = dirty
+        ? 'Pending changes — click Save skill details to apply'
+        : 'No pending changes';
+
+      [els.statusSelect, els.focusSelect, els.profSelect].forEach(sel => {
+        const map = { statusSelect: 'status', focusSelect: 'focus', profSelect: 'prof' };
+        const key = map[sel.id];
+        sel.classList.toggle('pending', pending[key] !== saved[key]);
+      });
+    }
+
+    function progressStats() {
+      const vis = visibleItems();
+      const done = vis.filter(i => pending.items[i.id]).length;
+      return { done, total: vis.length, pct: vis.length ? Math.round((done / vis.length) * 100) : 0 };
+    }
+
+    function updateProgress() {
+      const { done, total, pct } = progressStats();
+      els.progressBar.style.width = pct + '%';
+      els.progressText.textContent = `${done} / ${total}`;
+    }
+
+    function renderNotes() {
+      els.notesDisplay.textContent = NOTES_TEXT;
+      els.notesDisplay.classList.toggle('sdm-notes--long', notesExpanded);
+      const overflows = NOTES_TEXT.length > 120;
+      els.notesToggle.hidden = !overflows;
+      els.notesToggle.classList.toggle('visible', overflows);
+      els.notesToggle.textContent = notesExpanded ? 'Show less' : 'Show more';
+    }
+
+    function renderList() {
+      els.listScroll.innerHTML = '';
+      const sectionKeys = visibleSectionKeys();
+
+      sectionKeys.forEach(sec => {
+        const state = getSectionTreeState(sec);
+        const items = ITEMS.filter(i => i.section === sec);
+        if (!items.length) return;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'sdm-tree-section'
+          + (state.expanded ? '' : ' sdm-tree-section--collapsed')
+          + (state.canToggle ? '' : ' sdm-tree-section--locked')
+          + (state.isFocus ? ' sdm-tree-section--focus' : '');
+
+        const hdr = document.createElement('button');
+        hdr.type = 'button';
+        hdr.className = 'sdm-tree-section__header';
+        hdr.setAttribute('aria-expanded', String(state.expanded));
+        const toggleGlyph = state.expanded ? '−' : '+';
+        const done = items.filter(i => pending.items[i.id]).length;
+        hdr.innerHTML = `
+          <span class="sdm-tree-section__toggle" aria-hidden="true">${toggleGlyph}</span>
+          <span class="sdm-tree-section__label">${FOCUS_LABELS[sec]}</span>
+          <span class="sdm-tree-section__count">${done}/${items.length}</span>`;
+
+        hdr.addEventListener('click', () => {
+          if (!state.canToggle) return;
+          manualExpanded[sec] = !state.expanded;
+          renderList();
+        });
+
+        wrap.appendChild(hdr);
+
+        const body = document.createElement('div');
+        body.className = 'sdm-tree-section__body';
+
+        items.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'sdm-list-item'
+            + (item.id === selectedId ? ' active' : '')
+            + (isItemDirty(item.id) ? ' pending-complete' : '');
+
+          const check = document.createElement('button');
+          check.type = 'button';
+          check.className = 'sdm-list-check' + (pending.items[item.id] ? ' done' : '');
+          check.innerHTML = pending.items[item.id] ? SVG.check : SVG.circle;
+          check.setAttribute('aria-label', 'Toggle completion (pending until save)');
+          check.addEventListener('click', (e) => {
+            e.stopPropagation();
+            pending.items[item.id] = !pending.items[item.id];
+            updateProgress();
+            renderList();
+            if (selectedId === item.id) renderReader();
+            updateDirtyUI();
+          });
+
+          const textWrap = document.createElement('div');
+          textWrap.style.flex = '1';
+          textWrap.style.minWidth = '0';
+          textWrap.style.cursor = 'pointer';
+          textWrap.innerHTML = `<span class="sdm-list-item__title">${item.title}</span><span class="sdm-list-item__meta">${item.type}${item.mine ? ' · My item' : ''}</span>`;
+          textWrap.addEventListener('click', () => {
+            selectedId = item.id;
+            renderList();
+            renderReader();
+          });
+
+          row.appendChild(check);
+          row.appendChild(textWrap);
+          body.appendChild(row);
+        });
+
+        wrap.appendChild(body);
+        els.listScroll.appendChild(wrap);
+      });
+
+      if (!selectableItems().find(i => i.id === selectedId)) {
+        const first = selectableItems()[0];
+        if (first) selectedId = first.id;
+      }
+    }
+
+    function renderReader() {
+      const item = ITEMS.find(i => i.id === selectedId);
+      if (!item || !selectableItems().find(i => i.id === selectedId)) {
+        els.readerToolbar.hidden = true;
+        els.readerContent.innerHTML = '<p style="color:var(--text-muted)">Select an item to view content.</p>';
+        return;
+      }
+
+      els.readerToolbar.hidden = false;
+      const done = pending.items[item.id];
+      const dirty = isItemDirty(item.id);
+
+      els.completeBtn.className = 'sdm-complete-btn' + (done ? ' done' : '') + (dirty ? ' pending' : '');
+      els.completeIcon.innerHTML = done ? SVG.check : SVG.circle;
+      els.completeLabel.textContent = done ? (dirty ? 'Complete (unsaved)' : 'Completed') : 'Mark complete';
+
+      els.readerMeta.innerHTML = `${FOCUS_LABELS[item.section]} · ${item.type}`
+        + (dirty ? '<br><span style="color:var(--warning)">Change pending save</span>' : '');
+
+      els.readerContent.innerHTML = item.id === 'x3'
+        ? `<h2 style="font-size:22px;font-weight:700;margin:0 0 12px">${item.title}</h2>${LONG_BODY}`
+        : `<h2 style="font-size:22px;font-weight:700;margin:0 0 12px">${item.title}</h2><div class="sdm-reader-prose"><p>Content for <strong>${item.title}</strong>. Full descriptions render here with comfortable line length.</p></div>`;
+    }
+
+    function renderLog() {
+      els.logCountBadge.textContent = `${ALL_LOGS.length} entries`;
+      els.logBody.innerHTML = '';
+      ALL_LOGS.slice(0, logVisible).forEach(log => {
+        const row = document.createElement('div');
+        row.className = 'sdm-log-entry';
+        row.innerHTML = `
+          <span class="sdm-log-badge sdm-log-badge--${log.type}">${log.type}</span>
+          <div class="sdm-log-entry__text">
+            <strong>${log.title}</strong>
+            <span class="sdm-log-entry__time">${log.time}</span>
+          </div>`;
+        els.logBody.appendChild(row);
+      });
+      if (logVisible < ALL_LOGS.length) {
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'btn btn-secondary btn-sm sdm-log-more';
+        more.textContent = `Show more (${ALL_LOGS.length - logVisible} remaining)`;
+        more.addEventListener('click', () => { logVisible += 5; renderLog(); });
+        els.logBody.appendChild(more);
+      }
+    }
+
+    function bindControls() {
+      els.statusSelect.addEventListener('change', () => {
+        pending.status = els.statusSelect.value;
+        updateDirtyUI();
+      });
+      els.focusSelect.addEventListener('change', () => {
+        pending.focus = els.focusSelect.value;
+        resetTreeForFocus();
+        renderList();
+        renderReader();
+        updateProgress();
+        updateDirtyUI();
+      });
+      els.profSelect.addEventListener('change', () => {
+        pending.prof = els.profSelect.value;
+        updateDirtyUI();
+      });
+
+      els.completeBtn.addEventListener('click', () => {
+        const item = ITEMS.find(i => i.id === selectedId);
+        if (!item) return;
+        pending.items[item.id] = !pending.items[item.id];
+        updateProgress();
+        renderList();
+        renderReader();
+        updateDirtyUI();
+        toast('Completion staged — not saved yet', 'warn');
+      });
+
+      document.getElementById('addMyItemBtn').addEventListener('click', () => {
+        toast('Would open Library modal — staged until save', 'warn');
+      });
+
+      document.getElementById('logToggle').addEventListener('click', () => {
+        document.getElementById('logPanel').classList.toggle('open');
+      });
+
+      document.getElementById('saveBtn').addEventListener('click', () => {
+        Object.assign(saved, JSON.parse(JSON.stringify(pending)));
+        ITEMS.forEach(i => { i.savedCompleted = saved.items[i.id]; });
+        els.statusSelect.value = saved.status;
+        els.focusSelect.value = saved.focus;
+        els.profSelect.value = saved.prof;
+        updateDirtyUI();
+        renderList();
+        renderReader();
+        toast('All changes saved', 'success');
+      });
+
+      document.getElementById('discardBtn').addEventListener('click', () => {
+        if (!isDirty() || confirm('Discard all pending changes?')) {
+          pending.status = saved.status;
+          pending.focus = saved.focus;
+          pending.prof = saved.prof;
+          pending.items = { ...saved.items };
+          els.statusSelect.value = saved.status;
+          els.focusSelect.value = saved.focus;
+          els.profSelect.value = saved.prof;
+          updateDirtyUI();
+          renderList();
+          renderReader();
+          updateProgress();
+          toast('Changes discarded');
+        }
+      });
+
+      document.getElementById('closeHint').addEventListener('click', () => {
+        if (isDirty()) toast('Close blocked — save or discard pending changes', 'warn');
+        else toast('Modal would close');
+      });
+
+      els.notesToggle.addEventListener('click', () => {
+        notesExpanded = !notesExpanded;
+        renderNotes();
+      });
+
+      document.getElementById('themeToggle').addEventListener('click', () => {
+        const root = document.documentElement;
+        const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        root.setAttribute('data-theme', next);
+        document.getElementById('themeToggle').textContent = next === 'light' ? 'Dark theme' : 'Light theme';
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        logVisible = 5;
+        pending.focus = 'exposure';
+        els.focusSelect.value = 'exposure';
+        resetTreeForFocus();
+        selectedId = 'x3';
+        Object.assign(saved, { status: 'developing', focus: 'exposure', prof: '3' });
+        ITEMS.forEach(i => {
+          i.savedCompleted = ['e1','e2','x1'].includes(i.id);
+          saved.items[i.id] = i.savedCompleted;
+        });
+        pending.status = saved.status;
+        pending.prof = saved.prof;
+        pending.items = { ...saved.items };
+        els.statusSelect.value = saved.status;
+        els.profSelect.value = saved.prof;
+        notesExpanded = false;
+        renderNotes();
+        renderList();
+        renderReader();
+        updateProgress();
+        updateDirtyUI();
+        renderLog();
+        toast('Demo reset');
+      });
+    }
+
+    bindControls();
+    renderNotes();
+    renderList();
+    renderReader();
+    updateProgress();
+    updateDirtyUI();
+    renderLog();
+  </script>
+</body>
+</html>

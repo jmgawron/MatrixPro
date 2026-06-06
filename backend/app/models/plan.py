@@ -105,6 +105,8 @@ class UserContentOverride(Base):
     plan_skill_id = Column(Integer, ForeignKey("plan_skills.id"), nullable=False)
     content_id = Column(Integer, ForeignKey("skill_level_content.id"), nullable=False)
     override_description = Column(Text, nullable=True)
+    override_type = Column(String(32), nullable=True)
+    override_url = Column(String, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -182,6 +184,31 @@ class HiddenCatalogContent(Base):
     plan_skill_id = Column(Integer, ForeignKey("plan_skills.id"), nullable=False)
     content_id = Column(Integer, ForeignKey("skill_level_content.id"), nullable=False)
     hidden_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+    plan_skill = relationship("PlanSkill")
+    content = relationship("SkillLevelContent")
+
+
+class UserCatalogDisplayOrder(Base):
+    """Per-user display order for catalog content items within a plan skill."""
+
+    __tablename__ = "user_catalog_display_order"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "plan_skill_id",
+            "content_id",
+            name="uq_user_catalog_display_order",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    plan_skill_id = Column(Integer, ForeignKey("plan_skills.id"), nullable=False)
+    content_id = Column(Integer, ForeignKey("skill_level_content.id"), nullable=False)
+    position = Column(Integer, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User")
     plan_skill = relationship("PlanSkill")

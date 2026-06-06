@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Catalog Visual Redesign Mockups</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-catalog">
+  <style>
+    body.mockup-page { margin: 0; min-height: 100vh; background: var(--bg-page); }
+
+    .mockup-chrome {
+      position: sticky; top: 0; z-index: 300;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 14px 24px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+    }
+    .mockup-chrome__title { font-size: 15px; font-weight: 700; margin: 0; }
+    .mockup-chrome__sub { font-size: 12px; color: var(--text-muted); margin: 0; flex: 1; min-width: 200px; }
+    .mockup-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .mockup-tab {
+      border: 1px solid var(--border-soft); background: var(--bg-card-soft);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 7px 14px; border-radius: 999px; cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .mockup-tab:hover { color: var(--text-primary); border-color: var(--border-strong); }
+    .mockup-tab.active {
+      background: var(--accent-soft, rgba(59,130,246,.12));
+      border-color: var(--accent); color: var(--accent);
+    }
+    .mockup-theme-btn {
+      border: 1px solid var(--border-soft); background: var(--bg-card);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer;
+    }
+    .mockup-concept { display: none; }
+    .mockup-concept.active { display: block; }
+
+    /* ── Shared mock nav ── */
+    .cm-nav {
+      height: var(--nav-h, 56px); border-bottom: 1px solid var(--border-soft);
+      background: var(--bg-panel); display: flex; align-items: center; padding: 0 24px;
+    }
+    .cm-nav__brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; color: var(--text-primary); text-decoration: none; }
+    .cm-nav__brand .brand-tile { width: 32px; height: 32px; border-radius: 8px; }
+    .cm-nav__links { display: flex; gap: 4px; margin-left: 32px; list-style: none; padding: 0; }
+    .cm-nav__links a { font-size: 13px; font-weight: 600; color: var(--text-muted); text-decoration: none; padding: 6px 12px; border-radius: var(--radius-sm); }
+    .cm-nav__links a.active { color: var(--accent); background: var(--accent-soft, rgba(59,130,246,.1)); }
+    .cm-nav__user { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+
+    /* ── Shared sample data helpers ── */
+    .cm-cat-rail--foundational { --cm-rail: #22c55e; --cm-rail-soft: rgba(34,197,94,.12); }
+    .cm-cat-rail--core { --cm-rail: #3b82f6; --cm-rail-soft: rgba(59,130,246,.12); }
+    .cm-cat-rail--advanced { --cm-rail: #06b6d4; --cm-rail-soft: rgba(6,182,212,.12); }
+    .cm-cat-rail--ai { --cm-rail: #a855f7; --cm-rail-soft: rgba(168,85,247,.12); }
+
+    /* ═══════════════════════════════════════════════════════════
+       CONCEPT A — Refined Cards
+       ═══════════════════════════════════════════════════════════ */
+    .cm-a { position: relative; min-height: calc(100vh - 120px); background: var(--home-bg); }
+    .cm-a__mesh {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 45% at 10% -5%, rgba(0,174,239,.1), transparent 55%),
+        radial-gradient(ellipse 50% 35% at 95% 15%, rgba(59,130,246,.06), transparent 50%);
+    }
+    .cm-a__inner { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 28px 24px 56px; }
+
+    .cm-a__hero {
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;
+      flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .cm-a__hero h1 { font-size: clamp(28px, 3.5vw, 40px); font-weight: 800; margin: 0; letter-spacing: -.02em; }
+    .cm-a__hero p { font-size: 14px; color: var(--text-muted); margin: 6px 0 0; }
+    .cm-a__mini-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+    .cm-a__mini-stat {
+      background: var(--home-card-bg); border: 1px solid var(--home-card-border);
+      border-radius: var(--radius-md); padding: 10px 16px; min-width: 88px;
+      backdrop-filter: blur(8px);
+    }
+    .cm-a__mini-stat-val { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+    .cm-a__mini-stat-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-top: 4px; }
+
+    .cm-a__shell {
+      background: var(--bg-card); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden;
+    }
+    .cm-a__tabs {
+      display: flex; gap: 0; padding: 0 16px; border-bottom: 1px solid var(--border-soft);
+      background: var(--bg-panel);
+    }
+    .cm-a__tab {
+      padding: 12px 18px; font-size: 13px; font-weight: 600; color: var(--text-muted);
+      border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -1px; transition: color .15s, border-color .15s;
+    }
+    .cm-a__tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .cm-a__tab-count { font-size: 11px; font-weight: 700; opacity: .65; margin-left: 4px; }
+
+    .cm-a__toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+      padding: 14px 16px; border-bottom: 1px solid var(--border-soft);
+      background: var(--bg-card-soft);
+    }
+    .cm-a__search {
+      flex: 1; min-width: 200px; max-width: 360px; position: relative;
+    }
+    .cm-a__search svg {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;
+    }
+    .cm-a__search input {
+      width: 100%; padding: 9px 12px 9px 36px;
+      background: var(--bg-input); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md); font-size: 14px; color: var(--text-primary);
+    }
+    .cm-a__chip-group { display: flex; align-items: center; gap: 6px; }
+    .cm-a__chip-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-right: 2px; }
+    .cm-a__chip {
+      padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      border: 1px solid var(--border-soft); background: transparent; color: var(--text-secondary); cursor: pointer;
+    }
+    .cm-a__chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .cm-a__body { display: flex; min-height: 520px; }
+    .cm-a__tree {
+      width: 272px; flex-shrink: 0; border-right: 1px solid var(--border-soft);
+      background: var(--sidebar-gradient); overflow-y: auto; padding: 8px 0;
+    }
+    .cm-a__tree-head {
+      padding: 12px 16px 8px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--text-muted);
+    }
+    .cm-a__tree-item {
+      display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+      font-size: 13px; color: var(--text-secondary); cursor: pointer;
+      border-left: 3px solid transparent; transition: background .15s, border-color .15s, color .15s;
+    }
+    .cm-a__tree-item:hover { background: var(--bg-elevated); color: var(--text-primary); border-left-color: rgba(59,130,246,.3); }
+    .cm-a__tree-item.active { background: var(--accent-soft); color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+    .cm-a__tree-item--child { padding-left: 28px; font-size: 12px; }
+    .cm-a__tree-domain {
+      padding: 10px 16px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--text-muted); opacity: .85;
+    }
+
+    .cm-a__main { flex: 1; min-width: 0; overflow-y: auto; padding: 16px 20px 24px; }
+
+    .cm-a__section-head {
+      display: flex; align-items: center; gap: 10px; padding: 10px 0 14px;
+      border-bottom: 1px solid var(--border-soft); margin-bottom: 14px;
+    }
+    .cm-a__section-head::before {
+      content: ''; width: 3px; height: 22px; border-radius: 2px; background: var(--cm-rail, var(--accent));
+    }
+    .cm-a__section-icon { width: 18px; height: 18px; color: var(--text-secondary); opacity: .85; }
+    .cm-a__section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); flex: 1; margin: 0; }
+    .cm-a__section-count {
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+      background: var(--cm-rail-soft, var(--accent-soft)); color: var(--cm-rail, var(--accent));
+    }
+
+    .cm-a__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+    @media (max-width: 1100px) { .cm-a__grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .cm-a__card {
+      position: relative; background: var(--bg-card-gradient); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md); padding: 0; overflow: hidden; cursor: pointer;
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+    }
+    .cm-a__card::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--cm-rail, var(--accent));
+    }
+    .cm-a__card:hover {
+      transform: translateY(-2px); border-color: rgba(59,130,246,.45); box-shadow: var(--card-hover-glow);
+    }
+    .cm-a__card-inner { padding: 14px 14px 14px 18px; }
+    .cm-a__card-top { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+    .cm-a__card-icon {
+      width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--cm-rail-soft, rgba(59,130,246,.12)); color: var(--cm-rail, var(--accent));
+    }
+    .cm-a__card-icon svg { width: 24px; height: 24px; }
+    .cm-a__card-name { font-size: 15px; font-weight: 700; color: var(--text-primary); line-height: 1.3; margin: 0 0 4px; }
+    .cm-a__card-pill {
+      display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; padding: 2px 7px; border-radius: 999px;
+      background: var(--cm-rail-soft); color: var(--cm-rail);
+    }
+    .cm-a__card-desc {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 12px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .cm-a__card-meta {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      padding-top: 10px; border-top: 1px solid var(--border-soft);
+      font-size: 11px; color: var(--text-muted);
+    }
+    .cm-a__card-meta .chip-sm { font-size: 10px; }
+    .cm-a__card-meta-dot { opacity: .4; }
+    .cm-a__card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .cm-a__card-foot {
+      display: flex; justify-content: flex-end; margin-top: 8px;
+      font-size: 11px; font-weight: 600; color: var(--accent); opacity: 0; transition: opacity .15s;
+    }
+    .cm-a__card:hover .cm-a__card-foot { opacity: 1; }
+
+    /* ═══════════════════════════════════════════════════════════
+       CONCEPT B — Command Strip
+       ═══════════════════════════════════════════════════════════ */
+    .cm-b { background: var(--bg-page); min-height: calc(100vh - 120px); }
+    .cm-b__inner { max-width: 1400px; margin: 0 auto; padding: 20px 24px 48px; }
+
+    .cm-b__strip {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px;
+      padding: 14px 18px; margin-bottom: 16px;
+      background: var(--bg-card); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+    }
+    .cm-b__strip-title { font-size: 18px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
+    .cm-b__strip-title span { background: var(--brand-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .cm-b__context {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+      border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+      font-size: 11px; font-weight: 700;
+    }
+    .cm-b__strip-search { flex: 1; min-width: 180px; max-width: 320px; position: relative; }
+    .cm-b__strip-search input {
+      width: 100%; padding: 8px 12px; border-radius: var(--radius-md);
+      border: 1px solid var(--border-soft); background: var(--bg-input); font-size: 13px; color: var(--text-primary);
+    }
+    .cm-b__seg { display: inline-flex; padding: 3px; border-radius: var(--radius-md); background: var(--bg-card-soft); border: 1px solid var(--border-soft); }
+    .cm-b__seg button {
+      padding: 6px 14px; border: none; background: transparent; border-radius: calc(var(--radius-md) - 2px);
+      font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer;
+    }
+    .cm-b__seg button.active { background: var(--accent); color: #fff; box-shadow: var(--shadow-sm); }
+
+    .cm-b__layout { display: flex; gap: 16px; }
+    .cm-b__tree {
+      width: 260px; flex-shrink: 0;
+      background: var(--bg-card); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column;
+      max-height: 640px;
+    }
+    .cm-b__tree-top {
+      padding: 12px 14px; border-bottom: 1px solid var(--border-soft);
+      background: var(--bg-panel);
+    }
+    .cm-b__tree-top h3 { margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); }
+    .cm-b__tree-top input {
+      width: 100%; padding: 7px 10px; font-size: 12px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border-soft); background: var(--bg-input); color: var(--text-primary);
+    }
+    .cm-b__tree-scroll { overflow-y: auto; flex: 1; padding: 6px 0; }
+
+    .cm-b__panel {
+      flex: 1; min-width: 0;
+      background: var(--bg-card); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg); padding: 16px 18px 24px;
+    }
+    .cm-b__panel-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-soft);
+    }
+    .cm-b__panel-bar h2 { margin: 0; font-size: 14px; font-weight: 700; color: var(--text-primary); }
+    .cm-b__panel-bar span { font-size: 12px; color: var(--text-muted); }
+    .cm-b__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    @media (max-width: 1100px) { .cm-b__grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .cm-b__card {
+      border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+      padding: 14px; background: var(--bg-card-soft); cursor: pointer;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .cm-b__card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft); }
+    .cm-b__card-head { display: flex; gap: 10px; margin-bottom: 8px; }
+    .cm-b__card-icon {
+      width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+      background: rgba(59,130,246,.12); color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cm-b__card-icon svg { width: 20px; height: 20px; }
+    .cm-b__card h4 { margin: 0; font-size: 14px; font-weight: 700; line-height: 1.25; }
+    .cm-b__card p { margin: 0 0 10px; font-size: 12px; color: var(--text-secondary); line-height: 1.45;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .cm-b__card-meta { display: flex; flex-wrap: wrap; gap: 4px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       CONCEPT C — Editorial Bands
+       ═══════════════════════════════════════════════════════════ */
+    .cm-c { background: var(--home-bg); min-height: calc(100vh - 120px); position: relative; }
+    .cm-c__mesh {
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0,174,239,.08), transparent 60%);
+    }
+    .cm-c__inner { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 32px 24px 56px; }
+
+    .cm-c__header { text-align: center; margin-bottom: 28px; }
+    .cm-c__header h1 { font-size: clamp(32px, 4vw, 48px); font-weight: 800; margin: 0 0 8px; letter-spacing: -.03em; }
+    .cm-c__header p { font-size: 15px; color: var(--text-muted); margin: 0; max-width: 52ch; margin-inline: auto; }
+
+    .cm-c__controls {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px;
+      margin-bottom: 24px;
+    }
+    .cm-c__controls .search-input { max-width: 320px; }
+
+    .cm-c__layout { display: flex; gap: 20px; align-items: flex-start; }
+    .cm-c__tree {
+      width: 240px; flex-shrink: 0; padding: 12px 0;
+      border: 1px solid var(--border-soft); border-radius: var(--radius-lg);
+      background: var(--bg-card); box-shadow: var(--shadow-sm);
+    }
+
+    .cm-c__feed { flex: 1; min-width: 0; }
+
+    .cm-c__band {
+      margin-bottom: 32px; border-radius: var(--radius-lg); overflow: hidden;
+      border: 1px solid var(--border-soft); background: var(--bg-card);
+      box-shadow: var(--shadow-sm);
+    }
+    .cm-c__band-head {
+      display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+      background: linear-gradient(90deg, var(--cm-rail-soft, rgba(59,130,246,.08)) 0%, transparent 70%);
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .cm-c__band-icon {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--cm-rail, var(--accent)); background: var(--cm-rail-soft);
+      color: var(--cm-rail, var(--accent));
+    }
+    .cm-c__band-icon svg { width: 20px; height: 20px; }
+    .cm-c__band-title { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; flex: 1; }
+    .cm-c__band-sub { font-size: 12px; color: var(--text-muted); margin: 2px 0 0; font-weight: 400; }
+    .cm-c__band-count { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--cm-rail, var(--accent)); }
+
+    .cm-c__band-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+      background: var(--border-soft); padding: 0;
+    }
+    .cm-c__band-grid > article {
+      background: var(--bg-card); padding: 16px 18px; cursor: pointer;
+      transition: background .15s;
+    }
+    .cm-c__band-grid > article:hover { background: var(--bg-hover); }
+    .cm-c__band-grid h4 { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
+    .cm-c__band-grid p { margin: 0 0 8px; font-size: 12px; color: var(--text-secondary); line-height: 1.45;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    @media (max-width: 1000px) { .cm-c__band-grid { grid-template-columns: 1fr 1fr; } }
+
+    .cm-callout {
+      margin-top: 12px; padding: 10px 14px; border-radius: var(--radius-md);
+      background: var(--accent-soft); border: 1px dashed rgba(59,130,246,.35);
+      font-size: 11px; color: var(--text-secondary); line-height: 1.45;
+    }
+    .cm-callout strong { color: var(--accent); }
+  </style>
+</head>
+<body class="mockup-page">
+
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+    <defs>
+      <symbol id="mp-icon-dark" viewBox="0 0 256 256"><rect x="64" y="60" width="36" height="36" rx="8" fill="#3b82f6"/><circle cx="128" cy="78" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/><rect x="110" y="110" width="36" height="36" rx="8" fill="#3b82f6"/><rect x="64" y="160" width="36" height="36" rx="8" fill="#3b82f6"/><circle cx="174" cy="178" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/></symbol>
+      <symbol id="mp-icon-light" viewBox="0 0 256 256"><rect x="64" y="60" width="36" height="36" rx="8" fill="#2563eb"/><circle cx="128" cy="78" r="16" fill="none" stroke="#2563eb" stroke-width="4"/><rect x="110" y="110" width="36" height="36" rx="8" fill="#2563eb"/><rect x="64" y="160" width="36" height="36" rx="8" fill="#2563eb"/><circle cx="174" cy="178" r="16" fill="none" stroke="#2563eb" stroke-width="4"/></symbol>
+      <symbol id="ico-switch" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></symbol>
+      <symbol id="ico-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/></symbol>
+      <symbol id="ico-seed" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M12 20v-8"/><path d="M12 12c0-4 3-7 8-7-1 5-4 7-8 7z"/></symbol>
+      <symbol id="ico-diamond" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="mockup-chrome">
+    <div>
+      <h1 class="mockup-chrome__title">Catalog Visual Redesign — 3 Concepts</h1>
+      <p class="mockup-chrome__sub">Visual-only proposals. Same tabs, tree, filters, cards, and modals — presentation polish only.</p>
+    </div>
+    <div class="mockup-tabs" role="tablist">
+      <button type="button" class="mockup-tab active" data-concept="a">A · Refined Cards</button>
+      <button type="button" class="mockup-tab" data-concept="b">B · Command Strip</button>
+      <button type="button" class="mockup-tab" data-concept="c">C · Editorial Bands</button>
+    </div>
+    <button type="button" class="mockup-theme-btn" id="themeToggle">Toggle light / dark</button>
+  </header>
+
+  <!-- ═══ CONCEPT A ═══ -->
+  <div class="mockup-concept active" id="concept-a">
+    <nav class="cm-nav">
+      <a class="cm-nav__brand" href="#"><span class="brand-tile"><svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--dark"><use href="#mp-icon-dark"/></svg><svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--light"><use href="#mp-icon-light"/></svg></span> MatrixPro</a>
+      <ul class="cm-nav__links"><li><a href="#">Home</a></li><li><a href="#">My Plan</a></li><li><a href="#" class="active">Catalog</a></li></ul>
+      <span class="cm-nav__user">admin@matrixpro.com · Admin</span>
+    </nav>
+
+    <div class="cm-a">
+      <div class="cm-a__mesh"></div>
+      <div class="cm-a__inner">
+        <div class="cm-a__hero">
+          <div>
+            <h1>Skill <span class="mp-title-gradient">Catalog</span></h1>
+            <p>Browse, search and manage the skill catalog</p>
+          </div>
+          <div class="cm-a__mini-stats">
+            <div class="cm-a__mini-stat"><div class="cm-a__mini-stat-val">70</div><div class="cm-a__mini-stat-lbl">Skills</div></div>
+            <div class="cm-a__mini-stat"><div class="cm-a__mini-stat-val">84</div><div class="cm-a__mini-stat-lbl">Teams</div></div>
+            <div class="cm-a__mini-stat"><div class="cm-a__mini-stat-val">27</div><div class="cm-a__mini-stat-lbl">Certs</div></div>
+          </div>
+        </div>
+
+        <div class="cm-a__shell">
+          <div class="cm-a__tabs">
+            <button class="cm-a__tab active">Organization<span class="cm-a__tab-count">70</span></button>
+            <button class="cm-a__tab">Certification<span class="cm-a__tab-count">27</span></button>
+            <button class="cm-a__tab">Non-Technical<span class="cm-a__tab-count">12</span></button>
+          </div>
+
+          <div class="cm-a__toolbar">
+            <div class="cm-a__search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" placeholder="Search skills…" value="">
+            </div>
+            <div class="cm-a__chip-group">
+              <span class="cm-a__chip-label">Shifts</span>
+              <button class="cm-a__chip active">S1</button>
+              <button class="cm-a__chip active">S2</button>
+              <button class="cm-a__chip active">S3</button>
+              <button class="cm-a__chip active">S4</button>
+            </div>
+            <button class="cm-a__chip">⇅ Sort</button>
+            <button class="btn btn-primary btn-sm">+ Create Skill</button>
+          </div>
+
+          <div class="cm-a__body">
+            <aside class="cm-a__tree">
+              <div class="cm-a__tree-head">Organization tree</div>
+              <div class="cm-a__tree-item active">All Skills</div>
+              <div class="cm-a__tree-domain">Enterprise · ENT</div>
+              <div class="cm-a__tree-item">Enterprise Networking</div>
+              <div class="cm-a__tree-item cm-a__tree-item--child">TAC-ENT-LANSW-SHIFT1</div>
+              <div class="cm-a__tree-item cm-a__tree-item--child">TAC-ENT-LANSW-SHIFT2</div>
+              <div class="cm-a__tree-item cm-a__tree-item--child">TAC-ENT-WLAN-SHIFT1</div>
+              <div class="cm-a__tree-domain">Data Center · DC</div>
+              <div class="cm-a__tree-item">TAC-DC-ACI-SHIFT1</div>
+            </aside>
+
+            <main class="cm-a__main">
+              <!-- Core section -->
+              <section class="cm-cat-rail--core" style="--cm-rail:#3b82f6;--cm-rail-soft:rgba(59,130,246,.12)">
+                <div class="cm-a__section-head cm-cat-rail--core">
+                  <span class="cm-a__section-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="#ico-diamond"/></svg></span>
+                  <h3 class="cm-a__section-title">Core</h3>
+                  <span class="cm-a__section-count">6</span>
+                </div>
+                <div class="cm-a__grid">
+                  <article class="cm-a__card cm-cat-rail--core">
+                    <div class="cm-a__card-inner">
+                      <div class="cm-a__card-top">
+                        <div class="cm-a__card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="#ico-switch"/></svg></div>
+                        <div>
+                          <h4 class="cm-a__card-name">Catalyst 9000 IOS-XE Operations</h4>
+                          <span class="cm-a__card-pill">Core</span>
+                        </div>
+                      </div>
+                      <p class="cm-a__card-desc">Day-to-day operations, software management, and troubleshooting on Catalyst 9000 series switches.</p>
+                      <div class="cm-a__card-meta">
+                        <span class="triage-chip triage-signal chip-sm">TAC-ENT-LANSW-SHIFT2</span>
+                        <span class="cm-a__card-meta-dot">·</span>
+                        <span class="meta-badge meta-badge--cert">CCNP ENCOR</span>
+                      </div>
+                      <div class="cm-a__card-tags">
+                        <span class="triage-chip triage-feedback chip-sm">troubleshooting</span>
+                        <span class="triage-chip triage-feedback chip-sm">operations</span>
+                      </div>
+                      <div class="cm-a__card-foot">View details →</div>
+                    </div>
+                  </article>
+                  <article class="cm-a__card cm-cat-rail--core">
+                    <div class="cm-a__card-inner">
+                      <div class="cm-a__card-top">
+                        <div class="cm-a__card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="#ico-switch"/></svg></div>
+                        <div>
+                          <h4 class="cm-a__card-name">Layer 3 Switching &amp; Inter-VLAN Routing</h4>
+                          <span class="cm-a__card-pill">Core</span>
+                        </div>
+                      </div>
+                      <p class="cm-a__card-desc">SVIs, routed ports, and inter-VLAN routing design on campus switching platforms.</p>
+                      <div class="cm-a__card-meta">
+                        <span class="triage-chip triage-signal chip-sm">TAC-ENT-LANSW-SHIFT1</span>
+                        <span class="cm-a__card-meta-dot">·</span>
+                        <span class="meta-badge meta-badge--cert">CCNA</span>
+                      </div>
+                      <div class="cm-a__card-foot">View details →</div>
+                    </div>
+                  </article>
+                  <article class="cm-a__card cm-cat-rail--core">
+                    <div class="cm-a__card-inner">
+                      <div class="cm-a__card-top">
+                        <div class="cm-a__card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="#ico-switch"/></svg></div>
+                        <div>
+                          <h4 class="cm-a__card-name">802.1X, MAB &amp; MACsec Switchport Security</h4>
+                          <span class="cm-a__card-pill">Core</span>
+                        </div>
+                      </div>
+                      <p class="cm-a__card-desc">Port-based access control, fallback auth, and MACsec deployment on access switches.</p>
+                      <div class="cm-a__card-meta">
+                        <span class="triage-chip triage-signal chip-sm">TAC-ENT-LANSW-SHIFT2</span>
+                        <span class="triage-chip triage-signal chip-sm">+2 …</span>
+                      </div>
+                      <div class="cm-a__card-foot">View details →</div>
+                    </div>
+                  </article>
+                </div>
+              </section>
+
+              <!-- Foundational section (collapsed hint) -->
+              <section class="cm-cat-rail--foundational" style="--cm-rail:#22c55e;--cm-rail-soft:rgba(34,197,94,.12)">
+                <div class="cm-a__section-head">
+                  <span class="cm-a__section-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="#ico-seed"/></svg></span>
+                  <h3 class="cm-a__section-title">Foundational</h3>
+                  <span class="cm-a__section-count">5</span>
+                </div>
+                <p style="font-size:12px;color:var(--text-muted);margin:-8px 0 0;">Collapsed by default — same toggle behavior as today.</p>
+              </section>
+            </main>
+          </div>
+        </div>
+
+        <div class="cm-callout"><strong>Concept A highlights:</strong> Category accent rail on cards · unified meta row · compact glass stats · tab counts · search icon · mesh atmosphere · “View details →” hover affordance.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CONCEPT B ═══ -->
+  <div class="mockup-concept" id="concept-b" hidden>
+    <nav class="cm-nav">
+      <a class="cm-nav__brand" href="#"><span class="brand-tile"><svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--dark"><use href="#mp-icon-dark"/></svg></span> MatrixPro</a>
+      <ul class="cm-nav__links"><li><a href="#" class="active">Catalog</a></li></ul>
+      <span class="cm-nav__user">alice@matrixpro.com · Manager</span>
+    </nav>
+
+    <div class="cm-b">
+      <div class="cm-b__inner">
+        <div class="cm-b__strip">
+          <div class="cm-b__strip-title">Skill <span>Catalog</span></div>
+          <span class="cm-b__context">TAC-ENT-LANSW-SHIFT2 · 18 skills</span>
+          <div class="cm-b__strip-search"><input type="text" placeholder="Search skills…"></div>
+          <div class="cm-b__seg">
+            <button class="active">Organization</button>
+            <button>Certification</button>
+            <button>Non-Technical</button>
+          </div>
+          <div class="cm-b__seg">
+            <button class="active">S1</button><button class="active">S2</button><button>S3</button><button>S4</button>
+          </div>
+          <button class="btn btn-secondary btn-sm">Sort</button>
+        </div>
+
+        <div class="cm-b__layout">
+          <aside class="cm-b__tree">
+            <div class="cm-b__tree-top">
+              <h3>Browse</h3>
+              <input type="text" placeholder="Filter tree…">
+            </div>
+            <div class="cm-b__tree-scroll">
+              <div class="cm-a__tree-item active">All Skills</div>
+              <div class="cm-a__tree-domain">Enterprise</div>
+              <div class="cm-a__tree-item">LAN Switching</div>
+              <div class="cm-a__tree-item cm-a__tree-item--child">LANSW Shift 1</div>
+              <div class="cm-a__tree-item cm-a__tree-item--child">LANSW Shift 2</div>
+            </div>
+          </aside>
+
+          <div class="cm-b__panel">
+            <div class="cm-b__panel-bar">
+              <div>
+                <h2>Core skills</h2>
+                <span>Showing 6 of 18 · sorted A→Z</span>
+              </div>
+              <button class="btn btn-primary btn-sm">+ Create Skill</button>
+            </div>
+            <div class="cm-b__grid">
+              <article class="cm-b__card">
+                <div class="cm-b__card-head">
+                  <div class="cm-b__card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="#ico-switch"/></svg></div>
+                  <h4>Catalyst 9000 IOS-XE Operations</h4>
+                </div>
+                <p>Day-to-day operations and troubleshooting on Catalyst 9000 series switches.</p>
+                <div class="cm-b__card-meta">
+                  <span class="triage-chip triage-signal chip-sm">LANSW S2</span>
+                  <span class="meta-badge meta-badge--cert">CCNP</span>
+                </div>
+              </article>
+              <article class="cm-b__card">
+                <div class="cm-b__card-head">
+                  <div class="cm-b__card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="#ico-globe"/></svg></div>
+                  <h4>Multicast on Campus (IGMP/PIM-SM)</h4>
+                </div>
+                <p>IGMP snooping, PIM-SM routing, and multicast troubleshooting in campus networks.</p>
+                <div class="cm-b__card-meta">
+                  <span class="triage-chip triage-signal chip-sm">LANSW S2</span>
+                </div>
+              </article>
+              <article class="cm-b__card">
+                <div class="cm-b__card-head">
+                  <div class="cm-b__card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="#ico-switch"/></svg></div>
+                  <h4>QoS on Campus Switches</h4>
+                </div>
+                <p>Classification, marking, queuing, and policing for campus QoS policies.</p>
+                <div class="cm-b__card-meta">
+                  <span class="triage-chip triage-signal chip-sm">LANSW S1</span>
+                  <span class="triage-chip triage-signal chip-sm">LANSW S2</span>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+
+        <div class="cm-callout"><strong>Concept B highlights:</strong> Single command strip merges hero + context + tabs + shifts · active filter chip · tree mini-search · results summary bar · denser cards without category rails.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CONCEPT C ═══ -->
+  <div class="mockup-concept" id="concept-c" hidden>
+    <nav class="cm-nav">
+      <a class="cm-nav__brand" href="#"><span class="brand-tile"><svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--dark"><use href="#mp-icon-dark"/></svg></span> MatrixPro</a>
+      <ul class="cm-nav__links"><li><a href="#" class="active">Catalog</a></li></ul>
+      <span class="cm-nav__user">bob@matrixpro.com · Engineer</span>
+    </nav>
+
+    <div class="cm-c">
+      <div class="cm-c__mesh"></div>
+      <div class="cm-c__inner">
+        <header class="cm-c__header">
+          <h1>Skill <span class="mp-title-gradient">Catalog</span></h1>
+          <p>Explore skills by category, team, and certification track — everything in one place.</p>
+        </header>
+
+        <div class="cm-c__controls">
+          <div class="catalog-tab-bar" style="border-radius:999px;padding:4px;border:1px solid var(--border-soft);background:var(--bg-card);box-shadow:none;">
+            <button class="catalog-tab active" style="border-bottom:none;border-radius:999px;margin:0;">Organization</button>
+            <button class="catalog-tab" style="border-bottom:none;border-radius:999px;margin:0;">Certification</button>
+            <button class="catalog-tab" style="border-bottom:none;border-radius:999px;margin:0;">Non-Technical</button>
+          </div>
+          <input class="search-input" type="text" placeholder="Search skills…" style="max-width:280px;">
+        </div>
+
+        <div class="cm-c__layout">
+          <aside class="cm-c__tree">
+            <div class="cm-a__tree-head">Filter by team</div>
+            <div class="cm-a__tree-item active">All Skills</div>
+            <div class="cm-a__tree-item cm-a__tree-item--child">LANSW Shift 2</div>
+          </aside>
+
+          <div class="cm-c__feed">
+            <section class="cm-c__band cm-cat-rail--core" style="--cm-rail:#3b82f6;--cm-rail-soft:rgba(59,130,246,.12)">
+              <div class="cm-c__band-head">
+                <div class="cm-c__band-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="#ico-diamond"/></svg></div>
+                <div>
+                  <h3 class="cm-c__band-title">Core</h3>
+                  <p class="cm-c__band-sub">Day-to-day operational skills for your technology area</p>
+                </div>
+                <span class="cm-c__band-count">6</span>
+              </div>
+              <div class="cm-c__band-grid">
+                <article><h4>Catalyst 9000 IOS-XE Operations</h4><p>Software management, ISSU, and platform troubleshooting on Catalyst 9000.</p><span class="triage-chip triage-signal chip-sm">LANSW S2</span></article>
+                <article><h4>Layer 3 Switching &amp; Inter-VLAN Routing</h4><p>SVIs, routed ports, and L3 design on campus switches.</p><span class="triage-chip triage-signal chip-sm">LANSW</span></article>
+                <article><h4>802.1X, MAB &amp; MACsec</h4><p>Port security, fallback authentication, and MACsec on access ports.</p><span class="triage-chip triage-signal chip-sm">LANSW S2</span></article>
+              </div>
+            </section>
+
+            <section class="cm-c__band cm-cat-rail--advanced" style="--cm-rail:#06b6d4;--cm-rail-soft:rgba(6,182,212,.12)">
+              <div class="cm-c__band-head">
+                <div class="cm-c__band-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><ellipse cx="12" cy="12" rx="10" ry="4"/></svg></div>
+                <div>
+                  <h3 class="cm-c__band-title">Advanced</h3>
+                  <p class="cm-c__band-sub">Deep troubleshooting and escalation-grade analysis</p>
+                </div>
+                <span class="cm-c__band-count">6</span>
+              </div>
+              <div class="cm-c__band-grid">
+                <article><h4>VXLAN EVPN Campus Fabric</h4><p>BGP EVPN control plane and VXLAN data plane in campus fabric designs.</p></article>
+                <article><h4>EPC, ELAM &amp; FED Packet Capture</h4><p>Forwarding-plane debug techniques on Catalyst platforms.</p></article>
+                <article><h4>SD-Access Underlay Troubleshooting</h4><p>Fabric edge, control plane, and policy troubleshooting in SDA.</p></article>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div class="cm-callout"><strong>Concept C highlights:</strong> Full-width category bands · circular category icons · divider grid (no card gaps) · centered editorial header · pill tabs — strongest category hierarchy.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll('.mockup-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.mockup-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.mockup-concept').forEach(c => { c.classList.remove('active'); c.hidden = true; });
+        tab.classList.add('active');
+        const panel = document.getElementById('concept-' + tab.dataset.concept);
+        panel.classList.add('active');
+        panel.hidden = false;
+      });
+    });
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+    });
+  </script>
+</body>
+</html>

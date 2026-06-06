@@ -1138,3 +1138,47 @@ Screenshots stored in repo work area: `ntech-toggle-on-{light,dark}.png`, `orpha
 - **Cascade preserves**: `PlanSkill, PlanSkillTrainingLog, UserLevelContent, UserContentCompletion`. **Strips**: `SkillTag, SkillTeam, SkillCertificate, SkillCategoryAssignment, SkillLevelContent`.
 - `is_orphaned` is a **separate flag** from `is_archived` so future admin UI can distinguish "archived for retirement" vs "deleted but tombstoned for owners".
 - Typed-confirmation modal is the same primitive as the destructive delete patterns elsewhere — reuse, don't reimplement.
+
+---
+
+## 18. App Icon — Matrix Brackets / 3×3 Status Grid (current)
+
+Custom MatrixPro app icon. Concept: matrix brackets framing a 3×3 grid of three glyphs that map 1:1 to `PlanSkillStatus` enum values — filled rounded square = `developing`, outlined circle = `planned`, square+check = `mastered`. **Theme-aware**: dark variant (navy bg + light-blue ink `#0a1628` / `#5cb1ff`) for dark mode, light variant (white bg + accent-blue ink `#ffffff` / `#3b82f6`) for light mode. Same artwork survives 16-px favicon → 192-px launcher.
+
+### Files & wiring
+- **`frontend/icon.svg`** — standalone SVG (dark variant) for browser favicon via `<link rel="icon" type="image/svg+xml" href="icon.svg?v=1">` in `index.html` head. Favicon stays dark across browser themes (acceptable for tab favicons; could later be enhanced with `prefers-color-scheme` media queries inside the SVG if desired).
+- **`frontend/index.html` body top** — hidden `<svg width="0" height="0">` block defining TWO `<symbol>`s: `mp-icon-dark` and `mp-icon-light`. Any surface in the app renders both via:
+  ```html
+  <span class="brand-tile">
+    <svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--dark"><use href="#mp-icon-dark"/></svg>
+    <svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--light"><use href="#mp-icon-light"/></svg>
+  </span>
+  ```
+  CSS hides the inactive variant based on `[data-theme]`. **This is reusable infrastructure** — future branded surfaces (login splash, error pages, OG card embed, PDF cover) should mount the same `<span class="brand-tile">` markup, not duplicate the SVG.
+- **Nav top-left** (`index.html:80-87`): `.nav-brand .brand-tile` rendered at 32×32 with `border-radius: 7px`. Replaces the previous placeholder 4-rect outline.
+- **Home page hero** (`pages/home.js`): `.home-hero__brand` is a horizontal flex lockup `[56px tile][gap 18px][MatrixPro wordmark, 36px/800]`. Replaces the earlier standalone 96px icon. Wordmark uses `--text-primary` so it inherits theme-appropriate color automatically.
+- **`docs/design/app-icon-mockup.html`** — design proposal mockup with 4 variants (Dark / Light / Tile / Mono). Source of truth for canonical artwork; future `apple-touch-icon`, `android-chrome-{192,512}` PNG generation should sample from `mp-icon-tile` symbol there.
+
+### CSS hooks (`frontend/css/style.css`)
+- L391 — `.brand-tile` — shared base (overflow hidden, position relative, line-height 0).
+- L398 — `.brand-tile .brand-tile__art--light { display: none }` + `[data-theme="light"]` overrides flip visibility. **All four visibility rules at `(0,2,0)` / `(0,3,0)` specificity** so they win over the size rule and the legacy `.nav-brand svg` rule was removed (was forcing 24×24 SVG inside 32×32 tile).
+- L410 — `.nav-brand .brand-tile` — 32×32 / 7px radius / dark-theme drop shadow; `[data-theme="light"]` override at L420 lightens the shadow for light-surface mounting.
+- L9188 — `.home-hero__brand` — inline-flex container, 18px gap, 32px bottom margin, 520ms entrance animation (`home-hero-icon-in`). Animation honors `prefers-reduced-motion` at L9230.
+- L9197 — `.home-hero__brand .brand-tile` — 56×56 / 13px radius / multi-stop drop shadow scaled for hero size. Light-theme shadow override at L9207.
+- L9214 — `.home-hero__brand-name` — `clamp(28px, 3.2vw, 36px)`, weight 800, letter-spacing -0.02em, `--text-primary` color (theme-adaptive).
+- **Hero rebalanced**: `.home-hero` top margin 72→64, `.home-hero__title` size `clamp(36, 5vw, 56)` → `clamp(32, 4.2vw, 48)`, `.home-hero__cta` bottom margin 80→64. Result: brand lockup + title + subtitle + stats + CTAs + start of 3E section all above the fold at 1440×900.
+
+### Theme-aware swap mechanism (DO NOT replace with JS)
+Both icon variants are mounted in the DOM simultaneously per surface; CSS `display: none` hides the inactive one. This keeps theme switching instant (no flash, no re-render) and works without any JS theme-listener — `Store.set('theme', ...)` flips `[data-theme]` on `<html>` and the SVG visibility updates synchronously. Total DOM cost: 2 extra `<svg><use/></svg>` per surface (~20 bytes each rendered).
+
+### Cache versions bumped (current)
+- `frontend/index.html`: `style.css?v=54`, `app.js?v=45`
+- `frontend/js/app.js`: `pages/home.js?v=11`
+
+### Verification
+- Playwright dual-theme verification confirmed (bob@matrixpro.com session):
+  - **Dark**: nav tile + hero brand lockup show dark-variant artwork (`navy bg + #5cb1ff ink`).
+  - **Light**: same elements show light-variant artwork (`white bg + #3b82f6 ink`); shadow overrides applied correctly.
+  - DOM visibility check: `getComputedStyle().display` confirms exactly one variant per tile is `block`, the other is `none` in each theme.
+- LSP diagnostics clean across `home.js`, `index.html`, `style.css`.
+- Brand lockup visual: `[56px tile][18px gap][MatrixPro 36px/800] = 235px wide, 56px tall` centered on hero.

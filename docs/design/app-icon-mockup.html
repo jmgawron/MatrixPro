@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MatrixPro — App Icon Mockup</title>
+<style>
+  :root {
+    --bg-page:        #0d1117;
+    --bg-panel:       #11161f;
+    --bg-card:        #161d29;
+    --bg-card-soft:   #1a2230;
+    --bg-elevated:    #1f2937;
+    --border-soft:    rgba(255,255,255,.06);
+    --border-strong:  rgba(255,255,255,.10);
+    --text-primary:   #e6edf3;
+    --text-secondary: #b9c6d8;
+    --text-muted:     #8aa0bd;
+    --accent:         #3b82f6;
+    --accent-strong:  #2563eb;
+    --accent-soft:    rgba(59,130,246,.15);
+    --radius-md:      12px;
+    --radius-lg:      18px;
+    --radius-xl:      28px;
+    --shadow-card:    0 6px 24px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.04) inset;
+    --shadow-deep:    0 20px 60px rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.06) inset;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, system-ui, sans-serif;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(59,130,246,.18), transparent 60%),
+      radial-gradient(900px 500px at 0% 100%, rgba(37,99,235,.14), transparent 60%),
+      var(--bg-page);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 56px 32px 96px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1240px; margin: 0 auto; }
+
+  header.page {
+    margin-bottom: 56px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  header.page .eyebrow {
+    color: var(--accent);
+    font-size: 12px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  header.page h1 {
+    margin: 0 0 12px;
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+  }
+  header.page p {
+    margin: 0;
+    color: var(--text-secondary);
+    max-width: 760px;
+    font-size: 15px;
+  }
+
+  /* ---------- Section ---------- */
+  section {
+    margin-top: 56px;
+  }
+  h2 {
+    margin: 0 0 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  h2 + .sub {
+    margin: 0 0 24px;
+    color: var(--text-primary);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    align-items: stretch;
+  }
+  .hero-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-xl);
+    padding: 56px;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    min-height: 460px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-card::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(600px 300px at 50% 10%, rgba(59,130,246,.12), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-card.light {
+    background: linear-gradient(180deg,#ffffff 0%, #f1f5fb 100%);
+    border-color: rgba(15,23,42,.06);
+    color: #0f172a;
+  }
+  .hero-card .icon-frame {
+    width: 256px; height: 256px;
+    border-radius: 56px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.06) inset;
+    position: relative;
+    z-index: 1;
+  }
+  .hero-card.light .icon-frame {
+    box-shadow: 0 24px 60px rgba(15,23,42,.18), 0 1px 0 rgba(255,255,255,.7) inset;
+  }
+  .hero-meta { text-align: center; z-index: 1; }
+  .hero-meta .label {
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .hero-card.light .hero-meta .label { color: #64748b; }
+  .hero-meta .name {
+    font-size: 22px;
+    font-weight: 700;
+    margin-top: 6px;
+    letter-spacing: -.01em;
+  }
+
+  /* ---------- Sizes strip ---------- */
+  .sizes {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+  }
+  .size-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .size-cell .icon { display: block; }
+  .size-cell .icon img { display: block; }
+  .size-cell .px {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Context grid ---------- */
+  .ctx-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+  .ctx-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .ctx-card h3 {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-weight: 700;
+  }
+  .ctx-card .stage {
+    border-radius: var(--radius-md);
+    padding: 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 96px;
+  }
+
+  /* Browser tab */
+  .browser {
+    background: #0a0e15;
+    border: 1px solid var(--border-strong);
+  }
+  .tab-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: #161d29;
+    border-radius: 10px 10px 0 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .tab-bar .dots { display: flex; gap: 6px; }
+  .tab-bar .dots span {
+    width: 10px; height: 10px; border-radius: 50%;
+    display: inline-block;
+  }
+  .tab-bar .dots span:nth-child(1) { background: #ef4444; }
+  .tab-bar .dots span:nth-child(2) { background: #f59e0b; }
+  .tab-bar .dots span:nth-child(3) { background: #10b981; }
+  .tab-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #0d1117;
+    border: 1px solid var(--border-soft);
+    padding: 6px 12px 6px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-left: 8px;
+  }
+  .url {
+    flex: 1;
+    background: #0d1117;
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  /* Dock (macOS) */
+  .dock-stage {
+    background: linear-gradient(135deg, #1e3a8a, #6366f1 50%, #8b5cf6);
+    height: 220px;
+    border-radius: var(--radius-md);
+    padding: 0;
+    display: flex; align-items: flex-end; justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .dock {
+    background: rgba(255,255,255,.18);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 22px;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+    display: flex; gap: 12px; align-items: flex-end;
+    box-shadow: 0 8px 30px rgba(0,0,0,.3);
+  }
+  .dock .app {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,.25);
+  }
+  .dock .app.matrixpro { transform: translateY(-8px); }
+  .dock .app.matrixpro img { width: 100%; height: 100%; display: block; }
+  .dock .app.placeholder { background: linear-gradient(135deg,#f97316,#fbbf24); }
+  .dock .app.placeholder.b { background: linear-gradient(135deg,#10b981,#34d399); }
+  .dock .app.placeholder.c { background: linear-gradient(135deg,#ef4444,#f87171); }
+  .dock .app.placeholder.d { background: linear-gradient(135deg,#8b5cf6,#a78bfa); }
+
+  /* iOS Springboard */
+  .ios-stage {
+    background: url("https://images.unsplash.com/photo-1502759683299-cdcd6974244f?auto=format&fit=crop&w=900&q=60") center/cover, #1e293b;
+    height: 340px;
+    border-radius: 28px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .ios-stage::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(15,23,42,0) 60%, rgba(15,23,42,.45) 100%);
+  }
+  .ios-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    position: relative; z-index: 1;
+  }
+  .ios-app {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .ios-app .squircle {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 6px 14px rgba(0,0,0,.3);
+  }
+  .ios-app .squircle img { width: 100%; height: 100%; display: block; }
+  .ios-app.ph .squircle { background: linear-gradient(135deg,#06b6d4,#0ea5e9); }
+  .ios-app.ph2 .squircle { background: linear-gradient(135deg,#a78bfa,#ec4899); }
+  .ios-app.ph3 .squircle { background: linear-gradient(135deg,#f59e0b,#ef4444); }
+  .ios-app.ph4 .squircle { background: linear-gradient(135deg,#10b981,#22d3ee); }
+  .ios-app.ph5 .squircle { background: linear-gradient(135deg,#475569,#94a3b8); }
+  .ios-app.ph6 .squircle { background: linear-gradient(135deg,#fbbf24,#fde68a); }
+  .ios-app.ph7 .squircle { background: linear-gradient(135deg,#1d4ed8,#3b82f6); }
+  .ios-app .name {
+    font-size: 11px;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0,0,0,.5);
+    font-weight: 500;
+  }
+
+  /* Android adaptive */
+  .android-stage {
+    background: #0f172a;
+    height: 260px;
+    border-radius: 18px;
+    padding: 22px;
+    display: flex; align-items: center; justify-content: space-around;
+  }
+  .android-stage .circle-mask, .android-stage .squircle-mask, .android-stage .square-mask {
+    width: 96px; height: 96px;
+    overflow: hidden;
+    background: var(--accent);
+    box-shadow: 0 6px 16px rgba(0,0,0,.4);
+  }
+  .android-stage .circle-mask { border-radius: 50%; }
+  .android-stage .squircle-mask { border-radius: 24px; }
+  .android-stage .square-mask { border-radius: 8px; }
+  .android-stage img { width: 100%; height: 100%; display: block; }
+  .android-stage figure { margin: 0; text-align: center; display:flex; flex-direction:column; gap:10px; align-items:center; }
+  .android-stage figcaption { font-size: 11px; color: var(--text-muted); letter-spacing: .1em; text-transform: uppercase; }
+
+  /* Brand context (header) */
+  .brand-stage {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 0;
+    overflow: hidden;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+  }
+  .brand-nav {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .brand-nav .logo {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .brand-nav .name {
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: -.01em;
+  }
+  .brand-nav .ml-auto { margin-left: auto; display: flex; gap: 8px; }
+  .brand-nav .ml-auto span {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--bg-card-soft);
+    border: 1px solid var(--border-soft);
+  }
+  .brand-nav .links {
+    display: flex; gap: 4px; margin-left: 18px;
+  }
+  .brand-nav .links a {
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 6px 10px;
+    border-radius: 6px;
+    text-decoration: none;
+  }
+  .brand-nav .links a.active {
+    color: var(--text-primary);
+    background: var(--accent-soft);
+  }
+  .brand-body {
+    padding: 18px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Variants */
+  .variants {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .variant {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 22px;
+    display: flex; flex-direction: column; gap: 14px; align-items: center;
+  }
+  .variant .swatch {
+    width: 128px; height: 128px;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+  }
+  .variant .swatch.light { background: #ffffff; }
+  .variant .swatch.tile  { background: linear-gradient(135deg, var(--accent-strong), var(--accent)); }
+  .variant .swatch.mono  { background: var(--bg-page); border: 1px solid var(--border-strong); }
+  .variant .label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-weight: 700;
+  }
+
+  footer.page {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--text-muted);
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  footer.page kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--bg-card-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <div class="eyebrow">MatrixPro · App Icon Proposal</div>
+  <h1>Matrix Brackets · 3×3 Status Grid</h1>
+  <p>
+    A clean, minimalistic re-cut of the source artwork. The original 3×3 grid + matrix brackets are kept as the
+    identity, but the symbol set is reduced to the three states that actually exist in the product:
+    <strong>planned</strong> (outlined circle), <strong>developing</strong> (filled rounded square), and
+    <strong>mastered</strong> (checkmark). Single-accent palette in MatrixPro&rsquo;s <code>--accent #3b82f6</code>,
+    rendered scalably as inline SVG so it stays crisp at favicon sizes.
+  </p>
+</header>
+
+<section>
+  <h2>01 · Hero</h2>
+  <p class="sub">256&thinsp;px · dark and light tiles</p>
+
+  <div class="hero">
+    <div class="hero-card">
+      <div class="icon-frame">
+        <svg viewBox="0 0 256 256" width="256" height="256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MatrixPro app icon">
+          <defs>
+            <linearGradient id="bgDark" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%"  stop-color="#11243f"/>
+              <stop offset="100%" stop-color="#0a1628"/>
+            </linearGradient>
+          </defs>
+          <rect width="256" height="256" fill="url(#bgDark)"/>
+
+          <g fill="none" stroke="#7cc1ff" stroke-width="6" stroke-linecap="round">
+            <path d="M 60 44 Q 36 44 36 68 L 36 188 Q 36 212 60 212"/>
+            <path d="M 196 44 Q 220 44 220 68 L 220 188 Q 220 212 196 212"/>
+          </g>
+
+          <!-- 3x3 grid (cell 36, gap 14, x-origin 64, y-origin 60) -->
+          <rect x="64"  y="60"  width="36" height="36" rx="8" fill="#5cb1ff"/>                     <!-- developing -->
+          <circle cx="128" cy="78" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>          <!-- planned -->
+          <g transform="translate(156 60)">                                                        <!-- mastered -->
+            <rect width="36" height="36" rx="8" fill="#5cb1ff"/>
+            <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+
+          <circle cx="82"  cy="128" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+          <rect   x="110" y="110" width="36" height="36" rx="8" fill="#5cb1ff"/>
+          <g transform="translate(156 110)">
+            <rect width="36" height="36" rx="8" fill="#5cb1ff"/>
+            <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+
+          <rect   x="64"  y="160" width="36" height="36" rx="8" fill="#5cb1ff"/>
+          <g transform="translate(110 160)">
+            <rect width="36" height="36" rx="8" fill="#5cb1ff"/>
+            <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <circle cx="174" cy="178" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+        </svg>
+      </div>
+      <div class="hero-meta">
+        <div class="label">Primary · Dark</div>
+        <div class="name">MatrixPro</div>
+      </div>
+    </div>
+
+    <div class="hero-card light">
+      <div class="icon-frame">
+        <svg viewBox="0 0 256 256" width="256" height="256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MatrixPro app icon — light">
+          <defs>
+            <linearGradient id="bgLight" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%"  stop-color="#ffffff"/>
+              <stop offset="100%" stop-color="#eaf2ff"/>
+            </linearGradient>
+          </defs>
+          <rect width="256" height="256" fill="url(#bgLight)"/>
+
+          <g fill="none" stroke="#3b82f6" stroke-width="6" stroke-linecap="round">
+            <path d="M 60 44 Q 36 44 36 68 L 36 188 Q 36 212 60 212"/>
+            <path d="M 196 44 Q 220 44 220 68 L 220 188 Q 220 212 196 212"/>
+          </g>
+
+          <rect x="64"  y="60"  width="36" height="36" rx="8" fill="#3b82f6"/>
+          <circle cx="128" cy="78" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+          <g transform="translate(156 60)">
+            <rect width="36" height="36" rx="8" fill="#3b82f6"/>
+            <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <circle cx="82"  cy="128" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+          <rect   x="110" y="110" width="36" height="36" rx="8" fill="#3b82f6"/>
+          <g transform="translate(156 110)">
+            <rect width="36" height="36" rx="8" fill="#3b82f6"/>
+            <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <rect   x="64"  y="160" width="36" height="36" rx="8" fill="#3b82f6"/>
+          <g transform="translate(110 160)">
+            <rect width="36" height="36" rx="8" fill="#3b82f6"/>
+            <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <circle cx="174" cy="178" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+        </svg>
+      </div>
+      <div class="hero-meta">
+        <div class="label">Inverse · Light</div>
+        <div class="name">MatrixPro</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>02 · Scale</h2>
+  <p class="sub">Same artwork from 16&thinsp;px favicon to 192&thinsp;px launcher</p>
+
+  <div class="sizes">
+    <div class="size-cell"><span class="icon"><svg width="16" height="16" viewBox="0 0 256 256"><use href="#mp-icon-dark"/></svg></span><span class="px">16&thinsp;px</span></div>
+    <div class="size-cell"><span class="icon"><svg width="24" height="24" viewBox="0 0 256 256"><use href="#mp-icon-dark"/></svg></span><span class="px">24&thinsp;px</span></div>
+    <div class="size-cell"><span class="icon"><svg width="32" height="32" viewBox="0 0 256 256"><use href="#mp-icon-dark"/></svg></span><span class="px">32&thinsp;px</span></div>
+    <div class="size-cell"><span class="icon"><svg width="48" height="48" viewBox="0 0 256 256"><use href="#mp-icon-dark"/></svg></span><span class="px">48&thinsp;px</span></div>
+    <div class="size-cell"><span class="icon"><svg width="64" height="64" viewBox="0 0 256 256"><use href="#mp-icon-dark"/></svg></span><span class="px">64&thinsp;px</span></div>
+    <div class="size-cell"><span class="icon"><svg width="128" height="128" viewBox="0 0 256 256"><use href="#mp-icon-dark"/></svg></span><span class="px">128&thinsp;px</span></div>
+    <div class="size-cell"><span class="icon"><svg width="192" height="192" viewBox="0 0 256 256"><use href="#mp-icon-dark"/></svg></span><span class="px">192&thinsp;px</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>03 · In context</h2>
+  <p class="sub">Real surfaces the icon will live on</p>
+
+  <div class="ctx-grid">
+
+    <div class="ctx-card">
+      <h3>Browser tab · favicon</h3>
+      <div class="stage browser" style="flex-direction:column; align-items:stretch; padding:0;">
+        <div class="tab-bar">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div class="tab-pill">
+            <svg width="14" height="14" viewBox="0 0 256 256"><use href="#mp-icon-dark"/></svg>
+            MatrixPro · My Plan
+          </div>
+        </div>
+        <div style="padding:14px 16px; display:flex; gap:10px; align-items:center;">
+          <span style="width:8px; height:8px; border-radius:50%; background:#10b981;"></span>
+          <span class="url">https://matrixpro.cisco.local/#/my-plan</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctx-card">
+      <h3>macOS dock</h3>
+      <div class="stage dock-stage">
+        <div class="dock">
+          <div class="app placeholder"></div>
+          <div class="app placeholder b"></div>
+          <div class="app matrixpro">
+            <svg viewBox="0 0 256 256"><use href="#mp-icon-dark"/></svg>
+          </div>
+          <div class="app placeholder c"></div>
+          <div class="app placeholder d"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctx-card">
+      <h3>App nav · brand lockup</h3>
+      <div class="stage brand-stage" style="padding:0;">
+        <div class="brand-nav">
+          <div class="logo">
+            <svg viewBox="0 0 256 256" width="32" height="32"><use href="#mp-icon-dark"/></svg>
+          </div>
+          <div class="name">MatrixPro</div>
+          <div class="links">
+            <a href="#" class="active">My Plan</a>
+            <a href="#">My Team</a>
+            <a href="#">Catalog</a>
+          </div>
+          <div class="ml-auto">
+            <span></span><span></span>
+          </div>
+        </div>
+        <div class="brand-body">
+          Build, track, and master skill development plans across global TAC teams.
+        </div>
+      </div>
+    </div>
+
+    <div class="ctx-card" style="grid-column: span 2;">
+      <h3>iOS springboard</h3>
+      <div class="stage ios-stage" style="padding:22px;">
+        <div class="ios-grid">
+          <div class="ios-app ph"><div class="squircle"></div><div class="name">Calendar</div></div>
+          <div class="ios-app ph2"><div class="squircle"></div><div class="name">Photos</div></div>
+          <div class="ios-app"><div class="squircle"><svg viewBox="0 0 256 256"><use href="#mp-icon-dark"/></svg></div><div class="name">MatrixPro</div></div>
+          <div class="ios-app ph3"><div class="squircle"></div><div class="name">Maps</div></div>
+          <div class="ios-app ph4"><div class="squircle"></div><div class="name">Mail</div></div>
+          <div class="ios-app ph5"><div class="squircle"></div><div class="name">Settings</div></div>
+          <div class="ios-app ph6"><div class="squircle"></div><div class="name">Notes</div></div>
+          <div class="ios-app ph7"><div class="squircle"></div><div class="name">Cisco</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctx-card">
+      <h3>Android adaptive</h3>
+      <div class="stage android-stage">
+        <figure>
+          <div class="circle-mask"><svg viewBox="0 0 256 256"><use href="#mp-icon-tile"/></svg></div>
+          <figcaption>Circle</figcaption>
+        </figure>
+        <figure>
+          <div class="squircle-mask"><svg viewBox="0 0 256 256"><use href="#mp-icon-tile"/></svg></div>
+          <figcaption>Squircle</figcaption>
+        </figure>
+        <figure>
+          <div class="square-mask"><svg viewBox="0 0 256 256"><use href="#mp-icon-tile"/></svg></div>
+          <figcaption>Square</figcaption>
+        </figure>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <h2>04 · Variants</h2>
+  <p class="sub">Same primitive, four surfaces</p>
+
+  <div class="variants">
+    <div class="variant">
+      <div class="swatch"><svg width="128" height="128" viewBox="0 0 256 256"><use href="#mp-icon-dark"/></svg></div>
+      <div class="label">Dark · Default</div>
+    </div>
+    <div class="variant">
+      <div class="swatch light"><svg width="128" height="128" viewBox="0 0 256 256"><use href="#mp-icon-light"/></svg></div>
+      <div class="label">Light · Inverse</div>
+    </div>
+    <div class="variant">
+      <div class="swatch tile"><svg width="128" height="128" viewBox="0 0 256 256"><use href="#mp-icon-tile"/></svg></div>
+      <div class="label">Tile · On Accent</div>
+    </div>
+    <div class="variant">
+      <div class="swatch mono"><svg width="128" height="128" viewBox="0 0 256 256"><use href="#mp-icon-mono"/></svg></div>
+      <div class="label">Mono · Outline</div>
+    </div>
+  </div>
+</section>
+
+<footer class="page">
+  <div>
+    Source: <kbd>docs/design/app-icon-mockup.html</kbd> &middot; canonical SVG inlined as <kbd>&lt;symbol&gt;</kbd> below — copy + drop into <kbd>frontend/public/</kbd> as <kbd>icon.svg</kbd>.
+  </div>
+  <div>Palette: <code>#0a1628</code> / <code>#3b82f6</code> · Spec: 256 viewBox</div>
+</footer>
+
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+
+    <!-- DARK -->
+    <symbol id="mp-icon-dark" viewBox="0 0 256 256">
+      <rect width="256" height="256" fill="#0a1628"/>
+      <g fill="none" stroke="#5cb1ff" stroke-width="6" stroke-linecap="round">
+        <path d="M 60 44 Q 36 44 36 68 L 36 188 Q 36 212 60 212"/>
+        <path d="M 196 44 Q 220 44 220 68 L 220 188 Q 220 212 196 212"/>
+      </g>
+      <rect x="64"  y="60"  width="36" height="36" rx="8" fill="#5cb1ff"/>
+      <circle cx="128" cy="78" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+      <g transform="translate(156 60)">
+        <rect width="36" height="36" rx="8" fill="#5cb1ff"/>
+        <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <circle cx="82"  cy="128" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+      <rect   x="110" y="110" width="36" height="36" rx="8" fill="#5cb1ff"/>
+      <g transform="translate(156 110)">
+        <rect width="36" height="36" rx="8" fill="#5cb1ff"/>
+        <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <rect   x="64"  y="160" width="36" height="36" rx="8" fill="#5cb1ff"/>
+      <g transform="translate(110 160)">
+        <rect width="36" height="36" rx="8" fill="#5cb1ff"/>
+        <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <circle cx="174" cy="178" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+    </symbol>
+
+    <!-- LIGHT -->
+    <symbol id="mp-icon-light" viewBox="0 0 256 256">
+      <rect width="256" height="256" fill="#ffffff"/>
+      <g fill="none" stroke="#3b82f6" stroke-width="6" stroke-linecap="round">
+        <path d="M 60 44 Q 36 44 36 68 L 36 188 Q 36 212 60 212"/>
+        <path d="M 196 44 Q 220 44 220 68 L 220 188 Q 220 212 196 212"/>
+      </g>
+      <rect x="64"  y="60"  width="36" height="36" rx="8" fill="#3b82f6"/>
+      <circle cx="128" cy="78" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+      <g transform="translate(156 60)">
+        <rect width="36" height="36" rx="8" fill="#3b82f6"/>
+        <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <circle cx="82"  cy="128" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+      <rect   x="110" y="110" width="36" height="36" rx="8" fill="#3b82f6"/>
+      <g transform="translate(156 110)">
+        <rect width="36" height="36" rx="8" fill="#3b82f6"/>
+        <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <rect   x="64"  y="160" width="36" height="36" rx="8" fill="#3b82f6"/>
+      <g transform="translate(110 160)">
+        <rect width="36" height="36" rx="8" fill="#3b82f6"/>
+        <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <circle cx="174" cy="178" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+    </symbol>
+
+    <!-- TILE -->
+    <symbol id="mp-icon-tile" viewBox="0 0 256 256">
+      <g fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round">
+        <path d="M 60 44 Q 36 44 36 68 L 36 188 Q 36 212 60 212"/>
+        <path d="M 196 44 Q 220 44 220 68 L 220 188 Q 220 212 196 212"/>
+      </g>
+      <rect x="64"  y="60"  width="36" height="36" rx="8" fill="#ffffff"/>
+      <circle cx="128" cy="78" r="16" fill="none" stroke="#ffffff" stroke-width="4"/>
+      <g transform="translate(156 60)">
+        <rect width="36" height="36" rx="8" fill="#ffffff"/>
+        <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <circle cx="82"  cy="128" r="16" fill="none" stroke="#ffffff" stroke-width="4"/>
+      <rect   x="110" y="110" width="36" height="36" rx="8" fill="#ffffff"/>
+      <g transform="translate(156 110)">
+        <rect width="36" height="36" rx="8" fill="#ffffff"/>
+        <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <rect   x="64"  y="160" width="36" height="36" rx="8" fill="#ffffff"/>
+      <g transform="translate(110 160)">
+        <rect width="36" height="36" rx="8" fill="#ffffff"/>
+        <path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <circle cx="174" cy="178" r="16" fill="none" stroke="#ffffff" stroke-width="4"/>
+    </symbol>
+
+    <!-- MONO -->
+    <symbol id="mp-icon-mono" viewBox="0 0 256 256">
+      <g fill="none" stroke="#e6edf3" stroke-width="6" stroke-linecap="round">
+        <path d="M 60 44 Q 36 44 36 68 L 36 188 Q 36 212 60 212"/>
+        <path d="M 196 44 Q 220 44 220 68 L 220 188 Q 220 212 196 212"/>
+      </g>
+      <g stroke="#e6edf3" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="64"  y="60"  width="36" height="36" rx="8"/>
+        <circle cx="128" cy="78" r="16"/>
+        <g transform="translate(156 60)">
+          <rect width="36" height="36" rx="8"/>
+          <path d="M 9 19 L 16 26 L 27 13"/>
+        </g>
+        <circle cx="82"  cy="128" r="16"/>
+        <rect   x="110" y="110" width="36" height="36" rx="8"/>
+        <g transform="translate(156 110)">
+          <rect width="36" height="36" rx="8"/>
+          <path d="M 9 19 L 16 26 L 27 13"/>
+        </g>
+        <rect   x="64"  y="160" width="36" height="36" rx="8"/>
+        <g transform="translate(110 160)">
+          <rect width="36" height="36" rx="8"/>
+          <path d="M 9 19 L 16 26 L 27 13"/>
+        </g>
+        <circle cx="174" cy="178" r="16"/>
+      </g>
+    </symbol>
+
+  </defs>
+</svg>
+
+</body>
+</html>

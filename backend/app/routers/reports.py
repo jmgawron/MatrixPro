@@ -67,8 +67,21 @@ class PdfExportRequest(BaseModel):
     categories: Optional[list[str]] = None
     statuses: Optional[list[str]] = None
     skill_ids: Optional[list[int]] = None
+    sort: Optional[str] = "desc"
     markdown: Optional[str] = None
     title: Optional[str] = None
+
+
+def _csv_or_none(values: list[str] | None) -> str | None:
+    if not values:
+        return None
+    return ",".join(values)
+
+
+def _int_csv_or_none(values: list[int] | None) -> str | None:
+    if not values:
+        return None
+    return ",".join(str(v) for v in values)
 
 
 @router.get("/plans/{engineer_id}/landscape")
@@ -223,7 +236,14 @@ def export_report_pdf(
     body_parts: list[str] = []
 
     if payload.report_type == "landscape":
-        data = get_landscape_report(engineer_id, None, None, None, db, current_user)
+        data = get_landscape_report(
+            engineer_id,
+            _csv_or_none(payload.categories),
+            _csv_or_none(payload.statuses),
+            _int_csv_or_none(payload.skill_ids),
+            db,
+            current_user,
+        )
         body_parts.append("<h1>Skills Landscape Report</h1>")
         body_parts.append(
             f'<div class="meta">Engineer: {eng_name}<br>Generated: {generated} by {current_user.name}</div>'
@@ -263,12 +283,14 @@ def export_report_pdf(
                 body_parts.append("</table>")
 
     elif payload.report_type == "activity":
+        sort = payload.sort if payload.sort in ("asc", "desc") else "desc"
         act = collect_activity(
             engineer_id,
             db,
             from_dt=_parse_date(payload.from_date),
             to_dt=_parse_date(payload.to_date, end_of_day=True),
             skill_ids=payload.skill_ids,
+            sort=sort,
         )
         body_parts.append("<h1>Activity History Report</h1>")
         period = f"{payload.from_date or '—'} to {payload.to_date or '—'}"

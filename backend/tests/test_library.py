@@ -314,27 +314,31 @@ class TestLibraryPrivacy:
         assert "PUBLIC" in titles
         assert "SECRET" not in titles
 
-    def test_private_item_visible_to_owner(self, db: Session, seeded: dict, client: TestClient):
+    def test_own_items_excluded_from_discover(self, db: Session, seeded: dict, client: TestClient):
         tm = seeded["teammate"]
         _mk_content(db, tm, seeded["skill"].id, seeded["plan_skills"][tm.id].id, level=1, title="MINE", is_private=True)
+        _mk_content(db, tm, seeded["skill"].id, seeded["plan_skills"][tm.id].id, level=1, title="MINE_PUBLIC", is_private=False)
 
         _auth_as(tm)
         r = client.get(f"/api/plans/{tm.id}/skills/{seeded['skill'].id}/library/search", params={"level": 1})
         assert r.status_code == 200
         titles = [x["title"] for x in r.json()["results"]]
-        assert "MINE" in titles
+        assert "MINE" not in titles
+        assert "MINE_PUBLIC" not in titles
 
-    def test_private_item_visible_to_admin(self, db: Session, seeded: dict, client: TestClient):
+    def test_admin_discover_excludes_engineer_own_items(self, db: Session, seeded: dict, client: TestClient):
         admin = seeded["admin"]
         tm = seeded["teammate"]
+        owner = seeded["owner"]
         _mk_content(db, tm, seeded["skill"].id, seeded["plan_skills"][tm.id].id, level=1, title="HIDDEN", is_private=True)
+        _mk_content(db, owner, seeded["skill"].id, seeded["plan_skills"][owner.id].id, level=1, title="TEAM_PUBLIC", is_private=False)
 
         _auth_as(admin)
-        # Admin can query for any engineer
         r = client.get(f"/api/plans/{tm.id}/skills/{seeded['skill'].id}/library/search", params={"level": 1})
         assert r.status_code == 200
         titles = [x["title"] for x in r.json()["results"]]
-        assert "HIDDEN" in titles
+        assert "HIDDEN" not in titles
+        assert "TEAM_PUBLIC" in titles
 
 
 # ---------------------------------------------------------------------------
@@ -358,9 +362,9 @@ class TestLibraryRanking:
         results = r.json()["results"]
         assert [x["title"] for x in results] == ["TEAM", "DOMAIN", "OTHER"]
         assert [x["bucket"] for x in results] == [1, 2, 3]
-        assert results[0]["bucket_label"] == "From my team"
-        assert results[1]["bucket_label"] == "From my domain"
-        assert results[2]["bucket_label"] == "From other teams"
+        assert results[0]["bucket_label"] == "My team"
+        assert results[1]["bucket_label"] == "My domain (all shifts)"
+        assert results[2]["bucket_label"] == "Other teams & domains"
 
     def test_is_mine_flag(self, db: Session, seeded: dict, client: TestClient):
         owner = seeded["owner"]
@@ -370,7 +374,7 @@ class TestLibraryRanking:
         _auth_as(owner)
         r = client.get(f"/api/plans/{owner.id}/skills/{seeded['skill'].id}/library/search", params={"level": 1})
         results = {x["title"]: x for x in r.json()["results"]}
-        assert results["MINE"]["is_mine"] is True
+        assert "MINE" not in results
         assert results["THEIRS"]["is_mine"] is False
 
 

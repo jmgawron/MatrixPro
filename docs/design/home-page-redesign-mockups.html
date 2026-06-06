@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Home Page Redesign Mockups</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-home">
+  <style>
+    /* ── Mockup chrome only ─────────────────────────────────────────── */
+    body.mockup-page {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg-page);
+    }
+
+    .mockup-chrome {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 14px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 20px;
+    }
+
+    .mockup-chrome__title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    .mockup-chrome__sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 0;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .mockup-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .mockup-tab {
+      border: 1px solid var(--border-soft);
+      background: var(--bg-card-soft);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .mockup-tab:hover {
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+    }
+
+    .mockup-tab.active {
+      background: var(--accent-soft, rgba(59, 130, 246, 0.12));
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .mockup-theme-btn {
+      border: 1px solid var(--border-soft);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+
+    .mockup-concept {
+      display: none;
+    }
+
+    .mockup-concept.active {
+      display: block;
+    }
+
+    /* ── Shared mock nav ─────────────────────────────────────────────── */
+    .hm-nav {
+      height: var(--nav-h, 56px);
+      border-bottom: 1px solid var(--border-soft);
+      background: var(--bg-panel);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+    }
+
+    .hm-nav__brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .hm-nav__brand .brand-tile {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+    }
+
+    .hm-nav__links {
+      display: flex;
+      gap: 4px;
+      margin-left: 32px;
+      list-style: none;
+      padding: 0;
+      margin-bottom: 0;
+    }
+
+    .hm-nav__links a {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+    }
+
+    .hm-nav__links a.active {
+      color: var(--accent);
+      background: var(--accent-soft, rgba(59, 130, 246, 0.1));
+    }
+
+    .hm-nav__user {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ── Concept A: Command Center ─────────────────────────────────── */
+    .hm-a {
+      background: var(--home-bg);
+      min-height: calc(100vh - 120px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hm-a__mesh {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(0, 174, 239, 0.12), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 90% 20%, rgba(59, 130, 246, 0.08), transparent 50%);
+      pointer-events: none;
+    }
+
+    .hm-a__inner {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 48px 24px 72px;
+    }
+
+    .hm-a__hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: center;
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 960px) {
+      .hm-a__hero-grid { grid-template-columns: 1fr; }
+    }
+
+    .hm-a__eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 16px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--home-pill-bg);
+      border: 1px solid var(--home-pill-border);
+    }
+
+    .hm-a__headline {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 560px) {
+      .hm-a__headline {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+    }
+
+    .hm-a__headline-icon.brand-tile {
+      width: 72px;
+      height: 72px;
+      border-radius: 16px;
+      flex-shrink: 0;
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, .08) inset,
+        0 8px 22px rgba(0, 0, 0, .32),
+        0 2px 4px rgba(0, 0, 0, .22),
+        0 0 0 1px rgba(0, 0, 0, .25);
+    }
+
+    [data-theme="light"] .hm-a__headline-icon.brand-tile {
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, .35) inset,
+        0 10px 26px rgba(15, 23, 42, .14),
+        0 2px 6px rgba(15, 23, 42, .10),
+        0 0 0 1px rgba(15, 23, 42, .06);
+    }
+
+    .hm-a__headline-copy {
+      flex: 1;
+      min-width: 0;
+      text-align: left;
+    }
+
+    .hm-a__title {
+      font-size: clamp(32px, 4vw, 44px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.08;
+      margin: 0;
+      color: var(--text-primary);
+    }
+
+    .hm-a__lead {
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      margin: 0 0 28px;
+      max-width: 48ch;
+    }
+
+    .hm-a__cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+
+    .hm-a__stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .hm-a__stat {
+      background: var(--home-card-bg);
+      border: 1px solid var(--home-card-border);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      backdrop-filter: blur(8px);
+    }
+
+    .hm-a__stat-val {
+      font-size: 28px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .hm-a__stat-lbl {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .hm-a__stat--developing .hm-a__stat-val { color: var(--info); }
+    .hm-a__stat--planned .hm-a__stat-val { color: var(--text-secondary); }
+    .hm-a__stat--mastered .hm-a__stat-val { color: var(--success); }
+
+    .hm-a__news {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 420px;
+    }
+
+    .hm-a__news-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-soft);
+      flex-shrink: 0;
+    }
+
+    .hm-a__news-bar-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+    }
+
+    .hm-a__news-bar-title svg {
+      width: 14px;
+      height: 14px;
+      color: var(--accent);
+    }
+
+    .hm-a__news-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft, rgba(59, 130, 246, 0.12));
+      color: var(--accent);
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .hm-a__news-feed {
+      overflow-y: auto;
+      padding: 8px 0;
+      flex: 1;
+    }
+
+    .hm-a__news-item {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 10px 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-soft);
+      align-items: start;
+    }
+
+    .hm-a__news-item:last-child {
+      border-bottom: none;
+    }
+
+    .hm-a__news-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .hm-a__news-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .hm-a__news-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .hm-a__news-icon--login {
+      background: rgba(148, 163, 184, 0.15);
+      color: var(--text-muted);
+    }
+
+    .hm-a__news-icon--stalled {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warning, #f59e0b);
+    }
+
+    .hm-a__news-icon--updated {
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--success);
+    }
+
+    .hm-a__news-icon--matrix {
+      background: rgba(0, 174, 239, 0.12);
+      color: #00AEEF;
+    }
+
+    .hm-a__news-icon--manager {
+      background: rgba(168, 85, 247, 0.12);
+      color: var(--purple);
+    }
+
+    .hm-a__news-body {
+      min-width: 0;
+    }
+
+    .hm-a__news-meta {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+
+    .hm-a__news-text {
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .hm-a__news-text strong {
+      font-weight: 600;
+    }
+
+    .hm-a__news-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .hm-a__news-future {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--purple);
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(168, 85, 247, 0.1);
+      border: 1px dashed rgba(168, 85, 247, 0.35);
+    }
+
+    .hm-a__section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    .hm-a__timeline {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      position: relative;
+    }
+
+    @media (max-width: 768px) {
+      .hm-a__timeline { grid-template-columns: 1fr; gap: 16px; }
+    }
+
+    /* Connectors run in the gaps between circles — not through them */
+    .hm-a__step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 27px;
+      left: calc(50% + 28px);
+      width: calc(100% - 56px);
+      height: 2px;
+      opacity: 0.4;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .hm-a__step:nth-child(1)::after {
+      background: linear-gradient(90deg, var(--success), var(--info));
+    }
+
+    .hm-a__step:nth-child(2)::after {
+      background: linear-gradient(90deg, var(--info), var(--purple));
+    }
+
+    @media (max-width: 768px) {
+      .hm-a__step::after { display: none; }
+    }
+
+    .hm-a__step {
+      text-align: center;
+      padding: 0 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hm-a__step-icon {
+      position: relative;
+      z-index: 2;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--border-soft);
+      background: var(--home-card-bg);
+    }
+
+    .hm-a__step-icon svg {
+      width: 26px;
+      height: 26px;
+    }
+
+    .hm-a__step:nth-child(1) .hm-a__step-icon { border-color: rgba(34, 197, 94, 0.4); background: rgba(34, 197, 94, 0.08); }
+    .hm-a__step:nth-child(1) .hm-a__step-icon svg { stroke: #22c55e; }
+    .hm-a__step:nth-child(2) .hm-a__step-icon { border-color: rgba(6, 182, 212, 0.4); background: rgba(6, 182, 212, 0.08); }
+    .hm-a__step:nth-child(2) .hm-a__step-icon svg { stroke: #06b6d4; }
+    .hm-a__step:nth-child(3) .hm-a__step-icon { border-color: rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.08); }
+    .hm-a__step:nth-child(3) .hm-a__step-icon svg { stroke: #a855f7; }
+
+    .hm-a__step h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 8px;
+    }
+
+    .hm-a__step p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    /* ── Concept B: Bento Dashboard ──────────────────────────────────── */
+    .hm-b {
+      min-height: calc(100vh - 120px);
+      background: var(--home-bg);
+      position: relative;
+    }
+
+    .hm-b__bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(at 40% 20%, rgba(0, 114, 255, 0.15) 0px, transparent 50%),
+        radial-gradient(at 80% 0%, rgba(0, 198, 255, 0.1) 0px, transparent 45%),
+        radial-gradient(at 0% 50%, rgba(168, 85, 247, 0.06) 0px, transparent 40%);
+      pointer-events: none;
+    }
+
+    .hm-b__grid {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px 72px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: auto auto auto auto;
+      gap: 14px;
+    }
+
+    @media (max-width: 1024px) {
+      .hm-b__grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 560px) {
+      .hm-b__grid { grid-template-columns: 1fr; }
+    }
+
+    .hm-b__tile {
+      background: rgba(26, 33, 48, 0.72);
+      border: 1px solid var(--home-card-border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    [data-theme="light"] .hm-b__tile {
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .hm-b__tile:hover {
+      border-color: rgba(0, 174, 239, 0.35);
+    }
+
+    .hm-b__tile--hero {
+      grid-column: span 2;
+      grid-row: span 2;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 220px;
+    }
+
+    @media (max-width: 1024px) {
+      .hm-b__tile--hero { grid-column: span 2; grid-row: span 1; min-height: auto; }
+    }
+
+    @media (max-width: 560px) {
+      .hm-b__tile--hero { grid-column: span 1; }
+    }
+
+    .hm-b__tile--stat {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 100px;
+    }
+
+    .hm-b__tile--featured {
+      grid-column: span 2;
+      background: linear-gradient(135deg, rgba(0, 114, 255, 0.18), rgba(0, 198, 255, 0.08));
+      border-color: rgba(0, 174, 239, 0.3);
+    }
+
+    @media (max-width: 560px) {
+      .hm-b__tile--featured { grid-column: span 1; }
+    }
+
+    .hm-b__tile--module {
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 120px;
+    }
+
+    .hm-b__tile--module:hover { transform: translateY(-3px); }
+
+    .hm-b__tile--3e {
+      grid-column: span 4;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      padding: 28px;
+    }
+
+    @media (max-width: 768px) {
+      .hm-b__tile--3e { grid-column: span 2; grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .hm-b__tile--3e { grid-column: span 1; }
+    }
+
+    .hm-b__welcome {
+      font-size: clamp(28px, 3.5vw, 38px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin: 0 0 12px;
+    }
+
+    .hm-b__welcome em {
+      font-style: normal;
+      background: linear-gradient(90deg, #00C6FF, #0072FF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hm-b__stat-n {
+      font-size: 36px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+    }
+
+    .hm-b__stat-l {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .hm-b__mod-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .hm-b__mod-icon svg { width: 22px; height: 22px; }
+
+    .hm-b__mod-title { font-size: 15px; font-weight: 700; }
+    .hm-b__mod-desc { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+
+    .hm-b__3e-head {
+      grid-column: 1 / -1;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .hm-b__3e-head h2 {
+      font-size: 20px;
+      font-weight: 800;
+      margin: 0 0 4px;
+    }
+
+    .hm-b__3e-head p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .hm-b__3e-item h4 {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hm-b__3e-item p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .hm-b__3e-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Concept C: Editorial Executive ──────────────────────────────── */
+    .hm-c {
+      background: var(--home-bg);
+      min-height: calc(100vh - 120px);
+    }
+
+    .hm-c__inner {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 72px 24px 80px;
+    }
+
+    .hm-c__pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      border: 1px solid var(--border-soft);
+      border-radius: 999px;
+      padding: 6px 14px;
+      margin-bottom: 28px;
+    }
+
+    .hm-c__headline {
+      font-size: clamp(36px, 5vw, 52px);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      margin: 0 0 20px;
+      color: var(--text-primary);
+    }
+
+    .hm-c__sub {
+      font-size: 18px;
+      line-height: 1.55;
+      color: var(--text-secondary);
+      margin: 0 0 36px;
+      max-width: 52ch;
+    }
+
+    .hm-c__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .hm-c__meta {
+      font-size: 14px;
+      color: var(--text-muted);
+      padding-bottom: 48px;
+      margin-bottom: 48px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .hm-c__meta strong {
+      color: var(--text-primary);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hm-c__explore-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .hm-c__links {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1px;
+      background: var(--border-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 64px;
+    }
+
+    @media (max-width: 560px) {
+      .hm-c__links { grid-template-columns: 1fr; }
+    }
+
+    .hm-c__link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 22px;
+      background: var(--bg-panel);
+      text-decoration: none;
+      color: var(--text-primary);
+      font-size: 15px;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+
+    .hm-c__link:hover {
+      background: var(--bg-hover);
+    }
+
+    .hm-c__link svg {
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .hm-c__3e-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+
+    .hm-c__steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .hm-c__step {
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      gap: 24px;
+      padding: 28px 0;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .hm-c__step:last-child { border-bottom: 1px solid var(--border-soft); }
+
+    .hm-c__step-num {
+      font-size: 32px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      opacity: 0.25;
+    }
+
+    .hm-c__step:nth-child(1) .hm-c__step-num { color: var(--success); opacity: 0.7; }
+    .hm-c__step:nth-child(2) .hm-c__step-num { color: var(--info); opacity: 0.7; }
+    .hm-c__step:nth-child(3) .hm-c__step-num { color: var(--purple); opacity: 0.7; }
+
+    .hm-c__step h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 8px;
+    }
+
+    .hm-c__step-tag {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .hm-c__step p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hm-b__tile--module { transition: none; }
+    }
+  </style>
+</head>
+<body class="mockup-page">
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="mp-icon-dark" viewBox="0 0 256 256">
+        <rect width="256" height="256" fill="#0a1628"/>
+        <g fill="none" stroke="#7cc1ff" stroke-width="6" stroke-linecap="round">
+          <path d="M 60 44 Q 36 44 36 68 L 36 188 Q 36 212 60 212"/>
+          <path d="M 196 44 Q 220 44 220 68 L 220 188 Q 220 212 196 212"/>
+        </g>
+        <rect x="64" y="60" width="36" height="36" rx="8" fill="#5cb1ff"/>
+        <circle cx="128" cy="78" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+        <rect x="110" y="110" width="36" height="36" rx="8" fill="#5cb1ff"/>
+        <rect x="64" y="160" width="36" height="36" rx="8" fill="#5cb1ff"/>
+        <circle cx="174" cy="178" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+      </symbol>
+      <symbol id="mp-icon-light" viewBox="0 0 256 256">
+        <rect width="256" height="256" fill="#ffffff"/>
+        <g fill="none" stroke="#3b82f6" stroke-width="6" stroke-linecap="round">
+          <path d="M 60 44 Q 36 44 36 68 L 36 188 Q 36 212 60 212"/>
+          <path d="M 196 44 Q 220 44 220 68 L 220 188 Q 220 212 196 212"/>
+        </g>
+        <rect x="64" y="60" width="36" height="36" rx="8" fill="#3b82f6"/>
+        <circle cx="128" cy="78" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+        <rect x="110" y="110" width="36" height="36" rx="8" fill="#3b82f6"/>
+        <rect x="64" y="160" width="36" height="36" rx="8" fill="#3b82f6"/>
+        <circle cx="174" cy="178" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <header class="mockup-chrome">
+    <div>
+      <h1 class="mockup-chrome__title">Home Page Redesign — 3 Concepts</h1>
+      <p class="mockup-chrome__sub">MatrixPro start page mockups. Concept A updated: news feed, 3E icons, no quick actions.</p>
+    </div>
+    <div class="mockup-tabs" role="tablist">
+      <button type="button" class="mockup-tab active" data-concept="a" role="tab" aria-selected="true">A · Command Center</button>
+      <button type="button" class="mockup-tab" data-concept="b" role="tab">B · Bento Dashboard</button>
+      <button type="button" class="mockup-tab" data-concept="c" role="tab">C · Editorial Executive</button>
+    </div>
+    <button type="button" class="mockup-theme-btn" id="themeToggle">Toggle light / dark</button>
+  </header>
+
+  <!-- ═══ CONCEPT A ═══ -->
+  <div class="mockup-concept active" id="concept-a" role="tabpanel">
+    <nav class="hm-nav">
+      <a class="hm-nav__brand" href="#">
+        <span class="brand-tile"><svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--dark"><use href="#mp-icon-dark"/></svg><svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--light"><use href="#mp-icon-light"/></svg></span>
+        MatrixPro
+      </a>
+      <ul class="hm-nav__links">
+        <li><a href="#" class="active">Home</a></li>
+        <li><a href="#">My Plan</a></li>
+        <li><a href="#">Catalog</a></li>
+        <li><a href="#">Skill Explorer</a></li>
+      </ul>
+      <span class="hm-nav__user">bob@matrixpro.com · Engineer</span>
+    </nav>
+
+    <div class="hm-a">
+      <div class="hm-a__mesh"></div>
+      <div class="hm-a__inner">
+        <div class="hm-a__hero-grid">
+          <div>
+            <div class="hm-a__eyebrow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              TAC Skill Development
+            </div>
+            <div class="hm-a__headline">
+              <span class="brand-tile hm-a__headline-icon" aria-hidden="true">
+                <svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--dark"><use href="#mp-icon-dark"/></svg>
+                <svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--light"><use href="#mp-icon-light"/></svg>
+              </span>
+              <div class="hm-a__headline-copy">
+                <h1 class="hm-a__title">Your skills.<br><span class="mp-title-gradient">Your plan.<br>Your growth.</span></h1>
+              </div>
+            </div>
+            <p class="hm-a__lead">MatrixPro provides the structure to turn those efforts into progress—helping you set goals, develop new capabilities, and continuously grow throughout your career.</p>
+            <div class="hm-a__cta">
+              <a class="btn btn-primary" href="#">Go to My Plan →</a>
+              <a class="btn btn-secondary" href="#">Browse Catalog</a>
+            </div>
+            <div class="hm-a__stats">
+              <div class="hm-a__stat hm-a__stat--developing"><div class="hm-a__stat-val">13</div><div class="hm-a__stat-lbl">In development</div></div>
+              <div class="hm-a__stat hm-a__stat--planned"><div class="hm-a__stat-val">1</div><div class="hm-a__stat-lbl">Planned</div></div>
+              <div class="hm-a__stat hm-a__stat--mastered"><div class="hm-a__stat-val">4</div><div class="hm-a__stat-lbl">Mastered</div></div>
+            </div>
+          </div>
+          <div class="hm-a__news">
+            <div class="hm-a__news-bar">
+              <div class="hm-a__news-bar-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                Quick updates &amp; news
+              </div>
+              <span class="hm-a__news-badge">5 new</span>
+            </div>
+            <div class="hm-a__news-feed">
+              <article class="hm-a__news-item">
+                <span class="hm-a__news-icon hm-a__news-icon--login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span>
+                <div class="hm-a__news-body">
+                  <div class="hm-a__news-meta">Last login</div>
+                  <p class="hm-a__news-text">You signed in as <strong>bob@matrixpro.com</strong></p>
+                  <div class="hm-a__news-time">Today · 9:14 AM</div>
+                </div>
+              </article>
+              <article class="hm-a__news-item">
+                <span class="hm-a__news-icon hm-a__news-icon--stalled"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+                <div class="hm-a__news-body">
+                  <div class="hm-a__news-meta">Stalled skill</div>
+                  <p class="hm-a__news-text"><strong>Spanning Tree: STP, RSTP &amp; MST</strong> — no plan activity in 62 days</p>
+                  <div class="hm-a__news-time">Needs attention</div>
+                </div>
+              </article>
+              <article class="hm-a__news-item">
+                <span class="hm-a__news-icon hm-a__news-icon--updated"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span>
+                <div class="hm-a__news-body">
+                  <div class="hm-a__news-meta">Recently updated</div>
+                  <p class="hm-a__news-text"><strong>VLANs, Trunking &amp; VTP</strong> — training log entry added</p>
+                  <div class="hm-a__news-time">2 days ago</div>
+                </div>
+              </article>
+              <article class="hm-a__news-item">
+                <span class="hm-a__news-icon hm-a__news-icon--updated"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span>
+                <div class="hm-a__news-body">
+                  <div class="hm-a__news-meta">Recently updated</div>
+                  <p class="hm-a__news-text"><strong>Campus Telemetry: gNMI/YANG</strong> — catalog content refreshed (v3)</p>
+                  <div class="hm-a__news-time">4 days ago</div>
+                </div>
+              </article>
+              <article class="hm-a__news-item">
+                <span class="hm-a__news-icon hm-a__news-icon--matrix"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+                <div class="hm-a__news-body">
+                  <div class="hm-a__news-meta">Team matrix</div>
+                  <p class="hm-a__news-text"><strong>Alice</strong> added <strong>802.1X &amp; MACsec</strong> to LANSW Shift-2 matrix</p>
+                  <div class="hm-a__news-time">Yesterday · 4:32 PM</div>
+                </div>
+              </article>
+              <article class="hm-a__news-item">
+                <span class="hm-a__news-icon hm-a__news-icon--matrix"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+                <div class="hm-a__news-body">
+                  <div class="hm-a__news-meta">Matrix change</div>
+                  <p class="hm-a__news-text"><strong>Daniela</strong> moved to <strong>Developing</strong> on QoS Campus in team matrix</p>
+                  <div class="hm-a__news-time">Yesterday · 11:08 AM</div>
+                </div>
+              </article>
+              <article class="hm-a__news-item">
+                <span class="hm-a__news-icon hm-a__news-icon--manager"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+                <div class="hm-a__news-body">
+                  <div class="hm-a__news-meta">Manager message</div>
+                  <p class="hm-a__news-text"><strong>Alice</strong>: "Great progress on Layer 2 — schedule a shadow session for EVPN this week."</p>
+                  <div class="hm-a__news-time">Jun 1 · 2:15 PM</div>
+                  <span class="hm-a__news-future">Future feature · mock data</span>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+
+        <div class="hm-a__section-label" style="text-align:center;margin-bottom:28px;margin-top:48px;">The 3E development model</div>
+        <div class="hm-a__timeline">
+          <div class="hm-a__step">
+            <div class="hm-a__step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+            <h3>Education</h3>
+            <p>Structured learning — courses, reading, and certifications that build your foundation.</p>
+          </div>
+          <div class="hm-a__step">
+            <div class="hm-a__step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>
+            <h3>Exposure</h3>
+            <p>Hands-on practice through labs, shadowing, and guided real-world tasks.</p>
+          </div>
+          <div class="hm-a__step">
+            <div class="hm-a__step-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+            <h3>Experience</h3>
+            <p>Mastery through complex scenarios, mentoring others, and driving outcomes.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CONCEPT B ═══ -->
+  <div class="mockup-concept" id="concept-b" role="tabpanel" hidden>
+    <nav class="hm-nav">
+      <a class="hm-nav__brand" href="#"><span class="brand-tile"><svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--dark"><use href="#mp-icon-dark"/></svg><svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--light"><use href="#mp-icon-light"/></svg></span> MatrixPro</a>
+      <ul class="hm-nav__links"><li><a href="#" class="active">Home</a></li><li><a href="#">My Plan</a></li><li><a href="#">Catalog</a></li></ul>
+      <span class="hm-nav__user">bob@matrixpro.com</span>
+    </nav>
+
+    <div class="hm-b">
+      <div class="hm-b__bg"></div>
+      <div class="hm-b__grid">
+        <div class="hm-b__tile hm-b__tile--hero">
+          <p style="font-size:12px;font-weight:600;color:var(--accent);margin:0 0 12px;text-transform:uppercase;letter-spacing:0.06em;">Welcome back, Bob</p>
+          <h1 class="hm-b__welcome">Skill development<br><em>for TAC engineers</em></h1>
+          <p style="font-size:14px;color:var(--text-secondary);line-height:1.55;margin:0 0 24px;max-width:40ch;">Track progress across Education, Exposure, and Experience — from catalog to mastery.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a class="btn btn-primary" href="#">My Plan</a>
+            <a class="btn btn-secondary" href="#">Catalog</a>
+          </div>
+        </div>
+        <div class="hm-b__tile hm-b__tile--stat"><div class="hm-b__stat-n">48</div><div class="hm-b__stat-l">Engineers</div></div>
+        <div class="hm-b__tile hm-b__tile--stat"><div class="hm-b__stat-n">84</div><div class="hm-b__stat-l">Teams</div></div>
+        <div class="hm-b__tile hm-b__tile--stat"><div class="hm-b__stat-n">70</div><div class="hm-b__stat-l">Skills</div></div>
+        <div class="hm-b__tile hm-b__tile--stat" style="visibility:hidden" aria-hidden="true"></div>
+
+        <a class="hm-b__tile hm-b__tile--featured hm-b__tile--module" href="#">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="hm-b__mod-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg></div>
+            <span style="font-size:11px;font-weight:700;color:var(--success);">6 developing · 4 mastered</span>
+          </div>
+          <div class="hm-b__mod-title">Continue My Plan</div>
+          <div class="hm-b__mod-desc">18 LANSW skills on your kanban — pick up where you left off with VLANs & Trunking.</div>
+        </a>
+
+        <a class="hm-b__tile hm-b__tile--module" href="#"><div class="hm-b__mod-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><div class="hm-b__mod-title">Catalog</div><div class="hm-b__mod-desc">Explore the full skill library by domain, team, and category.</div></a>
+        <a class="hm-b__tile hm-b__tile--module" href="#"><div class="hm-b__mod-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="hm-b__mod-title">My Team</div><div class="hm-b__mod-desc">Team matrix, stats, and bulk skill assignment.</div></a>
+        <a class="hm-b__tile hm-b__tile--module" href="#"><div class="hm-b__mod-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><div class="hm-b__mod-title">Skill Explorer</div><div class="hm-b__mod-desc">Find engineers by skill and compare teams.</div></a>
+        <a class="hm-b__tile hm-b__tile--module" href="#"><div class="hm-b__mod-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="hm-b__mod-title">Reporting</div><div class="hm-b__mod-desc">Landscape, activity, and AI development summaries.</div></a>
+
+        <div class="hm-b__tile hm-b__tile--3e">
+          <div class="hm-b__3e-head"><h2>The 3E Model</h2><p>Education · Exposure · Experience — every skill plan follows this progression</p></div>
+          <div class="hm-b__3e-item"><h4><span class="hm-b__3e-dot" style="background:var(--success)"></span> Education</h4><p>Build foundation through courses, certifications, and structured reading materials.</p></div>
+          <div class="hm-b__3e-item"><h4><span class="hm-b__3e-dot" style="background:var(--info)"></span> Exposure</h4><p>Apply knowledge in labs, simulations, and guided hands-on scenarios.</p></div>
+          <div class="hm-b__3e-item"><h4><span class="hm-b__3e-dot" style="background:var(--purple)"></span> Experience</h4><p>Demonstrate mastery, solve complex problems, and mentor others.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CONCEPT C ═══ -->
+  <div class="mockup-concept" id="concept-c" role="tabpanel" hidden>
+    <nav class="hm-nav">
+      <a class="hm-nav__brand" href="#"><span class="brand-tile"><svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--dark"><use href="#mp-icon-dark"/></svg><svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--light"><use href="#mp-icon-light"/></svg></span> MatrixPro</a>
+      <ul class="hm-nav__links"><li><a href="#" class="active">Home</a></li><li><a href="#">My Plan</a></li><li><a href="#">Catalog</a></li></ul>
+      <span class="hm-nav__user">bob@matrixpro.com</span>
+    </nav>
+
+    <div class="hm-c">
+      <div class="hm-c__inner">
+        <span class="hm-c__pill">TAC Skill Development Platform</span>
+        <h1 class="hm-c__headline">Skill development,<br>measured in mastery.</h1>
+        <p class="hm-c__sub">Individual development plans, team skill matrices, and cross-team analytics — built for Cisco TAC engineers.</p>
+        <div class="hm-c__actions">
+          <a class="btn btn-primary" href="#">Go to My Plan</a>
+          <a class="btn btn-secondary" href="#">Browse Catalog</a>
+        </div>
+        <p class="hm-c__meta"><strong>48</strong> engineers · <strong>84</strong> teams · <strong>70</strong> skills in catalog</p>
+
+        <div class="hm-c__explore-label">Explore</div>
+        <div class="hm-c__links">
+          <a class="hm-c__link" href="#">My Plan <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></a>
+          <a class="hm-c__link" href="#">Skill Catalog <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></a>
+          <a class="hm-c__link" href="#">My Team <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></a>
+          <a class="hm-c__link" href="#">Skill Explorer <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></a>
+        </div>
+
+        <div class="hm-c__3e-title">The 3E Model</div>
+        <div class="hm-c__steps">
+          <div class="hm-c__step"><div class="hm-c__step-num">01</div><div><div class="hm-c__step-tag">Education</div><h3>Build your foundation</h3><p>Focus on courses, training programs, and reading materials. Absorb knowledge, learn terminology, and develop a strong theoretical base before moving to practice.</p></div></div>
+          <div class="hm-c__step"><div class="hm-c__step-num">02</div><div><div class="hm-c__step-tag">Exposure</div><h3>Turn knowledge into practice</h3><p>Apply what you've learned through labs, simulations, and shadowing. Build confidence, experiment safely, and identify gaps in your understanding.</p></div></div>
+          <div class="hm-c__step"><div class="hm-c__step-num">03</div><div><div class="hm-c__step-tag">Experience</div><h3>Demonstrate mastery</h3><p>Apply skills across complex scenarios, solve escalation-grade problems, mentor peers, and drive meaningful customer outcomes.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tabs = document.querySelectorAll('.mockup-tab');
+    const panels = document.querySelectorAll('.mockup-concept');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const id = tab.dataset.concept;
+        tabs.forEach(t => {
+          t.classList.toggle('active', t === tab);
+          t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+        });
+        panels.forEach(p => {
+          const show = p.id === `concept-${id}`;
+          p.classList.toggle('active', show);
+          p.hidden = !show;
+        });
+      });
+    });
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+    });
+  </script>
+</body>
+</html>

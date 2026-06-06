@@ -135,6 +135,7 @@ export function showConfirm(messageOrOpts, danger = false) {
       confirmText: 'Yes',
       cancelText: 'No',
       danger,
+      modalClass: 'modal-confirm-actions',
       onConfirm: () => resolve(true),
       onCancel: () => resolve(false),
     });

@@ -16,12 +16,14 @@ from app.models.plan import (
     UserContentCompletion,
     UserContentOverride,
     UserLevelContent,
+    UserCatalogDisplayOrder,
 )
 from app.models.org import Team
-from app.models.skill import Skill, SkillCategoryAssignment, SkillLevelContent, SkillTeam
+from app.models.skill import Skill, SkillCategory, SkillCategoryAssignment, SkillLevelContent, SkillLevelContentType, SkillTeam
 from app.models.user import User, UserRole
 from app.schemas.org import BulkAssignRequest, BulkAssignResponse, BulkAssignResultItem
 from app.schemas.plan import (
+    ContentOrderRequest,
     ContentCompletionResponse,
     ContentCompletionToggle,
     ContentOverrideCreate,
@@ -65,6 +67,24 @@ def _audit_log(
         changed_at=datetime.utcnow(),
     )
     db.add(entry)
+
+
+def _append_training_log(
+    db: Session,
+    plan_skill_id: int,
+    title: str,
+    log_type: SkillLevelContentType = SkillLevelContentType.action,
+    notes: str | None = None,
+) -> None:
+    db.add(
+        PlanSkillTrainingLog(
+            plan_skill_id=plan_skill_id,
+            title=title,
+            type=log_type,
+            completed_at=datetime.utcnow(),
+            notes=notes,
+        )
+    )
 
 
 def _check_plan_access(current_user: User, engineer_id: int, db: Session) -> User:
@@ -375,10 +395,17 @@ def create_own_skill(
     if not data.name or not data.name.strip():
         raise HTTPException(status_code=400, detail="Skill name is required")
 
+    if not data.category_id:
+        raise HTTPException(status_code=400, detail="Category is required")
+
+    cat = db.query(SkillCategory).filter(SkillCategory.id == data.category_id).first()
+    if cat is None:
+        raise HTTPException(status_code=400, detail=f"Category {data.category_id} not found")
+
     skill = Skill(
         name=data.name.strip(),
         description=data.description,
-        icon=None,
+        icon="personal",
         is_archived=False,
         is_custom=True,
         owner_id=engineer_id,
@@ -387,6 +414,8 @@ def create_own_skill(
     )
     db.add(skill)
     db.flush()
+
+    db.add(SkillCategoryAssignment(skill_id=skill.id, category_id=data.category_id))
 
     plan = _get_or_create_plan(db, engineer_id)
 
@@ -764,6 +793,7 @@ def add_training_log(
 def get_plan_skill_content(
     engineer_id: int,
     plan_skill_id: int,
+    include_hidden: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -811,32 +841,49 @@ def get_plan_skill_content(
         )
     }
 
+    display_orders = {
+        o.content_id: o.position
+        for o in db.query(UserCatalogDisplayOrder).filter(
+            UserCatalogDisplayOrder.user_id == engineer_id,
+            UserCatalogDisplayOrder.plan_skill_id == plan_skill_id,
+        )
+    }
+
     items = []
     completed_count = 0
     for item in catalog_items:
-        if item.id in hidden_ids:
+        is_hidden = item.id in hidden_ids
+        if is_hidden and not include_hidden:
             continue
         comp = completions.get(item.id)
         ovr = overrides.get(item.id)
         is_completed = comp.completed if comp else False
-        if is_completed:
+        if is_completed and not is_hidden:
             completed_count += 1
+        effective_position = display_orders.get(item.id, item.position)
+        effective_type = ovr.override_type if ovr and ovr.override_type else item.type
+        effective_url = (
+            ovr.override_url if ovr and ovr.override_url is not None else item.url
+        )
         items.append(
             MergedContentItem(
                 id=item.id,
                 skill_id=item.skill_id,
                 level=item.level,
-                type=item.type,
+                type=effective_type,
                 title=item.title,
-                description=ovr.override_description if ovr else item.description,
-                url=item.url,
-                position=item.position,
+                description=item.description,
+                url=effective_url,
+                position=effective_position,
                 completed=is_completed,
                 completed_at=comp.completed_at if comp else None,
                 completion_notes=comp.notes if comp else None,
                 has_override=ovr is not None,
                 override_description=ovr.override_description if ovr else None,
+                override_type=ovr.override_type if ovr else None,
+                override_url=ovr.override_url if ovr else None,
                 is_user_content=False,
+                is_hidden=is_hidden,
             )
         )
 
@@ -877,7 +924,15 @@ def get_plan_skill_content(
             )
         )
 
-    items.sort(key=lambda x: (x.level, x.position, x.id))
+    items.sort(
+        key=lambda x: (
+            x.level,
+            display_orders.get(x.id, x.position)
+            if not x.is_user_content
+            else x.position,
+            x.id,
+        )
+    )
 
     return PlanSkillContentResponse(
         plan_skill_id=plan_skill_id,
@@ -1032,13 +1087,31 @@ def save_content_override(
             plan_skill_id=plan_skill_id,
             content_id=content_id,
             override_description=data.override_description,
+            override_type=data.override_type.value if data.override_type else None,
+            override_url=data.override_url,
             is_active=True,
         )
         db.add(existing)
+        notes_action = "Added personal notes"
     else:
+        had_notes_before = bool(
+            existing.override_description and str(existing.override_description).strip()
+        )
         existing.override_description = data.override_description
+        existing.override_type = (
+            data.override_type.value if data.override_type else None
+        )
+        existing.override_url = data.override_url
         existing.is_active = True
         existing.updated_at = now
+        notes_action = "Updated personal notes" if had_notes_before else "Added personal notes"
+
+    _append_training_log(
+        db,
+        plan_skill_id,
+        f"{notes_action}: {content.title[:80]}",
+        content.type,
+    )
 
     _audit_log(
         db,
@@ -1383,6 +1456,13 @@ def hide_catalog_content(
     )
     db.add(hidden)
 
+    _append_training_log(
+        db,
+        plan_skill_id,
+        f"Hidden: {content.title[:80]}",
+        content.type,
+    )
+
     _audit_log(
         db,
         entity_type="hidden_catalog_content",
@@ -1431,6 +1511,22 @@ def unhide_catalog_content(
     if hidden is None:
         raise HTTPException(status_code=404, detail="Item is not hidden")
 
+    content = (
+        db.query(SkillLevelContent)
+        .filter(
+            SkillLevelContent.id == content_id,
+            SkillLevelContent.skill_id == plan_skill.skill_id,
+        )
+        .first()
+    )
+
+    _append_training_log(
+        db,
+        plan_skill_id,
+        f"Restored from catalog: {(content.title[:80] if content else f'item #{content_id}')}",
+        content.type if content else SkillLevelContentType.action,
+    )
+
     _audit_log(
         db,
         entity_type="hidden_catalog_content",
@@ -1444,6 +1540,84 @@ def unhide_catalog_content(
     db.delete(hidden)
     db.commit()
     return None
+
+
+@router.put(
+    "/{engineer_id}/skills/{plan_skill_id}/content/order",
+    status_code=200,
+)
+def update_content_display_order(
+    engineer_id: int,
+    plan_skill_id: int,
+    data: ContentOrderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _check_plan_access(current_user, engineer_id, db)
+    plan = _get_or_create_plan(db, engineer_id)
+
+    plan_skill = (
+        db.query(PlanSkill)
+        .filter(PlanSkill.id == plan_skill_id, PlanSkill.plan_id == plan.id)
+        .first()
+    )
+    if plan_skill is None:
+        raise HTTPException(status_code=404, detail="Plan skill not found")
+
+    catalog_ids = {
+        c.id
+        for c in db.query(SkillLevelContent)
+        .filter(SkillLevelContent.skill_id == plan_skill.skill_id)
+        .all()
+    }
+
+    for entry in data.items:
+        if entry.level not in (1, 2, 3):
+            raise HTTPException(status_code=400, detail="Level must be 1, 2, or 3")
+        if entry.kind == "user":
+            row = (
+                db.query(UserLevelContent)
+                .filter(
+                    UserLevelContent.id == entry.id,
+                    UserLevelContent.user_id == engineer_id,
+                    UserLevelContent.plan_skill_id == plan_skill_id,
+                )
+                .first()
+            )
+            if row is None:
+                raise HTTPException(status_code=404, detail=f"User item {entry.id} not found")
+            row.position = entry.position
+        elif entry.kind == "catalog":
+            if entry.id not in catalog_ids:
+                raise HTTPException(
+                    status_code=404, detail=f"Catalog item {entry.id} not found"
+                )
+            existing = (
+                db.query(UserCatalogDisplayOrder)
+                .filter(
+                    UserCatalogDisplayOrder.user_id == engineer_id,
+                    UserCatalogDisplayOrder.plan_skill_id == plan_skill_id,
+                    UserCatalogDisplayOrder.content_id == entry.id,
+                )
+                .first()
+            )
+            if existing is None:
+                db.add(
+                    UserCatalogDisplayOrder(
+                        user_id=engineer_id,
+                        plan_skill_id=plan_skill_id,
+                        content_id=entry.id,
+                        position=entry.position,
+                    )
+                )
+            else:
+                existing.position = entry.position
+                existing.updated_at = datetime.utcnow()
+        else:
+            raise HTTPException(status_code=400, detail="kind must be catalog or user")
+
+    db.commit()
+    return {"detail": "Order updated"}
 
 
 @router.post(
@@ -1467,14 +1641,42 @@ def resync_catalog_content(
     if plan_skill is None:
         raise HTTPException(status_code=404, detail="Plan skill not found")
 
-    count = (
+    hidden_rows = (
         db.query(HiddenCatalogContent)
         .filter(
             HiddenCatalogContent.user_id == engineer_id,
             HiddenCatalogContent.plan_skill_id == plan_skill_id,
         )
-        .delete()
+        .all()
     )
+    hidden_content_ids = [h.content_id for h in hidden_rows]
+    count = len(hidden_rows)
+
+    restored_contents = []
+    if hidden_content_ids:
+        restored_contents = (
+            db.query(SkillLevelContent)
+            .filter(SkillLevelContent.id.in_(hidden_content_ids))
+            .all()
+        )
+
+    for hidden in hidden_rows:
+        db.delete(hidden)
+
+    if hidden_content_ids:
+        db.query(UserContentOverride).filter(
+            UserContentOverride.user_id == engineer_id,
+            UserContentOverride.plan_skill_id == plan_skill_id,
+            UserContentOverride.content_id.in_(hidden_content_ids),
+        ).delete(synchronize_session=False)
+
+    for content in restored_contents:
+        _append_training_log(
+            db,
+            plan_skill_id,
+            f"Restored from catalog: {content.title[:80]}",
+            content.type,
+        )
 
     if count > 0:
         _audit_log(

@@ -124,6 +124,7 @@ export function mountLogin(container, params) {
       if (!token) throw new Error('No token received from server.');
 
       localStorage.setItem('matrixpro_token', token);
+      localStorage.setItem('matrixpro_last_login', new Date().toISOString());
 
       const user = await api.get('/api/auth/me');
       Store.set('user', user);

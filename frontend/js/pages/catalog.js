@@ -86,14 +86,13 @@ export function mountCatalog(container, params) {
   const urlParams = new URLSearchParams(hashParts[1] || '');
   _addMode = urlParams.get('addMode') || null;
 
-  _activeTab = 'org';
-  _selectedFilter = { type: 'all', id: null, label: 'All Skills' };
   _searchQuery = '';
   _tagQuery = '';
   _showArchived = false;
   _activeShifts = new Set([1, 2, 3, 4]);
   _sortMode = 'name-asc';
   _formDataCache = null;
+  bootstrapAddModeState();
 
   const page = buildPageShell(container);
   _gridEl = page.gridEl;
@@ -101,33 +100,115 @@ export function mountCatalog(container, params) {
   _shiftFiltersEl = page.shiftFiltersEl;
 
   if (_addMode) {
-    const banner = createElement('div', { className: 'cat-addmode-banner' });
-    banner.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--accent-soft);border-bottom:1px solid var(--border-soft);font-size:14px;color:var(--text-primary);';
-    const bannerText = createElement('span');
-    bannerText.textContent = 'Select skills to add to your plan';
-    bannerText.style.flex = '1';
-    const backLink = createElement('a', { href: '#/my-plan', className: 'btn btn-secondary btn-sm' });
-    backLink.textContent = '← Back to My Plan';
-    banner.appendChild(bannerText);
-    banner.appendChild(backLink);
-    container.insertBefore(banner, container.firstChild);
+    container.insertBefore(buildAddModeBanner(), container.firstChild);
   }
 
   loadStats();
-  loadTabTree('org', _treeEl).then(() => {
+  loadTabTree(_activeTab, _treeEl).then(() => {
     if (_addMode === 'team') {
-      const user = Store.get('user');
-      const teamId = user?.team_id;
-      if (teamId) {
-        _selectedFilter = { type: 'team_id', id: teamId, label: user?.team_name || 'My Team' };
-      }
+      resolveTeamFilterFromTree();
+      updateAddModeTeamLabels();
     }
+    focusTreeSelection();
     fetchAndRenderSkills();
   });
 
   return () => {
     clearTimeout(_debounceTimer);
   };
+}
+
+function bootstrapAddModeState() {
+  _activeTab = 'org';
+  _selectedFilter = { type: 'all', id: null, label: 'All Skills' };
+
+  if (_addMode === 'team') {
+    const user = Store.get('user');
+    if (user?.team_id) {
+      _selectedFilter = {
+        type: 'team_id',
+        id: user.team_id,
+        label: user.team_name || 'My Team',
+      };
+    }
+  }
+}
+
+function buildAddModeBanner() {
+  const user = Store.get('user');
+  const teamName = user?.team_name || 'your team';
+  const banner = createElement('div', { className: 'cat-addmode-banner' });
+  const textWrap = createElement('div', { className: 'cat-addmode-banner__text' });
+  const title = createElement('div', { className: 'cat-addmode-banner__title' });
+  const desc = createElement('div', { className: 'cat-addmode-banner__desc' });
+
+  if (_addMode === 'team') {
+    title.textContent = `My Team's Skills — ${teamName}`;
+    desc.textContent = 'Browse technical skills curated for your team. Select a skill card and click Add to My Plan.';
+  } else {
+    title.textContent = 'From Catalog — Full Skills Library';
+    desc.textContent = 'Explore skills across all teams, domains, certifications, and non-technical areas.';
+  }
+
+  textWrap.appendChild(title);
+  textWrap.appendChild(desc);
+
+  const actions = createElement('div', { className: 'cat-addmode-banner__actions' });
+  const backLink = createElement('a', { href: '#/my-plan', className: 'btn btn-secondary btn-sm' });
+  backLink.textContent = '← Back to My Plan';
+  actions.appendChild(backLink);
+
+  banner.appendChild(textWrap);
+  banner.appendChild(actions);
+  return banner;
+}
+
+function resolveTeamFilterFromTree() {
+  if (_selectedFilter.type !== 'team_id' || _selectedFilter.id == null) return;
+  const treeData = _treeCache.org;
+  if (!Array.isArray(treeData)) return;
+  for (const domain of treeData) {
+    for (const team of Array.isArray(domain.teams) ? domain.teams : []) {
+      if (String(team.id) === String(_selectedFilter.id)) {
+        _selectedFilter.label = team.name;
+        return;
+      }
+    }
+  }
+}
+
+function updateAddModeTeamLabels() {
+  if (_addMode !== 'team' || !_container) return;
+  const teamLabel = _selectedFilter.label || 'My Team';
+  const title = _container.querySelector('.cat-addmode-banner__title');
+  const subtitle = _container.querySelector('.mp-subtitle');
+  if (title) title.textContent = `My Team's Skills — ${teamLabel}`;
+  if (subtitle) subtitle.textContent = `Discover skills for ${teamLabel}`;
+}
+
+function focusTreeSelection() {
+  if (!_treeEl) return;
+  const { type, id } = _selectedFilter;
+
+  if (type === 'team_id' && id != null) {
+    const teamEl = _treeEl.querySelector(
+      `.tree-item[data-filter-type="team_id"][data-filter-id="${id}"]`,
+    );
+    if (!teamEl) return;
+    _treeEl.querySelectorAll('.tree-item').forEach(i => i.classList.remove('active'));
+    teamEl.classList.add('active');
+    const domainEl = teamEl.closest('.tree-item-children')?.parentElement;
+    if (domainEl?.classList.contains('tree-item')) {
+      domainEl.classList.add('expanded');
+    }
+    teamEl.scrollIntoView({ block: 'nearest' });
+    return;
+  }
+
+  if (type === 'all') {
+    const allEl = _treeEl.querySelector('.tree-item[data-type="all"]');
+    if (allEl) allEl.classList.add('active');
+  }
 }
 
 // ─── Stats loading ────────────────────────────────────────────────────────────
@@ -184,7 +265,13 @@ function buildPageShell(container) {
   gradientSpan.textContent = 'Catalog';
   title.appendChild(gradientSpan);
   const subtitle = createElement('p', { className: 'mp-subtitle' });
-  subtitle.textContent = 'Browse, search and manage the skill catalog';
+  if (_addMode === 'team') {
+    subtitle.textContent = `Discover skills for ${Store.get('user')?.team_name || 'your team'}`;
+  } else if (_addMode === 'all') {
+    subtitle.textContent = 'Select skills to add to your development plan';
+  } else {
+    subtitle.textContent = 'Browse, search and manage the skill catalog';
+  }
   heroText.appendChild(title);
   heroText.appendChild(subtitle);
   hero.appendChild(heroText);
@@ -243,6 +330,8 @@ function buildTabBar() {
   ];
 
   TABS.forEach(tab => {
+    if (_addMode === 'team' && tab.id !== 'org') return;
+
     const btn = createElement('button', { className: 'catalog-tab' + (tab.id === _activeTab ? ' active' : '') });
     btn.textContent = tab.label;
     btn.dataset.tabId = tab.id;
@@ -261,6 +350,7 @@ function buildTabBar() {
 
       delete _treeCache[tab.id];
       await loadTabTree(tab.id, _treeEl);
+      focusTreeSelection();
       fetchAndRenderSkills();
     });
     tabBar.appendChild(btn);
@@ -404,8 +494,8 @@ function buildToolbar() {
 
   const rightGroup = createElement('div', { className: 'cat-toolbar-right' });
 
-  // Add New Skill button (admin and manager only)
-  if (canEdit) {
+  // Add New Skill button (admin and manager only, not in plan-add mode)
+  if (canEdit && !_addMode) {
     const addBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
     addBtn.textContent = 'Add New Skill';
     addBtn.addEventListener('click', () => openSkillModal(null));
@@ -472,7 +562,10 @@ function renderOrgTree(domains, treeEl) {
       .filter(t => _activeShifts.has(t.shift));
     if (!teams.length) return;
 
-    const domainItem = buildTreeItem(domain.name, 'domain', 0, true, domain.icon ? getSkillIconSVG(domain.icon, 16) : null);
+    const domainItem = buildTreeItem(domain.name, 'domain', 0, true, domain.icon ? getSkillIconSVG(domain.icon, 16) : null, {
+      filterType: 'domain_id',
+      filterId: domain.id,
+    });
     if (_selectedFilter.type === 'domain_id' && String(_selectedFilter.id) === String(domain.id)) {
       domainItem.classList.add('active');
     }
@@ -486,7 +579,10 @@ function renderOrgTree(domains, treeEl) {
     const childrenEl = createElement('div', { className: 'tree-item-children' });
 
     teams.forEach(team => {
-      const teamItem = buildTreeItem(team.name, 'team', 1, false, team.icon ? getSkillIconSVG(team.icon, 16) : null);
+      const teamItem = buildTreeItem(team.name, 'team', 1, false, team.icon ? getSkillIconSVG(team.icon, 16) : null, {
+        filterType: 'team_id',
+        filterId: team.id,
+      });
       if (_selectedFilter.type === 'team_id' && String(_selectedFilter.id) === String(team.id)) {
         teamItem.classList.add('active');
       }
@@ -554,7 +650,10 @@ function renderNonTechnicalTree(domains, treeEl) {
     if (teams.length > 0) {
       const childrenEl = createElement('div', { className: 'tree-item-children' });
       teams.forEach(team => {
-        const teamItem = buildTreeItem(team.name, 'team', 1, false, team.icon ? getSkillIconSVG(team.icon, 16) : null);
+        const teamItem = buildTreeItem(team.name, 'team', 1, false, team.icon ? getSkillIconSVG(team.icon, 16) : null, {
+        filterType: 'team_id',
+        filterId: team.id,
+      });
         if (_selectedFilter.type === 'team_id' && String(_selectedFilter.id) === String(team.id)) {
           teamItem.classList.add('active');
         }
@@ -573,10 +672,12 @@ function renderNonTechnicalTree(domains, treeEl) {
 
 // ─── Tree item builder ────────────────────────────────────────────────────────
 
-function buildTreeItem(label, type, indent, hasToggle, iconText) {
+function buildTreeItem(label, type, indent, hasToggle, iconText, filterMeta = null) {
   const item = createElement('div', { className: 'tree-item' });
   if (indent) item.style.paddingLeft = `${16 + indent * 16}px`;
   if (type) item.dataset.type = type;
+  if (filterMeta?.filterType) item.dataset.filterType = filterMeta.filterType;
+  if (filterMeta?.filterId != null) item.dataset.filterId = String(filterMeta.filterId);
 
   const iconEl = createElement('span', { className: 'tree-item-icon' });
   iconEl.setAttribute('aria-hidden', 'true');
@@ -622,6 +723,18 @@ function addToggleListener(item) {
 }
 
 function selectFilter(filter, itemEl, treeEl) {
+  if (_addMode === 'team') {
+    const user = Store.get('user');
+    const userTeamId = user?.team_id;
+    if (filter.type !== 'team_id' || Number(filter.id) !== Number(userTeamId)) {
+      showToast(
+        `This view is scoped to ${user?.team_name || 'your team'}. Choose From Catalog to browse all skills.`,
+        'info',
+      );
+      return;
+    }
+  }
+
   _selectedFilter = filter;
 
   const allItems = (treeEl || _treeEl).querySelectorAll('.tree-item');
@@ -776,8 +889,27 @@ function getCertIdsForDomain(certDomainId) {
 function renderSkillGrid(container, skills) {
   container.innerHTML = '';
 
+  if (_addMode) {
+    const scope = createElement('div', { className: 'cat-addmode-scope' });
+    const countLabel = `${skills.length} skill${skills.length === 1 ? '' : 's'}`;
+    if (_addMode === 'team') {
+      scope.textContent = `${_selectedFilter.label} · ${countLabel} available`;
+    } else {
+      scope.textContent = `${_selectedFilter.label || 'Catalog'} · ${countLabel} shown`;
+    }
+    container.appendChild(scope);
+  }
+
   if (!skills.length) {
-    renderEmptyState(container, 'No skills found', 'Try adjusting your search or filters.');
+    const emptyHost = createElement('div');
+    renderEmptyState(
+      emptyHost,
+      'No skills found',
+      _addMode === 'team'
+        ? 'Your team has no matching skills for the current filters.'
+        : 'Try adjusting your search or filters.',
+    );
+    container.appendChild(emptyHost);
     return;
   }
 
@@ -1120,198 +1252,226 @@ function switchTabAndFilter(tabId, filterType, filterId, filterLabel) {
 }
 
 // ─── Skill Detail Modal ───────────────────────────────────────────────────────
-
 function showSkillDetailModal(skill) {
   const modalRoot = document.getElementById('modalRoot');
   if (!modalRoot) return;
 
+  const LEVEL_CONFIG = [
+    {
+      key: 'education',
+      label: 'Education',
+      chipClass: 'chip-education',
+      icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+    },
+    {
+      key: 'exposure',
+      label: 'Exposure',
+      chipClass: 'chip-exposure',
+      icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',
+    },
+    {
+      key: 'experience',
+      label: 'Experience',
+      chipClass: 'chip-experience',
+      icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    },
+  ];
+  const LEVEL_MAP = { 1: 'education', 2: 'exposure', 3: 'experience' };
+  const LEVEL_REVERSE = { education: 1, exposure: 2, experience: 3 };
+  const SECTION_ORDER = ['education', 'exposure', 'experience'];
+
+  const user = Store.get('user');
+  const canEdit = user?.role === 'admin' || user?.role === 'manager';
+
   const overlay = createElement('div', { className: 'modal-overlay' });
-  const modal = createElement('div', { className: 'modal skill-detail-modal' });
+  const modal = createElement('div', {
+    className: 'modal skill-detail-modal sdm-plan-modal catalog-skill-modal',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-label': `${skill.name} — Skill catalog`,
+  });
 
-  // Modal header
-  const modalHeader = createElement('div', { className: 'modal-header' });
-  const titleEl = createElement('h2', { className: 'modal-title' });
+  const body = createElement('div', { className: 'modal-body sdm-modal-body' });
+
+  /* ── Sticky information header ─────────────────────────────────────── */
+  const headerBlock = createElement('header', { className: 'sdm-header catalog-skill-header' });
+  const headerTop = createElement('div', { className: 'sdm-header__top' });
+  const titleWrap = createElement('div', { className: 'catalog-skill-header__title-wrap' });
+  if (skill.icon && SKILL_ICONS[skill.icon]) {
+    const skillIconWrap = createElement('div', { className: 'catalog-skill-header__icon', 'aria-hidden': 'true' });
+    skillIconWrap.innerHTML = getSkillIconSVG(skill.icon, 26);
+    titleWrap.appendChild(skillIconWrap);
+  }
+  const titleEl = createElement('h1', { className: 'sdm-header__title' });
   titleEl.textContent = skill.name;
-  const closeBtn = createElement('button', { className: 'modal-close' });
-  closeBtn.setAttribute('aria-label', 'Close');
+  titleWrap.appendChild(titleEl);
+  const closeBtn = createElement('button', { className: 'sdm-close', 'aria-label': 'Close' });
   closeBtn.textContent = '\u2715';
-  modalHeader.appendChild(titleEl);
-  modalHeader.appendChild(closeBtn);
-  modal.appendChild(modalHeader);
+  headerTop.appendChild(titleWrap);
+  headerTop.appendChild(closeBtn);
+  headerBlock.appendChild(headerTop);
 
-  const modalBody = createElement('div', { className: 'modal-body skill-detail-body' });
+  if (skill.is_archived) {
+    const archivedBadge = createElement('div', { className: 'catalog-skill-archived' });
+    archivedBadge.textContent = 'Archived';
+    headerBlock.appendChild(archivedBadge);
+  }
 
-  // Detail header with "Assigned To" section
-  const detailHeader = createElement('div', { className: 'skill-detail-header' });
+  const descText = (skill.description || '').trim();
+  const descEl = createElement('p', { className: 'sdm-notes' });
+  if (descText) {
+    descEl.textContent = descText;
+  } else {
+    descEl.classList.add('sdm-notes--empty');
+  }
+  const descToggle = createElement('button', { type: 'button', className: 'sdm-notes-toggle' });
+  descToggle.textContent = 'Show more';
+  descToggle.hidden = true;
+  let descExpanded = false;
+  function updateDescDisplay() {
+    if (!descText) {
+      descToggle.hidden = true;
+      return;
+    }
+    descEl.textContent = descText;
+    const overflow = descText.length > 140;
+    descToggle.hidden = !overflow;
+    descToggle.classList.toggle('visible', overflow);
+    descToggle.textContent = descExpanded ? 'Show less' : 'Show more';
+    descEl.classList.toggle('sdm-notes--long', descExpanded);
+  }
+  updateDescDisplay();
+  descToggle.addEventListener('click', () => {
+    descExpanded = !descExpanded;
+    updateDescDisplay();
+  });
+  headerBlock.appendChild(descEl);
+  headerBlock.appendChild(descToggle);
 
-  const assignSection = createElement('div', { className: 'skill-detail-assignments' });
-
+  const metaPanel = createElement('div', { className: 'catalog-skill-meta' });
+  const categories = Array.isArray(skill.categories) ? skill.categories : [];
   const teams = Array.isArray(skill.teams) ? skill.teams : [];
   const certificates = Array.isArray(skill.certificates) ? skill.certificates : [];
   const tags = Array.isArray(skill.tags) ? skill.tags : [];
 
-  function buildAssignRow(labelText, items, chipClassFn) {
-    if (!items.length) return null;
-    const row = createElement('div', { className: 'skill-detail-assign-row' });
-    const label = createElement('span', { className: 'skill-detail-assign-label' });
+  function appendMetaRow(labelText, chipsBuilder) {
+    const chips = chipsBuilder();
+    if (!chips.length) return;
+    const row = createElement('div', { className: 'catalog-skill-meta__row' });
+    const label = createElement('span', { className: 'catalog-skill-meta__label' });
     label.textContent = labelText;
+    const chipWrap = createElement('div', { className: 'catalog-skill-meta__chips' });
+    chips.forEach(chip => chipWrap.appendChild(chip));
     row.appendChild(label);
-    items.forEach(item => {
-      const chip = createElement('span', { className: chipClassFn(item) });
-      chip.textContent = item.name || item;
-      row.appendChild(chip);
-    });
-    return row;
+    row.appendChild(chipWrap);
+    metaPanel.appendChild(row);
   }
 
-  const categories = Array.isArray(skill.categories) ? skill.categories : [];
-  if (categories.length) {
-    const catRow = createElement('div', { className: 'skill-detail-assign-row skill-detail-categories' });
-    const catLabel = createElement('span', { className: 'skill-detail-assign-label' });
-    catLabel.textContent = 'Categories';
-    catRow.appendChild(catLabel);
-    categories.forEach(cat => {
-      const chip = createElement('span', { className: 'skill-detail-category-chip' });
-      chip.appendChild(categoryIconSpan(cat.slug, '14px'));
-      const txt = createElement('span', { className: 'skill-detail-category-chip__name' });
-      txt.textContent = cat.name;
-      chip.appendChild(txt);
-      catRow.appendChild(chip);
-    });
-    assignSection.appendChild(catRow);
-  }
+  appendMetaRow('Category', () => categories.map(cat => {
+    const chip = createElement('span', { className: 'mp-modal-category-chip' });
+    chip.appendChild(categoryIconSpan(cat.slug, '14px'));
+    const name = createElement('span', { className: 'mp-modal-category-chip__name' });
+    name.textContent = cat.name;
+    chip.appendChild(name);
+    return chip;
+  }));
 
-  if (teams.length) {
-    const teamRow = createElement('div', { className: 'skill-detail-assign-row' });
-    const label = createElement('span', { className: 'skill-detail-assign-label' });
-    label.textContent = 'Teams';
-    teamRow.appendChild(label);
-
-    const VISIBLE_TEAM_LIMIT = 2;
-    const visibleTeams = teams.slice(0, VISIBLE_TEAM_LIMIT);
-    const hiddenTeams = teams.slice(VISIBLE_TEAM_LIMIT);
-
-    visibleTeams.forEach(team => {
+  appendMetaRow('Teams', () => {
+    const VISIBLE = 3;
+    const chips = [];
+    teams.slice(0, VISIBLE).forEach(team => {
       const chip = createElement('span', { className: 'triage-chip triage-signal chip-sm' });
       chip.textContent = team.name || team;
-      teamRow.appendChild(chip);
+      chips.push(chip);
     });
-
-    if (hiddenTeams.length) {
+    if (teams.length > VISIBLE) {
+      const hidden = teams.slice(VISIBLE);
       const overflow = createElement('span', {
         className: 'triage-chip triage-signal chip-sm team-chip-overflow',
         tabindex: '0',
-        'aria-label': `${hiddenTeams.length} more team${hiddenTeams.length === 1 ? '' : 's'}: ${hiddenTeams.map(t => t.name || t).join(', ')}`,
+        'aria-label': `${hidden.length} more teams`,
       });
-      overflow.textContent = `+${hiddenTeams.length} …`;
-
+      overflow.textContent = `+${hidden.length} more`;
       const popover = createElement('span', { className: 'team-chip-overflow__popover', role: 'tooltip' });
-      hiddenTeams.forEach(team => {
+      hidden.forEach(team => {
         const line = createElement('span', { className: 'team-chip-overflow__item' });
         line.textContent = team.name || team;
         popover.appendChild(line);
       });
       overflow.appendChild(popover);
-      teamRow.appendChild(overflow);
+      chips.push(overflow);
     }
-
-    assignSection.appendChild(teamRow);
-  }
-
-  const certRow = buildAssignRow('Certs', certificates, () => 'meta-badge meta-badge--cert meta-badge--clickable');
-  if (certRow) {
-    const certChips = certRow.querySelectorAll('.meta-badge--cert');
-    certificates.forEach((cert, i) => {
-      if (certChips[i]) {
-        certChips[i].addEventListener('click', () => {
-          closeModal();
-          switchTabAndFilter('cert', 'cert_id', cert.id, cert.name);
-        });
-      }
-    });
-    assignSection.appendChild(certRow);
-  }
-
-  const tagsAssignRow = buildAssignRow('Tags', tags, () => 'triage-chip triage-feedback chip-sm');
-  if (tagsAssignRow) assignSection.appendChild(tagsAssignRow);
-
-  // Archived badge
-  if (skill.is_archived) {
-    const statusRow = createElement('div', { className: 'skill-detail-assign-row' });
-    const b = createElement('span', { className: 'triage-chip triage-blocking chip-sm' });
-    b.textContent = 'Archived';
-    statusRow.appendChild(b);
-    assignSection.appendChild(statusRow);
-  }
-
-  if (assignSection.children.length) detailHeader.appendChild(assignSection);
-
-  if (skill.description) {
-    const descEl = createElement('p', { className: 'skill-detail-description' });
-    descEl.textContent = skill.description;
-    detailHeader.appendChild(descEl);
-  }
-
-  modalBody.appendChild(detailHeader);
-
-  // ── Education/Exposure/Experience tabs ───────────────────────────────────
-
-  const LEVEL_CONFIG = [
-    { key: 'education', label: 'Education', chipClass: 'chip-education', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>' },
-    { key: 'exposure', label: 'Exposure', chipClass: 'chip-exposure', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>' },
-    { key: 'experience', label: 'Experience', chipClass: 'chip-experience', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' },
-  ];
-
-  const tabBar = createElement('div', { className: 'skill-detail-tabs', role: 'tablist' });
-  tabBar.setAttribute('aria-label', 'Skill level content');
-  const tabPanelsWrap = createElement('div', { className: 'skill-detail-panels' });
-
-  const tabButtons = {};
-  const tabPanels = {};
-
-  LEVEL_CONFIG.forEach(({ key, label, icon }) => {
-    const tabBtn = createElement('button', { className: 'skill-detail-tab', 'data-tab': key, role: 'tab', 'aria-selected': 'false', 'aria-controls': `panel-${key}` });
-    const iconSpan = createElement('span', { className: 'skill-detail-tab-icon' });
-    iconSpan.innerHTML = icon;
-    tabBtn.appendChild(iconSpan);
-    const tabLabel = createElement('span');
-    tabLabel.textContent = label;
-    const tabCount = createElement('span', { className: 'skill-detail-tab-count' });
-    tabCount.textContent = '0';
-    tabBtn.appendChild(tabLabel);
-    tabBtn.appendChild(tabCount);
-    tabBar.appendChild(tabBtn);
-    tabButtons[key] = tabBtn;
-
-    const panel = createElement('div', { className: 'skill-detail-tab-panel', 'data-panel': key, role: 'tabpanel', id: `panel-${key}` });
-    tabPanelsWrap.appendChild(panel);
-    tabPanels[key] = panel;
+    return chips;
   });
 
-  const skeletonEl = createElement('div', { className: 'skill-detail-skeleton' });
-  for (let i = 0; i < 3; i++) {
-    skeletonEl.appendChild(createElement('div', { className: 'skeleton skeleton-row-lg' }));
-  }
-  tabPanelsWrap.appendChild(skeletonEl);
+  appendMetaRow('Certifications', () => certificates.map(cert => {
+    const chip = createElement('button', {
+      type: 'button',
+      className: 'meta-badge meta-badge--cert meta-badge--clickable',
+    });
+    chip.textContent = cert.name || cert;
+    chip.addEventListener('click', () => {
+      closeModal();
+      switchTabAndFilter('cert', 'cert_id', cert.id, cert.name);
+    });
+    return chip;
+  }));
 
-  modalBody.appendChild(tabBar);
-  modalBody.appendChild(tabPanelsWrap);
-  modal.appendChild(modalBody);
+  appendMetaRow('Tags', () => tags.map(tag => {
+    const chip = createElement('span', { className: 'triage-chip triage-feedback chip-sm' });
+    chip.textContent = tag.name || tag;
+    return chip;
+  }));
+
+  if (metaPanel.children.length) headerBlock.appendChild(metaPanel);
+  body.appendChild(headerBlock);
+
+  /* ── Master–detail content area ──────────────────────────────────────── */
+  const mainArea = createElement('div', { className: 'sdm-main' });
+  const listCol = createElement('div', { className: 'sdm-list-col' });
+  const listScroll = createElement('div', { className: 'sdm-list-scroll' });
+  const listFooter = createElement('div', { className: 'sdm-list-footer catalog-skill-list-footer' });
+  listCol.appendChild(listScroll);
+  listCol.appendChild(listFooter);
+
+  const readerCol = createElement('div', { className: 'sdm-reader-col' });
+  const readerToolbar = createElement('div', { className: 'sdm-reader-toolbar catalog-skill-reader-toolbar' });
+  const readerToolbarLeft = createElement('div', { className: 'sdm-reader-toolbar__left' });
+  const readerActions = createElement('div', { className: 'sdm-reader-actions' });
+  readerToolbarLeft.appendChild(readerActions);
+  const readerMeta = createElement('div', { className: 'sdm-reader-meta' });
+  readerToolbar.appendChild(readerToolbarLeft);
+  readerToolbar.appendChild(readerMeta);
+  const readerScroll = createElement('div', { className: 'sdm-reader-scroll' });
+  const readerContent = createElement('div', { className: 'sdm-reader-content' });
+  readerScroll.appendChild(readerContent);
+  readerCol.appendChild(readerToolbar);
+  readerCol.appendChild(readerScroll);
+
+  mainArea.appendChild(listCol);
+  mainArea.appendChild(readerCol);
+  body.appendChild(mainArea);
+
+  const footer = createElement('div', { className: 'modal-footer sdm-footer catalog-skill-footer' });
+  const footerStatus = createElement('span', { className: 'sdm-footer__status catalog-skill-footer__hint' });
+  footerStatus.textContent = 'Expand a section to browse learning items.';
+  const footerActions = createElement('div', { className: 'catalog-skill-footer__actions' });
+  const closeFooterBtn = createElement('button', { type: 'button', className: 'btn btn-secondary' });
+  closeFooterBtn.textContent = 'Close';
+  footerActions.appendChild(closeFooterBtn);
+  footer.appendChild(footerStatus);
+  footer.appendChild(footerActions);
+  modal.appendChild(body);
+  modal.appendChild(footer);
   overlay.appendChild(modal);
   modalRoot.appendChild(overlay);
 
-  function activateTab(key) {
-    LEVEL_CONFIG.forEach(({ key: k }) => {
-      const isActive = k === key;
-      tabButtons[k].classList.toggle('active', isActive);
-      tabButtons[k].setAttribute('aria-selected', String(isActive));
-      tabPanels[k].classList.toggle('active', isActive);
-    });
-  }
-
-  LEVEL_CONFIG.forEach(({ key }) => {
-    tabButtons[key].addEventListener('click', () => activateTab(key));
-  });
+  let contentGroups = { education: [], exposure: [], experience: [] };
+  let contentLoading = true;
+  let selectedItemId = null;
+  const expandedSections = { education: false, exposure: false, experience: false };
+  let dragSrcEl = null;
+  let dragSectionKey = null;
 
   function closeModal() {
     overlay.classList.remove('open');
@@ -1324,37 +1484,25 @@ function showSkillDetailModal(skill) {
       closeModal();
       return;
     }
-
     if (e.key === 'Tab') {
-      const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      const focusable = modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
       if (!focusable.length) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (e.shiftKey) {
         if (document.activeElement === first) { e.preventDefault(); last.focus(); }
-      } else {
-        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
-      }
-    }
-
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      const tabKeys = LEVEL_CONFIG.map(l => l.key);
-      const focused = document.activeElement;
-      const currentTab = focused?.dataset?.tab;
-      if (currentTab && tabKeys.includes(currentTab)) {
-        const idx = tabKeys.indexOf(currentTab);
-        const next = e.key === 'ArrowRight'
-          ? (idx + 1) % tabKeys.length
-          : (idx - 1 + tabKeys.length) % tabKeys.length;
-        activateTab(tabKeys[next]);
-        tabButtons[tabKeys[next]].focus();
+      } else if (document.activeElement === last) {
         e.preventDefault();
+        first.focus();
       }
     }
   }
 
   closeBtn.addEventListener('click', closeModal);
-  overlay.addEventListener('click', (e) => {
+  closeFooterBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => {
     if (e.target === overlay) closeModal();
   });
   document.addEventListener('keydown', onKeyDown);
@@ -1364,264 +1512,350 @@ function showSkillDetailModal(skill) {
     closeBtn.focus();
   });
 
-  const LEVEL_MAP = { 1: 'education', 2: 'exposure', 3: 'experience' };
-  const LEVEL_REVERSE = { education: 1, exposure: 2, experience: 3 };
-
-  const user = Store.get('user');
-  const canEdit = user?.role === 'admin' || user?.role === 'manager';
-
-  function renderPanelContent(key, items) {
-    const levelCfg = LEVEL_CONFIG.find(l => l.key === key);
-    const panel = tabPanels[key];
-    panel.innerHTML = '';
-
-    const sorted = items.slice().sort((a, b) => {
+  function sortedItems(key) {
+    return contentGroups[key].slice().sort((a, b) => {
       const pd = (a.position ?? 0) - (b.position ?? 0);
       return pd !== 0 ? pd : a.id - b.id;
     });
+  }
 
-    tabButtons[key].querySelector('.skill-detail-tab-count').textContent = sorted.length;
-
-    let openItem = null;
-    let dragSrcEl = null;
-
-    function handleDragStart(e) {
-      dragSrcEl = this;
-      this.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', this.dataset.itemId);
+  function findItemById(id) {
+    for (const key of SECTION_ORDER) {
+      const hit = contentGroups[key].find(item => item.id === id);
+      if (hit) return hit;
     }
+    return null;
+  }
 
-    function handleDragOver(e) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      const target = this;
-      if (target === dragSrcEl || !target.classList.contains('skill-detail-accordion-item')) return;
-      const rect = target.getBoundingClientRect();
-      const midY = rect.top + rect.height / 2;
-      if (e.clientY < midY) {
-        target.classList.add('drag-over-top');
-        target.classList.remove('drag-over-bottom');
-      } else {
-        target.classList.add('drag-over-bottom');
-        target.classList.remove('drag-over-top');
-      }
-    }
+  function selectableItems() {
+    return SECTION_ORDER.flatMap(key => (
+      expandedSections[key] ? sortedItems(key) : []
+    ));
+  }
 
-    function handleDragLeave() {
-      this.classList.remove('drag-over-top', 'drag-over-bottom');
-    }
+  function ensureSelectedVisible() {
+    if (selectedItemId && selectableItems().some(i => i.id === selectedItemId)) return;
+    const first = selectableItems()[0];
+    selectedItemId = first ? first.id : null;
+  }
 
-    function handleDrop(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      const target = this;
-      target.classList.remove('drag-over-top', 'drag-over-bottom');
-      if (!dragSrcEl || dragSrcEl === target) return;
-      const rect = target.getBoundingClientRect();
-      const midY = rect.top + rect.height / 2;
-      if (e.clientY < midY) {
-        target.parentNode.insertBefore(dragSrcEl, target);
-      } else {
-        target.parentNode.insertBefore(dragSrcEl, target.nextSibling);
-      }
-      persistReorder(panel, key);
-    }
-
-    function handleDragEnd() {
-      this.classList.remove('dragging');
-      panel.querySelectorAll('.skill-detail-accordion-item').forEach(el => {
-        el.classList.remove('drag-over-top', 'drag-over-bottom');
-      });
-      dragSrcEl = null;
-    }
-
-    async function persistReorder(panelEl, levelKey) {
-      const reorderItems = [...panelEl.querySelectorAll('.skill-detail-accordion-item')].map((el, idx) => ({
-        id: parseInt(el.dataset.itemId, 10),
-        position: idx,
-      }));
-      try {
-        await api.put(`/api/skills/${skill.id}/content/reorder`, { items: reorderItems });
-        showToast('Order saved', 'success');
-      } catch (err) {
-        showToast(err.message || 'Failed to save order', 'error');
-        refreshModalContent();
-      }
-    }
-
-    if (!sorted.length) {
-      const empty = createElement('div', { className: 'empty-state empty-state--compact' });
-      empty.textContent = 'No content added for this level yet.';
-      panel.appendChild(empty);
+  function updateFooterHint() {
+    const total = SECTION_ORDER.reduce((n, k) => n + contentGroups[k].length, 0);
+    if (contentLoading) {
+      footerStatus.textContent = 'Loading learning content…';
+    } else if (!total) {
+      footerStatus.textContent = 'No catalog content items yet.';
+    } else if (!selectedItemId) {
+      footerStatus.textContent = 'Expand a section and select an item to view details.';
     } else {
-      sorted.forEach(item => {
-        const accItem = createElement('div', { className: 'skill-detail-accordion-item' });
-        accItem.dataset.itemId = item.id;
-
-        if (canEdit) {
-          accItem.draggable = true;
-          accItem.addEventListener('dragstart', handleDragStart);
-          accItem.addEventListener('dragover', handleDragOver);
-          accItem.addEventListener('dragleave', handleDragLeave);
-          accItem.addEventListener('drop', handleDrop);
-          accItem.addEventListener('dragend', handleDragEnd);
-        }
-
-        const trigger = createElement('button', { className: 'skill-detail-accordion-trigger' });
-
-        if (canEdit) {
-          const dragHandle = createElement('span', { className: 'drag-handle' });
-          dragHandle.setAttribute('aria-hidden', 'true');
-          dragHandle.textContent = '\u2630';
-          dragHandle.addEventListener('mousedown', () => { accItem.draggable = true; });
-          trigger.appendChild(dragHandle);
-        }
-
-        const typeChip = createElement('span', { className: `triage-chip ${levelCfg.chipClass} chip-sm chip-shrink` });
-        typeChip.textContent = item.type || 'resource';
-
-        const titleSpan = createElement('span', { className: 'skill-detail-accordion-title' });
-        titleSpan.textContent = item.title || 'Untitled';
-
-        if (canEdit) {
-          const adminActions = createElement('div', { className: 'accordion-admin-actions' });
-
-          const editBtn = createElement('button', { className: 'btn btn-sm btn-secondary accordion-action-btn' });
-          editBtn.setAttribute('aria-label', 'Edit item');
-          editBtn.textContent = '\u270F\uFE0F';
-          editBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            showContentEditModal(skill.id, LEVEL_REVERSE[key], item, () => refreshModalContent());
-          });
-
-          const deleteBtn = createElement('button', { className: 'btn btn-sm btn-danger accordion-action-btn' });
-          deleteBtn.setAttribute('aria-label', 'Delete item');
-          deleteBtn.textContent = '\uD83D\uDDD1\uFE0F';
-          deleteBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const confirmed = await showConfirm(`Delete "${item.title || 'this item'}"? This cannot be undone.`, true);
-            if (!confirmed) return;
-            try {
-              await api.del(`/api/skills/${skill.id}/content/${item.id}`);
-              showToast('Content item deleted', 'success');
-              refreshModalContent();
-            } catch (err) {
-              showToast(err.message || 'Failed to delete item', 'error');
-            }
-          });
-
-          adminActions.appendChild(editBtn);
-          adminActions.appendChild(deleteBtn);
-          trigger.appendChild(typeChip);
-          trigger.appendChild(titleSpan);
-          trigger.appendChild(adminActions);
-        } else {
-          trigger.appendChild(typeChip);
-          trigger.appendChild(titleSpan);
-        }
-
-        const chevron = createElement('span', { className: 'skill-detail-accordion-chevron' });
-        chevron.setAttribute('aria-hidden', 'true');
-        trigger.appendChild(chevron);
-
-        const body = createElement('div', { className: 'skill-detail-accordion-body' });
-        const bodyInner = createElement('div', { className: 'skill-detail-accordion-body-inner' });
-
-        if (item.description) {
-          const descEl = createElement('div');
-          descEl.innerHTML = item.description;
-          bodyInner.appendChild(descEl);
-        }
-
-        if (item.url) {
-          const link = createElement('a', { className: 'skill-detail-accordion-link', href: item.url, target: '_blank', rel: 'noopener noreferrer' });
-          link.textContent = 'Open Resource';
-          bodyInner.appendChild(link);
-        }
-
-        body.appendChild(bodyInner);
-        accItem.appendChild(trigger);
-        accItem.appendChild(body);
-        panel.appendChild(accItem);
-
-        trigger.addEventListener('click', (e) => {
-          if (e.target.closest('.accordion-admin-actions')) return;
-          if (e.target.closest('.drag-handle')) return;
-          if (accItem === openItem) {
-            accItem.classList.remove('open');
-            openItem = null;
-          } else {
-            if (openItem) openItem.classList.remove('open');
-            accItem.classList.add('open');
-            openItem = accItem;
-          }
-        });
-      });
+      footerStatus.textContent = 'Browse Education, Exposure, and Experience content.';
     }
+  }
 
-    if (canEdit) {
-      const addBtn = createElement('button', { className: 'btn btn-secondary btn-sm content-add-btn' });
-      addBtn.textContent = '+ Add Item';
-      addBtn.addEventListener('click', () => {
+  function renderAddButtons() {
+    listFooter.innerHTML = '';
+    if (!canEdit || contentLoading) return;
+    const addWrap = createElement('div', { className: 'catalog-skill-add-wrap' });
+    LEVEL_CONFIG.forEach(({ key, label }) => {
+      const btn = createElement('button', { type: 'button', className: 'btn btn-secondary btn-sm catalog-skill-add-btn' });
+      btn.textContent = `+ ${label}`;
+      btn.addEventListener('click', () => {
         showContentEditModal(skill.id, LEVEL_REVERSE[key], null, () => refreshModalContent());
       });
-      panel.appendChild(addBtn);
+      addWrap.appendChild(btn);
+    });
+    listFooter.appendChild(addWrap);
+  }
+
+  function renderList() {
+    listScroll.innerHTML = '';
+
+    if (contentLoading) {
+      const sk = createElement('div', { className: 'skeleton-list' });
+      for (let i = 0; i < 4; i++) {
+        sk.appendChild(createElement('div', { className: 'skeleton skeleton-row' }));
+      }
+      listScroll.appendChild(sk);
+      return;
     }
+
+    SECTION_ORDER.forEach(secKey => {
+      const items = sortedItems(secKey);
+      const cfg = LEVEL_CONFIG.find(l => l.key === secKey);
+      const expanded = expandedSections[secKey];
+      const section = createElement('div', {
+        className: 'sdm-tree-section catalog-tree-section'
+          + (expanded ? '' : ' sdm-tree-section--collapsed'),
+        'data-section': secKey,
+      });
+
+      const hdr = createElement('button', {
+        type: 'button',
+        className: 'sdm-tree-section__header',
+        'aria-expanded': String(expanded),
+      });
+      const toggleGlyph = createElement('span', { className: 'sdm-tree-section__toggle', 'aria-hidden': 'true' });
+      toggleGlyph.textContent = expanded ? '\u2212' : '+';
+      const hdrIcon = createElement('span', { className: 'catalog-tree-section__icon', 'aria-hidden': 'true' });
+      hdrIcon.innerHTML = cfg.icon;
+      const hdrLabel = createElement('span', { className: 'sdm-tree-section__label' });
+      hdrLabel.textContent = cfg.label;
+      const hdrCount = createElement('span', { className: 'sdm-tree-section__count' });
+      hdrCount.textContent = String(items.length);
+      hdr.appendChild(toggleGlyph);
+      hdr.appendChild(hdrIcon);
+      hdr.appendChild(hdrLabel);
+      hdr.appendChild(hdrCount);
+
+      hdr.addEventListener('click', () => {
+        expandedSections[secKey] = !expandedSections[secKey];
+        ensureSelectedVisible();
+        renderList();
+        renderReader();
+        updateFooterHint();
+      });
+
+      section.appendChild(hdr);
+
+      const sectionBody = createElement('div', { className: 'sdm-tree-section__body catalog-tree-section__body' });
+
+      if (!items.length) {
+        const empty = createElement('p', { className: 'catalog-tree-empty' });
+        empty.textContent = 'No items in this section yet.';
+        sectionBody.appendChild(empty);
+      } else {
+        items.forEach(item => {
+          const row = createElement('div', {
+            className: 'sdm-list-item catalog-list-item'
+              + (item.id === selectedItemId ? ' active' : ''),
+            'data-item-id': String(item.id),
+            'data-section': secKey,
+          });
+
+          if (canEdit) {
+            row.draggable = true;
+            row.addEventListener('dragstart', handleDragStart);
+            row.addEventListener('dragover', handleDragOver);
+            row.addEventListener('dragleave', handleDragLeave);
+            row.addEventListener('drop', handleDrop);
+            row.addEventListener('dragend', handleDragEnd);
+
+            const dragHandle = createElement('span', { className: 'drag-handle catalog-drag-handle', 'aria-hidden': 'true' });
+            dragHandle.textContent = '\u2630';
+            row.appendChild(dragHandle);
+          }
+
+          const textBtn = createElement('button', { type: 'button', className: 'sdm-list-item__body' });
+          const titleSpan = createElement('span', { className: 'sdm-list-item__title' });
+          titleSpan.textContent = item.title || 'Untitled';
+          const metaSpan = createElement('span', { className: 'sdm-list-item__meta' });
+          metaSpan.textContent = item.type || 'resource';
+          textBtn.appendChild(titleSpan);
+          textBtn.appendChild(metaSpan);
+          textBtn.addEventListener('click', () => {
+            selectedItemId = item.id;
+            renderList();
+            renderReader();
+            updateFooterHint();
+          });
+          row.appendChild(textBtn);
+          sectionBody.appendChild(row);
+        });
+      }
+
+      section.appendChild(sectionBody);
+      listScroll.appendChild(section);
+    });
+
+    ensureSelectedVisible();
+  }
+
+  function handleDragStart(e) {
+    dragSrcEl = this;
+    dragSectionKey = this.dataset.section;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', this.dataset.itemId);
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const target = this;
+    if (target === dragSrcEl || !target.classList.contains('catalog-list-item')) return;
+    if (target.dataset.section !== dragSectionKey) return;
+    const rect = target.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    target.classList.toggle('drag-over-top', e.clientY < midY);
+    target.classList.toggle('drag-over-bottom', e.clientY >= midY);
+  }
+
+  function handleDragLeave() {
+    this.classList.remove('drag-over-top', 'drag-over-bottom');
+  }
+
+  async function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const target = this;
+    target.classList.remove('drag-over-top', 'drag-over-bottom');
+    if (!dragSrcEl || dragSrcEl === target || target.dataset.section !== dragSectionKey) return;
+    const rect = target.getBoundingClientRect();
+    const body = target.parentNode;
+    if (e.clientY < rect.top + rect.height / 2) {
+      body.insertBefore(dragSrcEl, target);
+    } else {
+      body.insertBefore(dragSrcEl, target.nextSibling);
+    }
+    await persistReorder(dragSectionKey, body);
+  }
+
+  function handleDragEnd() {
+    this.classList.remove('dragging');
+    listScroll.querySelectorAll('.catalog-list-item').forEach(el => {
+      el.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+    dragSrcEl = null;
+    dragSectionKey = null;
+  }
+
+  async function persistReorder(sectionKey, bodyEl) {
+    const reorderItems = [...bodyEl.querySelectorAll('.catalog-list-item')].map((el, idx) => ({
+      id: parseInt(el.dataset.itemId, 10),
+      position: idx,
+    }));
+    try {
+      await api.put(`/api/skills/${skill.id}/content/reorder`, { items: reorderItems });
+      const reordered = reorderItems.map(r => findItemById(r.id)).filter(Boolean);
+      reordered.forEach((item, idx) => { item.position = idx; });
+      contentGroups[sectionKey] = reordered;
+      showToast('Order saved', 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to save order', 'error');
+      refreshModalContent();
+    }
+  }
+
+  function renderReader() {
+    readerContent.innerHTML = '';
+    readerActions.innerHTML = '';
+    const item = selectedItemId ? findItemById(selectedItemId) : null;
+
+    if (!item || contentLoading || !selectableItems().some(i => i.id === selectedItemId)) {
+      readerToolbar.hidden = true;
+      readerContent.innerHTML = '<p class="sdm-reader-empty">Select an item from an expanded section to view content.</p>';
+      return;
+    }
+
+    readerToolbar.hidden = false;
+    const secKey = LEVEL_MAP[item.level];
+    const cfg = LEVEL_CONFIG.find(l => l.key === secKey) || LEVEL_CONFIG[0];
+    readerMeta.textContent = `${cfg.label} · ${item.type || 'resource'}`;
+
+    if (canEdit) {
+      const editBtn = createElement('button', {
+        type: 'button',
+        className: 'btn btn-secondary btn-sm',
+        'aria-label': 'Edit item',
+      });
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => {
+        showContentEditModal(skill.id, item.level, item, () => refreshModalContent());
+      });
+
+      const deleteBtn = createElement('button', {
+        type: 'button',
+        className: 'btn btn-danger btn-sm',
+        'aria-label': 'Delete item',
+      });
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', async () => {
+        const confirmed = await showConfirm(`Delete "${item.title || 'this item'}"? This cannot be undone.`, true);
+        if (!confirmed) return;
+        try {
+          await api.del(`/api/skills/${skill.id}/content/${item.id}`);
+          showToast('Content item deleted', 'success');
+          if (selectedItemId === item.id) selectedItemId = null;
+          refreshModalContent();
+        } catch (err) {
+          showToast(err.message || 'Failed to delete item', 'error');
+        }
+      });
+
+      readerActions.appendChild(editBtn);
+      readerActions.appendChild(deleteBtn);
+    }
+
+    const titleH = createElement('h2', { className: 'sdm-reader-title' });
+    titleH.textContent = item.title || 'Untitled';
+    readerContent.appendChild(titleH);
+
+    if (item.description) {
+      const prose = createElement('div', { className: 'sdm-reader-prose' });
+      prose.innerHTML = item.description;
+      readerContent.appendChild(prose);
+    }
+
+    if (item.url) {
+      const link = createElement('a', {
+        className: 'skill-detail-accordion-link sdm-reader-link',
+        href: item.url,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      });
+      link.textContent = 'Open resource';
+      readerContent.appendChild(link);
+    }
+  }
+
+  function applyContent(rawContent) {
+    contentGroups = { education: [], exposure: [], experience: [] };
+    (Array.isArray(rawContent) ? rawContent : [])
+      .filter(row => row && row.title && String(row.title).trim() !== '' && [1, 2, 3].includes(row.level))
+      .forEach(row => {
+        const k = LEVEL_MAP[row.level];
+        if (k) contentGroups[k].push(row);
+      });
+    contentLoading = false;
+    renderAddButtons();
+    renderList();
+    renderReader();
+    updateFooterHint();
   }
 
   function refreshModalContent() {
-    LEVEL_CONFIG.forEach(({ key }) => {
-      tabPanels[key].innerHTML = '';
-      const sk = createElement('div', { className: 'skeleton-list' });
-      for (let i = 0; i < 2; i++) {
-        sk.appendChild(createElement('div', { className: 'skeleton skeleton-row-sm' }));
-      }
-      tabPanels[key].appendChild(sk);
-    });
-
-    api.get(`/api/skills/${skill.id}/content`).then(rawContent => {
-      const fresh = (Array.isArray(rawContent) ? rawContent : [])
-        .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3].includes(item.level));
-      const freshGroups = { education: [], exposure: [], experience: [] };
-      fresh.forEach(item => {
-        const k = LEVEL_MAP[item.level];
-        if (k) freshGroups[k].push(item);
-      });
-      LEVEL_CONFIG.forEach(({ key }) => renderPanelContent(key, freshGroups[key]));
-    }).catch(() => {
-      LEVEL_CONFIG.forEach(({ key }) => {
-        tabPanels[key].innerHTML = '';
+    contentLoading = true;
+    renderAddButtons();
+    renderList();
+    renderReader();
+    updateFooterHint();
+    api.get(`/api/skills/${skill.id}/content`)
+      .then(applyContent)
+      .catch(() => {
+        contentLoading = false;
+        listScroll.innerHTML = '';
         const errEl = createElement('div', { className: 'empty-state empty-state--compact' });
         errEl.textContent = 'Unable to reload content.';
-        tabPanels[key].appendChild(errEl);
+        listScroll.appendChild(errEl);
+        updateFooterHint();
       });
-    });
   }
 
-  api.get(`/api/skills/${skill.id}/content`).then(rawContent => {
-    skeletonEl.remove();
+  renderAddButtons();
+  renderList();
+  renderReader();
+  updateFooterHint();
 
-    const content = (Array.isArray(rawContent) ? rawContent : [])
-      .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3].includes(item.level));
-    const groups = { education: [], exposure: [], experience: [] };
-
-    content.forEach(item => {
-      const k = LEVEL_MAP[item.level];
-      if (k) groups[k].push(item);
+  api.get(`/api/skills/${skill.id}/content`)
+    .then(applyContent)
+    .catch(() => {
+      contentLoading = false;
+      listScroll.innerHTML = '';
+      const errEl = createElement('div', { className: 'empty-state empty-state--compact' });
+      errEl.textContent = 'Unable to load learning content.';
+      listScroll.appendChild(errEl);
+      updateFooterHint();
     });
-
-    LEVEL_CONFIG.forEach(({ key }) => renderPanelContent(key, groups[key]));
-
-    const firstWithContent = LEVEL_CONFIG.find(({ key }) => groups[key].length > 0);
-    activateTab(firstWithContent ? firstWithContent.key : 'education');
-  }).catch(() => {
-    skeletonEl.remove();
-    const errEl = createElement('div', { className: 'empty-state empty-state--compact' });
-    errEl.textContent = 'Unable to load learning content.';
-    tabPanelsWrap.appendChild(errEl);
-    activateTab('education');
-  });
 }
 
 // ─── Content Edit Modal ───────────────────────────────────────────────────────

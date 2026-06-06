@@ -7,14 +7,33 @@ import {
 } from './markdown-editor.js';
 
 const LEVEL_LABELS = { 1: 'Education', 2: 'Exposure', 3: 'Experience' };
+const LEVEL_CLS = { 1: 'edu', 2: 'exp', 3: 'xp' };
 const TYPE_OPTIONS = ['course', 'certification', 'reading', 'link', 'action'];
-const BUCKET_LABELS = {
-  1: 'From my team',
-  2: 'From my domain',
-  3: 'From other teams',
-};
 const IMPORT_CAP = 50;
 const DISCOVER_PAGE_SIZE = 20;
+
+const ICONS = {
+  education: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+  exposure: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>',
+  experience: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  team: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  domain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',
+  other: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>',
+};
+
+const BUCKET_DEFS = {
+  1: { cls: 'team', icon: ICONS.team, title: 'My team', subtitle: 'Engineers on your team' },
+  2: { cls: 'domain', icon: ICONS.domain, title: 'My domain (all shifts)', subtitle: 'Same domain, all shifts' },
+  3: { cls: 'other', icon: ICONS.other, title: 'Other teams & domains', subtitle: 'Cross-team contributions' },
+};
+
+const BUCKET_ORDER = [1, 2, 3];
+
+function iconSpan(html) {
+  const span = el('span');
+  span.innerHTML = html;
+  return span;
+}
 
 export function openLibraryModal(opts, onSaved) {
   const {
@@ -22,107 +41,103 @@ export function openLibraryModal(opts, onSaved) {
     item = null,
     planSkill,
     engineerId,
-    levelKey,
     level,
+    deferSave = false,
   } = opts || {};
 
   const isEdit = mode === 'edit';
   const initialLevel = isEdit ? Number(item.level) : Number(level);
   const levelLabel = LEVEL_LABELS[initialLevel] || 'Content';
+  const skillName = planSkill?.skill_name || planSkill?.skillName
+    || (planSkill?.skill_id ? `Skill #${planSkill.skill_id}` : 'Skill');
 
   const root = document.getElementById('modalRoot');
   if (!root) return;
 
   const overlay = el('div', { className: 'modal-overlay' });
-  const modal = el('div', { className: 'modal library-modal' });
+  const modal = el('div', { className: 'modal lib-modal-v2' });
 
-  const header = el('div', { className: 'modal-header' });
-  const titleEl = el('h2', { className: 'modal-title' });
+  const header = el('header', { className: 'lib-modal-v2__header' });
+  const headerTop = el('div', { className: 'lib-modal-v2__header-top' });
+  const headerText = el('div');
+  const titleEl = el('h2', { className: 'lib-modal-v2__title' });
   titleEl.textContent = isEdit
     ? `Edit My Item — ${item.title}`
     : `Add ${levelLabel} Item`;
-  const closeBtn = el('button', { className: 'modal-close', 'aria-label': 'Close' });
+  const contextEl = el('p', { className: 'lib-modal-v2__context' });
+  contextEl.textContent = `${skillName} · ${levelLabel}`;
+  headerText.appendChild(titleEl);
+  if (!isEdit) headerText.appendChild(contextEl);
+  const closeBtn = el('button', {
+    type: 'button',
+    className: 'lib-modal-v2__close',
+    'aria-label': 'Close',
+  });
   closeBtn.textContent = '\u2715';
-  header.appendChild(titleEl);
-  header.appendChild(closeBtn);
-  modal.appendChild(header);
+  headerTop.appendChild(headerText);
+  headerTop.appendChild(closeBtn);
+  header.appendChild(headerTop);
 
-  const body = el('div', { className: 'modal-body library-modal__body' });
-
-  let tabs = null;
+  let createTabBtn = null;
+  let discoverTabBtn = null;
   let createPane = null;
   let discoverPane = null;
   let createCtx = null;
   let discoverCtx = null;
 
   if (!isEdit) {
-    tabs = el('div', { className: 'library-modal__tabs', role: 'tablist' });
-    const createTabBtn = el('button', {
-      className: 'library-modal__tab library-modal__tab--active',
+    const modes = el('div', { className: 'lib-modal-v2__modes', role: 'tablist' });
+    createTabBtn = el('button', {
+      type: 'button',
+      className: 'lib-modal-v2__mode lib-modal-v2__mode--active',
       role: 'tab',
       'aria-selected': 'true',
     });
-    createTabBtn.textContent = 'Create New';
-    const discoverTabBtn = el('button', {
-      className: 'library-modal__tab',
+    createTabBtn.textContent = 'Create new';
+    discoverTabBtn = el('button', {
+      type: 'button',
+      className: 'lib-modal-v2__mode',
       role: 'tab',
       'aria-selected': 'false',
     });
-    discoverTabBtn.textContent = 'Discover';
-    tabs.appendChild(createTabBtn);
-    tabs.appendChild(discoverTabBtn);
-    body.appendChild(tabs);
-
-    createPane = el('div', { className: 'library-modal__pane library-modal__pane--active' });
-    discoverPane = el('div', { className: 'library-modal__pane' });
-    body.appendChild(createPane);
-    body.appendChild(discoverPane);
-
-    function activate(which) {
-      const isCreate = which === 'create';
-      createTabBtn.classList.toggle('library-modal__tab--active', isCreate);
-      discoverTabBtn.classList.toggle('library-modal__tab--active', !isCreate);
-      createTabBtn.setAttribute('aria-selected', String(isCreate));
-      discoverTabBtn.setAttribute('aria-selected', String(!isCreate));
-      createPane.classList.toggle('library-modal__pane--active', isCreate);
-      discoverPane.classList.toggle('library-modal__pane--active', !isCreate);
-      footer.style.display = isCreate ? '' : 'none';
-      importFooter.style.display = isCreate ? 'none' : '';
-      if (!isCreate && discoverCtx && !discoverCtx.initialized) {
-        discoverCtx.init();
-      }
-    }
-    createTabBtn.addEventListener('click', () => activate('create'));
-    discoverTabBtn.addEventListener('click', () => activate('discover'));
-  } else {
-    createPane = el('div', { className: 'library-modal__pane library-modal__pane--active library-modal__pane--edit' });
-    body.appendChild(createPane);
+    discoverTabBtn.textContent = 'Discover existing';
+    modes.appendChild(createTabBtn);
+    modes.appendChild(discoverTabBtn);
+    header.appendChild(modes);
   }
 
-  const footer = el('div', { className: 'modal-footer' });
-  const cancelBtn = el('button', { className: 'btn btn-secondary' });
-  cancelBtn.textContent = 'Cancel';
-  const saveBtn = el('button', { className: 'btn btn-primary' });
-  saveBtn.textContent = isEdit ? 'Save Changes' : 'Add Item';
-  footer.appendChild(cancelBtn);
-  footer.appendChild(saveBtn);
+  modal.appendChild(header);
 
-  const importFooter = el('div', { className: 'modal-footer library-modal__import-footer' });
-  importFooter.style.display = 'none';
-  const importCancelBtn = el('button', { className: 'btn btn-secondary' });
-  importCancelBtn.textContent = 'Cancel';
-  const importCountLabel = el('span', { className: 'library-modal__import-count' });
-  importCountLabel.textContent = '0 selected';
-  const importBtn = el('button', { className: 'btn btn-primary' });
-  importBtn.textContent = 'Import Selected';
-  importBtn.disabled = true;
-  importFooter.appendChild(importCancelBtn);
-  importFooter.appendChild(importCountLabel);
-  importFooter.appendChild(importBtn);
+  const body = el('div', { className: 'lib-modal-v2__body' });
+
+  createPane = el('div', {
+    className: `lib-modal-v2__pane lib-modal-v2__pane--active${isEdit ? '' : ''}`,
+    'data-pane': 'create',
+  });
+  body.appendChild(createPane);
+
+  if (!isEdit) {
+    discoverPane = el('div', {
+      className: 'lib-modal-v2__pane',
+      'data-pane': 'discover',
+    });
+    body.appendChild(discoverPane);
+  }
 
   modal.appendChild(body);
+
+  const footer = el('footer', { className: 'lib-modal-v2__footer' });
+  const footerHint = el('span', { className: 'lib-modal-v2__footer-left' });
+  footerHint.textContent = 'Personal to your plan unless marked private.';
+  const cancelBtn = el('button', { type: 'button', className: 'btn btn-secondary' });
+  cancelBtn.textContent = 'Cancel';
+  const primaryBtn = el('button', { type: 'button', className: 'btn btn-primary' });
+  primaryBtn.textContent = isEdit ? 'Save Changes' : 'Add Item';
+  footer.appendChild(footerHint);
+  footer.appendChild(cancelBtn);
+  footer.appendChild(primaryBtn);
   modal.appendChild(footer);
-  modal.appendChild(importFooter);
+
   overlay.appendChild(modal);
   root.appendChild(overlay);
 
@@ -134,10 +149,32 @@ export function openLibraryModal(opts, onSaved) {
     setTimeout(() => overlay.remove(), 200);
   }
 
+  function activate(which) {
+    const isCreate = which === 'create';
+    createTabBtn.classList.toggle('lib-modal-v2__mode--active', isCreate);
+    discoverTabBtn.classList.toggle('lib-modal-v2__mode--active', !isCreate);
+    createTabBtn.setAttribute('aria-selected', String(isCreate));
+    discoverTabBtn.setAttribute('aria-selected', String(!isCreate));
+    createPane.classList.toggle('lib-modal-v2__pane--active', isCreate);
+    discoverPane.classList.toggle('lib-modal-v2__pane--active', !isCreate);
+    if (isCreate) {
+      footerHint.textContent = 'Personal to your plan unless marked private.';
+      primaryBtn.textContent = 'Add Item';
+      primaryBtn.disabled = false;
+    } else if (discoverCtx) {
+      discoverCtx.syncFooter(primaryBtn);
+      if (!discoverCtx.initialized) discoverCtx.init();
+    }
+  }
+
   cancelBtn.addEventListener('click', close);
-  importCancelBtn.addEventListener('click', close);
   closeBtn.addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  if (!isEdit) {
+    createTabBtn.addEventListener('click', () => activate('create'));
+    discoverTabBtn.addEventListener('click', () => activate('discover'));
+  }
 
   createCtx = buildCreatePane({
     container: createPane,
@@ -146,9 +183,14 @@ export function openLibraryModal(opts, onSaved) {
     planSkill,
     engineerId,
     initialLevel,
-    saveBtn,
-    onDone: () => {
-      if (typeof onSaved === 'function') onSaved();
+    deferSave,
+    onLevelChange: isEdit ? null : (lv) => {
+      const lbl = LEVEL_LABELS[lv] || 'Content';
+      contextEl.textContent = `${skillName} · ${lbl}`;
+      titleEl.textContent = `Add ${lbl} Item`;
+    },
+    onDone: (payload) => {
+      if (typeof onSaved === 'function') onSaved(payload);
       close();
     },
   });
@@ -159,60 +201,61 @@ export function openLibraryModal(opts, onSaved) {
       planSkill,
       engineerId,
       initialLevel,
-      importBtn,
-      importCountLabel,
-      onImported: () => {
-        if (typeof onSaved === 'function') onSaved();
+      deferSave,
+      onImported: (payload) => {
+        if (typeof onSaved === 'function') onSaved(payload);
       },
       onClose: close,
+      onSelectionChange: (n) => {
+        if (discoverPane.classList.contains('lib-modal-v2__pane--active')) {
+          if (n > IMPORT_CAP) {
+            footerHint.textContent = `${n} selected — max ${IMPORT_CAP} per import`;
+          } else if (n > 0) {
+            footerHint.textContent = `${n} selected`;
+          } else {
+            footerHint.textContent = 'Select items to import into your plan.';
+          }
+          primaryBtn.disabled = n === 0 || n > IMPORT_CAP;
+          primaryBtn.textContent = n > 0 ? `Import ${n} Item${n === 1 ? '' : 's'}` : 'Import Selected';
+        }
+      },
     });
   }
+
+  primaryBtn.addEventListener('click', () => {
+    if (!isEdit && discoverPane.classList.contains('lib-modal-v2__pane--active')) {
+      discoverCtx.handleImport(primaryBtn);
+    } else {
+      createCtx.save(primaryBtn);
+    }
+  });
 }
 
-function buildCreatePane({ container, isEdit, item, planSkill, engineerId, initialLevel, saveBtn, onDone }) {
-  const wizard = el('div', { className: 'library-modal__wizard' });
-  container.appendChild(wizard);
+function buildCreatePane({
+  container, isEdit, item, planSkill, engineerId, initialLevel, deferSave, onLevelChange, onDone,
+}) {
+  let selectedLevel = initialLevel;
 
-  const stepIndicator = el('div', { className: 'library-modal__steps' });
-  const step1Pill = el('span', { className: 'library-modal__step library-modal__step--active' });
-  step1Pill.textContent = '1. Details';
-  const step2Pill = el('span', { className: 'library-modal__step' });
-  step2Pill.textContent = '2. Description';
-  stepIndicator.appendChild(step1Pill);
-  stepIndicator.appendChild(el('span', { className: 'library-modal__step-sep' }));
-  stepIndicator.appendChild(step2Pill);
-  wizard.appendChild(stepIndicator);
-
-  const step1 = el('div', { className: 'library-modal__step-panel library-modal__step-panel--active' });
-  const step2 = el('div', { className: 'library-modal__step-panel' });
-  wizard.appendChild(step1);
-  wizard.appendChild(step2);
-
-  const hint = el('p', { className: 'mp-form-hint' });
-  hint.textContent = 'This item is personal to you. Other engineers can discover it unless you mark it private.';
-  step1.appendChild(hint);
+  const hint = el('p', { className: 'lib-create__hint' });
+  hint.textContent = 'Personal to your plan. Others can discover this unless marked private.';
+  container.appendChild(hint);
 
   const titleGroup = el('div', { className: 'form-group' });
   const titleLabel = el('label', { className: 'form-label' });
   titleLabel.textContent = 'Title';
-  const titleInput = el('input', { type: 'text', className: 'form-input', placeholder: 'e.g. Cisco Live session, Lab exercise…' });
+  const titleInput = el('input', {
+    type: 'text',
+    className: 'form-input',
+    placeholder: 'e.g. Cisco Live session, lab exercise…',
+  });
   if (isEdit && item) titleInput.value = item.title || '';
   titleGroup.appendChild(titleLabel);
   titleGroup.appendChild(titleInput);
-  step1.appendChild(titleGroup);
+  container.appendChild(titleGroup);
 
-  const urlGroup = el('div', { className: 'form-group' });
-  const urlLabel = el('label', { className: 'form-label' });
-  urlLabel.textContent = 'URL (optional)';
-  const urlInput = el('input', { type: 'url', className: 'form-input', placeholder: 'https://…' });
-  if (isEdit && item) urlInput.value = item.url || '';
-  urlGroup.appendChild(urlLabel);
-  urlGroup.appendChild(urlInput);
-  step1.appendChild(urlGroup);
+  const grid = el('div', { className: 'lib-create__grid' });
 
-  const rowFields = el('div', { className: 'library-modal__row' });
-
-  const typeGroup = el('div', { className: 'form-group library-modal__row-item' });
+  const typeGroup = el('div', { className: 'form-group' });
   const typeLabel = el('label', { className: 'form-label' });
   typeLabel.textContent = 'Type';
   const typeSelect = el('select', { className: 'form-select' });
@@ -224,117 +267,131 @@ function buildCreatePane({ container, isEdit, item, planSkill, engineerId, initi
   });
   typeGroup.appendChild(typeLabel);
   typeGroup.appendChild(typeSelect);
-  rowFields.appendChild(typeGroup);
+  grid.appendChild(typeGroup);
 
-  const levelGroup = el('div', { className: 'form-group library-modal__row-item' });
+  const levelGroup = el('div', { className: 'form-group' });
   const levelDisplayLabel = el('label', { className: 'form-label' });
   levelDisplayLabel.textContent = 'Level';
-  const levelDisplay = el('div', { className: 'library-modal__level-locked' });
-  levelDisplay.textContent = `${LEVEL_LABELS[initialLevel]} (locked)`;
-  levelGroup.appendChild(levelDisplayLabel);
-  levelGroup.appendChild(levelDisplay);
-  rowFields.appendChild(levelGroup);
+  if (isEdit) {
+    const levelCls = LEVEL_CLS[initialLevel] || 'edu';
+    const levelBadge = el('div', { className: `lib-create__level-badge lib-create__level-badge--${levelCls}` });
+    levelBadge.appendChild(el('span', { className: 'lib-create__level-dot' }));
+    const levelText = el('span');
+    levelText.textContent = LEVEL_LABELS[initialLevel] || 'Content';
+    levelBadge.appendChild(levelText);
+    levelGroup.appendChild(levelDisplayLabel);
+    levelGroup.appendChild(levelBadge);
+  } else {
+    const levelPicker = el('div', { className: 'lib-create__level-picker' });
+    const levelButtons = [];
 
-  step1.appendChild(rowFields);
+    function syncLevelPicker() {
+      levelButtons.forEach(({ btn, lv }) => {
+        btn.classList.toggle('active', lv === selectedLevel);
+        btn.setAttribute('aria-pressed', String(lv === selectedLevel));
+      });
+    }
+
+    [1, 2, 3].forEach(lv => {
+      const key = lv === 1 ? 'education' : lv === 2 ? 'exposure' : 'experience';
+      const btn = el('button', {
+        type: 'button',
+        className: `lib-discover__level-chip lib-discover__level-chip--${LEVEL_CLS[lv]}`,
+        'aria-pressed': String(lv === selectedLevel),
+      });
+      btn.dataset.level = String(lv);
+      btn.appendChild(iconSpan(ICONS[key]));
+      btn.appendChild(document.createTextNode(` ${LEVEL_LABELS[lv]}`));
+      btn.addEventListener('click', () => {
+        selectedLevel = lv;
+        syncLevelPicker();
+        if (typeof onLevelChange === 'function') onLevelChange(lv);
+      });
+      levelButtons.push({ btn, lv });
+      levelPicker.appendChild(btn);
+    });
+    syncLevelPicker();
+    levelGroup.appendChild(levelDisplayLabel);
+    levelGroup.appendChild(levelPicker);
+  }
+  grid.appendChild(levelGroup);
+  container.appendChild(grid);
+
+  const urlGroup = el('div', { className: 'form-group' });
+  const urlLabel = el('label', { className: 'form-label' });
+  urlLabel.textContent = 'URL (optional)';
+  const urlInput = el('input', { type: 'url', className: 'form-input', placeholder: 'https://…' });
+  if (isEdit && item) urlInput.value = item.url || '';
+  urlGroup.appendChild(urlLabel);
+  urlGroup.appendChild(urlInput);
+  container.appendChild(urlGroup);
 
   const privacyGroup = el('label', { className: 'library-modal__privacy' });
   const privacyInput = el('input', { type: 'checkbox', className: 'library-modal__privacy-cb' });
   if (isEdit && item && item.is_private) privacyInput.checked = true;
   const privacyText = el('span', { className: 'library-modal__privacy-text' });
-  privacyText.textContent = 'Keep this item private (others can\u2019t discover it)';
+  privacyText.textContent = 'Keep private (hidden from discovery)';
   privacyGroup.appendChild(privacyInput);
   privacyGroup.appendChild(privacyText);
-  step1.appendChild(privacyGroup);
+  container.appendChild(privacyGroup);
 
-  const nextBtn = el('button', { type: 'button', className: 'btn btn-primary library-modal__next-btn' });
-  nextBtn.textContent = 'Next: Description';
-  step1.appendChild(nextBtn);
-
+  const descGroup = el('div', { className: 'form-group' });
   const descLabel = el('label', { className: 'form-label' });
   descLabel.textContent = 'Description';
-  step2.appendChild(descLabel);
+  descGroup.appendChild(descLabel);
 
-  const editorHost = el('div', { className: 'library-modal__editor-host' });
-  step2.appendChild(editorHost);
-
-  let editorApi = null;
   if (isEdit && item && item.description_format === 'legacy_html') {
     const legacyWarn = el('div', { className: 'library-modal__legacy-warn' });
     legacyWarn.textContent = 'This item uses legacy formatting. Saving will convert it to Markdown.';
-    step2.insertBefore(legacyWarn, editorHost);
+    descGroup.appendChild(legacyWarn);
   }
 
-  const backBtn = el('button', { type: 'button', className: 'btn btn-secondary library-modal__back-btn' });
-  backBtn.textContent = '\u2190 Back';
-  step2.appendChild(backBtn);
+  const editorHost = el('div', { className: 'library-modal__editor-host lib-create__editor-host' });
+  descGroup.appendChild(editorHost);
+  container.appendChild(descGroup);
 
   let initialMarkdown = '';
-  if (isEdit && item) {
-    if (item.description_format === 'legacy_html') {
-      initialMarkdown = '';
-    } else {
-      initialMarkdown = item.description || '';
-    }
+  if (isEdit && item && item.description_format !== 'legacy_html') {
+    initialMarkdown = item.description || '';
   }
 
-  function ensureEditor() {
-    if (editorApi) return;
-    editorApi = mountMarkdownEditor(editorHost, {
-      initialMarkdown,
-      placeholder: 'Notes, links, takeaways…',
-    });
-  }
+  const editorApi = mountMarkdownEditor(editorHost, {
+    initialMarkdown,
+    placeholder: 'Notes, links, takeaways…',
+  });
 
-  nextBtn.addEventListener('click', () => {
+  async function save(primaryBtn) {
     const titleVal = titleInput.value.trim();
     if (!titleVal) {
       showToast('Title is required', 'error');
       titleInput.focus();
       return;
     }
-    step1.classList.remove('library-modal__step-panel--active');
-    step2.classList.add('library-modal__step-panel--active');
-    step1Pill.classList.remove('library-modal__step--active');
-    step2Pill.classList.add('library-modal__step--active');
-    ensureEditor();
-    requestAnimationFrame(() => editorApi && editorApi.focus());
-  });
 
-  backBtn.addEventListener('click', () => {
-    step2.classList.remove('library-modal__step-panel--active');
-    step1.classList.add('library-modal__step-panel--active');
-    step2Pill.classList.remove('library-modal__step--active');
-    step1Pill.classList.add('library-modal__step--active');
-  });
-
-  if (isEdit) {
-    step1.classList.remove('library-modal__step-panel--active');
-    step2.classList.add('library-modal__step-panel--active');
-    step1Pill.classList.remove('library-modal__step--active');
-    step2Pill.classList.add('library-modal__step--active');
-    nextBtn.style.display = 'none';
-    backBtn.textContent = '\u2190 Edit Details';
-    ensureEditor();
-  }
-
-  saveBtn.addEventListener('click', async () => {
-    const titleVal = titleInput.value.trim();
-    if (!titleVal) {
-      showToast('Title is required', 'error');
-      step1Pill.click && step1Pill.click();
-      titleInput.focus();
-      return;
-    }
-
-    saveBtn.disabled = true;
-    const originalLabel = saveBtn.textContent;
-    saveBtn.textContent = 'Saving…';
+    primaryBtn.disabled = true;
+    const originalLabel = primaryBtn.textContent;
+    primaryBtn.textContent = 'Saving…';
 
     const markdown = editorApi ? editorApi.getMarkdown() : (initialMarkdown || '');
     const urlVal = urlInput.value.trim() || null;
     const isPrivate = !!privacyInput.checked;
 
     try {
+      const payload = {
+        mode: isEdit ? 'update' : 'create',
+        id: item?.id,
+        level: selectedLevel,
+        type: typeSelect.value,
+        title: titleVal,
+        description: markdown || null,
+        description_format: 'markdown',
+        url: urlVal,
+        is_private: isPrivate,
+      };
+      if (deferSave) {
+        onDone(payload);
+        return;
+      }
       if (isEdit) {
         await api.put(`/api/plans/${engineerId}/skills/${planSkill.id}/user-content/${item.id}`, {
           title: titleVal,
@@ -347,7 +404,7 @@ function buildCreatePane({ container, isEdit, item, planSkill, engineerId, initi
         showToast('Item updated', 'success');
       } else {
         await api.post(`/api/plans/${engineerId}/skills/${planSkill.id}/user-content`, {
-          level: initialLevel,
+          level: selectedLevel,
           type: typeSelect.value,
           title: titleVal,
           description: markdown || null,
@@ -357,210 +414,191 @@ function buildCreatePane({ container, isEdit, item, planSkill, engineerId, initi
         });
         showToast('Item added', 'success');
       }
-      onDone();
+      onDone(null);
     } catch (err) {
       showToast(err.message || 'Failed to save item', 'error');
-      saveBtn.disabled = false;
-      saveBtn.textContent = originalLabel;
+      primaryBtn.disabled = false;
+      primaryBtn.textContent = originalLabel;
     }
-  });
+  }
 
   return {
+    save,
     destroy() {
       if (editorApi) editorApi.destroy();
     },
   };
 }
 
-function buildDiscoverPane({ container, planSkill, engineerId, initialLevel, importBtn, importCountLabel, onImported, onClose }) {
+function buildDiscoverPane({
+  container, planSkill, engineerId, initialLevel, deferSave, onImported, onClose, onSelectionChange,
+}) {
   const ctx = { initialized: false };
 
-  const filterBar = el('div', { className: 'library-modal__filter-bar' });
+  const toolbar = el('div', { className: 'lib-discover__toolbar' });
   const searchInput = el('input', {
     type: 'search',
-    className: 'form-input library-modal__search',
+    className: 'lib-discover__search',
     placeholder: 'Search titles, descriptions, URLs…',
   });
-  const levelChips = el('div', { className: 'library-modal__level-chips' });
+  const levelChips = el('div', { className: 'lib-discover__levels' });
   let activeLevel = initialLevel;
+
   [1, 2, 3].forEach(lv => {
+    const key = lv === 1 ? 'education' : lv === 2 ? 'exposure' : 'experience';
+    const cls = LEVEL_CLS[lv];
     const chip = el('button', {
       type: 'button',
-      className: 'library-modal__chip',
-      'data-level': String(lv),
+      className: `lib-discover__level-chip lib-discover__level-chip--${cls}${lv === activeLevel ? ' active' : ''}`,
     });
-    chip.textContent = LEVEL_LABELS[lv];
-    if (lv === activeLevel) chip.classList.add('library-modal__chip--active');
+    chip.dataset.level = String(lv);
+    chip.appendChild(iconSpan(ICONS[key]));
+    chip.appendChild(document.createTextNode(` ${LEVEL_LABELS[lv]}`));
     chip.addEventListener('click', () => {
       activeLevel = lv;
-      Array.from(levelChips.children).forEach(c =>
-        c.classList.toggle('library-modal__chip--active', Number(c.dataset.level) === lv),
-      );
+      Array.from(levelChips.children).forEach(c => {
+        const on = Number(c.dataset.level) === lv;
+        c.classList.toggle('active', on);
+      });
       reload();
     });
     levelChips.appendChild(chip);
   });
-  filterBar.appendChild(searchInput);
-  filterBar.appendChild(levelChips);
-  container.appendChild(filterBar);
 
-  const resultsScroll = el('div', { className: 'library-modal__results' });
-  container.appendChild(resultsScroll);
+  toolbar.appendChild(searchInput);
+  toolbar.appendChild(levelChips);
+  container.appendChild(toolbar);
 
-  const emptyState = el('div', { className: 'library-modal__empty' });
-  emptyState.textContent = 'No items found.';
+  const scrollHost = el('div', { className: 'lib-discover__scroll' });
+  const bucketsHost = el('div', { className: 'lib-discover__buckets' });
+  scrollHost.appendChild(bucketsHost);
+  container.appendChild(scrollHost);
 
   const loadingState = el('div', { className: 'library-modal__loading' });
   loadingState.textContent = 'Loading…';
+  const errorState = el('div', { className: 'library-modal__error' });
 
   const selected = new Map();
   let cursor = null;
   let hasMore = false;
   let loading = false;
-  let lastQuery = '';
   let debounceTimer = null;
+  let bucketsReady = false;
+
+  function ensureBuckets() {
+    if (bucketsReady) return;
+    bucketsHost.innerHTML = '';
+    BUCKET_ORDER.forEach(b => {
+      const def = BUCKET_DEFS[b];
+      const bucket = el('div', {
+        className: `lib-bucket lib-bucket--${def.cls}`,
+        'data-bucket': String(b),
+      });
+      const head = el('button', { type: 'button', className: 'lib-bucket__head' });
+      const iconWrap = el('span', { className: 'lib-bucket__icon' });
+      iconWrap.appendChild(iconSpan(def.icon));
+      head.appendChild(iconWrap);
+      const titleWrap = el('span');
+      const title = el('span', { className: 'lib-bucket__title' });
+      title.textContent = def.title;
+      const subtitle = el('span', { className: 'lib-bucket__subtitle' });
+      subtitle.textContent = def.subtitle;
+      titleWrap.appendChild(title);
+      titleWrap.appendChild(subtitle);
+      head.appendChild(titleWrap);
+      const count = el('span', { className: 'lib-bucket__count' });
+      count.textContent = '0';
+      head.appendChild(count);
+      const chevron = el('span', { className: 'lib-bucket__chevron', 'aria-hidden': 'true' });
+      chevron.textContent = '\u25BC';
+      head.appendChild(chevron);
+      head.addEventListener('click', () => bucket.classList.toggle('lib-bucket--collapsed'));
+      bucket.appendChild(head);
+      const bodyEl = el('div', { className: 'lib-bucket__body' });
+      const empty = el('div', { className: 'lib-bucket__empty' });
+      empty.textContent = 'No items in this group yet.';
+      bodyEl.appendChild(empty);
+      bucket.appendChild(bodyEl);
+      bucketsHost.appendChild(bucket);
+    });
+    bucketsReady = true;
+  }
+
+  function resetBuckets() {
+    ensureBuckets();
+    bucketsHost.querySelectorAll('.lib-bucket__body').forEach(bodyEl => {
+      const empty = bodyEl.querySelector('.lib-bucket__empty');
+      Array.from(bodyEl.children).forEach(child => {
+        if (child !== empty) child.remove();
+      });
+      if (empty) empty.hidden = false;
+    });
+    bucketsHost.querySelectorAll('.lib-bucket__count').forEach(c => { c.textContent = '0'; });
+  }
+
+  function updateBucketCount(bucketEl) {
+    const bodyEl = bucketEl.querySelector('.lib-bucket__body');
+    const count = bucketEl.querySelector('.lib-bucket__count');
+    const empty = bucketEl.querySelector('.lib-bucket__empty');
+    const cards = bodyEl.querySelectorAll('.lib-card-v2');
+    if (count) count.textContent = String(cards.length);
+    if (empty) empty.hidden = cards.length > 0;
+  }
 
   function updateSelectionUI() {
-    const n = selected.size;
-    importCountLabel.textContent = `${n} selected`;
-    importBtn.disabled = n === 0 || n > IMPORT_CAP;
-    importBtn.textContent = n > 0 ? `Import ${n} Item${n === 1 ? '' : 's'}` : 'Import Selected';
-    if (n > IMPORT_CAP) {
-      importCountLabel.textContent = `${n} selected — max ${IMPORT_CAP} per import`;
-    }
+    onSelectionChange(selected.size);
   }
+
+  ctx.syncFooter = (primaryBtn) => {
+    updateSelectionUI();
+    if (selected.size === 0) primaryBtn.disabled = true;
+  };
 
   function clearSelection() {
     selected.clear();
-    Array.from(resultsScroll.querySelectorAll('.library-modal__card--selected')).forEach(c => {
-      c.classList.remove('library-modal__card--selected');
-      const cb = c.querySelector('.library-modal__card-cb');
+    bucketsHost.querySelectorAll('.lib-card-v2--selected').forEach(c => {
+      c.classList.remove('lib-card-v2--selected');
+      const cb = c.querySelector('.lib-card-v2__cb');
       if (cb) cb.checked = false;
     });
-    Array.from(resultsScroll.querySelectorAll('.library-modal__card--skipped')).forEach(c => {
-      c.classList.remove('library-modal__card--skipped');
+    bucketsHost.querySelectorAll('.lib-card-v2--skipped').forEach(c => {
+      c.classList.remove('lib-card-v2--skipped');
     });
     updateSelectionUI();
   }
 
-  async function load(append = false) {
-    if (loading) return;
-    if (append && !hasMore) return;
-    loading = true;
-    if (!append) {
-      resultsScroll.innerHTML = '';
-      resultsScroll.appendChild(loadingState);
-      cursor = null;
-    }
-    try {
-      const skillIdForApi = planSkill.skill_id || planSkill.skillId;
-      const params = new URLSearchParams();
-      params.set('level', String(activeLevel));
-      params.set('limit', String(DISCOVER_PAGE_SIZE));
-      const q = searchInput.value.trim();
-      if (q) params.set('q', q);
-      if (append && cursor) params.set('cursor', cursor);
-      const finalUrl = `/api/plans/${engineerId}/skills/${skillIdForApi}/library/search?${params.toString()}`;
-      const data = await api.get(finalUrl);
-      if (!append) resultsScroll.innerHTML = '';
-      cursor = data.next_cursor || null;
-      hasMore = !!data.has_more;
-      lastQuery = q;
-
-      const groups = Array.isArray(data.results) ? groupByBucket(data.results) : [];
-      if (groups.length === 0 && !append && resultsScroll.children.length === 0) {
-        resultsScroll.appendChild(emptyState);
-        return;
-      }
-      groups.forEach(group => renderGroup(group, append));
-      if (hasMore) {
-        const moreBtn = el('button', { type: 'button', className: 'btn btn-secondary library-modal__load-more' });
-        moreBtn.textContent = 'Load more';
-        moreBtn.addEventListener('click', () => {
-          moreBtn.remove();
-          load(true);
-        });
-        resultsScroll.appendChild(moreBtn);
-      }
-    } catch (err) {
-      resultsScroll.innerHTML = '';
-      const errEl = el('div', { className: 'library-modal__error' });
-      errEl.textContent = err.message || 'Failed to load library';
-      resultsScroll.appendChild(errEl);
-    } finally {
-      loading = false;
-    }
-  }
-
-  function groupByBucket(items) {
-    const map = new Map();
-    items.forEach(item => {
-      const b = item.bucket || 3;
-      if (!map.has(b)) map.set(b, []);
-      map.get(b).push(item);
-    });
-    return Array.from(map.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([bucket, list]) => ({ bucket, items: list }));
-  }
-
-  function renderGroup(group, append) {
-    const bucket = group.bucket || group.proximity || 3;
-    const items = group.items || [];
-    if (!items.length) return;
-
-    let groupEl = resultsScroll.querySelector(`[data-bucket="${bucket}"]`);
-    let groupCount;
-    if (groupEl) {
-      groupCount = groupEl.querySelector('.library-modal__group-count');
-    } else {
-      groupEl = el('div', { className: 'library-modal__group', 'data-bucket': String(bucket) });
-      const groupHeader = el('div', { className: 'library-modal__group-header' });
-      groupHeader.textContent = BUCKET_LABELS[bucket] || 'Other';
-      groupCount = el('span', { className: 'library-modal__group-count' });
-      groupCount.textContent = '0';
-      groupHeader.appendChild(groupCount);
-      groupEl.appendChild(groupHeader);
-      resultsScroll.appendChild(groupEl);
-    }
-
-    items.forEach(item => groupEl.appendChild(renderCard(item)));
-    const total = groupEl.querySelectorAll('.library-modal__card').length;
-    if (groupCount) groupCount.textContent = String(total);
-  }
-
   function renderCard(item) {
-    const card = el('div', { className: 'library-modal__card' });
+    const card = el('div', { className: 'lib-card-v2' });
     card.dataset.itemId = String(item.id);
 
-    const cb = el('input', { type: 'checkbox', className: 'library-modal__card-cb' });
+    const cb = el('input', { type: 'checkbox', className: 'lib-card-v2__cb' });
     if (selected.has(item.id)) {
       cb.checked = true;
-      card.classList.add('library-modal__card--selected');
+      card.classList.add('lib-card-v2--selected');
     }
     cb.addEventListener('change', () => {
       if (cb.checked) {
         selected.set(item.id, item);
-        card.classList.add('library-modal__card--selected');
+        card.classList.add('lib-card-v2--selected');
       } else {
         selected.delete(item.id);
-        card.classList.remove('library-modal__card--selected');
+        card.classList.remove('lib-card-v2--selected');
       }
       updateSelectionUI();
     });
 
-    const main = el('div', { className: 'library-modal__card-main' });
-    const titleRow = el('div', { className: 'library-modal__card-title-row' });
-    const title = el('div', { className: 'library-modal__card-title' });
+    const main = el('div', { className: 'lib-card-v2__main' });
+    const title = el('div', { className: 'lib-card-v2__title' });
     title.textContent = item.title || '(untitled)';
-    titleRow.appendChild(title);
-    const meta = el('div', { className: 'library-modal__card-meta' });
-    const typeBadge = el('span', { className: 'library-modal__card-type' });
+    main.appendChild(title);
+
+    const meta = el('div', { className: 'lib-card-v2__meta' });
+    const typeBadge = el('span', { className: 'lib-card-v2__type' });
     typeBadge.textContent = item.type || '';
     meta.appendChild(typeBadge);
     if (item.owner_name) {
-      const owner = el('span', { className: 'library-modal__card-owner' });
-      owner.textContent = item.is_mine ? 'by you' : `by ${item.owner_name}`;
+      const owner = el('span', { className: 'lib-card-v2__owner' });
+      owner.textContent = `by ${item.owner_name}`;
       meta.appendChild(owner);
     }
     if (item.is_private) {
@@ -568,24 +606,12 @@ function buildDiscoverPane({ container, planSkill, engineerId, initialLevel, imp
       priv.textContent = 'Private';
       meta.appendChild(priv);
     }
-    titleRow.appendChild(meta);
-    main.appendChild(titleRow);
+    main.appendChild(meta);
 
     if (item.description) {
-      const desc = el('div', { className: 'library-modal__card-desc' });
+      const desc = el('div', { className: 'lib-card-v2__desc' });
       desc.innerHTML = renderDescription(item.description, item.description_format || 'markdown');
       main.appendChild(desc);
-    }
-    if (item.url) {
-      const urlEl = el('a', {
-        className: 'library-modal__card-url',
-        href: item.url,
-        target: '_blank',
-        rel: 'noopener noreferrer',
-      });
-      urlEl.textContent = item.url;
-      urlEl.addEventListener('click', (e) => e.stopPropagation());
-      main.appendChild(urlEl);
     }
 
     card.appendChild(cb);
@@ -600,8 +626,72 @@ function buildDiscoverPane({ container, planSkill, engineerId, initialLevel, imp
     return card;
   }
 
+  function appendItems(items) {
+    items.forEach(item => {
+      if (item.is_mine) return;
+      const bucket = item.bucket || 3;
+      const bucketEl = bucketsHost.querySelector(`[data-bucket="${bucket}"]`);
+      if (!bucketEl) return;
+      const bodyEl = bucketEl.querySelector('.lib-bucket__body');
+      bodyEl.appendChild(renderCard(item));
+      updateBucketCount(bucketEl);
+    });
+  }
+
+  function removeLoadMore() {
+    scrollHost.querySelectorAll('.library-modal__load-more').forEach(btn => btn.remove());
+  }
+
+  async function load(append = false) {
+    if (loading) return;
+    if (append && !hasMore) return;
+    loading = true;
+    removeLoadMore();
+
+    if (!append) {
+      resetBuckets();
+      scrollHost.appendChild(loadingState);
+      cursor = null;
+    }
+
+    try {
+      const skillIdForApi = planSkill.skill_id || planSkill.skillId;
+      const params = new URLSearchParams();
+      params.set('level', String(activeLevel));
+      params.set('limit', String(DISCOVER_PAGE_SIZE));
+      const q = searchInput.value.trim();
+      if (q) params.set('q', q);
+      if (append && cursor) params.set('cursor', cursor);
+
+      const data = await api.get(
+        `/api/plans/${engineerId}/skills/${skillIdForApi}/library/search?${params.toString()}`,
+      );
+
+      loadingState.remove();
+      cursor = data.next_cursor || null;
+      hasMore = !!data.has_more;
+
+      const items = Array.isArray(data.results) ? data.results : [];
+      appendItems(items);
+
+      if (hasMore) {
+        const moreBtn = el('button', { type: 'button', className: 'btn btn-secondary library-modal__load-more' });
+        moreBtn.textContent = 'Load more';
+        moreBtn.addEventListener('click', () => load(true));
+        scrollHost.appendChild(moreBtn);
+      }
+    } catch (err) {
+      loadingState.remove();
+      errorState.textContent = err.message || 'Failed to load library';
+      scrollHost.appendChild(errorState);
+    } finally {
+      loading = false;
+    }
+  }
+
   function reload() {
     clearSelection();
+    errorState.remove();
     load(false);
   }
 
@@ -610,18 +700,24 @@ function buildDiscoverPane({ container, planSkill, engineerId, initialLevel, imp
     debounceTimer = setTimeout(reload, 250);
   });
 
-  importBtn.addEventListener('click', async () => {
+  ctx.handleImport = async (primaryBtn) => {
     const ids = Array.from(selected.keys());
     if (ids.length === 0) return;
     if (ids.length > IMPORT_CAP) {
       showToast(`Cannot import more than ${IMPORT_CAP} items at once`, 'error');
       return;
     }
-    importBtn.disabled = true;
-    importBtn.textContent = 'Importing…';
+    primaryBtn.disabled = true;
+    primaryBtn.textContent = 'Importing…';
 
     try {
       const skillIdForApi = planSkill.skill_id || planSkill.skillId;
+      if (deferSave) {
+        const items = ids.map(id => selected.get(id)).filter(Boolean);
+        onImported({ mode: 'import', level: activeLevel, items });
+        onClose();
+        return;
+      }
       const data = await api.post(
         `/api/plans/${engineerId}/skills/${skillIdForApi}/library/import?level=${activeLevel}`,
         { source_ids: ids },
@@ -644,13 +740,13 @@ function buildDiscoverPane({ container, planSkill, engineerId, initialLevel, imp
       }
       if (typeof onImported === 'function') onImported();
 
-      Array.from(resultsScroll.querySelectorAll('.library-modal__card')).forEach(card => {
+      bucketsHost.querySelectorAll('.lib-card-v2').forEach(card => {
         const id = Number(card.dataset.itemId);
         if (skippedIds.has(id)) {
-          card.classList.add('library-modal__card--skipped');
+          card.classList.add('lib-card-v2--skipped');
         } else if (selected.has(id)) {
-          card.classList.remove('library-modal__card--selected');
-          const cb = card.querySelector('.library-modal__card-cb');
+          card.classList.remove('lib-card-v2--selected');
+          const cb = card.querySelector('.lib-card-v2__cb');
           if (cb) cb.checked = false;
           selected.delete(id);
         }
@@ -659,15 +755,17 @@ function buildDiscoverPane({ container, planSkill, engineerId, initialLevel, imp
     } catch (err) {
       showToast(err.message || 'Import failed', 'error');
     } finally {
-      importBtn.disabled = false;
+      primaryBtn.disabled = selected.size === 0 || selected.size > IMPORT_CAP;
       const n = selected.size;
-      importBtn.textContent = n > 0 ? `Import ${n} Item${n === 1 ? '' : 's'}` : 'Import Selected';
+      primaryBtn.textContent = n > 0 ? `Import ${n} Item${n === 1 ? '' : 's'}` : 'Import Selected';
     }
-  });
+  };
 
   ctx.init = () => {
     if (ctx.initialized) return;
     ctx.initialized = true;
+    ensureBuckets();
+    updateSelectionUI();
     load(false);
   };
 

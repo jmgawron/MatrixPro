@@ -10,6 +10,12 @@ let _engineerName = '';
 let _activeReport = 'landscape';
 let _previewData = null;
 let _aiMarkdown = null;
+let _isMaximized = false;
+
+const WINDOW_ICONS = {
+  maximize: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
+  minimize: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/></svg>',
+};
 
 const MPR_ICONS = {
   landscape: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
@@ -53,6 +59,35 @@ function generateLabel() {
   return _activeReport === 'ai' ? 'Generate Summary' : 'Generate Preview';
 }
 
+function getModalEl() {
+  return _overlay?.querySelector('.mpr-plan-modal') ?? null;
+}
+
+function setModalMaximized(maximized) {
+  _isMaximized = maximized;
+  const modal = getModalEl();
+  if (!_overlay || !modal) return;
+  _overlay.classList.toggle('modal-overlay--maximized', maximized);
+  modal.classList.toggle('sdm-plan-modal--maximized', maximized);
+  const maximizeBtn = q('.sdm-maximize-btn');
+  if (maximizeBtn) {
+    maximizeBtn.setAttribute('aria-label', maximized ? 'Restore window size' : 'Maximize');
+    maximizeBtn.title = maximized ? 'Restore' : 'Maximize';
+    maximizeBtn.innerHTML = maximized ? WINDOW_ICONS.minimize : WINDOW_ICONS.maximize;
+  }
+}
+
+function updatePdfButtons() {
+  const canExport = _activeReport !== 'ai' || !!_aiMarkdown;
+  q('#mpr-pdf-btn')?.toggleAttribute('disabled', !canExport);
+  q('#mpr-pdf-toolbar-btn')?.toggleAttribute('disabled', !canExport);
+}
+
+function pdfFileName() {
+  const slug = (_engineerName || 'engineer').replace(/\s+/g, '_').replace(/[^\w.-]/g, '');
+  return `${_activeReport}_${slug || _engineerId}.pdf`;
+}
+
 /** Open the Reporting modal (matches Skill Detail modal shell). */
 export function openReportingModal(engineerId, engineerName = '') {
   closeReportingModal();
@@ -61,6 +96,7 @@ export function openReportingModal(engineerId, engineerName = '') {
   _activeReport = 'landscape';
   _previewData = null;
   _aiMarkdown = null;
+  _isMaximized = false;
 
   _root = document.getElementById('modalRoot');
   _overlay = el('div', { className: 'modal-overlay', id: 'mpr-overlay' });
@@ -80,7 +116,7 @@ export function openReportingModal(engineerId, engineerName = '') {
   footerStatus.textContent = 'Generate a preview to load report data.';
   const exportBtn = el('button', { type: 'button', className: 'btn btn-primary btn-sm', id: 'mpr-pdf-btn' });
   exportBtn.textContent = 'Export PDF';
-  exportBtn.addEventListener('click', () => exportPdf());
+  exportBtn.addEventListener('click', () => exportPdf(exportBtn));
   footer.appendChild(footerStatus);
   footer.appendChild(exportBtn);
   modal.appendChild(footer);
@@ -96,6 +132,7 @@ export function openReportingModal(engineerId, engineerName = '') {
   requestAnimationFrame(() => {
     _overlay.classList.add('open');
     _overlay.querySelector('.sdm-close')?.focus();
+    updatePdfButtons();
   });
 
   loadPreview();
@@ -107,6 +144,7 @@ function onKeyDown(e) {
 
 export function closeReportingModal() {
   document.removeEventListener('keydown', onKeyDown);
+  _isMaximized = false;
   if (_overlay) {
     _overlay.classList.remove('open');
     setTimeout(() => {
@@ -157,11 +195,30 @@ function buildShell() {
   titleBlock.innerHTML =
     `<h2 class="mpr-main-header__title">${escHtml(meta?.label || 'Report')}</h2>` +
     `<p class="mpr-main-header__sub" id="mpr-header-sub">${escHtml(meta?.desc || '')}</p>`;
-  const closeBtn = el('button', { type: 'button', className: 'sdm-close', 'aria-label': 'Close' });
+
+  const closeBtn = el('button', {
+    type: 'button',
+    className: 'sdm-window-btn sdm-close',
+    'aria-label': 'Close',
+    title: 'Close',
+  });
   closeBtn.textContent = '\u2715';
   closeBtn.addEventListener('click', () => closeReportingModal());
+
+  const maximizeBtn = el('button', {
+    type: 'button',
+    className: 'sdm-window-btn sdm-maximize-btn',
+    'aria-label': _isMaximized ? 'Restore window size' : 'Maximize',
+    title: _isMaximized ? 'Restore' : 'Maximize',
+  });
+  maximizeBtn.innerHTML = _isMaximized ? WINDOW_ICONS.minimize : WINDOW_ICONS.maximize;
+  maximizeBtn.addEventListener('click', () => setModalMaximized(!_isMaximized));
+
+  const windowControls = el('div', { className: 'sdm-header__window-controls' });
+  windowControls.appendChild(maximizeBtn);
+  windowControls.appendChild(closeBtn);
   headerTop.appendChild(titleBlock);
-  headerTop.appendChild(closeBtn);
+  headerTop.appendChild(windowControls);
   header.appendChild(headerTop);
 
   const toolbar = el('div', { className: 'mpr-toolbar' });
@@ -174,7 +231,16 @@ function buildShell() {
   });
   previewBtn.textContent = generateLabel();
   previewBtn.addEventListener('click', () => loadPreview());
+  const pdfToolbarBtn = el('button', {
+    type: 'button',
+    className: 'btn btn-secondary btn-sm',
+    id: 'mpr-pdf-toolbar-btn',
+    title: 'Download PDF for this report',
+  });
+  pdfToolbarBtn.innerHTML = `${MPR_ICONS.fileText}<span>Export PDF</span>`;
+  pdfToolbarBtn.addEventListener('click', () => exportPdf(pdfToolbarBtn));
   toolbarActions.appendChild(previewBtn);
+  toolbarActions.appendChild(pdfToolbarBtn);
   toolbar.appendChild(toolbarActions);
   header.appendChild(toolbar);
 
@@ -191,7 +257,9 @@ function refreshShell() {
   if (!body) return;
   body.innerHTML = '';
   body.appendChild(buildShell());
+  if (_isMaximized) setModalMaximized(true);
   updateFooterMeta();
+  updatePdfButtons();
 }
 
 function buildFilters() {
@@ -329,6 +397,7 @@ async function loadPreview() {
       btn.disabled = false;
     }
     if (pdfBtn) pdfBtn.disabled = false;
+    updatePdfButtons();
   };
 
   const setAnalyzingBtn = () => {
@@ -342,6 +411,7 @@ async function loadPreview() {
     renderAiLoading();
     setAnalyzingBtn();
     if (pdfBtn) pdfBtn.disabled = true;
+    if (q('#mpr-pdf-toolbar-btn')) q('#mpr-pdf-toolbar-btn').disabled = true;
     const statusEl = preview.querySelector('.mt-analyze-loading-status');
     const statusMessages = [
       'Collecting your plan data and activity history…',
@@ -389,6 +459,7 @@ async function loadPreview() {
       renderAiSummary(_previewData);
     }
     updateFooterMeta();
+    updatePdfButtons();
   } catch (err) {
     preview.innerHTML = '';
     if (_activeReport === 'ai') {
@@ -629,17 +700,18 @@ function renderAiSummary(data) {
   preview.appendChild(content);
 }
 
-async function exportPdf() {
-  if (_activeReport !== 'ai' && !_previewData) {
-    showToast({ message: 'Generate a preview first', type: 'warning' });
-    return;
-  }
+async function exportPdf(triggerBtn = null) {
   if (_activeReport === 'ai' && !_aiMarkdown) {
     showToast({ message: 'Generate the AI summary first', type: 'warning' });
     return;
   }
 
-  const typeMap = { landscape: 'landscape', activity: 'activity', stagnation: 'stagnation', ai: 'ai_summary' };
+  const typeMap = {
+    landscape: 'landscape',
+    activity: 'activity',
+    stagnation: 'stagnation',
+    ai: 'ai_summary',
+  };
   const body = {
     report_type: typeMap[_activeReport],
     from_date: q('#mpr-from')?.value || null,
@@ -647,11 +719,26 @@ async function exportPdf() {
     threshold_days: activeDays(),
     categories: activeCategories(),
     statuses: activeStatuses(),
+    sort: q('#mpr-activity-sort')?.value || 'desc',
   };
   if (_activeReport === 'ai') {
     body.markdown = _aiMarkdown;
     body.title = 'AI Development Summary';
   }
+
+  const pdfBtn = triggerBtn || q('#mpr-pdf-btn');
+  const toolbarPdfBtn = pdfBtn?.id === 'mpr-pdf-toolbar-btn' ? q('#mpr-pdf-btn') : q('#mpr-pdf-toolbar-btn');
+  const originalFooterLabel = pdfBtn?.id === 'mpr-pdf-btn' ? pdfBtn.textContent : null;
+  const originalToolbarHtml = pdfBtn?.id === 'mpr-pdf-toolbar-btn' ? pdfBtn.innerHTML : null;
+  if (pdfBtn) {
+    pdfBtn.disabled = true;
+    if (pdfBtn.id === 'mpr-pdf-toolbar-btn') {
+      pdfBtn.innerHTML = `${MPR_ICONS.fileText}<span>Exporting…</span>`;
+    } else {
+      pdfBtn.textContent = 'Exporting…';
+    }
+  }
+  if (toolbarPdfBtn && toolbarPdfBtn !== pdfBtn) toolbarPdfBtn.disabled = true;
 
   try {
     const token = localStorage.getItem('matrixpro_token');
@@ -665,17 +752,27 @@ async function exportPdf() {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || res.statusText);
+      const detail = err.detail;
+      throw new Error(typeof detail === 'string' ? detail : detail?.[0]?.msg || res.statusText);
     }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${_activeReport}_report.pdf`;
+    a.download = pdfFileName();
     a.click();
     URL.revokeObjectURL(url);
     showToast({ message: 'PDF downloaded', type: 'success' });
   } catch (err) {
     showToast({ message: err.message || 'PDF export failed', type: 'error' });
+  } finally {
+    if (pdfBtn) {
+      if (pdfBtn.id === 'mpr-pdf-toolbar-btn') {
+        pdfBtn.innerHTML = originalToolbarHtml || `${MPR_ICONS.fileText}<span>Export PDF</span>`;
+      } else {
+        pdfBtn.textContent = originalFooterLabel || 'Export PDF';
+      }
+    }
+    updatePdfButtons();
   }
 }

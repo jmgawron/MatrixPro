@@ -80,6 +80,7 @@ class OwnSkillCreate(BaseModel):
     status: PlanSkillStatus = PlanSkillStatus.planned
     proficiency_level: int | None = None
     notes: str | None = None
+    category_id: int | None = None
 
 
 class OwnSkillUpdate(BaseModel):
@@ -121,6 +122,8 @@ class ContentCompletionResponse(BaseModel):
 
 class ContentOverrideCreate(BaseModel):
     override_description: str
+    override_type: SkillLevelContentType | None = None
+    override_url: str | None = None
 
 
 class ContentOverrideResponse(BaseModel):
@@ -129,6 +132,8 @@ class ContentOverrideResponse(BaseModel):
     plan_skill_id: int
     content_id: int
     override_description: str | None = None
+    override_type: SkillLevelContentType | None = None
+    override_url: str | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime | None = None
@@ -204,8 +209,11 @@ class MergedContentItem(BaseModel):
     completion_notes: str | None = None
     has_override: bool = False
     override_description: str | None = None
+    override_type: SkillLevelContentType | None = None
+    override_url: str | None = None
     is_user_content: bool = False
     is_private: bool = False
+    is_hidden: bool = False
     source_user_content_id: int | None = None
 
 
@@ -219,3 +227,14 @@ class PlanSkillContentResponse(BaseModel):
     items: list[MergedContentItem] = []
     total_items: int = 0
     completed_items: int = 0
+
+
+class ContentOrderItem(BaseModel):
+    level: int
+    kind: str  # catalog | user
+    id: int
+    position: int
+
+
+class ContentOrderRequest(BaseModel):
+    items: list[ContentOrderItem] = []

@@ -5,9 +5,44 @@ import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
 import { el } from '../utils/dom.js';
 import { getSkillIconSVG } from '../components/icons.js';
-import { openLibraryModal } from '../components/library-modal.js';
-import { openReportingModal } from './my-plan-reports.js?v=3';
-import { renderDescription } from '../components/markdown-editor.js';
+import { openLibraryModal } from '../components/library-modal.js?v=3';
+import { openReportingModal } from './my-plan-reports.js?v=4';
+import { renderDescription, mountMarkdownEditor } from '../components/markdown-editor.js';
+
+const CONTENT_TYPE_OPTIONS = [
+  { value: 'course', label: 'Course' },
+  { value: 'certification', label: 'Certification' },
+  { value: 'reading', label: 'Reading' },
+  { value: 'link', label: 'Link' },
+  { value: 'action', label: 'Action' },
+];
+
+const THREE_E_SECTION_ICONS = {
+  education: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+  exposure: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',
+  experience: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+};
+
+function normalizeOverrideEntry(val) {
+  if (!val) return { description: '', type: null, url: null };
+  if (typeof val === 'string') return { description: val, type: null, url: null };
+  return {
+    description: val.description ?? '',
+    type: val.type ?? null,
+    url: val.url ?? null,
+  };
+}
+
+function overrideEntriesEqual(a, b) {
+  const na = normalizeOverrideEntry(a);
+  const nb = normalizeOverrideEntry(b);
+  return na.description === nb.description && na.type === nb.type && na.url === nb.url;
+}
+
+function formatContentTypeLabel(type) {
+  const opt = CONTENT_TYPE_OPTIONS.find(o => o.value === type);
+  return opt ? opt.label : (type || 'Resource');
+}
 
 let _container = null;
 let _engineerId = null;
@@ -29,11 +64,17 @@ const SVG_ICONS = {
   layers: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
   shield: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
   search: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  plus: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  users: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
   fileText: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
   table: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>',
   bookOpen: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
   checkCircle: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
   pencil: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>',
+  maximize: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
+  minimize: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/></svg>',
+  trash: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
+  grip: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>',
   calendar: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
   refresh: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
   circle: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
@@ -56,6 +97,21 @@ function svgIcon(name, size) {
   span.style.fontSize = size || '16px';
   span.innerHTML = SVG_ICONS[name] || '';
   return span;
+}
+
+function applyPersonalSkillIcon(iconEl, size = 20) {
+  iconEl.className = 'mp-card-icon mp-card-icon--personal';
+  const svg = getSkillIconSVG('personal', size);
+  iconEl.innerHTML = svg || SVG_ICONS.users;
+}
+
+function buildPersonalSkillBadge(title) {
+  const badge = el('div', {
+    className: 'mp-card__personal-badge',
+    title: title || 'You created this skill — it is not part of the shared catalog.',
+  });
+  badge.textContent = 'My skill';
+  return badge;
 }
 
 const SECTIONS = [
@@ -86,7 +142,6 @@ export function mountMyPlan(container, params) {
   _categoriesCache = null;
   _categoriesInitialized = false;
   _activeCategoryFilters.clear();
-
   const user = Store.get('user');
   _engineerId = params?.id ? Number(params.id) : user?.id;
 
@@ -119,7 +174,12 @@ async function loadPlan() {
       cats.forEach(c => _activeCategoryFilters.add(c.id));
       _categoriesInitialized = true;
     }
-    renderSections();
+    try {
+      renderSections();
+    } catch (renderErr) {
+      console.error('My Plan render error:', renderErr);
+      showToast('Failed to render plan view. Please refresh.', 'error');
+    }
   } catch (err) {
     const msg = err.message || 'Failed to load plan';
     if (msg.includes('403') || msg.toLowerCase().includes('forbidden') || msg.toLowerCase().includes('permission')) {
@@ -226,8 +286,8 @@ function buildPageShell(container, params) {
   const actionContainer = el('div', { className: 'mp-sidebar-actions' });
 
   const addBtn = el('button', { className: 'btn btn-primary btn--sidebar' });
-  addBtn.innerHTML = SVG_ICONS.search + '<span>Add Skill</span>';
-  addBtn.addEventListener('click', showAddSkillMenu);
+  addBtn.innerHTML = SVG_ICONS.plus + '<span>Add Skill</span>';
+  addBtn.addEventListener('click', openAddSkillChooserModal);
   actionContainer.appendChild(addBtn);
 
   const reportBtn = el('button', { className: 'btn btn-secondary btn--sidebar' });
@@ -717,9 +777,8 @@ function buildCard(planSkill, status, iconClass) {
   const icon = el('div', { className: `mp-card-icon ${iconClass}` });
   const skillName = planSkill.skill_name || 'Unknown Skill';
   if (planSkill.is_custom) {
-    icon.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l2 2"/></svg>';
-    icon.style.color = 'var(--text-muted)';
-    icon.style.background = 'var(--bg-tertiary)';
+    applyPersonalSkillIcon(icon);
+    card.classList.add('mp-card--personal');
   } else if (planSkill.skill_icon) {
     const svg = getSkillIconSVG(planSkill.skill_icon, 20);
     if (svg) {
@@ -736,6 +795,10 @@ function buildCard(planSkill, status, iconClass) {
   const nameEl = el('div', { className: 'mp-card-name' });
   nameEl.textContent = skillName;
   info.appendChild(nameEl);
+
+  if (planSkill.is_custom) {
+    info.appendChild(buildPersonalSkillBadge());
+  }
 
   if (planSkill.is_orphaned) {
     const orphanBadge = el('div', { className: 'mp-card__orphan-badge', title: 'This skill was removed from the catalog. Your progress and training logs are preserved.' });
@@ -1009,6 +1072,7 @@ function showCardActionsMenu(e, planSkill, currentStatus) {
 }
 
 function openEditSkillModal(planSkill) {
+  planSkill = (_planData?.skills || []).find(s => s.id === planSkill.id) || planSkill;
   const root = document.getElementById('modalRoot');
 
   const LEVEL_CONFIG = [
@@ -1021,19 +1085,19 @@ function openEditSkillModal(planSkill) {
   const FOCUS_TO_LEVEL = { education: 1, exposure: 2, experience: 3 };
   const FOCUS_TREE_DEFAULTS = {
     education: {
-      education: { visible: true, expanded: true, canToggle: false, isFocus: true },
+      education: { visible: true, expanded: true, canToggle: true, isFocus: true },
       exposure: { visible: false },
       experience: { visible: false },
     },
     exposure: {
       education: { visible: true, expanded: false, canToggle: true, isFocus: false },
-      exposure: { visible: true, expanded: true, canToggle: false, isFocus: true },
+      exposure: { visible: true, expanded: true, canToggle: true, isFocus: true },
       experience: { visible: false },
     },
     experience: {
       education: { visible: true, expanded: false, canToggle: true, isFocus: false },
       exposure: { visible: true, expanded: false, canToggle: true, isFocus: false },
-      experience: { visible: true, expanded: true, canToggle: false, isFocus: true },
+      experience: { visible: true, expanded: true, canToggle: true, isFocus: true },
     },
   };
 
@@ -1053,18 +1117,30 @@ function openEditSkillModal(planSkill) {
 
   const headerActions = el('div', { className: 'sdm-header__actions' });
 
-  const resyncBtn = el('button', {
-    className: 'btn btn-secondary btn-sm sdm-resync-btn',
-    'aria-label': 'Re-sync from catalog',
-    title: 'Re-sync hidden items from catalog',
+  const restoreBtn = el('button', {
+    type: 'button',
+    className: 'btn btn-secondary btn-sm sdm-restore-btn',
+    title: 'Restore catalog-managed items from the global skill catalog',
   });
-  resyncBtn.innerHTML = SVG_ICONS.refresh;
+  restoreBtn.textContent = 'Restore from Catalog';
 
-  const closeBtn = el('button', { className: 'sdm-close', 'aria-label': 'Close' });
+  const closeBtn = el('button', { type: 'button', className: 'sdm-window-btn sdm-close', 'aria-label': 'Close', title: 'Close' });
   closeBtn.textContent = '\u2715';
 
-  headerActions.appendChild(resyncBtn);
-  headerActions.appendChild(closeBtn);
+  const maximizeBtn = el('button', {
+    type: 'button',
+    className: 'sdm-window-btn sdm-maximize-btn',
+    'aria-label': 'Maximize',
+    title: 'Maximize',
+  });
+  maximizeBtn.innerHTML = SVG_ICONS.maximize;
+
+  const windowControls = el('div', { className: 'sdm-header__window-controls' });
+  windowControls.appendChild(maximizeBtn);
+  windowControls.appendChild(closeBtn);
+
+  headerActions.appendChild(restoreBtn);
+  headerActions.appendChild(windowControls);
   headerTop.appendChild(titleEl);
   headerTop.appendChild(headerActions);
   headerBlock.appendChild(headerTop);
@@ -1076,6 +1152,8 @@ function openEditSkillModal(planSkill) {
     });
     orphanBadge.textContent = 'Personal — removed from catalog';
     headerBlock.appendChild(orphanBadge);
+  } else if (planSkill.is_custom) {
+    headerBlock.appendChild(buildPersonalSkillBadge());
   }
 
   const notesText = (planSkill.notes || '').trim();
@@ -1278,8 +1356,7 @@ function openEditSkillModal(planSkill) {
   const discardBtn = el('button', { type: 'button', className: 'btn btn-secondary' });
   discardBtn.textContent = 'Discard';
   const saveBtn = el('button', { type: 'button', className: 'btn btn-primary' });
-  saveBtn.textContent = 'Save skill details';
-  saveBtn.disabled = true;
+  saveBtn.textContent = 'Save Details';
   footer.appendChild(footerStatus);
   footer.appendChild(discardBtn);
   footer.appendChild(saveBtn);
@@ -1295,10 +1372,33 @@ function openEditSkillModal(planSkill) {
 
   /* ── State ──────────────────────────────────────────────────────────── */
   let allContentItems = [];
+  let fullCatalogItems = [];
+  let userContentItems = [];
+  let serverHiddenIds = new Set();
   let selectedItemKey = null;
   let visibleLogCount = 5;
   let contentLoading = true;
   let manualExpanded = {};
+  let inlineEditKey = null;
+  let inlineEditorInstance = null;
+  let isMaximized = false;
+
+  function setModalMaximized(maximized) {
+    isMaximized = maximized;
+    overlay.classList.toggle('modal-overlay--maximized', maximized);
+    modal.classList.toggle('sdm-plan-modal--maximized', maximized);
+    maximizeBtn.setAttribute('aria-label', maximized ? 'Restore window size' : 'Maximize');
+    maximizeBtn.title = maximized ? 'Restore' : 'Maximize';
+    maximizeBtn.innerHTML = maximized ? SVG_ICONS.minimize : SVG_ICONS.maximize;
+  }
+
+  maximizeBtn.addEventListener('click', () => {
+    setModalMaximized(!isMaximized);
+  });
+
+  let draggingItemKey = null;
+  let tempUserItemId = -1;
+  let orderInitialized = false;
 
   const saved = {
     status: planSkill.status,
@@ -1312,6 +1412,23 @@ function openEditSkillModal(planSkill) {
     focus: saved.focus,
     prof: saved.prof,
     completions: {},
+  };
+
+  const savedContent = {
+    overrides: new Map(),
+    orderByLevel: { education: [], exposure: [], experience: [] },
+  };
+
+  const pendingContent = {
+    hideCatalogIds: new Set(),
+    deleteUserIds: new Set(),
+    catalogRefreshPending: false,
+    restoredCatalogIds: new Set(),
+    overrides: new Map(),
+    pendingUserAdds: [],
+    pendingUserEdits: new Map(),
+    pendingImports: [],
+    orderByLevel: { education: null, exposure: null, experience: null },
   };
 
   statusSelect.value = pending.status;
@@ -1368,19 +1485,414 @@ function openEditSkillModal(planSkill) {
     return pending.completions[key] !== saved.completions[key];
   }
 
+  function getCatalogBaseline(item) {
+    const src = fullCatalogItems.find(c => c.id === item.id);
+    return {
+      type: src?.type ?? item.type ?? 'action',
+      url: src?.url ?? item.url ?? '',
+      description: src?.description ?? item.description ?? '',
+    };
+  }
+
+  function getOverrideState(item) {
+    if (pendingContent.overrides.has(item.id)) {
+      return normalizeOverrideEntry(pendingContent.overrides.get(item.id));
+    }
+    if (savedContent.overrides.has(item.id)) {
+      return normalizeOverrideEntry(savedContent.overrides.get(item.id));
+    }
+    return {
+      description: item.override_description || '',
+      type: item.override_type || null,
+      url: item.override_url ?? null,
+    };
+  }
+
+  function getDetailEditBaseline(item) {
+    if (item.is_user_content) {
+      const edit = pendingContent.pendingUserEdits.get(item.id);
+      return {
+        type: edit?.type ?? item.type ?? 'action',
+        url: edit?.url ?? item.url ?? '',
+        description: edit?.description ?? item.description ?? '',
+      };
+    }
+    const cat = getCatalogBaseline(item);
+    const ov = getOverrideState(item);
+    return {
+      type: ov.type || cat.type,
+      url: ov.url !== null && ov.url !== undefined ? ov.url : cat.url,
+      description: ov.description?.trim() ? ov.description : cat.description,
+    };
+  }
+
+  function getEffectiveItemFields(item) {
+    if (item.is_user_content) {
+      const edit = pendingContent.pendingUserEdits.get(item.id);
+      return {
+        type: edit?.type ?? item.type ?? 'action',
+        url: edit?.url ?? item.url ?? '',
+        description: edit?.description ?? item.description ?? '',
+        description_format: edit?.description_format ?? item.description_format ?? 'markdown',
+        isPersonalized: !!edit,
+      };
+    }
+    const cat = getCatalogBaseline(item);
+    const ov = getOverrideState(item);
+    const hasDescOverride = !!(ov.description && ov.description.trim());
+    const hasTypeOverride = !!(ov.type && ov.type !== cat.type);
+    const hasUrlOverride = ov.url !== null && ov.url !== undefined && ov.url !== cat.url;
+    return {
+      type: ov.type || cat.type,
+      url: ov.url !== null && ov.url !== undefined ? ov.url : cat.url,
+      description: hasDescOverride ? ov.description : cat.description,
+      description_format: 'legacy_html',
+      isPersonalized: hasDescOverride || hasTypeOverride || hasUrlOverride,
+    };
+  }
+
+  function applyOverrideToCatalogCopy(copy, ovRaw) {
+    const ov = normalizeOverrideEntry(ovRaw);
+    if (ov.description?.trim()) {
+      copy.override_description = ov.description;
+      copy.has_override = true;
+    }
+    if (ov.type) copy.type = ov.type;
+    if (ov.url !== null && ov.url !== undefined) copy.url = ov.url;
+  }
+
+  function isOrderDirty() {
+    for (const levelKey of FOCUS_ORDER) {
+      const pendingOrder = pendingContent.orderByLevel[levelKey];
+      if (!pendingOrder) continue;
+      const savedOrder = savedContent.orderByLevel[levelKey] || [];
+      if (pendingOrder.length !== savedOrder.length) return true;
+      for (let i = 0; i < pendingOrder.length; i++) {
+        if (pendingOrder[i] !== savedOrder[i]) return true;
+      }
+    }
+    return false;
+  }
+
+  function isContentDirty() {
+    if (pendingContent.catalogRefreshPending) return true;
+    if (pendingContent.hideCatalogIds.size > 0) return true;
+    if (pendingContent.deleteUserIds.size > 0) return true;
+    if (pendingContent.pendingUserAdds.length > 0) return true;
+    if (pendingContent.pendingUserEdits.size > 0) return true;
+    if (pendingContent.pendingImports.length > 0) return true;
+    if (isOrderDirty()) return true;
+    for (const [id, payload] of pendingContent.overrides) {
+      const baseline = savedContent.overrides.get(id);
+      if (!overrideEntriesEqual(payload, baseline)) return true;
+    }
+    return false;
+  }
+
+  function hasUnsavedInlineEditDraft() {
+    if (!inlineEditKey) return false;
+    const item = getSelectedItem();
+    if (!item) return false;
+    const draft = readInlineEditForm();
+    const baseline = getDetailEditBaseline(item);
+    return draft.type !== baseline.type
+      || draft.url !== baseline.url
+      || draft.description !== baseline.description;
+  }
+
   function isDirty() {
     if (pending.status !== saved.status) return true;
     if (pending.focus !== saved.focus) return true;
     if (pending.prof !== saved.prof) return true;
+    if (isContentDirty()) return true;
+    if (hasUnsavedInlineEditDraft()) return true;
     return allContentItems.some(item => isCompletionDirty(itemKey(item)));
+  }
+
+  function syncContentSnapshotsFromItems() {
+    savedContent.overrides.clear();
+    fullCatalogItems.forEach(item => {
+      if (
+        item.has_override
+        || item.override_description
+        || item.override_type
+        || item.override_url != null
+      ) {
+        savedContent.overrides.set(item.id, {
+          description: item.override_description || '',
+          type: item.override_type || null,
+          url: item.override_url ?? null,
+        });
+      }
+    });
+  }
+
+  function captureSavedOrder(sourceItems) {
+    const items = sourceItems || allContentItems;
+    FOCUS_ORDER.forEach(levelKey => {
+      const level = FOCUS_TO_LEVEL[levelKey];
+      savedContent.orderByLevel[levelKey] = items
+        .filter(item => item.level === level)
+        .map(itemKey);
+    });
+  }
+
+  function sortItemsForLevel(items, levelKey) {
+    const customOrder = pendingContent.orderByLevel[levelKey]
+      || savedContent.orderByLevel[levelKey];
+    if (!customOrder || !customOrder.length) {
+      return items.slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || a.id - b.id);
+    }
+    const rank = new Map(customOrder.map((key, index) => [key, index]));
+    return items.slice().sort((a, b) => {
+      const ka = itemKey(a);
+      const kb = itemKey(b);
+      const ra = rank.has(ka) ? rank.get(ka) : 100000 + a.id;
+      const rb = rank.has(kb) ? rank.get(kb) : 100000 + b.id;
+      return ra - rb || a.id - b.id;
+    });
+  }
+
+  function setLevelOrder(levelKey, keys) {
+    pendingContent.orderByLevel[levelKey] = keys.slice();
+    updateDirtyUI();
+  }
+
+  function prunePendingOrder() {
+    FOCUS_ORDER.forEach(levelKey => {
+      const order = pendingContent.orderByLevel[levelKey];
+      if (!order) return;
+      const visibleKeys = new Set(
+        allContentItems
+          .filter(item => LEVEL_MAP[item.level] === levelKey)
+          .filter(item => !item.is_user_content || !pendingContent.deleteUserIds.has(item.id))
+          .filter(item => item.is_user_content || !pendingContent.hideCatalogIds.has(item.id))
+          .map(itemKey),
+      );
+      const pruned = order.filter(key => visibleKeys.has(key));
+      pendingContent.orderByLevel[levelKey] = pruned.length ? pruned : null;
+    });
+  }
+
+  function buildOrderPayload(tempToReal = new Map()) {
+    const orderPayload = [];
+    FOCUS_ORDER.forEach(levelKey => {
+      const level = FOCUS_TO_LEVEL[levelKey];
+      const order = pendingContent.orderByLevel[levelKey]
+        || savedContent.orderByLevel[levelKey]
+        || [];
+      order.forEach((key, index) => {
+        const item = allContentItems.find(i => itemKey(i) === key);
+        if (!item) return;
+        if (item.is_user_content && pendingContent.deleteUserIds.has(item.id)) return;
+        if (!item.is_user_content && pendingContent.hideCatalogIds.has(item.id)) return;
+        let realId = item.id;
+        if (realId < 0 && tempToReal.has(realId)) realId = tempToReal.get(realId);
+        if (realId < 0) return;
+        orderPayload.push({
+          level,
+          kind: item.is_user_content ? 'user' : 'catalog',
+          id: realId,
+          position: (index + 1) * 10,
+        });
+      });
+    });
+    return orderPayload;
+  }
+
+  function rebuildAllContentItems() {
+    const catalog = fullCatalogItems
+      .filter(item => {
+        if (pendingContent.hideCatalogIds.has(item.id)) return false;
+        const hiddenOnServer = serverHiddenIds.has(item.id);
+        if (hiddenOnServer && !pendingContent.catalogRefreshPending) return false;
+        return true;
+      })
+      .map(item => {
+        const copy = { ...item, is_user_content: false };
+        const wasRestored = pendingContent.restoredCatalogIds.has(item.id);
+        if (wasRestored && pendingContent.catalogRefreshPending) {
+          copy.has_override = false;
+          copy.override_description = null;
+        } else if (pendingContent.overrides.has(copy.id)) {
+          applyOverrideToCatalogCopy(copy, pendingContent.overrides.get(copy.id));
+        }
+        return copy;
+      });
+
+    let users = userContentItems
+      .filter(item => !pendingContent.deleteUserIds.has(item.id))
+      .map(item => {
+        const copy = { ...item };
+        if (pendingContent.pendingUserEdits.has(item.id)) {
+          Object.assign(copy, pendingContent.pendingUserEdits.get(item.id));
+        }
+        return copy;
+      });
+
+    pendingContent.pendingUserAdds.forEach(item => {
+      users.push({
+        ...item,
+        is_user_content: true,
+        completed: false,
+        has_override: false,
+      });
+    });
+
+    pendingContent.pendingImports.forEach(item => {
+      users.push({
+        ...item,
+        is_user_content: true,
+        completed: false,
+        has_override: false,
+        is_pending_import: true,
+      });
+    });
+
+    allContentItems = [...catalog, ...users];
+  }
+
+  function isRestoredPendingItem(item) {
+    return !item.is_user_content
+      && pendingContent.catalogRefreshPending
+      && pendingContent.restoredCatalogIds.has(item.id);
+  }
+
+  async function previewRestoreFromCatalog() {
+    const skillId = planSkill.skill_id;
+    const globalItems = await api.get(`/api/skills/${skillId}/content`);
+    const planItems = await api.get(
+      `/api/plans/${_engineerId}/skills/${planSkill.id}/content?include_hidden=true`,
+    );
+
+    const planCatalogById = new Map();
+    (planItems.items || []).filter(i => !i.is_user_content).forEach(i => {
+      planCatalogById.set(i.id, i);
+    });
+
+    const idsBeingRestored = new Set([
+      ...serverHiddenIds,
+      ...pendingContent.hideCatalogIds,
+    ]);
+
+    fullCatalogItems = globalItems
+      .filter(item => item && [1, 2, 3].includes(item.level))
+      .map(g => {
+        const existing = planCatalogById.get(g.id);
+        const wasRestored = idsBeingRestored.has(g.id);
+        let override = null;
+        let hasOverride = false;
+        if (!wasRestored) {
+          if (pendingContent.overrides.has(g.id)) {
+            const ov = normalizeOverrideEntry(pendingContent.overrides.get(g.id));
+            override = ov.description;
+            hasOverride = !!(ov.description?.trim() || ov.type || ov.url != null);
+          } else if (existing?.has_override) {
+            override = existing.override_description;
+            hasOverride = true;
+          }
+        }
+        const row = {
+          id: g.id,
+          skill_id: g.skill_id,
+          level: g.level,
+          type: g.type,
+          title: g.title,
+          description: g.description,
+          description_format: g.description_format || 'legacy_html',
+          url: g.url,
+          position: g.position,
+          completed: existing?.completed ?? false,
+          completed_at: existing?.completed_at ?? null,
+          completion_notes: existing?.completion_notes ?? null,
+          has_override: hasOverride,
+          override_description: typeof override === 'string' ? override : null,
+          is_hidden: false,
+          is_user_content: false,
+        };
+        if (pendingContent.overrides.has(g.id) && !wasRestored) {
+          applyOverrideToCatalogCopy(row, pendingContent.overrides.get(g.id));
+        } else if (existing?.has_override) {
+          row.override_type = existing.override_type ?? null;
+          row.override_url = existing.override_url ?? null;
+          row.type = existing.type ?? g.type;
+          row.url = existing.url ?? g.url;
+        }
+        return row;
+      });
+
+    for (const id of idsBeingRestored) {
+      pendingContent.overrides.delete(id);
+    }
+    pendingContent.restoredCatalogIds = idsBeingRestored;
+    serverHiddenIds = new Set();
+    pendingContent.hideCatalogIds.clear();
+    pendingContent.catalogRefreshPending = true;
+    refreshContentView();
+  }
+
+  function applyLibraryDeferredResult(result) {
+    if (!result) return;
+    if (result.mode === 'create') {
+      pendingContent.pendingUserAdds.push({
+        ...result,
+        id: tempUserItemId--,
+        is_user_content: true,
+        completed: false,
+      });
+    } else if (result.mode === 'update' && result.id) {
+      const { mode, id, level, ...updateFields } = result;
+      if (result.id < 0) {
+        const add = pendingContent.pendingUserAdds.find(a => a.id === result.id);
+        if (add) Object.assign(add, updateFields, { id: result.id });
+      } else {
+        pendingContent.pendingUserEdits.set(result.id, updateFields);
+      }
+    } else if (result.mode === 'import' && Array.isArray(result.items)) {
+      result.items.forEach(src => {
+        pendingContent.pendingImports.push({
+          id: tempUserItemId--,
+          skill_id: planSkill.skill_id,
+          level: result.level,
+          type: src.type || 'action',
+          title: src.title,
+          description: src.description,
+          description_format: src.description_format || 'markdown',
+          url: src.url,
+          position: 1000,
+          is_private: src.is_private ?? false,
+          source_user_content_id: src.id,
+          is_user_content: true,
+        });
+      });
+    }
+    refreshContentView();
+  }
+
+  function refreshContentView(forceResetPending = false) {
+    rebuildAllContentItems();
+    prunePendingOrder();
+    syncCompletionStateFromItems(forceResetPending);
+
+    if (!selectedItemKey) {
+      const first = visibleItems()[0];
+      selectedItemKey = first ? itemKey(first) : null;
+    }
+
+    ensureSelectedItemVisible();
+    renderList();
+    renderReader();
+    updateProgress();
+    updateDirtyUI();
   }
 
   function updateDirtyUI() {
     const dirty = isDirty();
     modal.classList.toggle('dirty', dirty);
-    saveBtn.disabled = !dirty;
+    footer.classList.toggle('sdm-footer--dirty', dirty);
+    saveBtn.disabled = false;
     footerStatus.textContent = dirty
-      ? 'Pending changes — click Save skill details to apply'
+      ? 'Pending changes — click Save Details to apply'
       : 'No pending changes';
 
     statusSelect.classList.toggle('pending', pending.status !== saved.status);
@@ -1420,35 +1932,50 @@ function openEditSkillModal(planSkill) {
     });
 
     let hasAny = false;
+    const visibleSections = [];
     visibleSectionKeys().forEach(secKey => {
+      if (itemsBySection[secKey]?.length) visibleSections.push(secKey);
+    });
+
+    const track = el('div', { className: 'sdm-3e-track' });
+
+    visibleSections.forEach((secKey, sectionIndex) => {
       const items = itemsBySection[secKey];
-      if (!items.length) return;
       hasAny = true;
 
       const state = getSectionTreeState(secKey);
       const cfg = LEVEL_CONFIG.find(l => l.key === secKey);
-      const sectionClasses = ['sdm-tree-section'];
-      if (!state.expanded) sectionClasses.push('sdm-tree-section--collapsed');
-      if (!state.canToggle) sectionClasses.push('sdm-tree-section--locked');
-      if (state.isFocus) sectionClasses.push('sdm-tree-section--focus');
+      const sectionClasses = ['sdm-3e-section', `sdm-3e-section--${secKey}`];
+      if (!state.expanded) sectionClasses.push('sdm-3e-section--collapsed');
+      if (!state.canToggle) sectionClasses.push('sdm-3e-section--locked');
+      if (state.isFocus) sectionClasses.push('sdm-3e-section--focus');
+      if (sectionIndex === visibleSections.length - 1) sectionClasses.push('sdm-3e-section--last');
 
       const section = el('div', { className: sectionClasses.join(' ') });
 
+      const rail = el('div', { className: 'sdm-3e-section__rail' });
+      const bubble = el('div', { className: 'sdm-3e-section__bubble', 'aria-hidden': 'true' });
+      bubble.innerHTML = THREE_E_SECTION_ICONS[secKey] || '';
+      rail.appendChild(bubble);
+      rail.appendChild(el('div', { className: 'sdm-3e-section__connector', 'aria-hidden': 'true' }));
+
+      const main = el('div', { className: 'sdm-3e-section__main' });
+
       const hdr = el('button', {
         type: 'button',
-        className: 'sdm-tree-section__header',
+        className: 'sdm-3e-section__header',
         'aria-expanded': String(state.expanded),
       });
-      const toggleGlyph = el('span', { className: 'sdm-tree-section__toggle', 'aria-hidden': 'true' });
-      toggleGlyph.textContent = state.expanded ? '\u2212' : '+';
-      const hdrLabel = el('span', { className: 'sdm-tree-section__label' });
+      const hdrLabel = el('span', { className: 'sdm-3e-section__label' });
       hdrLabel.textContent = cfg.label;
       const done = items.filter(i => pending.completions[itemKey(i)]).length;
-      const hdrCount = el('span', { className: 'sdm-tree-section__count' });
+      const hdrCount = el('span', { className: 'sdm-3e-section__count' });
       hdrCount.textContent = `${done}/${items.length}`;
-      hdr.appendChild(toggleGlyph);
+      const toggleGlyph = el('span', { className: 'sdm-3e-section__toggle', 'aria-hidden': 'true' });
+      toggleGlyph.textContent = state.expanded ? '\u2212' : '+';
       hdr.appendChild(hdrLabel);
       hdr.appendChild(hdrCount);
+      hdr.appendChild(toggleGlyph);
 
       hdr.addEventListener('click', () => {
         const current = getSectionTreeState(secKey);
@@ -1459,17 +1986,64 @@ function openEditSkillModal(planSkill) {
         renderReader();
       });
 
-      section.appendChild(hdr);
+      main.appendChild(hdr);
 
-      const body = el('div', { className: 'sdm-tree-section__body' });
+      const body = el('div', { className: 'sdm-3e-section__body' });
 
-      items.forEach(item => {
+      sortItemsForLevel(items, secKey).forEach(item => {
         const key = itemKey(item);
         const row = el('div', {
           className: 'sdm-list-item'
             + (key === selectedItemKey ? ' active' : '')
             + (isCompletionDirty(key) ? ' pending-complete' : '')
-            + (pending.completions[key] ? ' completed' : ''),
+            + (pending.completions[key] ? ' completed' : '')
+            + (isRestoredPendingItem(item) ? ' sdm-list-item--restore-pending' : ''),
+          draggable: 'true',
+          'data-item-key': key,
+        });
+
+        const grip = el('span', {
+          className: 'sdm-list-grip',
+          'aria-hidden': 'true',
+          title: 'Drag to reorder',
+        });
+        grip.innerHTML = SVG_ICONS.grip;
+
+        row.addEventListener('dragstart', (e) => {
+          draggingItemKey = key;
+          row.classList.add('sdm-list-item--dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', key);
+        });
+        row.addEventListener('dragend', () => {
+          draggingItemKey = null;
+          row.classList.remove('sdm-list-item--dragging');
+          body.querySelectorAll('.sdm-list-item--drop-target').forEach(el => {
+            el.classList.remove('sdm-list-item--drop-target');
+          });
+        });
+        row.addEventListener('dragover', (e) => {
+          if (!draggingItemKey || draggingItemKey === key) return;
+          e.preventDefault();
+          row.classList.add('sdm-list-item--drop-target');
+        });
+        row.addEventListener('dragleave', () => {
+          row.classList.remove('sdm-list-item--drop-target');
+        });
+        row.addEventListener('drop', (e) => {
+          e.preventDefault();
+          row.classList.remove('sdm-list-item--drop-target');
+          const fromKey = draggingItemKey || e.dataTransfer.getData('text/plain');
+          if (!fromKey || fromKey === key) return;
+          const currentOrder = sortItemsForLevel(items, secKey).map(itemKey);
+          const fromIdx = currentOrder.indexOf(fromKey);
+          const toIdx = currentOrder.indexOf(key);
+          if (fromIdx < 0 || toIdx < 0) return;
+          currentOrder.splice(fromIdx, 1);
+          currentOrder.splice(toIdx, 0, fromKey);
+          setLevelOrder(secKey, currentOrder);
+          renderList();
+          renderReader();
         });
 
         const check = el('button', {
@@ -1491,25 +2065,41 @@ function openEditSkillModal(planSkill) {
         const titleSpan = el('span', { className: 'sdm-list-item__title' });
         titleSpan.textContent = item.title || 'Untitled';
         const metaSpan = el('span', { className: 'sdm-list-item__meta' });
-        const metaParts = [item.type || 'resource'];
+        const eff = getEffectiveItemFields(item);
+        const metaParts = [formatContentTypeLabel(eff.type)];
         if (item.is_user_content) metaParts.push('My item');
         metaSpan.textContent = metaParts.join(' · ');
         textWrap.appendChild(titleSpan);
         textWrap.appendChild(metaSpan);
-        textWrap.addEventListener('click', () => {
+        textWrap.addEventListener('click', async () => {
+          if (selectedItemKey !== key) {
+            if (hasUnsavedInlineEditDraft()) {
+              const discard = await showConfirm('Discard unsaved edits?', true);
+              if (!discard) return;
+            }
+            inlineEditKey = null;
+            destroyInlineEditor();
+          }
           selectedItemKey = key;
           renderList();
           renderReader();
         });
 
+        row.appendChild(grip);
         row.appendChild(check);
         row.appendChild(textWrap);
         body.appendChild(row);
       });
 
-      section.appendChild(body);
-      listScroll.appendChild(section);
+      main.appendChild(body);
+      section.appendChild(rail);
+      section.appendChild(main);
+      track.appendChild(section);
     });
+
+    if (hasAny) {
+      listScroll.appendChild(track);
+    }
 
     if (!hasAny) {
       const empty = el('div', { className: 'empty-state empty-state--compact' });
@@ -1524,77 +2114,272 @@ function openEditSkillModal(planSkill) {
     readerActions.innerHTML = '';
     if (!item) return;
 
-    const isUserItem = !!item.is_user_content;
-
-    if (isUserItem) {
-      const editBtn = el('button', {
-        type: 'button',
-        className: 'btn btn-secondary btn-sm',
-        'aria-label': 'Edit item',
-        title: 'Edit',
-      });
-      editBtn.innerHTML = SVG_ICONS.pencil;
-      editBtn.addEventListener('click', () => {
-        const levelKey = LEVEL_MAP[item.level] || 'education';
-        openLibraryModal({ mode: 'edit', item, planSkill, engineerId: _engineerId, levelKey }, () => refreshContent());
-      });
-
+    if (item.is_user_content) {
       const delBtn = el('button', {
         type: 'button',
         className: 'btn btn-danger btn-sm',
         'aria-label': 'Delete item',
         title: 'Delete',
       });
-      delBtn.textContent = '\u2715';
+      delBtn.innerHTML = SVG_ICONS.trash;
       delBtn.addEventListener('click', async () => {
-        const confirmed = await showConfirm(`Delete "${item.title}"? This cannot be undone.`, true);
-        if (!confirmed) return;
-        try {
-          await api.del(`/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${item.id}`);
-          showToast('Item deleted', 'success');
-          refreshContent();
-        } catch (err) {
-          showToast(err.message || 'Failed to delete item', 'error');
-        }
-      });
-
-      readerActions.appendChild(editBtn);
-      readerActions.appendChild(delBtn);
-    } else {
-      const notesBtn = el('button', { type: 'button', className: 'btn btn-secondary btn-sm' });
-      notesBtn.textContent = item.has_override ? 'Edit My Notes' : 'Add My Notes';
-      notesBtn.addEventListener('click', () => {
-        openOverrideEditor(item, planSkill, () => refreshContent());
-      });
-
-      const hideBtn = el('button', {
-        type: 'button',
-        className: 'btn btn-secondary btn-sm',
-        'aria-label': 'Hide item',
-        title: 'Hide from my view',
-      });
-      hideBtn.textContent = '\u2715';
-      hideBtn.addEventListener('click', async () => {
         const confirmed = await showConfirm(
-          `Hide "${item.title}" from your view? You can restore it later with the re-sync button.`,
+          `Remove "${item.title}" from this skill? Applies when you save skill details.`,
           true,
         );
         if (!confirmed) return;
-        hideBtn.disabled = true;
-        try {
-          await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/content/${item.id}/hide`, {});
-          showToast('Item hidden', 'success');
-          refreshContent();
-        } catch (err) {
-          showToast(err.message || 'Failed to hide item', 'error');
-        } finally {
-          hideBtn.disabled = false;
+        if (item.id < 0) {
+          pendingContent.pendingUserAdds = pendingContent.pendingUserAdds.filter(a => a.id !== item.id);
+          pendingContent.pendingImports = pendingContent.pendingImports.filter(a => a.id !== item.id);
+        } else {
+          pendingContent.deleteUserIds.add(item.id);
         }
+        if (selectedItemKey === itemKey(item)) selectedItemKey = null;
+        refreshContentView();
       });
-
-      readerActions.appendChild(notesBtn);
-      readerActions.appendChild(hideBtn);
+      readerActions.appendChild(delBtn);
+      return;
     }
+
+    const hideBtn = el('button', {
+      type: 'button',
+      className: 'btn btn-secondary btn-sm',
+      'aria-label': 'Hide item',
+      title: 'Hide from my view',
+    });
+    hideBtn.innerHTML = SVG_ICONS.trash;
+    hideBtn.addEventListener('click', async () => {
+      const confirmed = await showConfirm(
+        `Hide "${item.title}" from your view? You can restore it later with re-sync. Applies when you save skill details.`,
+        true,
+      );
+      if (!confirmed) return;
+      pendingContent.hideCatalogIds.add(item.id);
+      if (selectedItemKey === itemKey(item)) selectedItemKey = null;
+      refreshContentView();
+    });
+    readerActions.appendChild(hideBtn);
+  }
+
+  function destroyInlineEditor() {
+    if (inlineEditorInstance?.destroy) {
+      inlineEditorInstance.destroy();
+    }
+    inlineEditorInstance = null;
+  }
+
+  function readInlineEditForm() {
+    const typeEl = readerContent.querySelector('.sdm-reader-detail__type');
+    const urlEl = readerContent.querySelector('.sdm-reader-detail__url');
+    let description = '';
+    if (inlineEditorInstance?.getMarkdown) {
+      description = inlineEditorInstance.getMarkdown();
+    } else if (inlineEditorInstance?.quill) {
+      description = inlineEditorInstance.quill.root.innerHTML;
+    }
+    return {
+      type: typeEl?.value || 'action',
+      url: (urlEl?.value || '').trim(),
+      description,
+    };
+  }
+
+  function mountInlineEditor(item) {
+    const host = readerContent.querySelector('.sdm-reader-detail__editor-host');
+    if (!host) return;
+    destroyInlineEditor();
+    const baseline = getDetailEditBaseline(item);
+    if (item.is_user_content) {
+      inlineEditorInstance = mountMarkdownEditor(host, {
+        initialMarkdown: baseline.description || '',
+        placeholder: 'Describe this item — supports Markdown formatting',
+      });
+    } else if (typeof Quill !== 'undefined') {
+      const editorEl = el('div', { className: 'sdm-reader-detail__quill' });
+      host.appendChild(editorEl);
+      const quill = new Quill(editorEl, {
+        theme: 'snow',
+        placeholder: 'Add notes or adapt the catalog description for your plan…',
+        modules: {
+          toolbar: [['bold', 'italic'], [{ header: [2, 3, false] }], ['link'], ['clean']],
+        },
+      });
+      quill.root.innerHTML = baseline.description || '';
+      inlineEditorInstance = {
+        quill,
+        destroy() { host.innerHTML = ''; },
+      };
+    } else {
+      const editorEl = el('div', {
+        className: 'sdm-reader-detail__quill',
+        contentEditable: 'true',
+      });
+      editorEl.innerHTML = baseline.description || '';
+      host.appendChild(editorEl);
+      inlineEditorInstance = {
+        quill: { root: editorEl },
+        destroy() { host.innerHTML = ''; },
+      };
+    }
+  }
+
+  function cancelInlineEdit() {
+    inlineEditKey = null;
+    destroyInlineEditor();
+    renderReader();
+  }
+
+  function startInlineEdit(item) {
+    inlineEditKey = itemKey(item);
+    destroyInlineEditor();
+    renderReader();
+    requestAnimationFrame(() => mountInlineEditor(item));
+  }
+
+  function commitInlineEdit(item) {
+    const draft = readInlineEditForm();
+    if (item.is_user_content) {
+      pendingContent.pendingUserEdits.set(item.id, {
+        type: draft.type,
+        url: draft.url || null,
+        description: draft.description,
+        description_format: 'markdown',
+      });
+    } else {
+      const cat = getCatalogBaseline(item);
+      const entry = {
+        description: draft.description !== cat.description ? draft.description : '',
+        type: draft.type !== cat.type ? draft.type : null,
+        url: draft.url !== (cat.url ?? '') ? (draft.url || null) : null,
+      };
+      const hadSaved = savedContent.overrides.has(item.id);
+      const isEmpty = !entry.description?.trim() && !entry.type && entry.url == null;
+      if (isEmpty && !hadSaved) {
+        pendingContent.overrides.delete(item.id);
+      } else {
+        pendingContent.overrides.set(item.id, entry);
+      }
+    }
+    inlineEditKey = null;
+    destroyInlineEditor();
+    refreshContentView();
+  }
+
+  function buildTypeSelect(className, value) {
+    const select = el('select', { className });
+    CONTENT_TYPE_OPTIONS.forEach(opt => {
+      const option = el('option', { value: opt.value });
+      option.textContent = opt.label;
+      if (opt.value === value) option.selected = true;
+      select.appendChild(option);
+    });
+    return select;
+  }
+
+  function buildReaderDetailPanel(item, key) {
+    const panel = el('div', { className: 'sdm-reader-detail' });
+    const fields = getEffectiveItemFields(item);
+    const isEditing = inlineEditKey === key;
+
+    if (isEditing) {
+      panel.classList.add('sdm-reader-detail--editing');
+      const baseline = getDetailEditBaseline(item);
+      const form = el('div', { className: 'sdm-reader-detail__form' });
+
+      const typeRow = el('div', { className: 'sdm-reader-detail__field' });
+      typeRow.appendChild(el('label', { className: 'sdm-reader-detail__label', textContent: 'Type' }));
+      typeRow.appendChild(buildTypeSelect('form-input sdm-reader-detail__type', baseline.type || 'action'));
+      form.appendChild(typeRow);
+
+      const urlRow = el('div', { className: 'sdm-reader-detail__field' });
+      urlRow.appendChild(el('label', { className: 'sdm-reader-detail__label', textContent: 'Resource link' }));
+      urlRow.appendChild(el('input', {
+        type: 'url',
+        className: 'form-input sdm-reader-detail__url',
+        placeholder: 'https://…',
+        value: baseline.url || '',
+      }));
+      form.appendChild(urlRow);
+
+      const descRow = el('div', { className: 'sdm-reader-detail__field sdm-reader-detail__field--grow' });
+      descRow.appendChild(el('label', {
+        className: 'sdm-reader-detail__label',
+        textContent: item.is_user_content ? 'Description' : 'Notes & description',
+      }));
+      descRow.appendChild(el('div', { className: 'sdm-reader-detail__editor-host content-edit-quill-wrap' }));
+      form.appendChild(descRow);
+      panel.appendChild(form);
+
+      const actions = el('div', { className: 'sdm-reader-detail__edit-actions' });
+      const hint = el('span', { className: 'sdm-reader-detail__edit-hint' });
+      hint.textContent = 'Changes apply when you save skill details.';
+      const btnGroup = el('div', { className: 'sdm-reader-detail__edit-btns' });
+      const cancelBtn = el('button', { type: 'button', className: 'btn btn-secondary btn-sm' });
+      cancelBtn.textContent = 'Cancel';
+      const applyBtn = el('button', { type: 'button', className: 'btn btn-primary btn-sm' });
+      applyBtn.textContent = 'Done';
+      cancelBtn.addEventListener('click', cancelInlineEdit);
+      applyBtn.addEventListener('click', () => commitInlineEdit(item));
+      btnGroup.appendChild(cancelBtn);
+      btnGroup.appendChild(applyBtn);
+      actions.appendChild(hint);
+      actions.appendChild(btnGroup);
+      panel.appendChild(actions);
+      return panel;
+    }
+
+    const head = el('div', { className: 'sdm-reader-detail__head' });
+    const meta = el('div', { className: 'sdm-reader-detail__meta' });
+    meta.appendChild(el('span', {
+      className: 'sdm-reader-detail__type-chip',
+      textContent: formatContentTypeLabel(fields.type),
+    }));
+    if (fields.url) {
+      meta.appendChild(el('a', {
+        className: 'sdm-reader-detail__resource-link',
+        href: fields.url,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        textContent: 'Open resource',
+      }));
+    }
+    if (item.is_user_content) {
+      meta.appendChild(el('span', { className: 'mp-user-content-badge', textContent: 'My item' }));
+    }
+    const editBtn = el('button', {
+      type: 'button',
+      className: 'sdm-reader-detail__edit-btn',
+      'aria-label': 'Edit item details',
+      title: 'Edit',
+    });
+    editBtn.innerHTML = `${SVG_ICONS.pencil}<span>Edit</span>`;
+    editBtn.addEventListener('click', () => startInlineEdit(item));
+    head.appendChild(meta);
+    head.appendChild(editBtn);
+    panel.appendChild(head);
+
+    const body = el('div', { className: 'sdm-reader-detail__body sdm-reader-prose' });
+    if (fields.description) {
+      body.innerHTML = item.is_user_content
+        ? renderDescription(fields.description, fields.description_format)
+        : fields.description;
+    } else {
+      body.appendChild(el('p', {
+        className: 'sdm-reader-detail__empty',
+        textContent: item.is_user_content
+          ? 'No description yet. Click Edit to add one.'
+          : 'No description available. Click Edit to add personal notes.',
+      }));
+    }
+    panel.appendChild(body);
+
+    if (fields.isPersonalized && !item.is_user_content) {
+      const foot = el('div', { className: 'sdm-reader-detail__foot' });
+      foot.appendChild(el('span', { className: 'mp-override-badge', textContent: 'Personalized' }));
+      panel.appendChild(foot);
+    }
+
+    return panel;
   }
 
   function renderReader() {
@@ -1613,6 +2398,7 @@ function openEditSkillModal(planSkill) {
     const done = !!pending.completions[key];
     const dirty = isCompletionDirty(key);
     const cfg = LEVEL_CONFIG.find(l => l.level === item.level) || LEVEL_CONFIG[0];
+    const fields = getEffectiveItemFields(item);
 
     completeBtn.className = 'sdm-complete-btn'
       + (done ? ' done' : '')
@@ -1624,12 +2410,17 @@ function openEditSkillModal(planSkill) {
 
     readerMeta.innerHTML = '';
     const metaLine = el('span');
-    metaLine.textContent = `${cfg.label} · ${item.type || 'resource'}`;
+    metaLine.textContent = `${cfg.label} · ${formatContentTypeLabel(fields.type)}`;
     readerMeta.appendChild(metaLine);
     if (dirty) {
       const pendingHint = el('span', { className: 'sdm-reader-meta__pending' });
       pendingHint.textContent = 'Change pending save';
       readerMeta.appendChild(pendingHint);
+    }
+    if (isRestoredPendingItem(item)) {
+      const restoreHint = el('span', { className: 'sdm-reader-meta__restore-pending' });
+      restoreHint.textContent = 'Restored — pending save';
+      readerMeta.appendChild(restoreHint);
     }
     if (item.completed_at && done) {
       const dateLine = el('span', { className: 'sdm-reader-meta__date' });
@@ -1643,36 +2434,16 @@ function openEditSkillModal(planSkill) {
     titleH.textContent = item.title || 'Untitled';
     readerContent.appendChild(titleH);
 
-    if (item.is_user_content) {
-      const prose = el('div', { className: 'sdm-reader-prose' });
-      prose.innerHTML = renderDescription(item.description, item.description_format || 'markdown');
-      readerContent.appendChild(prose);
-    } else if (item.description) {
-      const prose = el('div', { className: 'sdm-reader-prose' });
-      prose.innerHTML = item.override_description || item.description;
-      readerContent.appendChild(prose);
-    }
+    readerContent.appendChild(buildReaderDetailPanel(item, key));
+  }
 
-    if (item.url) {
-      const link = el('a', {
-        className: 'skill-detail-accordion-link sdm-reader-link',
-        href: item.url,
-        target: '_blank',
-        rel: 'noopener noreferrer',
-      });
-      link.textContent = 'Open resource';
-      readerContent.appendChild(link);
+  function syncTrainingLogsFromPlan() {
+    const fresh = (_planData?.skills || []).find(s => s.id === planSkill.id);
+    if (fresh?.training_logs) {
+      planSkill.training_logs = fresh.training_logs;
     }
-
-    if (item.is_user_content) {
-      const badge = el('span', { className: 'mp-user-content-badge' });
-      badge.textContent = 'My item';
-      readerContent.appendChild(badge);
-    } else if (item.has_override) {
-      const badge = el('span', { className: 'mp-override-badge' });
-      badge.textContent = 'Modified';
-      readerContent.appendChild(badge);
-    }
+    visibleLogCount = 5;
+    renderLogList();
   }
 
   function renderLogList() {
@@ -1704,36 +2475,48 @@ function openEditSkillModal(planSkill) {
     }
   }
 
-  function syncCompletionStateFromItems() {
+  function syncCompletionStateFromItems(forceResetPending = false) {
+    const nextSaved = {};
     allContentItems.forEach(item => {
-      const key = itemKey(item);
-      saved.completions[key] = !!item.completed;
+      nextSaved[itemKey(item)] = !!item.completed;
     });
-    pending.completions = { ...saved.completions };
+    saved.completions = nextSaved;
+
+    if (forceResetPending || !isDirty()) {
+      pending.completions = { ...saved.completions };
+      return;
+    }
+
+    const merged = { ...pending.completions };
+    Object.entries(nextSaved).forEach(([key, value]) => {
+      if (!(key in merged)) merged[key] = value;
+    });
+    Object.keys(merged).forEach(key => {
+      if (!(key in nextSaved)) delete merged[key];
+    });
+    pending.completions = merged;
   }
 
-  function refreshContent() {
+  function refreshContent(forceResetPending = false) {
     contentLoading = true;
-    selectedItemKey = selectedItemKey;
     renderList();
     renderReader();
 
-    api.get(`/api/plans/${_engineerId}/skills/${planSkill.id}/content`).then(data => {
+    return api.get(`/api/plans/${_engineerId}/skills/${planSkill.id}/content?include_hidden=true`).then(data => {
       contentLoading = false;
-      allContentItems = (Array.isArray(data.items) ? data.items : [])
+      const items = (Array.isArray(data.items) ? data.items : [])
         .filter(item => item && item.title && String(item.title).trim() !== '' && [1, 2, 3, 4, 5].includes(item.level));
 
-      syncCompletionStateFromItems();
+      fullCatalogItems = items.filter(item => !item.is_user_content);
+      userContentItems = items.filter(item => item.is_user_content);
+      serverHiddenIds = new Set(fullCatalogItems.filter(item => item.is_hidden).map(item => item.id));
 
-      if (!selectedItemKey) {
-        const first = visibleItems()[0];
-        selectedItemKey = first ? itemKey(first) : null;
+      syncContentSnapshotsFromItems();
+      refreshContentView(forceResetPending);
+      if (!orderInitialized || forceResetPending) {
+        captureSavedOrder(items);
+        orderInitialized = true;
       }
-
-      renderList();
-      renderReader();
-      updateProgress();
-      updateDirtyUI();
     }).catch(() => {
       contentLoading = false;
       listScroll.innerHTML = '';
@@ -1745,7 +2528,19 @@ function openEditSkillModal(planSkill) {
     });
   }
 
-  function discardChanges() {
+  function resetPendingContent() {
+    pendingContent.hideCatalogIds.clear();
+    pendingContent.deleteUserIds.clear();
+    pendingContent.catalogRefreshPending = false;
+    pendingContent.restoredCatalogIds.clear();
+    pendingContent.overrides.clear();
+    pendingContent.pendingUserAdds = [];
+    pendingContent.pendingUserEdits.clear();
+    pendingContent.pendingImports = [];
+    pendingContent.orderByLevel = { education: null, exposure: null, experience: null };
+  }
+
+  function discardPendingState() {
     pending.status = saved.status;
     pending.focus = saved.focus;
     pending.prof = saved.prof;
@@ -1753,10 +2548,19 @@ function openEditSkillModal(planSkill) {
     statusSelect.value = saved.status;
     focusSelect.value = saved.focus;
     profSelect.value = saved.prof;
-    updateDirtyUI();
-    renderList();
-    renderReader();
-    updateProgress();
+    inlineEditKey = null;
+    destroyInlineEditor();
+    resetPendingContent();
+  }
+
+  function discardChanges() {
+    discardPendingState();
+    return refreshContent(true).then(() => {
+      updateDirtyUI();
+      renderList();
+      renderReader();
+      updateProgress();
+    });
   }
 
   function closeModal() {
@@ -1767,6 +2571,11 @@ function openEditSkillModal(planSkill) {
   }
 
   async function doSave() {
+    if (inlineEditKey) {
+      const item = getSelectedItem();
+      if (item) commitInlineEdit(item);
+    }
+
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving...';
 
@@ -1778,33 +2587,164 @@ function openEditSkillModal(planSkill) {
         notes: planSkill.notes || null,
       });
 
+      const tempToReal = new Map();
+
+      for (const add of pendingContent.pendingUserAdds) {
+        const created = await api.post(
+          `/api/plans/${_engineerId}/skills/${planSkill.id}/user-content`,
+          {
+            level: add.level,
+            type: add.type,
+            title: add.title,
+            description: add.description,
+            description_format: add.description_format || 'markdown',
+            url: add.url,
+            is_private: add.is_private ?? false,
+          },
+        );
+        tempToReal.set(add.id, created.id);
+      }
+
+      const importsByLevel = new Map();
+      pendingContent.pendingImports.forEach(item => {
+        if (!importsByLevel.has(item.level)) importsByLevel.set(item.level, []);
+        importsByLevel.get(item.level).push(item.source_user_content_id);
+      });
+      for (const [level, sourceIds] of importsByLevel) {
+        if (!sourceIds.length) continue;
+        const data = await api.post(
+          `/api/plans/${_engineerId}/skills/${planSkill.skill_id}/library/import?level=${level}`,
+          { source_ids: sourceIds },
+        );
+        (data.imported || []).forEach(row => {
+          const pendingRow = pendingContent.pendingImports.find(
+            p => p.source_user_content_id === row.source_user_content_id,
+          );
+          if (pendingRow) tempToReal.set(pendingRow.id, row.id);
+        });
+      }
+
+      for (const [itemId, payload] of pendingContent.pendingUserEdits) {
+        if (itemId < 0) continue;
+        await api.put(
+          `/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${itemId}`,
+          payload,
+        );
+      }
+
+      if (pendingContent.catalogRefreshPending) {
+        await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/resync`, {});
+      }
+
+      if (isOrderDirty()) {
+        const orderPayload = buildOrderPayload(tempToReal);
+        if (orderPayload.length) {
+          await api.put(
+            `/api/plans/${_engineerId}/skills/${planSkill.id}/content/order`,
+            { items: orderPayload },
+          );
+        }
+      }
+
+      for (const contentId of pendingContent.hideCatalogIds) {
+        await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/content/${contentId}/hide`, {});
+      }
+
+      for (const userContentId of pendingContent.deleteUserIds) {
+        if (userContentId < 0) continue;
+        await api.del(`/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${userContentId}`);
+      }
+
+      for (const [contentId, payload] of pendingContent.overrides) {
+        if (pendingContent.restoredCatalogIds.has(contentId)) continue;
+        const baseline = savedContent.overrides.get(contentId);
+        if (overrideEntriesEqual(payload, baseline)) continue;
+        const norm = normalizeOverrideEntry(payload);
+        await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/content/${contentId}/override`, {
+          override_description: norm.description,
+          override_type: norm.type || null,
+          override_url: norm.url,
+        });
+      }
+
       for (const item of allContentItems) {
         const key = itemKey(item);
         if (pending.completions[key] === saved.completions[key]) continue;
+        let itemId = item.id;
+        if (itemId < 0 && tempToReal.has(itemId)) itemId = tempToReal.get(itemId);
+        if (itemId < 0) continue;
 
         const endpoint = item.is_user_content
-          ? `/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${item.id}/complete`
-          : `/api/plans/${_engineerId}/skills/${planSkill.id}/content/${item.id}/complete`;
+          ? `/api/plans/${_engineerId}/skills/${planSkill.id}/user-content/${itemId}/complete`
+          : `/api/plans/${_engineerId}/skills/${planSkill.id}/content/${itemId}/complete`;
         await api.post(endpoint, {});
       }
 
+      saved.status = pending.status;
+      saved.focus = pending.focus;
+      saved.prof = pending.prof;
+      saved.completions = { ...pending.completions };
+      FOCUS_ORDER.forEach(levelKey => {
+        if (pendingContent.orderByLevel[levelKey]) {
+          savedContent.orderByLevel[levelKey] = pendingContent.orderByLevel[levelKey].slice();
+        }
+      });
+      resetPendingContent();
+
       showToast('Skill details saved', 'success');
       await reloadPlan();
-      closeModal();
+      syncTrainingLogsFromPlan();
+      await refreshContent(true);
+      updateDirtyUI();
+      saveBtn.textContent = 'Save Details';
     } catch (err) {
       showToast(err.message || 'Failed to save changes', 'error');
-      saveBtn.disabled = !isDirty();
-      saveBtn.textContent = 'Save skill details';
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Details';
+    }
+  }
+
+  async function promptUnsavedChanges() {
+    return showModal({
+      title: 'Unsaved Changes',
+      body: 'You have unsaved changes in this skill. What would you like to do?',
+      modalClass: 'modal-confirm-actions',
+      actions: [
+        { label: 'Continue Editing', value: 'continue', className: 'btn btn-secondary' },
+        { label: 'Discard Changes', value: 'discard', className: 'btn btn-danger' },
+        { label: 'Save Changes', value: 'save', className: 'btn btn-primary' },
+      ],
+    });
+  }
+
+  async function attemptCloseModal() {
+    if (hasUnsavedInlineEditDraft()) {
+      const discardNotes = await showConfirm('Discard unsaved edits and close?', true);
+      if (!discardNotes) return;
+      inlineEditKey = null;
+      destroyInlineEditor();
+      renderReader();
+    }
+    if (!isDirty()) {
+      closeModal();
+      return;
+    }
+    const choice = await promptUnsavedChanges();
+    if (choice === 'save') {
+      await doSave();
+      return;
+    }
+    if (choice === 'discard') {
+      discardPendingState();
+      closeModal();
+      return;
     }
   }
 
   function onKeyDown(e) {
     if (e.key === 'Escape') {
-      if (isDirty()) {
-        showToast('Save or discard pending changes before closing', 'warning');
-        return;
-      }
-      closeModal();
+      e.preventDefault();
+      attemptCloseModal();
     }
   }
 
@@ -1841,7 +2781,10 @@ function openEditSkillModal(planSkill) {
   addMyItemBtn.addEventListener('click', () => {
     const levelKey = pending.focus || 'education';
     const level = FOCUS_TO_LEVEL[levelKey] || 1;
-    openLibraryModal({ mode: 'create', planSkill, engineerId: _engineerId, levelKey, level }, () => refreshContent());
+    openLibraryModal(
+      { mode: 'create', planSkill, engineerId: _engineerId, levelKey, level, deferSave: true },
+      applyLibraryDeferredResult,
+    );
   });
 
   logToggle.addEventListener('click', () => {
@@ -1849,21 +2792,24 @@ function openEditSkillModal(planSkill) {
     logToggle.setAttribute('aria-expanded', String(open));
   });
 
-  resyncBtn.addEventListener('click', async () => {
-    const confirmed = await showConfirm(
-      'Restore all hidden catalog items for this skill? This will bring back any items you previously dismissed.',
-      true,
-    );
-    if (!confirmed) return;
-    resyncBtn.disabled = true;
+  restoreBtn.addEventListener('click', async () => {
+    const choice = await showModal({
+      title: 'Restore from Catalog',
+      body: 'Restoring from the catalog will refresh all catalog-managed items and update the list to match the current catalog definition.<br><br>Your personal items and personal notes will be preserved.<br><br>Do you want to continue?',
+      actions: [
+        { label: 'Cancel', value: 'cancel', className: 'btn btn-secondary' },
+        { label: 'Restore from Catalog', value: 'restore', className: 'btn btn-primary' },
+      ],
+    });
+    if (choice !== 'restore') return;
+    restoreBtn.disabled = true;
     try {
-      const resp = await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/resync`, {});
-      showToast(resp.detail || 'Catalog items restored', 'success');
-      refreshContent();
+      await previewRestoreFromCatalog();
+      showToast('Catalog items restored in view — click Save Details to keep', 'info');
     } catch (err) {
-      showToast(err.message || 'Failed to re-sync', 'error');
+      showToast(err.message || 'Failed to restore from catalog', 'error');
     } finally {
-      resyncBtn.disabled = false;
+      restoreBtn.disabled = false;
     }
   });
 
@@ -1872,22 +2818,13 @@ function openEditSkillModal(planSkill) {
   discardBtn.addEventListener('click', async () => {
     if (!isDirty()) return;
     const confirmed = await showConfirm('Discard all pending changes?', true);
-    if (confirmed) discardChanges();
+    if (confirmed) await discardChanges();
   });
 
-  closeBtn.addEventListener('click', async () => {
-    if (isDirty()) {
-      const action = await showConfirm('You have unsaved changes. Save before closing?');
-      if (action) { await doSave(); return; }
-      const discard = await showConfirm('Discard pending changes and close?', true);
-      if (!discard) return;
-      discardChanges();
-    }
-    closeModal();
-  });
+  closeBtn.addEventListener('click', () => { attemptCloseModal(); });
 
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay && !isDirty()) closeModal();
+    if (e.target === overlay) attemptCloseModal();
   });
 
   document.addEventListener('keydown', onKeyDown);
@@ -1897,98 +2834,6 @@ function openEditSkillModal(planSkill) {
   updateDirtyUI();
 }
 
-function openOverrideEditor(item, planSkill, onSaved) {
-  const root = document.getElementById('modalRoot');
-  if (!root) return;
-
-  const overlay = el('div', { className: 'modal-overlay' });
-  const modal = el('div', { className: 'modal content-edit-modal' });
-
-  const header = el('div', { className: 'modal-header' });
-  const titleEl = el('h2', { className: 'modal-title' });
-  titleEl.textContent = `My Notes — ${item.title}`;
-  const closeBtn = el('button', { className: 'modal-close', 'aria-label': 'Close' });
-  closeBtn.textContent = '\u2715';
-  header.appendChild(titleEl);
-  header.appendChild(closeBtn);
-  modal.appendChild(header);
-
-  const body = el('div', { className: 'modal-body' });
-  const hint = el('p', { className: 'mp-form-hint' });
-  hint.textContent = 'Your notes are personal and do not modify the global catalog.';
-  body.appendChild(hint);
-
-  const editorWrap = el('div', { className: 'content-edit-quill-wrap' });
-  const editorEl = el('div', { id: 'override-body-editor' });
-  editorWrap.appendChild(editorEl);
-  body.appendChild(editorWrap);
-
-  const footer = el('div', { className: 'modal-footer' });
-  const cancelBtn = el('button', { className: 'btn btn-secondary' });
-  cancelBtn.textContent = 'Cancel';
-  const saveBtn = el('button', { className: 'btn btn-primary' });
-  saveBtn.textContent = 'Save Notes';
-  footer.appendChild(cancelBtn);
-  footer.appendChild(saveBtn);
-
-  modal.appendChild(body);
-  modal.appendChild(footer);
-  overlay.appendChild(modal);
-  root.appendChild(overlay);
-
-  let quillInstance = null;
-
-  requestAnimationFrame(() => {
-    overlay.classList.add('open');
-    if (typeof Quill !== 'undefined') {
-      quillInstance = new Quill(editorEl, {
-        theme: 'snow',
-        modules: {
-          toolbar: [['bold', 'italic'], [{ header: [1, 2, 3, false] }], [{ color: [] }], ['link'], ['clean']],
-        },
-      });
-      if (item.override_description || item.description) {
-        quillInstance.root.innerHTML = item.override_description || item.description || '';
-      }
-    } else {
-      editorEl.contentEditable = 'true';
-      editorEl.style.cssText = 'min-height:120px;padding:10px;border:1px solid var(--border-soft);border-radius:var(--radius-md);background:var(--bg-input);color:var(--text-primary);';
-      editorEl.innerHTML = item.override_description || item.description || '';
-    }
-  });
-
-  function getBodyHtml() {
-    return quillInstance ? quillInstance.root.innerHTML : editorEl.innerHTML;
-  }
-
-  function close() {
-    overlay.classList.remove('open');
-    setTimeout(() => overlay.remove(), 200);
-  }
-
-  cancelBtn.addEventListener('click', close);
-  closeBtn.addEventListener('click', close);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-
-  saveBtn.addEventListener('click', async () => {
-    const html = getBodyHtml();
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
-    try {
-      await api.post(`/api/plans/${_engineerId}/skills/${planSkill.id}/content/${item.id}/override`, {
-        override_description: html,
-      });
-      showToast('Notes saved', 'success');
-      close();
-      if (typeof onSaved === 'function') onSaved();
-    } catch (err) {
-      showToast(err.message || 'Failed to save notes', 'error');
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save Notes';
-    }
-  });
-}
-
 const TRAINING_LOG_BADGE_LABELS = {
   completed: 'Completed',
   incomplete: 'Incomplete',
@@ -1996,6 +2841,7 @@ const TRAINING_LOG_BADGE_LABELS = {
   updated: 'Updated',
   removed: 'Removed',
   moved: 'Moved',
+  restored: 'Restored',
 };
 
 function parseTrainingLogTitle(rawTitle) {
@@ -2005,6 +2851,10 @@ function parseTrainingLogTitle(rawTitle) {
     { re: /^marked incomplete:\s*(.+)$/i, action: 'incomplete' },
     { re: /^completed:\s*(.+)$/i, action: 'completed' },
     { re: /^marked complete:\s*(.+)$/i, action: 'completed' },
+    { re: /^hidden:\s*(.+)$/i, action: 'removed' },
+    { re: /^removed user content:\s*(.+)$/i, action: 'removed' },
+    { re: /^restored from catalog:\s*(.+)$/i, action: 'restored' },
+    { re: /^(?:added|updated) personal notes:\s*(.+)$/i, action: 'updated' },
   ];
   for (const { re, action } of patterns) {
     const match = title.match(re);
@@ -2019,9 +2869,10 @@ function inferTrainingLogBadge(log) {
 
   const title = (log.title || '').toLowerCase();
   if (title.includes('moved from') || title.startsWith('moved')) return 'moved';
+  if (title.includes('restored from catalog')) return 'restored';
   if (title.startsWith('added') || title.includes('imported')) return 'added';
   if (title.startsWith('hidden') || title.startsWith('removed') || title.startsWith('deleted')) return 'removed';
-  if (title.startsWith('updated') || title.includes('override')) return 'updated';
+  if (title.includes('personal notes') || title.startsWith('updated') || title.includes('override')) return 'updated';
   return 'updated';
 }
 
@@ -2095,70 +2946,115 @@ async function handleRemoveSkill(planSkill) {
   }
 }
 
-function showAddSkillMenu(e) {
-  document.querySelectorAll('.mp-add-skill-menu').forEach(m => m.remove());
+function openAddSkillChooserModal() {
+  const root = document.getElementById('modalRoot');
+  if (!root) return;
 
-  const menu = el('div', { className: 'mp-add-skill-menu mp-context-menu' });
-
-  const ownItem = el('button', { className: 'mp-context-menu-item' });
-  ownItem.appendChild(svgIcon('circle', '16px'));
-  const ownLabel = el('span');
-  ownLabel.textContent = 'Own Skill';
-  ownItem.appendChild(ownLabel);
-  ownItem.addEventListener('mouseenter', () => { ownItem.style.background = 'var(--bg-hover)'; });
-  ownItem.addEventListener('mouseleave', () => { ownItem.style.background = 'none'; });
-  ownItem.addEventListener('click', (ev) => {
-    ev.stopPropagation();
-    menu.remove();
-    openOwnSkillModal();
+  const overlay = el('div', { className: 'modal-overlay' });
+  const modal = el('div', {
+    className: 'modal modal-add-skill-chooser',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-label': 'Add Skill',
   });
-  menu.appendChild(ownItem);
 
-  const teamItem = el('button', { className: 'mp-context-menu-item' });
-  const teamIconSpan = el('span', { className: 'mp-icon' });
-  teamIconSpan.style.fontSize = '16px';
-  teamIconSpan.innerHTML = '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
-  teamItem.appendChild(teamIconSpan);
-  const teamLabel = el('span');
-  teamLabel.textContent = "My Team's Skills";
-  teamItem.appendChild(teamLabel);
-  teamItem.addEventListener('mouseenter', () => { teamItem.style.background = 'var(--bg-hover)'; });
-  teamItem.addEventListener('mouseleave', () => { teamItem.style.background = 'none'; });
-  teamItem.addEventListener('click', (ev) => {
-    ev.stopPropagation();
-    menu.remove();
-    window.location.hash = '#/catalog?addMode=team';
+  const header = el('div', { className: 'modal-header' });
+  const title = el('h2', { className: 'modal-title' });
+  title.textContent = 'Add Skill';
+  const closeBtn = el('button', {
+    type: 'button',
+    className: 'modal-close',
+    'aria-label': 'Close',
   });
-  menu.appendChild(teamItem);
+  closeBtn.textContent = '\u2715';
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+  modal.appendChild(header);
 
-  const catalogItem = el('button', { className: 'mp-context-menu-item' });
-  catalogItem.appendChild(svgIcon('bookOpen', '16px'));
-  const catalogLabel = el('span');
-  catalogLabel.textContent = 'From Catalog';
-  catalogItem.appendChild(catalogLabel);
-  catalogItem.addEventListener('mouseenter', () => { catalogItem.style.background = 'var(--bg-hover)'; });
-  catalogItem.addEventListener('mouseleave', () => { catalogItem.style.background = 'none'; });
-  catalogItem.addEventListener('click', (ev) => {
-    ev.stopPropagation();
-    menu.remove();
-    window.location.hash = '#/catalog?addMode=all';
+  const body = el('div', { className: 'modal-body mp-add-skill-chooser' });
+  const intro = el('p', { className: 'mp-add-skill-chooser__intro' });
+  intro.textContent = 'Choose how you want to add a skill to your development plan.';
+  body.appendChild(intro);
+
+  const options = [
+    {
+      id: 'own',
+      title: 'Own Skill',
+      desc: 'Manually create a custom skill that is personal to your plan.',
+      icon: 'pencil',
+      action: () => openOwnSkillModal(),
+    },
+    {
+      id: 'team',
+      title: "My Team's Skills",
+      desc: 'Browse technical skills curated for your team in the catalog.',
+      icon: 'users',
+      action: () => { window.location.hash = '#/catalog?addMode=team'; },
+    },
+    {
+      id: 'catalog',
+      title: 'From Catalog',
+      desc: 'Explore the complete skills library across all teams and domains.',
+      icon: 'bookOpen',
+      action: () => { window.location.hash = '#/catalog?addMode=all'; },
+    },
+  ];
+
+  const grid = el('div', { className: 'mp-add-skill-chooser__grid' });
+  options.forEach(opt => {
+    const card = el('button', {
+      type: 'button',
+      className: 'mp-add-skill-option',
+      'data-option': opt.id,
+    });
+    const iconWrap = el('span', { className: 'mp-add-skill-option__icon' });
+    iconWrap.appendChild(svgIcon(opt.icon, '22px'));
+    const textWrap = el('span', { className: 'mp-add-skill-option__text' });
+    const cardTitle = el('span', { className: 'mp-add-skill-option__title' });
+    cardTitle.textContent = opt.title;
+    const cardDesc = el('span', { className: 'mp-add-skill-option__desc' });
+    cardDesc.textContent = opt.desc;
+    textWrap.appendChild(cardTitle);
+    textWrap.appendChild(cardDesc);
+    card.appendChild(iconWrap);
+    card.appendChild(textWrap);
+    card.addEventListener('click', () => {
+      close();
+      opt.action();
+    });
+    grid.appendChild(card);
   });
-  menu.appendChild(catalogItem);
+  body.appendChild(grid);
+  modal.appendChild(body);
 
-  const rect = e.currentTarget.getBoundingClientRect();
-  menu.style.top = `${rect.bottom + 4}px`;
-  menu.style.left = `${rect.left}px`;
-  menu.style.minWidth = '180px';
+  const footer = el('div', { className: 'modal-footer' });
+  const cancelBtn = el('button', { type: 'button', className: 'btn btn-secondary' });
+  cancelBtn.textContent = 'Cancel';
+  footer.appendChild(cancelBtn);
+  modal.appendChild(footer);
 
-  document.body.appendChild(menu);
+  overlay.appendChild(modal);
+  root.appendChild(overlay);
 
-  const dismiss = (ev) => {
-    if (!menu.contains(ev.target)) {
-      menu.remove();
-      document.removeEventListener('click', dismiss);
-    }
-  };
-  setTimeout(() => document.addEventListener('click', dismiss), 0);
+  function close() {
+    overlay.classList.remove('open');
+    document.removeEventListener('keydown', onKey);
+    setTimeout(() => overlay.remove(), 200);
+  }
+
+  function onKey(ev) {
+    if (ev.key === 'Escape') close();
+  }
+
+  closeBtn.addEventListener('click', close);
+  cancelBtn.addEventListener('click', close);
+  overlay.addEventListener('click', (ev) => { if (ev.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  requestAnimationFrame(() => {
+    overlay.classList.add('open');
+    grid.querySelector('.mp-add-skill-option')?.focus();
+  });
 }
 
 function openOwnSkillModal() {
@@ -2179,6 +3075,8 @@ function openOwnSkillModal() {
   descGroup.appendChild(descLabel);
   descGroup.appendChild(descInput);
   bodyEl.appendChild(descGroup);
+
+  bodyEl.appendChild(buildOwnSkillCategoryPicker());
 
   const statusGroup = el('div', { className: 'form-group' });
   const statusLabel = el('label', { className: 'form-label' });
@@ -2227,10 +3125,11 @@ function openOwnSkillModal() {
   bodyEl.appendChild(notesGroup);
 
   showModal({
-    title: 'Create Own Skill',
+    title: 'Add Own Skill',
     body: bodyEl,
     confirmText: 'Create Skill',
     cancelText: 'Cancel',
+    modalClass: 'modal-own-skill',
     onConfirm: async () => {
       const name = nameInput.value.trim();
       if (!name) {
@@ -2238,6 +3137,12 @@ function openOwnSkillModal() {
         return false;
       }
       const profVal = profSelect.value;
+      const selectedCategory = bodyEl.querySelector('.skill-category-item__cb:checked');
+      const categoryId = selectedCategory ? Number(selectedCategory.value) : null;
+      if (!categoryId || !Number.isFinite(categoryId)) {
+        showToast('Select a category', 'error');
+        return false;
+      }
       try {
         await api.post(`/api/plans/${_engineerId}/own-skills`, {
           name,
@@ -2245,6 +3150,7 @@ function openOwnSkillModal() {
           status: statusSelect.value,
           proficiency_level: profVal ? Number(profVal) : null,
           notes: notesInput.value.trim() || null,
+          category_id: categoryId,
         });
         showToast('Own skill created', 'success');
         await reloadPlan();
@@ -2256,6 +3162,79 @@ function openOwnSkillModal() {
   });
 }
 
+const OWN_SKILL_CATEGORY_ICONS = {
+  foundational: 'seedling',
+  core: 'diamond',
+  advanced: 'atom',
+  ai_future: 'sparkles',
+  'ai-future': 'sparkles',
+};
+
+function buildOwnSkillCategoryPicker() {
+  const group = el('div', { className: 'form-group skill-category-picker mp-own-skill-categories' });
+  const label = el('div', { className: 'form-label' });
+  label.textContent = 'Category *';
+  group.appendChild(label);
+
+  const hint = el('div', { className: 'form-hint' });
+  hint.textContent = 'Select one — Foundational, Core, Advanced, or AI & Future Skills.';
+  group.appendChild(hint);
+
+  const chips = el('div', { className: 'skill-category-chips' });
+  group.appendChild(chips);
+
+  getCategories().then(categories => {
+    chips.innerHTML = '';
+    if (!Array.isArray(categories) || categories.length === 0) {
+      const empty = el('div', { className: 'form-hint' });
+      empty.textContent = 'No categories available.';
+      chips.appendChild(empty);
+      return;
+    }
+
+    categories.forEach(cat => {
+      const isCore = cat.slug === 'core';
+      const chip = el('button', { type: 'button', className: 'mp-filter-chip skill-category-chip' + (isCore ? ' active' : '') });
+      chip.dataset.category = cat.slug || '';
+      chip.dataset.categoryId = String(cat.id);
+      chip.setAttribute('aria-pressed', isCore ? 'true' : 'false');
+
+      const iconName = OWN_SKILL_CATEGORY_ICONS[cat.slug] || OWN_SKILL_CATEGORY_ICONS[cat.slug?.replace(/_/g, '-')] || 'layers';
+      chip.appendChild(svgIcon(iconName, '14px'));
+
+      const labelSpan = el('span', { className: 'mp-filter-chip__label' });
+      labelSpan.textContent = cat.name;
+      chip.appendChild(labelSpan);
+
+      const radio = el('input', { className: 'skill-category-item__cb' });
+      radio.type = 'radio';
+      radio.name = 'own-skill-category';
+      radio.value = String(cat.id);
+      radio.checked = isCore;
+      chip.appendChild(radio);
+
+      chip.addEventListener('click', () => {
+        chips.querySelectorAll('.skill-category-chip').forEach(other => {
+          other.classList.remove('active');
+          other.setAttribute('aria-pressed', 'false');
+          const otherRadio = other.querySelector('.skill-category-item__cb');
+          if (otherRadio) otherRadio.checked = false;
+        });
+        chip.classList.add('active');
+        chip.setAttribute('aria-pressed', 'true');
+        radio.checked = true;
+      });
+
+      chips.appendChild(chip);
+    });
+  }).catch(() => {
+    const err = el('div', { className: 'form-hint' });
+    err.textContent = 'Failed to load categories.';
+    chips.appendChild(err);
+  });
+
+  return group;
+}
 
 function showPermissionError(msg) {
   const contentEl = _container.querySelector('.mp-plan-content');

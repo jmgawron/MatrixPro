@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — My Plan Visual Redesign Mockups</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-myplan">
+  <style>
+    body.mockup-page { margin: 0; min-height: 100vh; background: var(--bg-page); }
+
+    .mockup-chrome {
+      position: sticky; top: 0; z-index: 300;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 14px 24px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+    }
+    .mockup-chrome__title { font-size: 15px; font-weight: 700; margin: 0; }
+    .mockup-chrome__sub { font-size: 12px; color: var(--text-muted); margin: 0; flex: 1; min-width: 200px; }
+    .mockup-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .mockup-tab {
+      border: 1px solid var(--border-soft); background: var(--bg-card-soft);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 7px 14px; border-radius: 999px; cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .mockup-tab:hover { color: var(--text-primary); border-color: var(--border-strong); }
+    .mockup-tab.active {
+      background: var(--accent-soft, rgba(59,130,246,.12));
+      border-color: var(--accent); color: var(--accent);
+    }
+    .mockup-theme-btn {
+      border: 1px solid var(--border-soft); background: var(--bg-card);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer;
+    }
+    .mockup-concept { display: none; }
+    .mockup-concept.active { display: block; }
+
+    /* Mock nav */
+    .pm-nav {
+      height: var(--nav-h, 56px); border-bottom: 1px solid var(--border-soft);
+      background: var(--bg-panel); display: flex; align-items: center; padding: 0 24px;
+    }
+    .pm-nav__brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; color: var(--text-primary); text-decoration: none; }
+    .pm-nav__brand .brand-tile { width: 32px; height: 32px; border-radius: 8px; background: var(--brand-gradient); }
+    .pm-nav__links { display: flex; gap: 4px; margin-left: 32px; list-style: none; padding: 0; margin-bottom: 0; }
+    .pm-nav__links a { font-size: 13px; font-weight: 600; color: var(--text-muted); text-decoration: none; padding: 6px 12px; border-radius: var(--radius-sm); }
+    .pm-nav__links a.active { color: var(--accent); background: var(--accent-soft, rgba(59,130,246,.1)); }
+    .pm-nav__user { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+
+    /* Shared tokens */
+    .pm-cat--foundational { --pm-rail: #22c55e; --pm-rail-soft: rgba(34,197,94,.12); }
+    .pm-cat--core { --pm-rail: #3b82f6; --pm-rail-soft: rgba(59,130,246,.12); }
+    .pm-cat--advanced { --pm-rail: #06b6d4; --pm-rail-soft: rgba(6,182,212,.12); }
+    .pm-cat--ai { --pm-rail: #a855f7; --pm-rail-soft: rgba(168,85,247,.12); }
+
+    .pm-status--developing { --pm-section: var(--status-developing-fg); --pm-section-bg: var(--status-developing-bg); }
+    .pm-status--planned { --pm-section: var(--status-planned-fg); --pm-section-bg: var(--status-planned-bg); }
+    .pm-status--mastered { --pm-section: var(--status-mastered-fg); --pm-section-bg: var(--status-mastered-bg); }
+
+    /* Overview compare panels */
+    .ov-wrap { max-width: 1280px; margin: 0 auto; padding: 28px 24px 64px; }
+    .ov-section { margin-bottom: 48px; }
+    .ov-kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); margin-bottom: 6px; }
+    .ov-heading { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+    .ov-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.55; max-width: 72ch; margin-bottom: 20px; }
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 900px) { .compare-grid { grid-template-columns: 1fr; } }
+    .compare-panel { background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); overflow: hidden; }
+    .compare-panel__label { padding: 10px 16px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid var(--border-soft); }
+    .compare-panel__label--before { background: rgba(239,68,68,.08); color: #f87171; }
+    .compare-panel__label--after { background: rgba(34,197,94,.08); color: #4ade80; }
+    .compare-panel__body { padding: 16px; }
+
+    /* Mini reproductions for overview */
+    .ov-stats-old { display: flex; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+    .ov-stats-old .stat-block { text-align: center; }
+    .ov-stats-new { display: flex; gap: 10px; flex-wrap: wrap; }
+    .ov-mini-stat {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--home-card-bg); border: 1px solid var(--home-card-border);
+      border-radius: var(--radius-md); padding: 10px 14px; min-width: 120px;
+    }
+    .ov-mini-stat__icon { width: 32px; height: 32px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+    .ov-mini-stat__icon svg { width: 16px; height: 16px; }
+    .ov-mini-stat__val { font-size: 18px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+    .ov-mini-stat__lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-top: 2px; }
+
+    .ov-header-old { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; background: var(--bg-card-soft); border-radius: var(--radius-md); border: 1px solid var(--border-soft); }
+    .ov-header-old__title { font-weight: 600; margin-right: auto; }
+    .ov-header-old .chip-sidebar { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--bg-elevated); border-radius: var(--radius-md); font-size: 12px; font-weight: 600; }
+    .ov-header-new { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: var(--bg-card-soft); border-radius: var(--radius-md); border: 1px solid var(--border-soft); }
+    .ov-header-new__row1 { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .ov-header-new__search { position: relative; flex: 0 1 220px; }
+    .ov-header-new__search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-muted); }
+    .ov-header-new__search input { width: 100%; padding: 8px 10px 8px 32px; border-radius: var(--radius-md); border: 1px solid var(--border-soft); background: var(--bg-input); font-size: 13px; color: var(--text-primary); }
+    .ov-header-new__chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+    .ov-pill { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 500; border: 1px solid var(--border-soft); background: var(--bg-card); color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
+    .ov-pill.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; box-shadow: 0 0 0 1px var(--accent) inset; }
+    .ov-pill.active::after { content: "✓"; font-size: 11px; font-weight: 700; }
+
+    .ov-card-old, .ov-card-new { max-width: 240px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 10px; background: var(--bg-card-gradient); }
+    .ov-card-old__top { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; }
+    .ov-card-old__icon { width: 32px; height: 32px; border-radius: 6px; background: linear-gradient(135deg, var(--status-developing-fg), #0072FF); flex-shrink: 0; }
+    .ov-card-old__gauge { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--accent); margin-left: auto; flex-shrink: 0; }
+    .ov-card-new { position: relative; padding-left: 14px; overflow: hidden; }
+    .ov-card-new::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--pm-rail, var(--accent)); }
+    .ov-card-new__icon { width: 40px; height: 40px; border-radius: 10px; background: var(--pm-rail-soft); color: var(--pm-rail); display: flex; align-items: center; justify-content: center; }
+    .ov-card-new__bar { height: 4px; background: var(--bg-elevated); border-radius: 999px; margin-top: 8px; overflow: hidden; }
+    .ov-card-new__bar span { display: block; height: 100%; width: 68%; background: linear-gradient(90deg, var(--info), var(--success)); border-radius: 999px; }
+
+    .ov-filter-old .ov-3e-tile { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); font-size: 10px; margin-right: 6px; }
+    .ov-filter-new { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ov-3e-chip { padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid var(--border-soft); }
+    .ov-3e-chip--edu { background: rgba(34,197,94,.12); color: #22c55e; border-color: rgba(34,197,94,.3); }
+    .ov-3e-chip--exp { background: rgba(6,182,212,.12); color: #06b6d4; border-color: rgba(6,182,212,.3); }
+    .ov-3e-chip--xp { background: rgba(168,85,247,.12); color: #a855f7; border-color: rgba(168,85,247,.3); }
+
+    .ov-empty-old { text-align: center; font-size: 13px; color: var(--text-muted); padding: 24px; }
+    .ov-empty-new { text-align: center; padding: 28px 20px; background: var(--bg-card-soft); border-radius: var(--radius-md); border: 1px dashed var(--border-soft); }
+    .ov-empty-new__icon { width: 48px; height: 48px; margin: 0 auto 12px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+    .ov-empty-new__title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .ov-empty-new__desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; }
+    .ov-empty-new__btn { display: inline-block; padding: 8px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-soft); font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+
+    /* Full page shared */
+    .pm-page { position: relative; min-height: calc(100vh - 120px); }
+    .pm-page__mesh {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 45% at 8% -5%, rgba(0,174,239,.09), transparent 55%),
+        radial-gradient(ellipse 50% 35% at 92% 20%, rgba(59,130,246,.05), transparent 50%);
+    }
+    .pm-page__inner { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 24px 24px 56px; }
+
+    .pm-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+    .pm-hero h1 { font-size: clamp(28px, 3.5vw, 44px); font-weight: 800; margin: 0; letter-spacing: -.02em; }
+    .pm-hero h1 span { background: var(--brand-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .pm-hero p { font-size: 14px; color: var(--text-muted); margin: 6px 0 0; }
+
+    .pm-shell { display: grid; grid-template-columns: 220px 1fr; gap: 0; background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; min-height: 640px; }
+    @media (max-width: 960px) { .pm-shell { grid-template-columns: 1fr; } }
+
+    .pm-sidebar { background: var(--sidebar-gradient); border-right: 1px solid var(--border-soft); padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+    .pm-sidebar__label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); margin: 8px 0 6px; }
+    .pm-nav-btn {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border: none; border-left: 3px solid transparent; border-radius: var(--radius-md);
+      background: none; color: var(--text-secondary); font-size: 14px; font-weight: 500;
+      cursor: pointer; text-align: left; width: 100%; transition: background .15s, color .15s, border-color .15s;
+    }
+    .pm-nav-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .pm-nav-btn.active[data-status="developing"] { background: var(--status-developing-bg); color: var(--status-developing-fg); border-left-color: var(--status-developing-fg); font-weight: 600; }
+    .pm-nav-btn.active[data-status="planned"] { background: var(--status-planned-bg); color: var(--status-planned-fg); border-left-color: var(--status-planned-fg); font-weight: 600; }
+    .pm-nav-btn.active[data-status="mastered"] { background: var(--status-mastered-bg); color: var(--status-mastered-fg); border-left-color: var(--status-mastered-fg); font-weight: 600; }
+    .pm-nav-btn svg { width: 16px; height: 16px; flex-shrink: 0; opacity: .75; }
+    .pm-nav-btn.active svg { opacity: 1; }
+    .pm-nav-btn .count { margin-left: auto; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--bg-elevated); border: 1px solid var(--border-soft); color: var(--text-muted); }
+    .pm-sidebar-sep { border: none; border-top: 1px solid var(--border-soft); margin: 10px 0; }
+    .pm-sidebar-actions { display: flex; flex-direction: column; gap: 8px; }
+    .pm-btn-sidebar { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; border: 1px solid var(--border-soft); cursor: pointer; }
+    .pm-btn-sidebar--primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .pm-btn-sidebar--ghost { background: transparent; color: var(--text-secondary); }
+    .pm-filters-collapsed { font-size: 12px; color: var(--accent); cursor: pointer; padding: 6px 0; font-weight: 600; }
+    .pm-filter-group { margin-top: 8px; }
+    .pm-filter-group__lbl { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+    .pm-filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .pm-content { display: flex; flex-direction: column; min-width: 0; border-top: 3px solid var(--pm-section, var(--accent)); }
+    .pm-content__pad { padding: 20px 22px 28px; flex: 1; }
+
+    .pm-cmd-header { margin-bottom: 16px; }
+    .pm-cmd-header__row1 { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .pm-cmd-header__title { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; margin: 0; }
+    .pm-cmd-header__title svg { color: var(--pm-section); width: 20px; height: 20px; }
+    .pm-cmd-header__count { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--pm-section-bg); color: var(--pm-section); }
+    .pm-cmd-search { position: relative; flex: 0 1 280px; min-width: 180px; }
+    .pm-cmd-search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-muted); pointer-events: none; }
+    .pm-cmd-search input {
+      width: 100%; padding: 10px 12px 10px 38px;
+      background: var(--bg-input); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md); font-size: 14px; color: var(--text-primary);
+    }
+    .pm-cmd-search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .pm-cmd-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+    .pm-cmd-chips::-webkit-scrollbar { height: 4px; }
+    .pm-cat-pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 500; border: 1px solid var(--border-soft); background: var(--bg-card-soft); color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; cursor: pointer; }
+    .pm-cat-pill.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; box-shadow: 0 0 0 1px var(--accent) inset; }
+    .pm-cat-pill.active::after { content: "✓"; font-size: 11px; font-weight: 700; }
+
+    .pm-group { margin-bottom: 28px; }
+    .pm-group__head { display: flex; align-items: center; gap: 10px; padding: 0 0 12px; margin-bottom: 14px; border-bottom: 1px solid var(--border-soft); }
+    .pm-group__head::before { content: ''; width: 3px; height: 20px; border-radius: 2px; background: var(--pm-rail, var(--accent)); }
+    .pm-group__name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); flex: 1; margin: 0; }
+    .pm-group__count { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--pm-rail-soft); color: var(--pm-rail); }
+
+    .pm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+
+    .pm-card {
+      position: relative; background: var(--bg-card-gradient); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md); overflow: hidden; cursor: pointer;
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+    }
+    .pm-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--pm-rail, var(--accent)); }
+    .pm-card:hover { transform: translateY(-2px); border-color: rgba(59,130,246,.4); box-shadow: var(--card-hover-glow); }
+    .pm-card__inner { padding: 12px 12px 12px 16px; display: flex; flex-direction: column; gap: 8px; min-height: 140px; }
+    .pm-card__top { display: flex; gap: 10px; align-items: flex-start; }
+    .pm-card__icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--pm-rail-soft); color: var(--pm-rail); }
+    .pm-card__icon svg { width: 20px; height: 20px; }
+    .pm-card__info { flex: 1; min-width: 0; }
+    .pm-card__name { font-size: 14px; font-weight: 700; line-height: 1.35; margin: 0 0 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .pm-card__prof { display: flex; align-items: center; gap: 6px; }
+    .pm-card__prof-lbl { font-size: 10px; color: var(--text-muted); }
+    .pm-prof { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 700; border: 1px solid transparent; }
+    .pm-prof--3 { background: rgba(6,182,212,.15); color: #22d3ee; border-color: rgba(6,182,212,.3); }
+    .pm-prof--5 { background: rgba(234,179,8,.15); color: #eab308; border-color: rgba(234,179,8,.3); }
+    .pm-card__menu { background: none; border: none; color: var(--text-muted); padding: 2px; cursor: pointer; margin-left: auto; flex-shrink: 0; }
+    .pm-card__notes { font-size: 12px; color: var(--text-secondary); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 34px; }
+    .pm-card__notes--empty { font-style: italic; color: var(--text-muted); opacity: .85; }
+    .pm-card__foot { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-muted); padding-top: 8px; border-top: 1px solid var(--border-soft); margin-top: auto; }
+    .pm-card__bar { height: 4px; background: var(--bg-elevated); border-radius: 999px; overflow: hidden; }
+    .pm-card__bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--info), var(--success)); }
+
+    /* Current (production-like) overrides */
+    .pm-current .pm-card__icon--section { width: 32px; height: 32px; border-radius: 6px; background: linear-gradient(135deg, var(--status-developing-fg), #0072FF); color: #fff; }
+    .pm-current .pm-card__gauge { width: 32px; height: 32px; border: 3px solid var(--accent); border-radius: 50%; border-top-color: transparent; transform: rotate(-45deg); flex-shrink: 0; }
+    .pm-current .pm-header-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+    .pm-current .pm-header-stats .stat-block { text-align: center; }
+    .pm-current .pm-inline-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .pm-current .chip-sidebar-style { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--bg-elevated); border-radius: var(--radius-md); font-size: 12px; font-weight: 600; min-width: 130px; }
+
+    .note-box { background: var(--bg-card-soft); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 12px 14px; font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin-top: 16px; }
+    .note-box strong { color: var(--text-primary); }
+
+    .pm-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .pm-legend span { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--bg-card-soft); border: 1px solid var(--border-soft); color: var(--text-muted); }
+  </style>
+</head>
+<body class="mockup-page">
+
+  <header class="mockup-chrome">
+    <div>
+      <h1 class="mockup-chrome__title">My Plan — Visual Redesign Mockups</h1>
+      <p class="mockup-chrome__sub">Presentation only · no behavior changes · open with frontend/css/style.css</p>
+    </div>
+    <nav class="mockup-tabs" aria-label="Concept tabs">
+      <button type="button" class="mockup-tab active" data-tab="overview">Overview</button>
+      <button type="button" class="mockup-tab" data-tab="current">Current</button>
+      <button type="button" class="mockup-tab" data-tab="a">A · Cards</button>
+      <button type="button" class="mockup-tab" data-tab="b">B · Command Strip</button>
+      <button type="button" class="mockup-tab" data-tab="c">C · Dashboard</button>
+      <button type="button" class="mockup-tab" data-tab="rec">Recommended</button>
+    </nav>
+    <button type="button" class="mockup-theme-btn" id="themeToggle">Light theme</button>
+  </header>
+
+  <!-- ═══ OVERVIEW ═══ -->
+  <section class="mockup-concept active" id="tab-overview">
+    <div class="ov-wrap">
+      <div class="ov-section">
+        <div class="ov-kicker">Summary</div>
+        <h2 class="ov-heading">Before → After at a glance</h2>
+        <p class="ov-desc">Each panel pairs today's production patterns with the proposed visual treatment. Functionality (filters, drag-drop, modals) stays identical.</p>
+      </div>
+
+      <div class="ov-section">
+        <div class="ov-kicker">1 · Hero stats</div>
+        <h3 class="ov-heading" style="font-size:18px">Compact context strip with icons</h3>
+        <div class="compare-grid">
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--before">Before — 5 number-only blocks</div>
+            <div class="compare-panel__body">
+              <div class="ov-stats-old">
+                <div class="stat-block"><div class="stat-block-value">18</div><div class="stat-block-label">Total Skills</div></div>
+                <div class="stat-block"><div class="stat-block-value">13</div><div class="stat-block-label">Developing</div></div>
+                <div class="stat-block"><div class="stat-block-value">4</div><div class="stat-block-label">Mastered</div></div>
+                <div class="stat-block"><div class="stat-block-value">8</div><div class="stat-block-label">Logs This Quarter</div></div>
+                <div class="stat-block"><div class="stat-block-value">31</div><div class="stat-block-label">Logs This Year</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--after">After — 3 icon stats + secondary logs</div>
+            <div class="compare-panel__body">
+              <div class="ov-stats-new">
+                <div class="ov-mini-stat">
+                  <div class="ov-mini-stat__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+                  <div><div class="ov-mini-stat__val">18</div><div class="ov-mini-stat__lbl">Total</div></div>
+                </div>
+                <div class="ov-mini-stat">
+                  <div class="ov-mini-stat__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+                  <div><div class="ov-mini-stat__val">13</div><div class="ov-mini-stat__lbl">Developing</div></div>
+                </div>
+                <div class="ov-mini-stat">
+                  <div class="ov-mini-stat__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                  <div><div class="ov-mini-stat__val">4</div><div class="ov-mini-stat__lbl">Mastered</div></div>
+                </div>
+              </div>
+              <p style="font-size:12px;color:var(--text-muted);margin:12px 0 0">8 logs this quarter · 31 this year → Reporting or footer</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ov-section">
+        <div class="ov-kicker">2 · Content header</div>
+        <h3 class="ov-heading" style="font-size:18px">Command strip (two rows)</h3>
+        <div class="compare-grid">
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--before">Before — single crowded row</div>
+            <div class="compare-panel__body">
+              <div class="ov-header-old">
+                <span class="ov-header-old__title">Developing <span class="mp-nav-count">13</span></span>
+                <span class="chip-sidebar">◆ Core ✓</span>
+                <span class="chip-sidebar">◇ Foundational</span>
+                <input type="text" placeholder="Search…" style="padding:6px 10px;font-size:12px;border-radius:6px;border:1px solid var(--border-soft);width:120px">
+              </div>
+            </div>
+          </div>
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--after">After — title + search, then scroll pills</div>
+            <div class="compare-panel__body">
+              <div class="ov-header-new">
+                <div class="ov-header-new__row1">
+                  <strong>Developing <span style="font-size:12px;padding:2px 8px;border-radius:999px;background:var(--status-developing-bg);color:var(--status-developing-fg)">13</span></strong>
+                  <div class="ov-header-new__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search skills…" readonly></div>
+                </div>
+                <div class="ov-header-new__chips">
+                  <span class="ov-pill active">◆ Core</span>
+                  <span class="ov-pill active">◇ Foundational</span>
+                  <span class="ov-pill">⚛ Advanced</span>
+                  <span class="ov-pill">✦ AI &amp; Future</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ov-section">
+        <div class="ov-kicker">3 · Skill cards</div>
+        <h3 class="ov-heading" style="font-size:18px">Calmer card — single progress, category rail</h3>
+        <div class="compare-grid">
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--before">Before — gauge + bar + section icon</div>
+            <div class="compare-panel__body">
+              <div class="ov-card-old pm-cat--core">
+                <div class="ov-card-old__top">
+                  <div class="ov-card-old__icon"></div>
+                  <div style="flex:1;font-size:13px;font-weight:700">VLANs, Trunking &amp; VTP</div>
+                  <div class="ov-card-old__gauge"></div>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted)">No notes added</div>
+                <div style="height:4px;background:var(--bg-elevated);margin-top:8px;border-radius:4px"><span style="display:block;width:72%;height:100%;background:var(--accent);border-radius:4px"></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--after">After — catalog icon well + one bar</div>
+            <div class="compare-panel__body">
+              <div class="ov-card-new pm-cat--core">
+                <div style="display:flex;gap:10px;margin-bottom:6px">
+                  <div class="ov-card-new__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
+                  <div style="flex:1"><div style="font-size:14px;font-weight:700">VLANs, Trunking &amp; VTP</div><div style="font-size:10px;color:var(--text-muted)">Prof <span class="pm-prof pm-prof--3">3</span></div></div>
+                </div>
+                <div class="pm-card__notes--empty" style="font-size:12px">No notes yet</div>
+                <div class="ov-card-new__bar"><span></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ov-section">
+        <div class="ov-kicker">4 · Sidebar filters</div>
+        <h3 class="ov-heading" style="font-size:18px">Unified chip pattern</h3>
+        <div class="compare-grid">
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--before">Before — vertical 3E tiles</div>
+            <div class="compare-panel__body ov-filter-old">
+              <span class="ov-3e-tile">📖<br>Education</span>
+              <span class="ov-3e-tile">🌐<br>Exposure</span>
+              <span class="ov-3e-tile">⭐<br>Experience</span>
+            </div>
+          </div>
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--after">After — horizontal colored chips</div>
+            <div class="compare-panel__body ov-filter-new">
+              <span class="ov-3e-chip ov-3e-chip--edu">Education</span>
+              <span class="ov-3e-chip ov-3e-chip--exp">Exposure</span>
+              <span class="ov-3e-chip ov-3e-chip--xp">Experience</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ov-section">
+        <div class="ov-kicker">5 · Empty state</div>
+        <div class="compare-grid">
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--before">Before</div>
+            <div class="compare-panel__body"><div class="ov-empty-old">No skills yet — browse the catalog to get started!</div></div>
+          </div>
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--after">After</div>
+            <div class="compare-panel__body">
+              <div class="ov-empty-new">
+                <div class="ov-empty-new__icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+                <div class="ov-empty-new__title">No skills in this section</div>
+                <div class="ov-empty-new__desc">Browse the catalog or add your own skill to get started.</div>
+                <span class="ov-empty-new__btn">Browse Catalog</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ov-section">
+        <div class="ov-kicker">6 · Section atmosphere</div>
+        <h3 class="ov-heading" style="font-size:18px">Status-colored content panel rail</h3>
+        <div class="compare-grid">
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--before">Before — panel looks identical per section</div>
+            <div class="compare-panel__body">
+              <div style="border:1px solid var(--border-soft);border-radius:var(--radius-md);padding:16px;background:var(--bg-card)">
+                <strong>Developing</strong> — same chrome for Planned / Mastered
+              </div>
+            </div>
+          </div>
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--after">After — top rail + tinted count</div>
+            <div class="compare-panel__body">
+              <div style="border:1px solid var(--border-soft);border-radius:var(--radius-md);overflow:hidden;background:var(--bg-card);border-top:3px solid var(--status-developing-fg)">
+                <div style="padding:16px"><strong style="color:var(--status-developing-fg)">Developing</strong> <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:var(--status-developing-bg);color:var(--status-developing-fg)">13</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ov-section">
+        <div class="ov-kicker">7 · Page shell &amp; category bands</div>
+        <h3 class="ov-heading" style="font-size:18px">Glass wrapper + mesh + category header rails</h3>
+        <div class="compare-grid">
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--before">Before — flat layout, plain group headers</div>
+            <div class="compare-panel__body" style="background:var(--bg-page);padding:12px;border-radius:8px">
+              <div style="display:grid;grid-template-columns:180px 1fr;gap:12px">
+                <div style="background:var(--sidebar-gradient);border:1px solid var(--border-soft);border-radius:8px;height:80px"></div>
+                <div style="background:var(--bg-card);border:1px solid var(--border-soft);border-radius:8px;padding:12px">
+                  <div style="font-size:12px;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border-soft);padding-bottom:8px;margin-bottom:8px">Core</div>
+                  <div style="height:48px;background:var(--bg-card-soft);border-radius:6px"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="compare-panel">
+            <div class="compare-panel__label compare-panel__label--after">After — unified glass shell + tinted bands</div>
+            <div class="compare-panel__body" style="background:var(--home-bg);padding:12px;border-radius:8px;position:relative;overflow:hidden">
+              <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 40% at 20% 0%,rgba(0,174,239,.08),transparent 60%);pointer-events:none"></div>
+              <div style="position:relative;display:grid;grid-template-columns:180px 1fr;gap:0;border:1px solid var(--border-soft);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg)">
+                <div style="background:var(--sidebar-gradient);border-right:1px solid var(--border-soft);height:100px"></div>
+                <div style="background:var(--bg-card);border-top:3px solid var(--status-developing-fg);padding:12px">
+                  <div style="display:flex;align-items:center;gap:8px;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--border-soft)">
+                    <span style="width:3px;height:18px;background:#3b82f6;border-radius:2px"></span>
+                    <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary)">Core</span>
+                    <span style="font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(59,130,246,.12);color:#3b82f6">3</span>
+                  </div>
+                  <div style="height:48px;background:var(--bg-card-soft);border-radius:6px;border-left:4px solid #3b82f6"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Shared SVG defs via inline in snippets -->
+  <template id="svg-wrench"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></template>
+
+  <!-- ═══ CURRENT (production-like) ═══ -->
+  <section class="mockup-concept" id="tab-current">
+    <nav class="pm-nav"><a class="pm-nav__brand" href="#"><span class="brand-tile"></span> MatrixPro</a><ul class="pm-nav__links"><li><a href="#">Home</a></li><li><a href="#" class="active">My Plan</a></li><li><a href="#">Catalog</a></li></ul><span class="pm-nav__user">bob@matrixpro.com</span></nav>
+    <div class="pm-page pm-current">
+      <div class="pm-page__inner">
+        <div class="pm-hero">
+          <div><h1>My Development <span>Plan</span></h1><p>Track and manage your skill development journey</p></div>
+          <div class="pm-header-stats">
+            <div class="stat-block"><div class="stat-block-value">18</div><div class="stat-block-label">Total Skills</div></div>
+            <div class="stat-block"><div class="stat-block-value">13</div><div class="stat-block-label">Developing</div></div>
+            <div class="stat-block"><div class="stat-block-value">4</div><div class="stat-block-label">Mastered</div></div>
+            <div class="stat-block"><div class="stat-block-value">8</div><div class="stat-block-label">Logs This Quarter</div></div>
+            <div class="stat-block"><div class="stat-block-value">31</div><div class="stat-block-label">Logs This Year</div></div>
+          </div>
+        </div>
+        <div class="pm-shell" style="box-shadow:var(--shadow-sm);background:transparent;border:none;grid-template-columns:200px 1fr;gap:24px">
+          <aside class="pm-sidebar" style="border-right:none;border:1px solid var(--border-soft);border-radius:var(--radius-lg)">
+            <button type="button" class="pm-nav-btn active" data-status="developing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Developing <span class="count">13</span></button>
+            <button type="button" class="pm-nav-btn" data-status="planned"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/></svg> Planned <span class="count">1</span></button>
+            <button type="button" class="pm-nav-btn" data-status="mastered"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Mastered <span class="count">4</span></button>
+            <hr class="pm-sidebar-sep">
+            <div class="pm-sidebar-actions">
+              <button type="button" class="pm-btn-sidebar pm-btn-sidebar--primary">+ Add Skill</button>
+              <button type="button" class="pm-btn-sidebar pm-btn-sidebar--ghost">Reporting</button>
+            </div>
+            <hr class="pm-sidebar-sep">
+            <div class="pm-sidebar__label">Quick Filters</div>
+            <div class="pm-filter-group"><div class="pm-filter-group__lbl">3E Framework</div>
+              <div style="display:flex;gap:6px"><span class="ov-3e-tile" style="display:inline-flex;flex-direction:column;align-items:center;padding:8px;border:1px solid var(--border-soft);border-radius:8px;font-size:10px">Edu</span><span class="ov-3e-tile" style="display:inline-flex;flex-direction:column;align-items:center;padding:8px;border:1px solid var(--border-soft);border-radius:8px;font-size:10px">Exp</span><span class="ov-3e-tile" style="display:inline-flex;flex-direction:column;align-items:center;padding:8px;border:1px solid var(--border-soft);border-radius:8px;font-size:10px">Xp</span></div>
+            </div>
+          </aside>
+          <main class="pm-content" style="border-top:none;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--radius-lg)">
+            <div class="pm-content__pad">
+              <div class="pm-current pm-inline-header">
+                <strong style="font-size:18px">Developing</strong><span class="count" style="font-size:12px;padding:2px 8px;border-radius:999px;background:var(--bg-elevated)">13</span>
+                <span class="pm-current chip-sidebar-style">◆ Core</span><span class="pm-current chip-sidebar-style" style="border-left-color:var(--accent);background:var(--bg-elevated)">◇ Foundational</span>
+                <input type="text" class="search-input" placeholder="Search skills…" style="margin-left:auto;padding:8px 12px;font-size:13px;border-radius:8px;border:1px solid var(--border-soft);min-width:180px">
+              </div>
+              <div class="pm-group pm-cat--core">
+                <div class="pm-group__head" style="border-bottom:1px solid var(--border-soft)"><span class="pm-group__name" style="text-transform:uppercase;font-size:14px">Core</span><span class="pm-group__count">8</span></div>
+                <div class="pm-grid">
+                  <article class="pm-card pm-cat--core" style="padding:12px">
+                    <div style="display:flex;gap:10px;align-items:flex-start">
+                      <div class="pm-card__icon pm-card__icon--section"></div>
+                      <div style="flex:1"><div class="pm-card__name">Layer 3 Switching</div><div style="font-size:10px;color:var(--text-muted)">Prof <span style="background:rgba(6,182,212,.15);color:#22d3ee;padding:2px 6px;border-radius:999px;font-size:11px">3</span></div></div>
+                      <div class="pm-card__gauge"></div>
+                    </div>
+                    <p style="font-size:12px;color:var(--text-secondary);margin:8px 0">No notes added</p>
+                    <div class="pm-card__bar"><span style="width:65%"></span></div>
+                  </article>
+                  <article class="pm-card pm-cat--core" style="padding:12px">
+                    <div style="display:flex;gap:10px;align-items:flex-start">
+                      <div class="pm-card__icon pm-card__icon--section"></div>
+                      <div style="flex:1"><div class="pm-card__name">Catalyst 9000 IOS-XE</div><div style="font-size:10px;color:var(--text-muted)">Prof <span style="background:rgba(234,179,8,.15);color:#eab308;padding:2px 6px;border-radius:999px;font-size:11px">5</span></div></div>
+                      <div class="pm-card__gauge"></div>
+                    </div>
+                    <p style="font-size:12px;color:var(--text-secondary);margin:8px 0">Lab repro notes for stacking…</p>
+                    <div class="pm-card__bar"><span style="width:91%"></span></div>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+        <div class="note-box"><strong>Current issues:</strong> stats duplicate sidebar counts; header wraps; dual progress on cards; 3E vertical tiles; flat page background.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CONCEPT A — Refined Cards ═══ -->
+  <section class="mockup-concept" id="tab-a">
+    <nav class="pm-nav"><a class="pm-nav__brand" href="#"><span class="brand-tile"></span> MatrixPro</a><ul class="pm-nav__links"><li><a href="#">Home</a></li><li><a href="#" class="active">My Plan</a></li></ul><span class="pm-nav__user">Concept A</span></nav>
+    <div class="pm-page pm-status--developing">
+      <div class="pm-page__mesh"></div>
+      <div class="pm-page__inner">
+        <div class="pm-legend"><span>Concept A — Refined Cards</span><span>Category accent rails</span><span>Single progress bar</span></div>
+        <div class="pm-hero">
+          <div><h1>My Development <span>Plan</span></h1><p>Discover skills for TAC-ENT-LANSW-SHIFT2</p></div>
+          <div class="ov-stats-new">
+            <div class="ov-mini-stat"><div class="ov-mini-stat__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div><div><div class="ov-mini-stat__val">18</div><div class="ov-mini-stat__lbl">Total</div></div></div>
+            <div class="ov-mini-stat"><div class="ov-mini-stat__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><div><div class="ov-mini-stat__val">13</div><div class="ov-mini-stat__lbl">Developing</div></div></div>
+            <div class="ov-mini-stat"><div class="ov-mini-stat__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div><div class="ov-mini-stat__val">4</div><div class="ov-mini-stat__lbl">Mastered</div></div></div>
+          </div>
+        </div>
+        <div id="pm-shell-a"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CONCEPT B — Command Strip ═══ -->
+  <section class="mockup-concept" id="tab-b">
+    <nav class="pm-nav"><a class="pm-nav__brand" href="#"><span class="brand-tile"></span> MatrixPro</a><ul class="pm-nav__links"><li><a href="#" class="active">My Plan</a></li></ul><span class="pm-nav__user">Concept B</span></nav>
+    <div class="pm-page pm-status--developing">
+      <div class="pm-page__inner">
+        <div class="pm-legend"><span>Concept B — Command Strip</span><span>Two-row header</span><span>Horizontal category scroll</span></div>
+        <div class="pm-hero"><div><h1>My Development <span>Plan</span></h1></div></div>
+        <div id="pm-shell-b"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CONCEPT C — Dashboard Shell ═══ -->
+  <section class="mockup-concept" id="tab-c">
+    <nav class="pm-nav"><a class="pm-nav__brand" href="#"><span class="brand-tile"></span> MatrixPro</a><ul class="pm-nav__links"><li><a href="#" class="active">My Plan</a></li></ul><span class="pm-nav__user">Concept C</span></nav>
+    <div class="pm-page pm-status--developing" style="background:var(--home-bg)">
+      <div class="pm-page__mesh"></div>
+      <div class="pm-page__inner">
+        <div class="pm-legend"><span>Concept C — Dashboard Shell</span><span>Glass wrapper</span><span>Mesh glow</span><span>Filter disclosure</span></div>
+        <div class="pm-hero" style="margin-bottom:16px"><div><h1>My Development <span>Plan</span></h1><p>Compact hero — stats live inside shell header</p></div></div>
+        <div id="pm-shell-c"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ RECOMMENDED — Combined ═══ -->
+  <section class="mockup-concept" id="tab-rec">
+    <nav class="pm-nav"><a class="pm-nav__brand" href="#"><span class="brand-tile"></span> MatrixPro</a><ul class="pm-nav__links"><li><a href="#" class="active">My Plan</a></li><li><a href="#">Catalog</a></li></ul><span class="pm-nav__user">Recommended target</span></nav>
+    <div class="pm-page pm-status--developing" style="background:var(--home-bg)">
+      <div class="pm-page__mesh"></div>
+      <div class="pm-page__inner">
+        <div class="pm-hero">
+          <div><h1>My Development <span>Plan</span></h1><p>Track and manage your skill development journey</p></div>
+          <div class="ov-stats-new">
+            <div class="ov-mini-stat"><div class="ov-mini-stat__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div><div><div class="ov-mini-stat__val">18</div><div class="ov-mini-stat__lbl">Total</div></div></div>
+            <div class="ov-mini-stat"><div class="ov-mini-stat__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><div><div class="ov-mini-stat__val">13</div><div class="ov-mini-stat__lbl">Developing</div></div></div>
+            <div class="ov-mini-stat"><div class="ov-mini-stat__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div><div class="ov-mini-stat__val">4</div><div class="ov-mini-stat__lbl">Mastered</div></div></div>
+          </div>
+        </div>
+        <div id="pm-shell-rec"></div>
+        <div class="note-box"><strong>Recommended production target</strong> combines A (cards + category bands) + B (command strip) + C (glass shell, mesh, unified filters). Implement in CSS-first phases per <code>my-plan-visual-redesign-design.md</code>.</div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      const tabs = document.querySelectorAll('.mockup-tab');
+      const panels = document.querySelectorAll('.mockup-concept');
+      tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          panels.forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          const id = 'tab-' + btn.dataset.tab;
+          document.getElementById(id)?.classList.add('active');
+        });
+      });
+
+      const themeBtn = document.getElementById('themeToggle');
+      themeBtn.addEventListener('click', () => {
+        const html = document.documentElement;
+        const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        html.setAttribute('data-theme', next);
+        themeBtn.textContent = next === 'light' ? 'Dark theme' : 'Light theme';
+      });
+
+      const CARDS = [
+        { name: 'Layer 2 Switching Fundamentals', cat: 'foundational', prof: 5, pct: 100, notes: 'Bob\'s lab notebook — repro recipes' },
+        { name: 'VLANs, Trunking & VTP', cat: 'foundational', prof: 3, pct: 72, notes: '' },
+        { name: 'Catalyst 9000 IOS-XE Operations', cat: 'core', prof: 4, pct: 58, notes: 'StackWise Virtual lab notes' },
+        { name: 'QoS on Campus Switches', cat: 'core', prof: 3, pct: 41, notes: '' },
+        { name: 'VXLAN EVPN Campus Fabric', cat: 'advanced', prof: 2, pct: 22, notes: 'Escalation case study draft' },
+      ];
+      const CAT_CLASS = { foundational: 'pm-cat--foundational', core: 'pm-cat--core', advanced: 'pm-cat--advanced', ai: 'pm-cat--ai' };
+      const CAT_LABEL = { foundational: 'Foundational', core: 'Core', advanced: 'Advanced', ai: 'AI & Future Skills' };
+
+      function cardHtml(c) {
+        const cc = CAT_CLASS[c.cat] || 'pm-cat--core';
+        const notes = c.notes
+          ? `<p class="pm-card__notes">${c.notes}</p>`
+          : `<p class="pm-card__notes pm-card__notes--empty">No notes yet</p>`;
+        return `<article class="pm-card ${cc}"><div class="pm-card__inner"><div class="pm-card__top"><div class="pm-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div><div class="pm-card__info"><h3 class="pm-card__name">${c.name}</h3><div class="pm-card__prof"><span class="pm-card__prof-lbl">Prof</span><span class="pm-prof pm-prof--${c.prof}">${c.prof}</span></div></div><button type="button" class="pm-card__menu" aria-label="Actions">⋯</button></div>${notes}<div class="pm-card__foot"><span>Jun 2</span><span>3 logs</span></div><div class="pm-card__bar"><span style="width:${c.pct}%"></span></div></div></article>`;
+      }
+
+      function groupHtml(catKey, cards) {
+        const cc = CAT_CLASS[catKey];
+        return `<div class="pm-group ${cc}"><div class="pm-group__head"><h3 class="pm-group__name">${CAT_LABEL[catKey]}</h3><span class="pm-group__count">${cards.length}</span></div><div class="pm-grid">${cards.map(cardHtml).join('')}</div></div>`;
+      }
+
+      function sidebarHtml(opts) {
+        const filters = opts.filtersExpanded ? `
+          <div class="pm-filter-group"><div class="pm-filter-group__lbl">Domains</div><div class="pm-filter-chips"><span class="ov-pill">Enterprise</span></div></div>
+          <div class="pm-filter-group"><div class="pm-filter-group__lbl">3E Framework</div><div class="pm-filter-chips"><span class="ov-3e-chip ov-3e-chip--edu">Education</span><span class="ov-3e-chip ov-3e-chip--exp">Exposure</span><span class="ov-3e-chip ov-3e-chip--xp">Experience</span></div></div>
+          <div class="pm-filter-group"><div class="pm-filter-group__lbl">Proficiency</div><div class="pm-filter-chips"><span class="ov-pill">1</span><span class="ov-pill">2</span><span class="ov-pill active">3</span></div></div>` : `<div class="pm-filters-collapsed">▸ Show filters (3 active)</div>`;
+        return `<aside class="pm-sidebar"><div class="pm-sidebar__label">Sections</div>
+          <button type="button" class="pm-nav-btn active" data-status="developing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Developing <span class="count">13</span></button>
+          <button type="button" class="pm-nav-btn" data-status="planned"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/></svg> Planned <span class="count">1</span></button>
+          <button type="button" class="pm-nav-btn" data-status="mastered"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Mastered <span class="count">4</span></button>
+          <hr class="pm-sidebar-sep"><div class="pm-sidebar-actions"><button type="button" class="pm-btn-sidebar pm-btn-sidebar--primary">+ Add Skill</button><button type="button" class="pm-btn-sidebar pm-btn-sidebar--ghost">Reporting</button></div>
+          <hr class="pm-sidebar-sep"><div class="pm-sidebar__label">Quick Filters</div>${filters}</aside>`;
+      }
+
+      function headerHtml(mode) {
+        const pills = ['Foundational','Core','Advanced','AI & Future'].map((n,i) =>
+          `<span class="pm-cat-pill${i < 2 ? ' active' : ''}">${n}</span>`).join('');
+        if (mode === 'legacy') {
+          return `<div class="pm-current pm-inline-header"><strong style="font-size:18px">Developing</strong><span class="count">13</span><span class="chip-sidebar-style">Core</span><input type="text" placeholder="Search…" style="margin-left:auto;padding:8px;border-radius:8px;border:1px solid var(--border-soft)"></div>`;
+        }
+        return `<header class="pm-cmd-header"><div class="pm-cmd-header__row1"><h2 class="pm-cmd-header__title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Developing <span class="pm-cmd-header__count">13</span></h2><div class="pm-cmd-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search skills…" readonly></div></div><div class="pm-cmd-chips">${pills}</div></header>`;
+      }
+
+      function buildShell(targetId, opts) {
+        const el = document.getElementById(targetId);
+        if (!el) return;
+        const byCat = { foundational: [], core: [], advanced: [] };
+        CARDS.forEach(c => { if (byCat[c.cat]) byCat[c.cat].push(c); });
+        const groups = Object.keys(byCat).filter(k => byCat[k].length).map(k => groupHtml(k, byCat[k])).join('');
+        el.innerHTML = `<div class="pm-shell">${sidebarHtml(opts)}<main class="pm-content"><div class="pm-content__pad">${headerHtml(opts.header || 'cmd')}${groups}</div></main></div>`;
+      }
+
+      buildShell('pm-shell-a', { filtersExpanded: true, header: 'cmd' });
+      buildShell('pm-shell-b', { filtersExpanded: true, header: 'cmd' });
+      buildShell('pm-shell-c', { filtersExpanded: false, header: 'cmd' });
+      buildShell('pm-shell-rec', { filtersExpanded: true, header: 'cmd' });
+    })();
+  </script>
+</body>
+</html>

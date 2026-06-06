@@ -39,9 +39,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/plans", tags=["library"])
 
 BUCKET_LABELS = {
-    1: "From my team",
-    2: "From my domain",
-    3: "From other teams",
+    1: "My team",
+    2: "My domain (all shifts)",
+    3: "Other teams & domains",
 }
 
 
@@ -111,14 +111,13 @@ async def library_search(
     if cursor and not cursor_data:
         raise HTTPException(status_code=400, detail="Invalid cursor")
 
-    req_team_id, req_domain_id = _resolve_team_and_domain(db, current_user.id)
+    req_team_id, req_domain_id = _resolve_team_and_domain(db, engineer_id)
     is_admin = current_user.role == UserRole.admin
 
-    privacy_clause = (
-        ""
-        if is_admin
-        else "AND (ulc.is_private = 0 OR ulc.user_id = :requesting_user_id)"
-    )
+    # Discover excludes the plan owner's items (Create tab only) and non-public items
+    # for non-admins. Admins may still see other engineers' private items.
+    exclude_own_clause = "AND ulc.user_id != :engineer_id"
+    privacy_clause = "" if is_admin else "AND ulc.is_private = 0"
 
     has_query = bool(q and q.strip())
 
@@ -144,6 +143,7 @@ async def library_search(
         LEFT JOIN teams t_owner ON u_owner.team_id = t_owner.id
         WHERE ulc.skill_id = :skill_id
           AND ulc.level = :level
+          {exclude_own_clause}
           {privacy_clause}
           AND fts.user_content_fts MATCH :search_query
         """
@@ -161,6 +161,7 @@ async def library_search(
         LEFT JOIN teams t_owner ON u_owner.team_id = t_owner.id
         WHERE ulc.skill_id = :skill_id
           AND ulc.level = :level
+          {exclude_own_clause}
           {privacy_clause}
         """
         order = "ORDER BY bucket ASC, ulc.created_at DESC, ulc.id ASC"
@@ -187,7 +188,7 @@ async def library_search(
     sql += f" {order} LIMIT :limit_plus_one"
 
     params: dict = {
-        "requesting_user_id": current_user.id,
+        "engineer_id": engineer_id,
         "req_team_id": req_team_id,
         "req_domain_id": req_domain_id,
         "skill_id": skill_id,
@@ -237,7 +238,7 @@ async def library_search(
                 "bucket": r[9],
                 "bucket_label": BUCKET_LABELS.get(r[9], "Other"),
                 "score": float(r[10]) if r[10] is not None else 0.0,
-                "is_mine": r[6] == current_user.id,
+                "is_mine": r[6] == engineer_id,
             }
         )
 

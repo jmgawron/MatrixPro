@@ -166,11 +166,49 @@ def rebuild_user_content_fts(conn=None):
             conn.close()
 
 
+def _ensure_user_catalog_display_order_table(conn):
+    tables = {
+        r[0]
+        for r in conn.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table'")
+        ).fetchall()
+    }
+    if "user_catalog_display_order" in tables:
+        return
+    logger.info("CREATE TABLE user_catalog_display_order")
+    conn.execute(text("""
+        CREATE TABLE user_catalog_display_order (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            plan_skill_id INTEGER NOT NULL REFERENCES plan_skills(id),
+            content_id INTEGER NOT NULL REFERENCES skill_level_content(id),
+            position INTEGER NOT NULL,
+            updated_at DATETIME,
+            UNIQUE(user_id, plan_skill_id, content_id)
+        )
+    """))
+
+
+def _ensure_user_content_override_columns(conn):
+    cols = {
+        row[1]
+        for row in conn.execute(text("PRAGMA table_info(user_content_overrides)")).fetchall()
+    }
+    if "override_type" not in cols:
+        logger.info("ALTER TABLE user_content_overrides ADD COLUMN override_type")
+        conn.execute(text("ALTER TABLE user_content_overrides ADD COLUMN override_type VARCHAR(32)"))
+    if "override_url" not in cols:
+        logger.info("ALTER TABLE user_content_overrides ADD COLUMN override_url")
+        conn.execute(text("ALTER TABLE user_content_overrides ADD COLUMN override_url VARCHAR"))
+
+
 def run_migrations():
     """Execute all pending migrations idempotently."""
     with engine.connect() as conn:
         _ensure_user_level_content_columns(conn)
         _ensure_skills_columns(conn)
+        _ensure_user_catalog_display_order_table(conn)
+        _ensure_user_content_override_columns(conn)
 
         logger.info("Creating user_content_fts virtual table...")
         conn.execute(text("""

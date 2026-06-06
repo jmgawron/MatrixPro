@@ -463,6 +463,13 @@ export const SKILL_ICONS = {
 <path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
   },
 
+  /** Personal skill: engineer-owned item (user + star badge) */
+  personal: {
+    paths: `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+<circle cx="12" cy="8" r="4"/>
+<path d="M18.5 2.5l.45.95.98.14-.72.7.17.98-.88-.52-.88.52.17-.98-.72-.7.98-.14z" fill="currentColor" stroke="none"/>`,
+  },
+
   /** Search: magnifying glass */
   search: {
     paths: `<circle cx="11" cy="11" r="8"/>
@@ -708,6 +715,7 @@ export const ICON_CATEGORIES = {
   ],
   'General': [
     'document',
+    'personal',
     'users',
     'search',
     'flask',

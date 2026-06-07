@@ -2,7 +2,7 @@
 //
 // createComboboxMulti({ options, selectedValues, placeholder?, groupLabel?,
 //                       emptyText?, onChange? })
-//   → { element, getSelected(), setSelected(values), destroy() }
+//   → { element, getSelected(), setSelected(values), updateOptions(options), destroy() }
 //
 // Token-style multi-select: chips above an input, typing filters a dropdown
 // of options, Enter / click adds to selection. Backspace on empty input
@@ -19,8 +19,14 @@ export function createComboboxMulti({
   onOpen = null,
 } = {}) {
   const selected = new Set(selectedValues);
+  let optionList = options.slice();
   const optionsById = new Map();
-  options.forEach(o => optionsById.set(o.id, o));
+  optionList.forEach(o => optionsById.set(o.id, o));
+
+  function syncOptionsById() {
+    optionsById.clear();
+    optionList.forEach(o => optionsById.set(o.id, o));
+  }
 
   const root = createElement('div', { className: 'combobox-multi' });
 
@@ -82,7 +88,7 @@ export function createComboboxMulti({
   function renderDropdown(query) {
     dropdown.innerHTML = '';
     const q = (query || '').trim().toLowerCase();
-    filteredOptions = options.filter(o => {
+    filteredOptions = optionList.filter(o => {
       if (selected.has(o.id)) return false;
       if (!q) return true;
       return (o.label || '').toLowerCase().includes(q) ||
@@ -253,6 +259,17 @@ export function createComboboxMulti({
 
   document.addEventListener('mousedown', onDocMouseDown);
 
+  function updateOptions(newOptions) {
+    optionList = Array.isArray(newOptions) ? newOptions.slice() : [];
+    syncOptionsById();
+    [...selected].forEach((id) => {
+      if (!optionsById.has(id)) selected.delete(id);
+    });
+    renderChips();
+    if (dropdown.style.display !== 'none') renderDropdown(input.value);
+    notifyChange();
+  }
+
   renderChips();
 
   return {
@@ -264,10 +281,11 @@ export function createComboboxMulti({
       renderChips();
       notifyChange();
     },
-    destroy() {
+    updateOptions,
+    destroy({ removeRoot = false } = {}) {
       document.removeEventListener('mousedown', onDocMouseDown);
-      root.remove();
       dropdown.remove();
+      if (removeRoot && root.parentNode) root.remove();
     },
   };
 }

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import and_, exists, or_
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
@@ -15,6 +16,7 @@ from app.models.plan import (
     UserCatalogDisplayOrder,
     UserContentCompletion,
     UserContentOverride,
+    UserLevelContent,
 )
 from app.models.skill import (
     Skill,
@@ -34,8 +36,13 @@ from app.schemas.skill import (
     CompareResponse,
     CompareSkillInfo,
     CompareTeamResult,
+    ExplorerContentMatch,
+    ExplorerContentOption,
+    ExplorerContentOptionsResponse,
     ExplorerEngineerResult,
+    ExplorerLevelProgress,
     ExplorerResponse,
+    ExplorerSkillProgress,
     ReorderRequest,
     SkillCreate,
     SkillLevelContentCreate,
@@ -373,13 +380,191 @@ def list_ntech_teams(
     ]
 
 
+_FOCUS_TO_LEVEL = {"education": 1, "exposure": 2, "experience": 3}
+_LEVEL_TO_FOCUS = {1: "Education", 2: "Exposure", 3: "Experience"}
+
+
+def _parse_csv_ints(value: Optional[str]) -> list[int]:
+    if not value:
+        return []
+    out: list[int] = []
+    for part in value.split(","):
+        part = part.strip()
+        if part.isdigit():
+            out.append(int(part))
+    return out
+
+
+def _development_focus_label(
+    focus_area: Optional[str],
+    proficiency_level: Optional[int],
+    status: str,
+) -> Optional[str]:
+    if status == "mastered":
+        return None
+    if focus_area:
+        return focus_area.strip().capitalize()
+    if proficiency_level in _LEVEL_TO_FOCUS:
+        return _LEVEL_TO_FOCUS[proficiency_level]
+    return None
+
+
+def _level_pct(completed: int, total: int) -> int:
+    if total <= 0:
+        return 0
+    return round(100 * completed / total)
+
+
+def _compute_explorer_progress_batch(
+    db: Session,
+    rows: list[tuple[PlanSkill, Skill, User, Team]],
+) -> dict[int, ExplorerSkillProgress]:
+    if not rows:
+        return {}
+
+    plan_skill_ids = [ps.id for ps, _, _, _ in rows]
+    skill_ids = list({skill.id for _, skill, _, _ in rows})
+    user_ids = list({user.id for _, _, user, _ in rows})
+
+    catalog_by_skill: dict[int, list[SkillLevelContent]] = {}
+    if skill_ids:
+        for item in (
+            db.query(SkillLevelContent)
+            .filter(SkillLevelContent.skill_id.in_(skill_ids))
+            .all()
+        ):
+            catalog_by_skill.setdefault(item.skill_id, []).append(item)
+
+    hidden_set = {
+        (h.user_id, h.plan_skill_id, h.content_id)
+        for h in db.query(HiddenCatalogContent).filter(
+            HiddenCatalogContent.plan_skill_id.in_(plan_skill_ids),
+            HiddenCatalogContent.user_id.in_(user_ids),
+        )
+    }
+
+    completion_set = {
+        (c.user_id, c.plan_skill_id, c.content_id)
+        for c in db.query(UserContentCompletion).filter(
+            UserContentCompletion.plan_skill_id.in_(plan_skill_ids),
+            UserContentCompletion.user_id.in_(user_ids),
+            UserContentCompletion.completed.is_(True),
+        )
+    }
+
+    user_content_by_key: dict[tuple[int, int], list] = {}
+    for ui in (
+        db.query(UserLevelContent)
+        .filter(
+            UserLevelContent.plan_skill_id.in_(plan_skill_ids),
+            UserLevelContent.user_id.in_(user_ids),
+            UserLevelContent.is_private.is_(False),
+        )
+        .all()
+    ):
+        user_content_by_key.setdefault((ui.user_id, ui.plan_skill_id), []).append(ui)
+
+    progress_map: dict[int, ExplorerSkillProgress] = {}
+    for plan_skill, skill, user, _team in rows:
+        level_stats = {1: [0, 0], 2: [0, 0], 3: [0, 0]}
+
+        for item in catalog_by_skill.get(skill.id, []):
+            if (user.id, plan_skill.id, item.id) in hidden_set:
+                continue
+            lvl = item.level if item.level in _LEVEL_TO_FOCUS else 1
+            level_stats[lvl][1] += 1
+            if (user.id, plan_skill.id, item.id) in completion_set:
+                level_stats[lvl][0] += 1
+
+        for ui in user_content_by_key.get((user.id, plan_skill.id), []):
+            lvl = ui.level if ui.level in _LEVEL_TO_FOCUS else 1
+            level_stats[lvl][1] += 1
+            if ui.completed:
+                level_stats[lvl][0] += 1
+
+        levels = [
+            ExplorerLevelProgress(
+                level=lvl,
+                level_label=_LEVEL_TO_FOCUS[lvl],
+                completed=level_stats[lvl][0],
+                total=level_stats[lvl][1],
+                pct=_level_pct(level_stats[lvl][0], level_stats[lvl][1]),
+            )
+            for lvl in (1, 2, 3)
+        ]
+
+        total_items = sum(t for _, t in level_stats.values())
+        completed_items = sum(c for c, _ in level_stats.values())
+        if plan_skill.status.value == "mastered":
+            completion_pct = 100
+        else:
+            completion_pct = _level_pct(completed_items, total_items)
+
+        progress_map[plan_skill.id] = ExplorerSkillProgress(
+            completed_items=completed_items,
+            total_items=total_items,
+            completion_pct=completion_pct,
+            levels=levels,
+        )
+
+    return progress_map
+
+
+@router.get("/explorer/content", response_model=ExplorerContentOptionsResponse)
+def explorer_content_options(
+    skill_ids: str = Query(..., description="Comma-separated skill IDs"),
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
+):
+    ids = _parse_csv_ints(skill_ids)
+    if not ids:
+        raise HTTPException(status_code=400, detail="At least one skill_id is required")
+
+    rows = (
+        db.query(SkillLevelContent, Skill)
+        .join(Skill, SkillLevelContent.skill_id == Skill.id)
+        .filter(
+            SkillLevelContent.skill_id.in_(ids),
+            Skill.is_archived.is_(False),
+        )
+        .order_by(Skill.name, SkillLevelContent.level, SkillLevelContent.position)
+        .all()
+    )
+
+    return ExplorerContentOptionsResponse(
+        options=[
+            ExplorerContentOption(
+                id=content.id,
+                skill_id=skill.id,
+                skill_name=skill.name,
+                level=content.level,
+                level_label=_LEVEL_TO_FOCUS.get(content.level, "Content"),
+                title=content.title,
+                type=content.type.value if hasattr(content.type, "value") else str(content.type),
+            )
+            for content, skill in rows
+        ]
+    )
+
+
 @router.get("/explorer", response_model=ExplorerResponse)
 def explorer_search(
     q: Optional[str] = Query(None),
+    skill_ids: Optional[str] = Query(None, description="Comma-separated skill IDs"),
     team_id: Optional[int] = Query(None),
+    team_ids: Optional[str] = Query(None, description="Comma-separated team IDs"),
+    domain_ids: Optional[str] = Query(None, description="Comma-separated domain IDs"),
     status: Optional[str] = Query(None),
+    focus: Optional[str] = Query(
+        None, description="Comma-separated focus areas: education, exposure, experience"
+    ),
+    shift: Optional[str] = Query(None, description="Comma-separated shift numbers"),
+    content_ids: Optional[str] = Query(None, description="Comma-separated catalog content IDs"),
+    content_completed: Optional[bool] = Query(
+        None, description="When content_ids set: true=completed, false=not completed"
+    ),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
 ):
     query = (
         db.query(PlanSkill, Skill, User, Team)
@@ -387,13 +572,23 @@ def explorer_search(
         .join(DevelopmentPlan, PlanSkill.plan_id == DevelopmentPlan.id)
         .join(User, DevelopmentPlan.engineer_id == User.id)
         .outerjoin(Team, User.team_id == Team.id)
+        .filter(Skill.is_archived.is_(False))
     )
 
-    if q:
+    parsed_skill_ids = _parse_csv_ints(skill_ids)
+    if parsed_skill_ids:
+        query = query.filter(Skill.id.in_(parsed_skill_ids))
+    elif q:
         query = query.filter(Skill.name.ilike(f"%{q}%"))
 
-    if team_id is not None:
+    if team_id_list := _parse_csv_ints(team_ids):
+        query = query.filter(User.team_id.in_(team_id_list))
+    elif team_id is not None:
         query = query.filter(User.team_id == team_id)
+
+    domain_id_list = _parse_csv_ints(domain_ids)
+    if domain_id_list:
+        query = query.filter(Team.domain_id.in_(domain_id_list))
 
     if status is not None:
         status_list = [s.strip() for s in status.split(",") if s.strip()]
@@ -402,21 +597,111 @@ def explorer_search(
         elif status_list:
             query = query.filter(PlanSkill.status.in_(status_list))
 
+    if focus:
+        areas = [a.strip().lower() for a in focus.split(",") if a.strip()]
+        focus_conds = []
+        for area in areas:
+            focus_conds.append(PlanSkill.focus_area == area)
+            if area in _FOCUS_TO_LEVEL:
+                level = _FOCUS_TO_LEVEL[area]
+                focus_conds.append(
+                    and_(
+                        or_(PlanSkill.focus_area.is_(None), PlanSkill.focus_area == ""),
+                        PlanSkill.proficiency_level == level,
+                    )
+                )
+        if focus_conds:
+            query = query.filter(or_(*focus_conds))
+
+    shift_nums = _parse_csv_ints(shift)
+    if shift_nums:
+        query = query.filter(Team.shift.in_(shift_nums))
+
+    content_id_list = _parse_csv_ints(content_ids)
+    if content_id_list and content_completed is not None:
+        for cid in content_id_list:
+            completion_exists = exists().where(
+                and_(
+                    UserContentCompletion.user_id == User.id,
+                    UserContentCompletion.plan_skill_id == PlanSkill.id,
+                    UserContentCompletion.content_id == cid,
+                    UserContentCompletion.completed.is_(True),
+                )
+            )
+            if content_completed:
+                query = query.filter(completion_exists)
+            else:
+                query = query.filter(~completion_exists)
+
     query = query.order_by(Skill.name, User.name)
     rows = query.all()
 
-    results = [
-        ExplorerEngineerResult(
-            engineer_id=user.id,
-            engineer_name=user.name,
-            team_id=team.id if team else None,
-            team_name=team.name if team else None,
-            skill_name=skill.name,
-            status=plan_skill.status.value,
-            proficiency_level=plan_skill.proficiency_level,
+    progress_map = _compute_explorer_progress_batch(db, rows)
+
+    content_titles: dict[int, tuple[str, int]] = {}
+    if content_id_list:
+        for content in (
+            db.query(SkillLevelContent)
+            .filter(SkillLevelContent.id.in_(content_id_list))
+            .all()
+        ):
+            content_titles[content.id] = (content.title, content.level)
+
+    completion_map: dict[tuple[int, int], dict[int, bool]] = {}
+    if content_id_list and rows:
+        plan_skill_ids = [ps.id for ps, _, _, _ in rows]
+        user_ids = [u.id for _, _, u, _ in rows]
+        completions = (
+            db.query(UserContentCompletion)
+            .filter(
+                UserContentCompletion.plan_skill_id.in_(plan_skill_ids),
+                UserContentCompletion.user_id.in_(user_ids),
+                UserContentCompletion.content_id.in_(content_id_list),
+            )
+            .all()
         )
-        for plan_skill, skill, user, team in rows
-    ]
+        for comp in completions:
+            key = (comp.user_id, comp.plan_skill_id)
+            completion_map.setdefault(key, {})[comp.content_id] = bool(comp.completed)
+
+    results: list[ExplorerEngineerResult] = []
+    for plan_skill, skill, user, team in rows:
+        content_matches: list[ExplorerContentMatch] = []
+        if content_id_list:
+            key = (user.id, plan_skill.id)
+            comp_by_content = completion_map.get(key, {})
+            for cid in content_id_list:
+                title, level = content_titles.get(cid, (f"Item #{cid}", 0))
+                content_matches.append(
+                    ExplorerContentMatch(
+                        content_id=cid,
+                        title=title,
+                        level=level,
+                        level_label=_LEVEL_TO_FOCUS.get(level, "Content"),
+                        completed=comp_by_content.get(cid, False),
+                    )
+                )
+
+        results.append(
+            ExplorerEngineerResult(
+                engineer_id=user.id,
+                engineer_name=user.name,
+                team_id=team.id if team else None,
+                team_name=team.name if team else None,
+                shift=team.shift if team else None,
+                skill_id=skill.id,
+                skill_name=skill.name,
+                status=plan_skill.status.value,
+                proficiency_level=plan_skill.proficiency_level,
+                development_focus=_development_focus_label(
+                    plan_skill.focus_area,
+                    plan_skill.proficiency_level,
+                    plan_skill.status.value,
+                ),
+                progress=progress_map.get(plan_skill.id),
+                content_matches=content_matches,
+            )
+        )
 
     return ExplorerResponse(results=results, total=len(results))
 

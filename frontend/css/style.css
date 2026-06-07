@@ -8377,6 +8377,407 @@ textarea.is-error:focus {
   color: var(--text-secondary);
 }
 
+.explorer-search-controls {
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+/* ── Engineer Search — tiered filter panel ─────────────────────────────── */
+
+.explorer-filter-panel {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.explorer-filter-primary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-card-soft);
+}
+
+.explorer-filter-groups {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.explorer-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 20px 16px;
+  min-width: 0;
+}
+
+.explorer-filter-groups .explorer-filter-group:first-child {
+  border-right: 1px solid var(--border-soft);
+}
+
+.explorer-filter-group__head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.explorer-filter-group__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.explorer-filter-group__desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.explorer-filter-group__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.explorer-filter-group__body--stack {
+  gap: 10px;
+}
+
+.explorer-filter-field {
+  min-width: 0;
+}
+
+.explorer-filter-subrow {
+  padding-left: 10px;
+  border-left: 2px solid var(--accent-soft, rgba(59, 130, 246, 0.25));
+}
+
+.explorer-filter-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.explorer-filter-chips--field {
+  gap: 6px;
+}
+
+.explorer-filter-chips__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.explorer-filter-sublabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.explorer-filter-sublabel--muted {
+  color: var(--text-muted);
+  text-transform: none;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.explorer-filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 20px 14px;
+  border-top: 1px solid var(--border-soft);
+  background: var(--bg-card-soft);
+}
+
+.explorer-filter-actions__count {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.explorer-filter-clear {
+  flex: 0 0 auto;
+}
+
+.explorer-filter-group--refinement {
+  margin: 0;
+  padding: 14px 20px 16px;
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-card-soft);
+  gap: 14px;
+}
+
+.explorer-filter-group--refinement .explorer-refinement-combo {
+  width: 100%;
+  max-width: 720px;
+  min-width: 0;
+}
+
+.explorer-refinement-combo .combobox-multi {
+  width: 100%;
+  min-width: 0;
+}
+
+.explorer-refinement-combo .combobox-multi__field {
+  min-height: 42px;
+}
+
+.explorer-refinement-combo .combobox-multi__input {
+  /* Override global form input { width:100%; display:block } */
+  width: auto;
+  display: inline-block;
+  flex: 1 1 140px;
+  min-width: 140px;
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.explorer-refinement-combo .combobox-multi__input:focus {
+  box-shadow: none;
+}
+
+.explorer-filter-group--refinement .explorer-refinement-completion {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.explorer-filter-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.explorer-skill-picker {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  position: relative;
+}
+
+.explorer-skill-picker__field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 6px 8px;
+  min-height: 42px;
+}
+
+.explorer-skill-picker__field:focus-within {
+  border-color: var(--accent);
+}
+
+.explorer-skill-picker__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.explorer-skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent-soft, rgba(59, 130, 246, 0.1));
+  border: 1px solid var(--accent, #3b82f6);
+  color: var(--accent, #3b82f6);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.explorer-skill-chip__remove {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.explorer-skill-picker__field .explorer-search-input {
+  flex: 1 1 140px;
+  min-width: 120px;
+  border: 0;
+  background: transparent;
+  padding: 4px 2px;
+}
+
+.explorer-skill-suggestions {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 240px;
+  overflow: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.18));
+}
+
+.explorer-skill-suggestions__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.explorer-skill-suggestions__item:hover,
+.explorer-skill-suggestions__item:focus-visible {
+  background: var(--bg-card-soft);
+  outline: none;
+}
+
+.explorer-skill-suggestions__empty {
+  padding: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.explorer-search-btn {
+  flex: 0 0 auto;
+  min-width: 148px;
+}
+
+.explorer-team-filter__combo {
+  width: 100%;
+}
+
+.explorer-team-filter__combo .combobox-multi__field {
+  min-height: 42px;
+}
+
+.explorer-refinement-panel {
+  /* legacy hooks retained; layout via .explorer-filter-group--refinement */
+}
+
+.explorer-content-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.explorer-content-match {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.explorer-content-match__title {
+  font-size: 12px;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.explorer-content-match__badge {
+  display: inline-block;
+  width: fit-content;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.explorer-content-match__badge--done {
+  color: #15803d;
+  background: rgba(34, 197, 94, 0.14);
+}
+
+.explorer-content-match__badge--pending {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.explorer-progress {
+  min-width: 140px;
+  max-width: 220px;
+}
+
+.explorer-progress__track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-soft);
+}
+
+.explorer-progress__track--mastered {
+  background: rgba(212, 175, 55, 0.12);
+  border-color: var(--status-mastered-border);
+}
+
+.explorer-progress__fill {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-strong, #2563eb) 100%);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.explorer-progress__fill--mastered {
+  background: linear-gradient(90deg, #d4af37 0%, #e5c76b 100%);
+}
+
+.explorer-progress__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 8px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.explorer-progress__pct {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.explorer-progress__pct--mastered {
+  color: var(--status-mastered-fg);
+}
+
+.explorer-progress__count {
+  color: var(--text-muted);
+}
+
 .explorer-empty-icon {
   font-size: 32px;
   margin-bottom: 12px;
@@ -12329,14 +12730,20 @@ textarea.is-error:focus {
   background: rgba(255, 255, 255, 0.08);
 }
 .combobox-multi__input {
-  flex: 1;
+  flex: 1 1 140px;
   min-width: 140px;
+  width: auto;
+  display: inline-block;
   border: 0;
   background: transparent;
   outline: none;
   color: var(--text-primary);
   font-size: 13px;
   padding: 4px 2px;
+  box-shadow: none;
+}
+.combobox-multi__input:focus {
+  box-shadow: none;
 }
 .combobox-multi__input::placeholder {
   color: var(--text-muted);

@@ -7,7 +7,10 @@ export function createElement(tag, props) {
     if (k === 'className') el.className = v;
     else if (k === 'textContent') el.textContent = v;
     else if (k === 'htmlFor') el.htmlFor = v;
-    else el.setAttribute(k, v);
+    else if (k === 'style') {
+      if (typeof v === 'string') el.setAttribute('style', v);
+      else if (v && typeof v === 'object') Object.assign(el.style, v);
+    } else el.setAttribute(k, v);
   });
   return el;
 }

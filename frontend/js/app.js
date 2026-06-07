@@ -11,7 +11,7 @@ import { mountLogin } from './pages/login.js?v=3';
 import { mountMyPlan } from './pages/my-plan.js?v=58';
 import { mountMyTeam } from './pages/my-team.js?v=25';
 import { mountCatalog } from './pages/catalog.js?v=38';
-import { mountSkillExplorer } from './pages/skill-explorer.js?v=10';
+import { mountSkillExplorer } from './pages/skill-explorer.js?v=19';
 import { mountSettings } from './pages/settings.js';
 import { mountAdmin } from './pages/admin.js?v=7';
 

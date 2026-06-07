@@ -129,19 +129,61 @@ class SkillResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ExplorerContentMatch(BaseModel):
+    content_id: int
+    title: str
+    level: int
+    level_label: str
+    completed: bool
+
+
+class ExplorerLevelProgress(BaseModel):
+    level: int
+    level_label: str
+    completed: int
+    total: int
+    pct: int
+
+
+class ExplorerSkillProgress(BaseModel):
+    completed_items: int
+    total_items: int
+    completion_pct: int
+    levels: list[ExplorerLevelProgress] = []
+
+
 class ExplorerEngineerResult(BaseModel):
     engineer_id: int
     engineer_name: str
     team_id: int | None = None
     team_name: str | None = None
+    shift: int | None = None
+    skill_id: int
     skill_name: str
     status: str
     proficiency_level: int | None = None
+    development_focus: str | None = None
+    progress: ExplorerSkillProgress | None = None
+    content_matches: list[ExplorerContentMatch] = []
 
 
 class ExplorerResponse(BaseModel):
     results: list[ExplorerEngineerResult]
     total: int
+
+
+class ExplorerContentOption(BaseModel):
+    id: int
+    skill_id: int
+    skill_name: str
+    level: int
+    level_label: str
+    title: str
+    type: str
+
+
+class ExplorerContentOptionsResponse(BaseModel):
+    options: list[ExplorerContentOption]
 
 
 class CompareSkillInfo(BaseModel):

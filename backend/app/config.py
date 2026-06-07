@@ -13,10 +13,36 @@ _default_db_dir.mkdir(parents=True, exist_ok=True)
 _default_db_url = f"sqlite:///{_default_db_dir / 'matrixpro.db'}"
 
 
+_INSECURE_JWT_SECRETS = frozenset(
+    {"", "change-me", "change-me-in-production", "changeme", "secret"}
+)
+
+
 class Settings:
     JWT_SECRET: str = os.getenv("JWT_SECRET", "change-me-in-production")
     DATABASE_URL: str = os.getenv("DATABASE_URL", _default_db_url)
     JWT_EXPIRY_HOURS: int = int(os.getenv("JWT_EXPIRY_HOURS", "24"))
+    ENV: str = os.getenv("MATRIXPRO_ENV", "development")
+    CORS_ORIGINS: list[str] = [
+        origin.strip()
+        for origin in os.getenv(
+            "CORS_ORIGINS",
+            "http://localhost:3000,http://127.0.0.1:3000,"
+            "http://localhost:8000,http://127.0.0.1:8000",
+        ).split(",")
+        if origin.strip()
+    ]
+
+    def validate(self) -> None:
+        if self.ENV.lower() in ("production", "prod"):
+            if (
+                self.JWT_SECRET in _INSECURE_JWT_SECRETS
+                or len(self.JWT_SECRET) < 32
+            ):
+                raise RuntimeError(
+                    "JWT_SECRET must be a strong value (≥32 chars) when "
+                    "MATRIXPRO_ENV=production"
+                )
 
 
 settings = Settings()

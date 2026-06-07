@@ -117,8 +117,35 @@ def _sync_category_m2m(db: Session, skill_id: int, category_ids: list[int]):
         db.add(SkillCategoryAssignment(skill_id=skill_id, category_id=cat_id))
 
 
+def _manager_accessible_team_ids(current_user: User, db: Session) -> set[int]:
+    """Teams a manager may attach skills to: own team + teams of direct reports."""
+    allowed: set[int] = set()
+    if current_user.team_id is not None:
+        allowed.add(current_user.team_id)
+    report_team_ids = (
+        db.query(User.team_id)
+        .filter(User.manager_id == current_user.id, User.team_id.isnot(None))
+        .distinct()
+        .all()
+    )
+    allowed.update(row[0] for row in report_team_ids)
+    return allowed
+
+
 def _check_manager_team_access(current_user: User, team_ids: list[int], db: Session):
-    return
+    if current_user.role == UserRole.admin:
+        return
+    if current_user.role != UserRole.manager:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not team_ids:
+        return
+    allowed = _manager_accessible_team_ids(current_user, db)
+    invalid = [tid for tid in team_ids if tid not in allowed]
+    if invalid:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Not authorized to assign skills to team(s): {invalid}",
+        )
 
 
 @router.get("/", response_model=list[SkillResponse])
@@ -222,9 +249,15 @@ def create_skill(
 
     _check_manager_team_access(current_user, team_ids, db)
 
-    for tid in team_ids:
-        if not db.query(Team).filter(Team.id == tid).first():
-            raise HTTPException(status_code=400, detail=f"Team {tid} not found")
+    if team_ids:
+        found_ids = {
+            t.id for t in db.query(Team).filter(Team.id.in_(team_ids)).all()
+        }
+        missing = [tid for tid in team_ids if tid not in found_ids]
+        if missing:
+            raise HTTPException(
+                status_code=400, detail=f"Team(s) not found: {missing}"
+            )
 
     skill = Skill(
         name=data.name,

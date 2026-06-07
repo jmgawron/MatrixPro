@@ -1,3 +1,5 @@
+import { ensureMarkdownDeps } from '../utils/cdn-loader.js';
+
 const DOMPURIFY_CONFIG = {
   ALLOWED_TAGS: [
     'p', 'br', 'strong', 'em', 'u', 's', 'code', 'pre',
@@ -21,6 +23,12 @@ const TURNDOWN_OPTIONS = {
 };
 
 let _turndown = null;
+
+function configureMarked() {
+  if (typeof marked === 'undefined') return;
+  marked.setOptions({ gfm: true, breaks: true, headerIds: false, mangle: false });
+}
+
 function getTurndown() {
   if (_turndown) return _turndown;
   if (typeof TurndownService === 'undefined') {
@@ -30,11 +38,7 @@ function getTurndown() {
   return _turndown;
 }
 
-function configureMarked() {
-  if (typeof marked === 'undefined') return;
-  marked.setOptions({ gfm: true, breaks: true, headerIds: false, mangle: false });
-}
-configureMarked();
+export { ensureMarkdownDeps };
 
 export function markdownToHtml(md) {
   if (!md) return '';
@@ -81,10 +85,9 @@ const TOOLBAR = [
   ['clean'],
 ];
 
-export function mountMarkdownEditor(container, options = {}) {
-  if (typeof Quill === 'undefined') {
-    throw new Error('Quill not loaded');
-  }
+export async function mountMarkdownEditor(container, options = {}) {
+  await ensureMarkdownDeps();
+  configureMarked();
 
   const initialMd = options.initialMarkdown || '';
   const editorRoot = document.createElement('div');

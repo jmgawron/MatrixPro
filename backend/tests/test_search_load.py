@@ -10,19 +10,11 @@ from app.models.org import Domain, Team
 from app.models.user import User, UserRole
 from app.models.skill import Skill
 from app.models.plan import DevelopmentPlan, PlanSkill, UserLevelContent
-from app.database import Base, engine
 
 
-@pytest.fixture(scope="function")
-def db():
-    """Create a fresh database for each test."""
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
-    from app.database import SessionLocal
-    session = SessionLocal()
-    yield session
-    session.close()
-    Base.metadata.drop_all(engine)
+@pytest.fixture
+def db(isolated_db: Session) -> Session:
+    return isolated_db
 
 
 @pytest.fixture

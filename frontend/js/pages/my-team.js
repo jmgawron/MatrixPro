@@ -1,4 +1,5 @@
 import { api, API_BASE } from '../api.js';
+import { ensureEcharts } from '../utils/cdn-loader.js';
 import { Store } from '../state.js';
 import { showSkeleton } from '../components/skeleton.js';
 import { showToast } from '../components/toast.js';
@@ -318,6 +319,7 @@ async function loadAllData(teamId) {
       api.get(matrixUrl),
       api.get(statsUrl).catch(() => null),
       api.get(activityUrl).catch(() => ({ items: [] })),
+      ensureEcharts(),
     ]);
 
     _matrixData = matrix;

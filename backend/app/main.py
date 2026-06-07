@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
+from app.config import settings
 from app.database import Base, engine
 from app.routers import (
     auth,
@@ -22,9 +22,11 @@ from app.routers import (
 
 app = FastAPI(title="MatrixPro API", version="0.1.0")
 
+settings.validate()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,

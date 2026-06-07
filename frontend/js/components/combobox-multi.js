@@ -247,9 +247,11 @@ export function createComboboxMulti({
     }
   });
 
-  document.addEventListener('mousedown', (e) => {
+  function onDocMouseDown(e) {
     if (!root.contains(e.target) && !dropdown.contains(e.target)) closeDropdown();
-  });
+  }
+
+  document.addEventListener('mousedown', onDocMouseDown);
 
   renderChips();
 
@@ -263,6 +265,7 @@ export function createComboboxMulti({
       notifyChange();
     },
     destroy() {
+      document.removeEventListener('mousedown', onDocMouseDown);
       root.remove();
       dropdown.remove();
     },

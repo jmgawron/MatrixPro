@@ -269,6 +269,19 @@ def run_migrations():
             logger.warning("user_content_fts index is corrupt — auto-rebuilding...")
             rebuild_user_content_fts(conn)
 
+        logger.info("Creating core table indexes...")
+        for idx_sql in (
+            "CREATE INDEX IF NOT EXISTS idx_plan_skills_plan_id ON plan_skills(plan_id);",
+            "CREATE INDEX IF NOT EXISTS idx_plan_skills_skill_id ON plan_skills(skill_id);",
+            "CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);",
+            "CREATE INDEX IF NOT EXISTS idx_users_manager_id ON users(manager_id);",
+            "CREATE INDEX IF NOT EXISTS idx_skill_level_content_skill_id ON skill_level_content(skill_id);",
+            "CREATE INDEX IF NOT EXISTS idx_skill_teams_team_id ON skill_teams(team_id);",
+            "CREATE INDEX IF NOT EXISTS idx_skills_is_archived ON skills(is_archived);",
+            "CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_type, entity_id, changed_at DESC);",
+        ):
+            conn.execute(text(idx_sql))
+
         conn.commit()
         logger.info("✅ All migrations completed successfully")
 

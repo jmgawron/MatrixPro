@@ -1,21 +1,24 @@
-import { Router } from './router.js?v=8';
+import { Router } from './router.js?v=9';
 import { Store } from './state.js';
 import { api } from './api.js';
-import { initNav } from './components/nav.js?v=8';
+import { parseBuildFromModuleUrl, formatAppVersion } from './version.js';
+import { initNav } from './components/nav.js?v=9';
 import { initThemeToggle } from './components/theme.js';
 import { initFeedbackButton } from './components/feedback.js';
 
-import { mountHome } from './pages/home.js?v=13';
-import { mountLogin } from './pages/login.js';
-import { mountMyPlan } from './pages/my-plan.js?v=56';
-import { mountMyTeam } from './pages/my-team.js?v=23';
+import { mountHome } from './pages/home.js?v=17';
+import { mountLogin } from './pages/login.js?v=2';
+import { mountMyPlan } from './pages/my-plan.js?v=57';
+import { mountMyTeam } from './pages/my-team.js?v=24';
 import { mountCatalog } from './pages/catalog.js?v=23';
 import { mountSkillExplorer } from './pages/skill-explorer.js?v=9';
 import { mountSettings } from './pages/settings.js';
 import { mountAdmin } from './pages/admin.js?v=7';
 
+Store.set('appVersion', formatAppVersion(parseBuildFromModuleUrl(import.meta.url)));
+
 const routes = {
-  '/': { mount: mountHome, title: 'Home', minRole: null },
+  '/': { mount: mountHome, title: 'Home', minRole: null, public: true },
   '/login': { mount: mountLogin, title: 'Login', minRole: null, public: true },
   '/my-plan': { mount: mountMyPlan, title: 'My Plan', minRole: 'engineer', excludeRoles: ['admin'] },
   '/my-plan/:id': { mount: mountMyPlan, title: 'My Plan', minRole: 'manager', excludeRoles: ['admin'] },
@@ -44,4 +47,10 @@ async function init() {
   Router.init(routes, document.getElementById('app'));
 }
 
-init();
+init().catch((err) => {
+  console.error('MatrixPro init failed:', err);
+  const app = document.getElementById('app');
+  if (app) {
+    app.innerHTML = `<div class="empty-state"><h2>Failed to start</h2><p>${err?.message || 'Unknown error'}</p></div>`;
+  }
+});

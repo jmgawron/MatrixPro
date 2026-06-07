@@ -1938,10 +1938,12 @@ function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
 
   let quillInstance = null;
 
-  requestAnimationFrame(() => {
+  requestAnimationFrame(async () => {
     overlay.classList.add('open');
 
-    if (typeof Quill !== 'undefined') {
+    try {
+      const { ensureMarkdownDeps } = await import('../utils/cdn-loader.js');
+      await ensureMarkdownDeps();
       quillInstance = new Quill(editorEl, {
         theme: 'snow',
         modules: {
@@ -1957,7 +1959,7 @@ function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
       if (existingItem?.description) {
         quillInstance.root.innerHTML = existingItem.description;
       }
-    } else {
+    } catch {
       editorEl.contentEditable = 'true';
       editorEl.style.cssText = 'min-height:120px;padding:10px;border:1px solid var(--border-soft);border-radius:var(--radius-md);background:var(--bg-input);color:var(--text-primary);';
       if (existingItem?.description) editorEl.innerHTML = existingItem.description;

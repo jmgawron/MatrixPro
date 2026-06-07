@@ -125,25 +125,29 @@ def _require_owner(current_user: User, engineer_id: int, db: Session) -> User:
     )
 
 
+def _plan_list_eager_options():
+    return [
+        selectinload(DevelopmentPlan.engineer),
+        selectinload(DevelopmentPlan.skills)
+        .selectinload(PlanSkill.skill)
+        .selectinload(Skill.skill_teams)
+        .selectinload(SkillTeam.team)
+        .selectinload(Team.domain),
+        selectinload(DevelopmentPlan.skills)
+        .selectinload(PlanSkill.skill)
+        .selectinload(Skill.level_content),
+        selectinload(DevelopmentPlan.skills)
+        .selectinload(PlanSkill.skill)
+        .selectinload(Skill.skill_categories)
+        .selectinload(SkillCategoryAssignment.category),
+        selectinload(DevelopmentPlan.skills).selectinload(PlanSkill.training_log),
+    ]
+
+
 def _eager_load_plan(db: Session, plan_id: int) -> Optional[DevelopmentPlan]:
     return (
         db.query(DevelopmentPlan)
-        .options(
-            selectinload(DevelopmentPlan.engineer),
-            selectinload(DevelopmentPlan.skills)
-            .selectinload(PlanSkill.skill)
-            .selectinload(Skill.skill_teams)
-            .selectinload(SkillTeam.team)
-            .selectinload(Team.domain),
-            selectinload(DevelopmentPlan.skills)
-            .selectinload(PlanSkill.skill)
-            .selectinload(Skill.level_content),
-            selectinload(DevelopmentPlan.skills)
-            .selectinload(PlanSkill.skill)
-            .selectinload(Skill.skill_categories)
-            .selectinload(SkillCategoryAssignment.category),
-            selectinload(DevelopmentPlan.skills).selectinload(PlanSkill.training_log),
-        )
+        .options(*_plan_list_eager_options())
         .filter(DevelopmentPlan.id == plan_id)
         .first()
     )
@@ -207,7 +211,9 @@ def _to_plan_response(plan: DevelopmentPlan) -> PlanResponse:
     )
 
 
-def _get_or_create_plan(db: Session, engineer_id: int) -> DevelopmentPlan:
+def _get_or_create_plan(
+    db: Session, engineer_id: int, *, commit: bool = True
+) -> DevelopmentPlan:
     plan = (
         db.query(DevelopmentPlan)
         .filter(DevelopmentPlan.engineer_id == engineer_id)
@@ -219,8 +225,11 @@ def _get_or_create_plan(db: Session, engineer_id: int) -> DevelopmentPlan:
             created_at=datetime.utcnow(),
         )
         db.add(plan)
-        db.commit()
-        db.refresh(plan)
+        if commit:
+            db.commit()
+            db.refresh(plan)
+        else:
+            db.flush()
     return plan
 
 
@@ -233,28 +242,17 @@ def list_plans(
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     if current_user.role == UserRole.admin:
-        plans = (
-            db.query(DevelopmentPlan)
-            .options(
-                selectinload(DevelopmentPlan.engineer),
-                selectinload(DevelopmentPlan.skills).selectinload(PlanSkill.skill),
-                selectinload(DevelopmentPlan.skills).selectinload(
-                    PlanSkill.training_log
-                ),
-            )
-            .all()
-        )
+        plans = db.query(DevelopmentPlan).options(*_plan_list_eager_options()).all()
     else:
-        report_ids = [r.id for r in current_user.reports]
+        report_ids = [
+            row[0]
+            for row in db.query(User.id)
+            .filter(User.manager_id == current_user.id)
+            .all()
+        ]
         plans = (
             db.query(DevelopmentPlan)
-            .options(
-                selectinload(DevelopmentPlan.engineer),
-                selectinload(DevelopmentPlan.skills).selectinload(PlanSkill.skill),
-                selectinload(DevelopmentPlan.skills).selectinload(
-                    PlanSkill.training_log
-                ),
-            )
+            .options(*_plan_list_eager_options())
             .filter(DevelopmentPlan.engineer_id.in_(report_ids))
             .all()
         )
@@ -282,8 +280,20 @@ def bulk_assign_skill(
     skipped_count = 0
     error_count = 0
 
-    for eng_id in data.engineer_ids:
-        engineer = db.query(User).filter(User.id == eng_id).first()
+    engineer_ids = list(data.engineer_ids)
+    engineers_by_id = {
+        u.id: u
+        for u in db.query(User).filter(User.id.in_(engineer_ids)).all()
+    }
+    existing_plans = {
+        p.engineer_id: p
+        for p in db.query(DevelopmentPlan)
+        .filter(DevelopmentPlan.engineer_id.in_(engineer_ids))
+        .all()
+    }
+
+    for eng_id in engineer_ids:
+        engineer = engineers_by_id.get(eng_id)
         if engineer is None:
             results.append(
                 BulkAssignResultItem(
@@ -309,7 +319,15 @@ def bulk_assign_skill(
                 error_count += 1
                 continue
 
-        plan = _get_or_create_plan(db, eng_id)
+        plan = existing_plans.get(eng_id)
+        if plan is None:
+            plan = DevelopmentPlan(
+                engineer_id=eng_id,
+                created_at=datetime.utcnow(),
+            )
+            db.add(plan)
+            db.flush()
+            existing_plans[eng_id] = plan
 
         existing = (
             db.query(PlanSkill)
@@ -717,6 +735,18 @@ def remove_skill_from_plan(
 
     db.query(PlanSkillTrainingLog).filter(
         PlanSkillTrainingLog.plan_skill_id == plan_skill_id
+    ).delete()
+    db.query(UserContentCompletion).filter(
+        UserContentCompletion.plan_skill_id == plan_skill_id
+    ).delete()
+    db.query(UserContentOverride).filter(
+        UserContentOverride.plan_skill_id == plan_skill_id
+    ).delete()
+    db.query(HiddenCatalogContent).filter(
+        HiddenCatalogContent.plan_skill_id == plan_skill_id
+    ).delete()
+    db.query(UserCatalogDisplayOrder).filter(
+        UserCatalogDisplayOrder.plan_skill_id == plan_skill_id
     ).delete()
 
     _audit_log(

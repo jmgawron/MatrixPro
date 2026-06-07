@@ -2,51 +2,89 @@ import { api } from '../api.js';
 import { Store } from '../state.js';
 import { Router } from '../router.js';
 import { showToast } from '../components/toast.js';
+import { mountHome } from './home.js?v=16';
 
-export function mountLogin(container, params) {
+const AUTH_ICON = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+  <rect x="9" y="11" width="6" height="5" rx="1"/>
+  <path d="M10 11V9a2 2 0 0 1 4 0v2"/>
+</svg>`;
+
+let _activeLoginModal = null;
+
+function closeLoginModal() {
+  if (!_activeLoginModal) return;
+  const { overlay, onKey } = _activeLoginModal;
+  document.removeEventListener('keydown', onKey);
+  overlay.classList.remove('open');
+  setTimeout(() => overlay.remove(), 200);
+  _activeLoginModal = null;
+}
+
+export function openLoginModal({ onClose } = {}) {
   if (Store.isLoggedIn) {
-    Router.go('/');
-    return;
+    onClose?.();
+    return () => {};
   }
 
-  container.innerHTML = '';
+  if (_activeLoginModal) closeLoginModal();
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'auth-page';
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay modal-overlay--auth';
 
-  const card = document.createElement('div');
-  card.className = 'card auth-card';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-auth';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'login-modal-title');
 
-  const logoWrap = document.createElement('div');
-  logoWrap.className = 'auth-logo';
-  logoWrap.innerHTML = `
-    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2">
-      <rect x="3" y="3" width="7" height="7" rx="1"/>
-      <rect x="14" y="3" width="7" height="7" rx="1"/>
-      <rect x="3" y="14" width="7" height="7" rx="1"/>
-      <rect x="14" y="14" width="7" height="7" rx="1"/>
-    </svg>
-  `;
+  const header = document.createElement('div');
+  header.className = 'modal-header modal-auth__header';
 
-  const title = document.createElement('h1');
-  title.className = 'auth-title';
-  title.textContent = 'MatrixPro';
+  const headerMain = document.createElement('div');
+  headerMain.className = 'modal-auth__header-main';
+
+  const iconWrap = document.createElement('div');
+  iconWrap.className = 'modal-auth__icon';
+  iconWrap.innerHTML = AUTH_ICON;
+
+  const titleWrap = document.createElement('div');
+  const title = document.createElement('h3');
+  title.id = 'login-modal-title';
+  title.className = 'modal-title';
+  title.textContent = 'Sign in';
 
   const subtitle = document.createElement('p');
-  subtitle.className = 'auth-subtitle';
-  subtitle.textContent = 'Sign in to your account';
+  subtitle.className = 'modal-auth__subtitle';
+  subtitle.textContent = 'Authenticate to access MatrixPro';
+
+  titleWrap.appendChild(title);
+  titleWrap.appendChild(subtitle);
+  headerMain.appendChild(iconWrap);
+  headerMain.appendChild(titleWrap);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'modal-close';
+  closeBtn.setAttribute('aria-label', 'Close sign in');
+  closeBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+  header.appendChild(headerMain);
+  header.appendChild(closeBtn);
+
+  const body = document.createElement('div');
+  body.className = 'modal-body modal-auth__body';
 
   const form = document.createElement('form');
-  form.className = 'auth-form';
+  form.className = 'auth-form modal-auth__form';
   form.setAttribute('novalidate', '');
 
   const emailGroup = document.createElement('div');
   emailGroup.className = 'form-group';
-
   const emailLabel = document.createElement('label');
+  emailLabel.className = 'form-label';
   emailLabel.htmlFor = 'login-email';
   emailLabel.textContent = 'Email';
-
   const emailInput = document.createElement('input');
   emailInput.type = 'email';
   emailInput.id = 'login-email';
@@ -54,17 +92,15 @@ export function mountLogin(container, params) {
   emailInput.placeholder = 'you@cisco.com';
   emailInput.autocomplete = 'email';
   emailInput.required = true;
-
   emailGroup.appendChild(emailLabel);
   emailGroup.appendChild(emailInput);
 
   const passGroup = document.createElement('div');
   passGroup.className = 'form-group';
-
   const passLabel = document.createElement('label');
+  passLabel.className = 'form-label';
   passLabel.htmlFor = 'login-password';
   passLabel.textContent = 'Password';
-
   const passInput = document.createElement('input');
   passInput.type = 'password';
   passInput.id = 'login-password';
@@ -72,7 +108,6 @@ export function mountLogin(container, params) {
   passInput.placeholder = '••••••••';
   passInput.autocomplete = 'current-password';
   passInput.required = true;
-
   passGroup.appendChild(passLabel);
   passGroup.appendChild(passInput);
 
@@ -91,17 +126,28 @@ export function mountLogin(container, params) {
   form.appendChild(passGroup);
   form.appendChild(errorEl);
   form.appendChild(submitBtn);
+  body.appendChild(form);
 
-  card.appendChild(logoWrap);
-  card.appendChild(title);
-  card.appendChild(subtitle);
-  card.appendChild(form);
-  wrapper.appendChild(card);
-  container.appendChild(wrapper);
+  modal.appendChild(header);
+  modal.appendChild(body);
+  overlay.appendChild(modal);
 
-  emailInput.focus();
+  const dismiss = () => {
+    closeLoginModal();
+    onClose?.();
+  };
 
-  form.addEventListener('submit', async e => {
+  const onKey = (e) => {
+    if (e.key === 'Escape') dismiss();
+  };
+
+  closeBtn.addEventListener('click', dismiss);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) dismiss();
+  });
+  document.addEventListener('keydown', onKey);
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorEl.hidden = true;
 
@@ -119,7 +165,6 @@ export function mountLogin(container, params) {
 
     try {
       const data = await api.post('/api/auth/login', { email, password });
-
       const token = data.access_token ?? data.token;
       if (!token) throw new Error('No token received from server.');
 
@@ -129,6 +174,7 @@ export function mountLogin(container, params) {
       const user = await api.get('/api/auth/me');
       Store.set('user', user);
 
+      closeLoginModal();
       showToast(`Welcome back, ${user.name ?? user.email}!`, 'success');
       Router.go('/');
     } catch (err) {
@@ -140,4 +186,31 @@ export function mountLogin(container, params) {
       passInput.focus();
     }
   });
+
+  document.getElementById('modalRoot').appendChild(overlay);
+  _activeLoginModal = { overlay, onKey };
+
+  requestAnimationFrame(() => {
+    overlay.classList.add('open');
+    emailInput.focus();
+  });
+
+  return closeLoginModal;
+}
+
+export function mountLogin(container) {
+  if (Store.isLoggedIn) {
+    Router.go('/');
+    return;
+  }
+
+  mountHome(container);
+
+  const closeModal = openLoginModal({
+    onClose: () => {
+      if (Router.current() === '/login') Router.go('/');
+    },
+  });
+
+  return () => closeModal();
 }

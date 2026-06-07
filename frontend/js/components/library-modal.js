@@ -355,12 +355,17 @@ function buildCreatePane({
     initialMarkdown = item.description || '';
   }
 
-  const editorApi = mountMarkdownEditor(editorHost, {
+  let editorApi = null;
+  const editorReady = mountMarkdownEditor(editorHost, {
     initialMarkdown,
     placeholder: 'Notes, links, takeaways…',
+  }).then((api) => {
+    editorApi = api;
+    return api;
   });
 
   async function save(primaryBtn) {
+    await editorReady;
     const titleVal = titleInput.value.trim();
     if (!titleVal) {
       showToast('Title is required', 'error');

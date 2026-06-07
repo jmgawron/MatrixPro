@@ -13,3 +13,11 @@ export function createElement(tag, props) {
 }
 
 export { createElement as el };
+
+/** Escape text for safe HTML interpolation. */
+export function escHtml(value) {
+  const s = String(value ?? '');
+  const el = document.createElement('span');
+  el.textContent = s;
+  return el.innerHTML;
+}

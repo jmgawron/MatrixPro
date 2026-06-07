@@ -14,20 +14,26 @@ const API_BASE = (() => {
   return '';
 })();
 
-async function request(method, path, body) {
+let _authRedirectPending = false;
+
+async function request(method, path, body, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const options = { method, headers };
-  if (body !== undefined) options.body = JSON.stringify(body);
+  const fetchOptions = { method, headers, ...options };
+  if (body !== undefined) fetchOptions.body = JSON.stringify(body);
 
-  const res = await fetch(`${API_BASE}${path}`, options);
+  const res = await fetch(`${API_BASE}${path}`, fetchOptions);
 
   if (res.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    Store.set('user', null);
-    window.location.hash = '#/login';
+    if (!_authRedirectPending) {
+      _authRedirectPending = true;
+      localStorage.removeItem(TOKEN_KEY);
+      Store.set('user', null);
+      window.location.hash = '#/login';
+      setTimeout(() => { _authRedirectPending = false; }, 100);
+    }
     throw new Error('Unauthorized');
   }
 
@@ -40,8 +46,11 @@ async function request(method, path, body) {
   }
 
   if (!res.ok) {
-    const message = data?.detail ?? data?.message ?? `HTTP ${res.status}`;
-    throw new Error(message);
+    const detail = data?.detail;
+    const message = Array.isArray(detail)
+      ? detail.map((d) => d.msg ?? String(d)).join('; ')
+      : (detail ?? data?.message ?? `HTTP ${res.status}`);
+    throw new Error(typeof message === 'string' ? message : `HTTP ${res.status}`);
   }
 
   return data;
@@ -51,8 +60,8 @@ export { API_BASE };
 
 export const api = {
   request,
-  get: (path) => request('GET', path),
-  post: (path, body) => request('POST', path, body),
-  put: (path, body) => request('PUT', path, body),
-  del: (path) => request('DELETE', path),
+  get: (path, opts) => request('GET', path, undefined, opts),
+  post: (path, body, opts) => request('POST', path, body, opts),
+  put: (path, body, opts) => request('PUT', path, body, opts),
+  del: (path, opts) => request('DELETE', path, undefined, opts),
 };

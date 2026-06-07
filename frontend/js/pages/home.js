@@ -29,24 +29,6 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-function animateCountUp(el, target) {
-  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (prefersReduced || target === 0) {
-    el.textContent = String(target);
-    return;
-  }
-  const duration = 800;
-  const start = performance.now();
-  function tick(now) {
-    const elapsed = Math.min(now - start, duration);
-    const progress = 1 - Math.pow(1 - elapsed / duration, 3);
-    el.textContent = String(Math.round(target * progress));
-    if (elapsed < duration) requestAnimationFrame(tick);
-    else el.textContent = String(target);
-  }
-  requestAnimationFrame(tick);
-}
-
 function formatDateTime(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -105,48 +87,6 @@ const THREE_E_STEPS = [
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
   },
 ];
-
-// ─── Plan stats ───────────────────────────────────────────────────────────────
-
-async function fetchPlanStats(engineerId, statEls) {
-  try {
-    const plan = await api.get(`/api/plans/${engineerId}`);
-    const counts = { developing: 0, planned: 0, mastered: 0 };
-    for (const ps of plan.skills || []) {
-      const st = ps.status;
-      if (st in counts) counts[st] += 1;
-    }
-    if (statEls.developing) animateCountUp(statEls.developing, counts.developing);
-    if (statEls.planned) animateCountUp(statEls.planned, counts.planned);
-    if (statEls.mastered) animateCountUp(statEls.mastered, counts.mastered);
-  } catch {
-    ['developing', 'planned', 'mastered'].forEach((k) => {
-      if (statEls[k]) statEls[k].textContent = '—';
-    });
-  }
-}
-
-async function fetchManagerTeamStats(statEls) {
-  try {
-    const data = await api.get('/api/teams/stats');
-    const engineers = data.total_engineers ?? 0;
-    const developing = (data.per_engineer_stats || []).reduce(
-      (sum, e) => sum + (e.skills_in_development || 0),
-      0,
-    );
-    const mastered = (data.per_engineer_stats || []).reduce(
-      (sum, e) => sum + (e.skills_proficient || 0),
-      0,
-    );
-    if (statEls.engineers) animateCountUp(statEls.engineers, engineers);
-    if (statEls.developing) animateCountUp(statEls.developing, developing);
-    if (statEls.mastered) animateCountUp(statEls.mastered, mastered);
-  } catch {
-    ['engineers', 'developing', 'mastered'].forEach((k) => {
-      if (statEls[k]) statEls[k].textContent = '—';
-    });
-  }
-}
 
 // ─── News feed ────────────────────────────────────────────────────────────────
 
@@ -359,38 +299,56 @@ function buildNewsPanel(user) {
 
 // ─── Sections ─────────────────────────────────────────────────────────────────
 
-function buildPlanStats(user) {
-  const stats = h('div', { className: 'hm-a__stats' });
-  const defs = [
-    { key: 'developing', label: 'In development', mod: 'developing' },
-    { key: 'planned', label: 'Planned', mod: 'planned' },
-    { key: 'mastered', label: 'Mastered', mod: 'mastered' },
-  ];
-  const statEls = {};
-  defs.forEach(({ key, label, mod }) => {
-    const val = h('div', { className: 'hm-a__stat-val', textContent: '—' });
-    statEls[key] = val;
-    stats.appendChild(h('div', { className: `hm-a__stat hm-a__stat--${mod}` }, val, h('div', { className: 'hm-a__stat-lbl', textContent: label })));
-  });
-  fetchPlanStats(user.id, statEls);
-  return stats;
+function buildGuestHeroColumn() {
+  const col = h('div', { className: 'hm-a__guest-copy' });
+
+  const eyebrow = h('div', { className: 'hm-a__eyebrow' });
+  eyebrow.innerHTML = ICONS.eyebrow;
+  eyebrow.appendChild(document.createTextNode('TAC Skill Development Platform'));
+  col.appendChild(eyebrow);
+
+  const wordmark = h('h1', { className: 'hm-a__wordmark', 'aria-label': 'MatrixPro' });
+  wordmark.appendChild(h('span', { className: 'hm-a__wordmark-matrix', textContent: 'Matrix' }));
+  wordmark.appendChild(h('span', { className: 'hm-a__wordmark-pro', textContent: 'Pro' }));
+  col.appendChild(wordmark);
+
+  const tagline = h('p', { className: 'hm-a__guest-tagline' });
+  tagline.innerHTML = '<span class="mp-title-gradient">Your skills. Your plan. Your growth.</span>';
+  col.appendChild(tagline);
+
+  col.appendChild(h('p', {
+    className: 'hm-a__lead hm-a__lead--guest',
+    textContent: 'MatrixPro gives TAC engineers a structured path from learning to mastery — track development plans, explore the skill catalog, and grow through the 3E model.',
+  }));
+
+  const cta = h('div', { className: 'hm-a__cta hm-a__cta--guest' });
+  cta.appendChild(ctaButton('#/login', 'Sign In to Get Started', 'primary'));
+  col.appendChild(cta);
+
+  return col;
 }
 
-function buildManagerStats() {
-  const stats = h('div', { className: 'hm-a__stats' });
-  const defs = [
-    { key: 'engineers', label: 'Engineers', mod: 'engineers' },
-    { key: 'developing', label: 'In development', mod: 'developing' },
-    { key: 'mastered', label: 'Mastered', mod: 'mastered' },
-  ];
-  const statEls = {};
-  defs.forEach(({ key, label, mod }) => {
-    const val = h('div', { className: 'hm-a__stat-val', textContent: '—' });
-    statEls[key] = val;
-    stats.appendChild(h('div', { className: `hm-a__stat hm-a__stat--${mod}` }, val, h('div', { className: 'hm-a__stat-lbl', textContent: label })));
-  });
-  fetchManagerTeamStats(statEls);
-  return stats;
+function buildBrandShowcase() {
+  const aside = h('aside', { className: 'hm-a__brand-showcase', 'aria-label': 'MatrixPro logo' });
+
+  const orbit = h('div', { className: 'hm-a__brand-orbit' });
+  const stage = h('div', { className: 'hm-a__brand-stage' });
+  stage.appendChild(h('div', { className: 'hm-a__brand-glow' }));
+  stage.appendChild(h('div', { className: 'hm-a__brand-ring hm-a__brand-ring--1' }));
+  stage.appendChild(h('div', { className: 'hm-a__brand-ring hm-a__brand-ring--2' }));
+  stage.appendChild(h('div', { className: 'hm-a__brand-shimmer', 'aria-hidden': 'true' }));
+
+  const logo3d = h('div', { className: 'hm-a__brand-logo-3d' });
+  const logoWrap = h('span', { className: 'brand-tile hm-a__brand-logo', 'aria-hidden': 'true' });
+  logoWrap.innerHTML = BRAND_TILE_HTML;
+  logo3d.appendChild(logoWrap);
+  logo3d.appendChild(h('span', { className: 'hm-a__brand-shadow', 'aria-hidden': 'true' }));
+  stage.appendChild(logo3d);
+
+  orbit.appendChild(stage);
+  aside.appendChild(orbit);
+
+  return aside;
 }
 
 function buildHeroColumn(user) {
@@ -442,17 +400,16 @@ function buildHeroColumn(user) {
   }
   col.appendChild(cta);
 
-  if (user) {
-    col.appendChild(isManager ? buildManagerStats() : buildPlanStats(user));
-  }
   return col;
 }
 
-function build3ETimeline() {
-  const wrap = h('div');
+function build3ETimeline({ compact = false } = {}) {
+  const wrap = h('div', {
+    id: 'home-3e',
+    className: compact ? 'hm-a__3e hm-a__3e--compact' : 'hm-a__3e',
+  });
   wrap.appendChild(h('div', {
     className: 'hm-a__section-label',
-    style: 'text-align:center;margin-bottom:28px;margin-top:48px;',
     textContent: 'The 3E development model',
   }));
   const timeline = h('div', { className: 'hm-a__timeline' });
@@ -475,19 +432,35 @@ export function mountHome(container) {
   container.innerHTML = '';
 
   const user = Store.get('user');
-  const page = h('div', { className: 'home-page hm-a' });
+  const page = h('div', { className: user ? 'home-page hm-a' : 'home-page hm-a hm-a--guest' });
   page.appendChild(h('div', { className: 'hm-a__mesh' }));
+  if (!user) page.appendChild(h('div', { className: 'hm-a__mesh hm-a__mesh--guest' }));
 
   const inner = h('div', { className: 'hm-a__inner' });
-  const heroGrid = h('div', {
-    className: user ? 'hm-a__hero-grid' : 'hm-a__hero-grid hm-a__hero-grid--solo',
-  });
+  const heroGrid = h('div', { className: 'hm-a__hero-grid' });
 
-  heroGrid.appendChild(buildHeroColumn(user));
-  if (user) heroGrid.appendChild(buildNewsPanel(user));
+  if (user) {
+    heroGrid.appendChild(buildHeroColumn(user));
+    heroGrid.appendChild(buildNewsPanel(user));
+  } else {
+    heroGrid.classList.add('hm-a__hero-grid--guest');
+    heroGrid.appendChild(buildGuestHeroColumn());
+    heroGrid.appendChild(buildBrandShowcase());
+  }
 
   inner.appendChild(heroGrid);
-  inner.appendChild(build3ETimeline());
+  inner.appendChild(build3ETimeline({ compact: !user }));
   page.appendChild(inner);
+
+  if (!user) {
+    const appVersion = Store.get('appVersion');
+    if (appVersion) {
+      page.appendChild(h('footer', {
+        className: 'hm-a__version',
+        textContent: `App Version ${appVersion}`,
+      }));
+    }
+  }
+
   container.appendChild(page);
 }

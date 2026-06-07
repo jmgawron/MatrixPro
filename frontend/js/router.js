@@ -57,7 +57,7 @@ let _routes = {};
 let _container = null;
 let _currentCleanup = null;
 
-function navigate() {
+async function navigate() {
   const { path } = parseHash();
   const matched = matchRoute(path, _routes);
 
@@ -109,8 +109,22 @@ function navigate() {
 
   document.title = route.title ? `${route.title} — MatrixPro` : 'MatrixPro';
 
-  const cleanup = route.mount(_container, params);
-  if (typeof cleanup === 'function') _currentCleanup = cleanup;
+  try {
+    const result = route.mount(_container, params);
+    const cleanup = result instanceof Promise ? await result : result;
+    if (typeof cleanup === 'function') _currentCleanup = cleanup;
+  } catch (err) {
+    console.error('Route mount failed:', err);
+    const msg = err?.message ? String(err.message).replace(/&/g, '&amp;').replace(/</g, '&lt;') : 'An unexpected error occurred.';
+    _container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">!</div>
+        <h2>Failed to load page</h2>
+        <p>${msg}</p>
+        <a href="#/" class="btn btn-primary">Go Home</a>
+      </div>
+    `;
+  }
 
   updateActiveLinks(path);
 }
@@ -127,8 +141,8 @@ export const Router = {
   init(routes, container) {
     _routes = routes;
     _container = container;
-    window.addEventListener('hashchange', navigate);
-    navigate();
+    window.addEventListener('hashchange', () => { navigate().catch(console.error); });
+    navigate().catch(console.error);
   },
 
   go(path) {

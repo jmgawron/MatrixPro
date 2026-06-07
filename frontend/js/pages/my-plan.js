@@ -44,6 +44,9 @@ function formatContentTypeLabel(type) {
   return opt ? opt.label : (type || 'Resource');
 }
 
+let _mountGen = 0;
+let _abortController = null;
+
 let _container = null;
 let _engineerId = null;
 let _planData = null;
@@ -127,6 +130,10 @@ const STATUS_LABELS = {
 };
 
 export function mountMyPlan(container, params) {
+  const mountGen = ++_mountGen;
+  if (_abortController) _abortController.abort();
+  _abortController = new AbortController();
+
   _container = container;
   container.innerHTML = '';
 
@@ -146,29 +153,37 @@ export function mountMyPlan(container, params) {
   _engineerId = params?.id ? Number(params.id) : user?.id;
 
   buildPageShell(container, params);
-  loadPlan();
+  loadPlan(mountGen);
 
-  return () => {};
+  return () => {
+    if (mountGen === _mountGen) {
+      _abortController?.abort();
+      _abortController = null;
+    }
+  };
 }
 
-async function getCategories() {
+async function getCategories(options = {}) {
   if (_categoriesCache) return _categoriesCache;
   try {
-    _categoriesCache = await api.get('/api/skills/categories');
-  } catch {
+    _categoriesCache = await api.get('/api/skills/categories', options);
+  } catch (err) {
+    if (err?.name === 'AbortError') throw err;
     _categoriesCache = [];
   }
   return _categoriesCache;
 }
 
-async function loadPlan() {
+async function loadPlan(mountGen) {
   Object.values(_sectionGridEls).forEach(grid => showSkeleton(grid, 'cards'));
+  const signal = _abortController?.signal;
 
   try {
     const [planRes, cats] = await Promise.all([
-      api.get(`/api/plans/${_engineerId}`),
-      getCategories()
+      api.get(`/api/plans/${_engineerId}`, { signal }),
+      getCategories({ signal }),
     ]);
+    if (mountGen !== _mountGen) return;
     _planData = planRes;
     if (!_categoriesInitialized && cats.length > 0) {
       cats.forEach(c => _activeCategoryFilters.add(c.id));
@@ -181,6 +196,8 @@ async function loadPlan() {
       showToast('Failed to render plan view. Please refresh.', 'error');
     }
   } catch (err) {
+    if (err?.name === 'AbortError') return;
+    if (mountGen !== _mountGen) return;
     const msg = err.message || 'Failed to load plan';
     if (msg.includes('403') || msg.toLowerCase().includes('forbidden') || msg.toLowerCase().includes('permission')) {
       showPermissionError();
@@ -192,11 +209,14 @@ async function loadPlan() {
 }
 
 async function reloadPlan() {
+  const mountGen = _mountGen;
+  const signal = _abortController?.signal;
   try {
     const [planRes, cats] = await Promise.all([
-      api.get(`/api/plans/${_engineerId}`),
-      getCategories()
+      api.get(`/api/plans/${_engineerId}`, { signal }),
+      getCategories({ signal }),
     ]);
+    if (mountGen !== _mountGen) return;
     _planData = planRes;
     if (!_categoriesInitialized && cats.length > 0) {
       cats.forEach(c => _activeCategoryFilters.add(c.id));
@@ -204,6 +224,7 @@ async function reloadPlan() {
     }
     renderSections();
   } catch (err) {
+    if (err?.name === 'AbortError') return;
     showToast(err.message || 'Failed to reload plan', 'error');
   }
 }
@@ -2190,9 +2211,13 @@ function openEditSkillModal(planSkill) {
     destroyInlineEditor();
     const baseline = getDetailEditBaseline(item);
     if (item.is_user_content) {
-      inlineEditorInstance = mountMarkdownEditor(host, {
+      mountMarkdownEditor(host, {
         initialMarkdown: baseline.description || '',
-        placeholder: 'Describe this item — supports Markdown formatting',
+      }).then((api) => {
+        inlineEditorInstance = api;
+      }).catch((err) => {
+        console.error('Editor init failed:', err);
+        showToast('Failed to load editor', 'error');
       });
     } else if (typeof Quill !== 'undefined') {
       const editorEl = el('div', { className: 'sdm-reader-detail__quill' });

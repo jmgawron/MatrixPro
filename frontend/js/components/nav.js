@@ -1,6 +1,7 @@
 import { Store } from '../state.js';
 import { Router } from '../router.js';
 import { renderAvatarThumbnail } from './avatars.js';
+import { escHtml } from '../utils/dom.js';
 
 const ROLE_RANK = { engineer: 1, manager: 2, admin: 3 };
 
@@ -53,7 +54,7 @@ function buildAuthItem(isLoggedIn, user) {
 
     const avatarHtml = renderAvatarThumbnail(user?.avatar, 28);
     const nameText = user?.name ?? user?.email ?? 'Account';
-    trigger.innerHTML = `${avatarHtml}<span class="nav-user-name">${nameText}</span><svg class="nav-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+    trigger.innerHTML = `${avatarHtml}<span class="nav-user-name">${escHtml(nameText)}</span><svg class="nav-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
 
     const menu = document.createElement('div');
     menu.className = 'nav-dropdown-menu';

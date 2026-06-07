@@ -25,5 +25,5 @@ htmlcov/
 .playwright-mcp/
 tmp/
 
-# Loose screenshot artifacts at repo root
-/*.png
+# Playwright / vibe-coding screenshot artifacts (app icons use SVG)
+*.png

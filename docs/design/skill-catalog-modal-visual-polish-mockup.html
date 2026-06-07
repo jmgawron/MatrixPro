@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Catalog Modal — Visual Polish Mockup</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-catalog-polish-v1">
+  <style>
+    /* ── Mockup page chrome ───────────────────────────────────────────── */
+    body.mockup-page {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg-page);
+    }
+
+    .mockup-chrome {
+      position: sticky;
+      top: 0;
+      z-index: 400;
+      background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 14px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 20px;
+    }
+
+    .mockup-chrome h1 {
+      font-size: 15px;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .mockup-chrome p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 0;
+      flex: 1;
+      min-width: 220px;
+      line-height: 1.5;
+    }
+
+    .mockup-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .mockup-tab {
+      border: 1px solid var(--border-soft);
+      background: var(--bg-card-soft);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .mockup-tab:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .mockup-tab.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .mockup-stage {
+      padding: 28px 24px 48px;
+      background:
+        radial-gradient(ellipse 70% 50% at 50% -10%, rgba(0, 174, 239, 0.12), transparent 55%),
+        radial-gradient(ellipse 40% 30% at 80% 100%, rgba(59, 130, 246, 0.08), transparent 50%),
+        var(--bg-page);
+    }
+
+    .mockup-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 1680px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1100px) {
+      .mockup-compare {
+        grid-template-columns: 1fr;
+      }
+      .mockup-compare__col--baseline {
+        display: none;
+      }
+      .mockup-compare__col--baseline.is-visible {
+        display: block;
+      }
+      .mockup-compare__col--polish:not(.is-visible) {
+        display: none;
+      }
+    }
+
+    .mockup-col-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin: 0 0 10px 4px;
+    }
+
+    .mockup-col-label span {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+    }
+
+    .mockup-col-label--polish span {
+      background: var(--accent-soft);
+      border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+      color: var(--accent);
+    }
+
+    .mockup-dim {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+      max-width: 720px;
+      margin: 0 auto 24px;
+      line-height: 1.6;
+    }
+
+    .mockup-dim code {
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+    }
+
+    /* ── Modal frame (shared) ─────────────────────────────────────────── */
+    .mock-modal-frame {
+      width: 100%;
+      max-height: min(680px, 82vh);
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+
+    .mock-modal-frame .mock-inner-tabs {
+      display: flex;
+      gap: 0;
+      margin: 12px 20px 0;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .mock-modal-frame .mock-inner-tab {
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      margin-bottom: -1px;
+    }
+
+    .mock-modal-frame .mock-inner-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .mock-modal-frame.dirty .sdm-footer {
+      display: flex;
+    }
+
+    .mock-modal-frame.dirty .sdm-footer__status {
+      color: var(--accent);
+    }
+
+    .mock-content-split {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+    }
+
+    .mock-list-col {
+      border-right: 1px solid var(--border-soft);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--bg-card-soft);
+    }
+
+    .mock-list-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      min-height: 0;
+    }
+
+    .mock-list-footer {
+      padding: 10px;
+      border-top: 1px solid var(--border-soft);
+      flex-shrink: 0;
+    }
+
+    .mock-reader-col {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--bg-panel);
+    }
+
+    .mock-details-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+
+    .mock-panel {
+      display: none;
+      flex: 1;
+      min-height: 0;
+      flex-direction: column;
+    }
+
+    .mock-panel.active {
+      display: flex;
+    }
+
+    .catalog-list-item--pending .sdm-list-item__title {
+      color: var(--accent);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       VISUAL POLISH LAYER — proposed production CSS (scoped)
+       Apply class .catalog-visual-polish on .catalog-unified-modal
+       ═══════════════════════════════════════════════════════════════════ */
+
+    .catalog-visual-polish {
+      position: relative;
+      border: 1px solid color-mix(in srgb, var(--border-strong) 80%, var(--accent) 20%);
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.25),
+        0 24px 64px rgba(0, 0, 0, 0.45),
+        0 8px 24px rgba(0, 0, 0, 0.28);
+    }
+
+    .catalog-visual-polish::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--brand-gradient);
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    [data-theme="light"] .catalog-visual-polish {
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.04),
+        0 20px 50px rgba(15, 23, 42, 0.12),
+        0 6px 16px rgba(15, 23, 42, 0.06);
+    }
+
+    /* Header hero band */
+    .catalog-visual-polish .catalog-skill-header {
+      background:
+        radial-gradient(ellipse 80% 120% at 0% 0%, rgba(59, 130, 246, 0.14), transparent 55%),
+        radial-gradient(ellipse 50% 80% at 100% 0%, rgba(0, 174, 239, 0.08), transparent 50%),
+        var(--bg-panel);
+      border-bottom: 1px solid color-mix(in srgb, var(--border-soft) 70%, var(--accent) 30%);
+    }
+
+    [data-theme="light"] .catalog-visual-polish .catalog-skill-header {
+      background:
+        radial-gradient(ellipse 80% 120% at 0% 0%, rgba(59, 130, 246, 0.08), transparent 55%),
+        radial-gradient(ellipse 50% 80% at 100% 0%, rgba(0, 114, 255, 0.05), transparent 50%),
+        var(--bg-panel);
+    }
+
+    .catalog-visual-polish .catalog-skill-header__icon {
+      background: linear-gradient(145deg, rgba(59, 130, 246, 0.35) 0%, rgba(0, 174, 239, 0.18) 100%);
+      box-shadow:
+        0 0 0 1px rgba(59, 130, 246, 0.35),
+        0 4px 16px rgba(59, 130, 246, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    [data-theme="light"] .catalog-visual-polish .catalog-skill-header__icon {
+      background: linear-gradient(145deg, rgba(59, 130, 246, 0.18) 0%, rgba(0, 114, 255, 0.1) 100%);
+      box-shadow:
+        0 0 0 1px rgba(59, 130, 246, 0.2),
+        0 4px 12px rgba(59, 130, 246, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .catalog-visual-polish .sdm-header__title {
+      font-weight: 800;
+      letter-spacing: -0.025em;
+    }
+
+    .catalog-visual-polish .sdm-notes {
+      line-height: 1.65;
+    }
+
+    /* Meta glass card */
+    .catalog-visual-polish .catalog-skill-meta {
+      background: color-mix(in srgb, var(--bg-card-soft) 75%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid color-mix(in srgb, var(--border-soft) 60%, var(--accent) 15%);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    [data-theme="light"] .catalog-visual-polish .catalog-skill-meta {
+      background: color-mix(in srgb, #ffffff 82%, var(--bg-card-soft));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.95),
+        0 4px 16px rgba(15, 23, 42, 0.06);
+    }
+
+    .catalog-visual-polish .catalog-skill-meta__label {
+      letter-spacing: 0.08em;
+    }
+
+    /* Segmented tabs */
+    .catalog-visual-polish .mock-inner-tabs,
+    .catalog-visual-polish .catalog-unified-tabs {
+      display: inline-flex;
+      gap: 4px;
+      margin: 14px 20px 0;
+      padding: 4px;
+      border: none;
+      border-bottom: none;
+      background: var(--bg-card-soft);
+      border-radius: 999px;
+      width: fit-content;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+
+    .catalog-visual-polish .mock-inner-tab,
+    .catalog-visual-polish .catalog-unified-tab {
+      margin-bottom: 0;
+      border-bottom: none;
+      border-radius: 999px;
+      padding: 8px 20px;
+      transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+    }
+
+    .catalog-visual-polish .mock-inner-tab.active,
+    .catalog-visual-polish .catalog-unified-tab.active {
+      background: var(--bg-panel);
+      color: var(--accent);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2), 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+
+    [data-theme="light"] .catalog-visual-polish .mock-inner-tab.active,
+    [data-theme="light"] .catalog-visual-polish .catalog-unified-tab.active {
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(59, 130, 246, 0.15);
+    }
+
+    /* List column wash */
+    .catalog-visual-polish .mock-list-col,
+    .catalog-visual-polish .sdm-list-col {
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-card-soft) 90%, var(--accent) 10%) 0%, var(--bg-card-soft) 120px);
+    }
+
+    /* 3E bubbles — richer nodes */
+    .catalog-visual-polish .sdm-3e-section--education .sdm-3e-section__bubble {
+      background: linear-gradient(145deg, rgba(34, 197, 94, 0.35), rgba(34, 197, 94, 0.12));
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35), 0 2px 8px rgba(34, 197, 94, 0.2);
+    }
+
+    .catalog-visual-polish .sdm-3e-section--exposure .sdm-3e-section__bubble {
+      background: linear-gradient(145deg, rgba(6, 182, 212, 0.35), rgba(6, 182, 212, 0.12));
+      box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.35), 0 2px 8px rgba(6, 182, 212, 0.2);
+    }
+
+    .catalog-visual-polish .sdm-3e-section--experience .sdm-3e-section__bubble {
+      background: linear-gradient(145deg, rgba(168, 85, 247, 0.35), rgba(168, 85, 247, 0.12));
+      box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.35), 0 2px 8px rgba(168, 85, 247, 0.2);
+    }
+
+    .catalog-visual-polish .sdm-3e-section--focus .sdm-3e-section__main {
+      background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+      border-radius: var(--radius-md);
+      outline: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .catalog-visual-polish .sdm-3e-section--education.sdm-3e-section--focus .sdm-3e-section__main {
+      background: rgba(34, 197, 94, 0.08);
+      outline-color: rgba(34, 197, 94, 0.25);
+    }
+
+    .catalog-visual-polish .sdm-3e-section--focus .sdm-3e-section__bubble {
+      transform: scale(1.06);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent), 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .catalog-visual-polish .sdm-3e-section__connector {
+      background: linear-gradient(180deg, transparent, var(--border-soft) 20%, var(--border-soft) 80%, transparent);
+      width: 2px;
+    }
+
+    /* List items */
+    .catalog-visual-polish .sdm-list-item {
+      border-radius: var(--radius-sm);
+      margin-bottom: 2px;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+
+    .catalog-visual-polish .sdm-list-item.active {
+      background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+      box-shadow: inset 3px 0 0 var(--accent);
+    }
+
+    .catalog-visual-polish .catalog-list-item--pending {
+      box-shadow: inset 3px 0 0 var(--warning);
+      background: rgba(245, 158, 11, 0.06);
+    }
+
+    /* Reader */
+    .catalog-visual-polish .mock-reader-col,
+    .catalog-visual-polish .sdm-reader-col {
+      background:
+        linear-gradient(180deg, var(--bg-panel) 0%, color-mix(in srgb, var(--bg-panel) 95%, var(--accent) 5%) 100%);
+    }
+
+    .catalog-visual-polish .sdm-reader-toolbar,
+    .catalog-visual-polish .catalog-skill-reader-toolbar {
+      background: color-mix(in srgb, var(--bg-card-soft) 70%, transparent);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .catalog-visual-polish .sdm-reader-meta {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--success);
+      border: 1px solid rgba(34, 197, 94, 0.25);
+    }
+
+    .catalog-visual-polish .sdm-reader-title {
+      letter-spacing: -0.02em;
+    }
+
+    .catalog-visual-polish .sdm-reader-prose {
+      line-height: 1.65;
+    }
+
+    /* Details sections */
+    .catalog-visual-polish .skill-edit-section__title {
+      position: relative;
+      padding-bottom: 8px;
+    }
+
+    .catalog-visual-polish .skill-edit-section__title::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 48px;
+      height: 2px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+    .catalog-visual-polish .skill-assoc-section {
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .catalog-visual-polish .skill-assoc-section:hover {
+      border-color: color-mix(in srgb, var(--border-soft) 50%, var(--accent) 50%);
+    }
+
+    /* Footer glass + gradient save */
+    .catalog-visual-polish .sdm-footer {
+      background: color-mix(in srgb, var(--bg-panel) 88%, transparent);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .catalog-visual-polish.dirty .sdm-footer {
+      border-top-color: color-mix(in srgb, var(--accent) 45%, var(--border-soft));
+      box-shadow: 0 -4px 24px rgba(59, 130, 246, 0.08);
+      animation: polish-footer-glow 2.4s ease-in-out infinite;
+    }
+
+    @keyframes polish-footer-glow {
+      0%, 100% { box-shadow: 0 -4px 24px rgba(59, 130, 246, 0.06); }
+      50% { box-shadow: 0 -6px 32px rgba(59, 130, 246, 0.14); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .catalog-visual-polish.dirty .sdm-footer {
+        animation: none;
+      }
+      .catalog-visual-polish .sdm-3e-section--focus .sdm-3e-section__bubble {
+        transform: none;
+      }
+    }
+
+    .catalog-visual-polish.dirty .sdm-footer__status {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .catalog-visual-polish .btn-primary {
+      background: var(--brand-gradient);
+      border: none;
+      box-shadow: 0 2px 12px rgba(59, 130, 246, 0.35);
+      font-weight: 600;
+    }
+
+    .catalog-visual-polish .btn-primary:hover {
+      filter: brightness(1.08);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.45);
+    }
+
+    [data-theme="light"] .catalog-visual-polish .btn-primary {
+      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.25);
+    }
+  </style>
+</head>
+<body class="mockup-page">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="icon-education" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+    <symbol id="icon-exposure" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+    <symbol id="icon-experience" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+  </svg>
+
+  <header class="mockup-chrome">
+    <h1>Skill Catalog Modal — Visual Polish</h1>
+    <p>CSS-only enhancements · same layout · compare Current vs Polished side-by-side</p>
+    <div class="mockup-tabs" role="tablist">
+      <button type="button" class="mockup-tab active" data-view="content">Content tab</button>
+      <button type="button" class="mockup-tab" data-view="details">Details tab</button>
+      <button type="button" class="mockup-tab" data-view="dirty">Unsaved changes</button>
+    </div>
+    <button type="button" class="mockup-tab" id="themeToggle">Light / Dark</button>
+    <button type="button" class="mockup-tab" id="compareToggle" hidden>Toggle comparison</button>
+  </header>
+
+  <main class="mockup-stage">
+    <p class="mockup-dim">
+      Open this file via local HTTP so <code>style.css</code> loads.
+      Approve the <strong>Polished</strong> column to implement — see
+      <code>docs/design/skill-catalog-modal-visual-polish.md</code>.
+    </p>
+
+    <div class="mockup-compare">
+      <!-- BASELINE -->
+      <div class="mockup-compare__col mockup-compare__col--baseline">
+        <p class="mockup-col-label"><span>Current (production)</span></p>
+        <div class="mock-modal-frame modal skill-detail-modal sdm-plan-modal catalog-skill-modal catalog-unified-modal" id="modalBaseline" role="dialog">
+          <!-- injected by JS -->
+        </div>
+      </div>
+
+      <!-- POLISHED -->
+      <div class="mockup-compare__col mockup-compare__col--polish is-visible">
+        <p class="mockup-col-label mockup-col-label--polish"><span>Proposed polish</span></p>
+        <div class="mock-modal-frame modal skill-detail-modal sdm-plan-modal catalog-skill-modal catalog-unified-modal catalog-visual-polish" id="modalPolish" role="dialog">
+          <!-- injected by JS -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const ICON_ROUTING = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>';
+
+    function buildModalInner(activePanel, isDirty) {
+      const dirtyClass = isDirty ? ' dirty' : '';
+      const pendingClass = isDirty ? ' catalog-list-item--pending' : '';
+      const footerDisplay = isDirty ? ' sdm-footer--dirty' : '';
+
+      return `
+        <div class="modal-body sdm-modal-body catalog-unified-body" style="display:flex;flex-direction:column;min-height:0;flex:1;padding:0">
+          <header class="sdm-header catalog-skill-header" style="padding:16px 20px 0;flex-shrink:0">
+            <div class="sdm-header__top">
+              <div class="catalog-skill-header__title-wrap">
+                <div class="catalog-skill-header__icon" aria-hidden="true">${ICON_ROUTING}</div>
+                <h1 class="sdm-header__title">BGP Troubleshooting</h1>
+              </div>
+              <div class="sdm-header__actions">
+                <div class="sdm-header__window-controls">
+                  <button type="button" class="sdm-window-btn" aria-label="Maximize">⛶</button>
+                  <button type="button" class="sdm-window-btn sdm-close" aria-label="Close">×</button>
+                </div>
+              </div>
+            </div>
+            <p class="sdm-notes">Advanced routing diagnostics for enterprise and service provider environments.</p>
+            <div class="catalog-skill-meta">
+              <div class="catalog-skill-meta__row">
+                <span class="catalog-skill-meta__label">Category</span>
+                <div class="catalog-skill-meta__chips">
+                  <span class="mp-modal-category-chip"><span class="mp-modal-category-chip__name">Advanced</span></span>
+                </div>
+              </div>
+              <div class="catalog-skill-meta__row">
+                <span class="catalog-skill-meta__label">Teams</span>
+                <div class="catalog-skill-meta__chips">
+                  <span class="triage-chip triage-signal chip-sm">TAC-ENT-ROUT-S1</span>
+                  <span class="triage-chip triage-signal chip-sm">TAC-ENT-ROUT-S2</span>
+                </div>
+              </div>
+              <div class="catalog-skill-meta__row">
+                <span class="catalog-skill-meta__label">Tags</span>
+                <div class="catalog-skill-meta__chips">
+                  <span class="triage-chip triage-feedback chip-sm">bgp</span>
+                  <span class="triage-chip triage-feedback chip-sm">escalation</span>
+                </div>
+              </div>
+            </div>
+            <div class="mock-inner-tabs catalog-unified-tabs" role="tablist">
+              <button type="button" class="mock-inner-tab catalog-unified-tab ${activePanel === 'content' ? 'active' : ''}" data-tab="content">Content</button>
+              <button type="button" class="mock-inner-tab catalog-unified-tab ${activePanel === 'details' ? 'active' : ''}" data-tab="details">Details</button>
+            </div>
+          </header>
+
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">
+            <div class="mock-panel catalog-unified-panel ${activePanel === 'content' ? 'active' : ''}" data-panel="content">
+              <div class="mock-content-split sdm-main">
+                <div class="mock-list-col sdm-list-col">
+                  <div class="mock-list-scroll sdm-list-scroll">
+                    <div class="sdm-3e-track">
+                      <div class="sdm-3e-section sdm-3e-section--education sdm-3e-section--focus">
+                        <div class="sdm-3e-section__rail">
+                          <div class="sdm-3e-section__bubble"><svg width="16" height="16"><use href="#icon-education"/></svg></div>
+                          <div class="sdm-3e-section__connector"></div>
+                        </div>
+                        <div class="sdm-3e-section__main">
+                          <button type="button" class="sdm-3e-section__header">
+                            <span class="sdm-3e-section__label">Education</span>
+                            <span class="sdm-3e-section__count">2</span>
+                            <span class="sdm-3e-section__toggle">−</span>
+                          </button>
+                          <div class="sdm-3e-section__body">
+                            <div class="sdm-list-item catalog-list-item active${pendingClass}">
+                              <button type="button" class="sdm-list-item__body"><span class="sdm-list-item__title">Cisco Learning Network — BGP Fundamentals</span></button>
+                            </div>
+                            <div class="sdm-list-item catalog-list-item">
+                              <button type="button" class="sdm-list-item__body"><span class="sdm-list-item__title">RFC 4271 Reading Guide</span></button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="sdm-3e-section sdm-3e-section--exposure sdm-3e-section--collapsed">
+                        <div class="sdm-3e-section__rail">
+                          <div class="sdm-3e-section__bubble"><svg width="16" height="16"><use href="#icon-exposure"/></svg></div>
+                          <div class="sdm-3e-section__connector"></div>
+                        </div>
+                        <div class="sdm-3e-section__main">
+                          <button type="button" class="sdm-3e-section__header">
+                            <span class="sdm-3e-section__label">Exposure</span>
+                            <span class="sdm-3e-section__count">1</span>
+                            <span class="sdm-3e-section__toggle">+</span>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="sdm-3e-section sdm-3e-section--experience sdm-3e-section--collapsed sdm-3e-section--last">
+                        <div class="sdm-3e-section__rail">
+                          <div class="sdm-3e-section__bubble"><svg width="16" height="16"><use href="#icon-experience"/></svg></div>
+                        </div>
+                        <div class="sdm-3e-section__main">
+                          <button type="button" class="sdm-3e-section__header">
+                            <span class="sdm-3e-section__label">Experience</span>
+                            <span class="sdm-3e-section__count">1</span>
+                            <span class="sdm-3e-section__toggle">+</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mock-list-footer catalog-skill-list-footer">
+                    <button type="button" class="btn btn-secondary btn-sm catalog-add-item-btn" style="width:100%">+ Add Item</button>
+                  </div>
+                </div>
+                <div class="mock-reader-col sdm-reader-col">
+                  <div class="sdm-reader-toolbar catalog-skill-reader-toolbar">
+                    <div class="sdm-reader-toolbar__left">
+                      <button type="button" class="btn btn-secondary btn-sm">Edit</button>
+                      <button type="button" class="btn btn-danger btn-sm">Delete</button>
+                    </div>
+                    <div class="sdm-reader-meta">course · Education</div>
+                  </div>
+                  <div class="sdm-reader-scroll">
+                    <div class="sdm-reader-content">
+                      <h2 class="sdm-reader-title">Cisco Learning Network — BGP Fundamentals</h2>
+                      <div class="sdm-reader-prose"><p>Structured learning path covering BGP path selection, attributes, and common misconfiguration patterns in enterprise networks.</p></div>
+                      <a class="skill-detail-accordion-link sdm-reader-link" href="#">Open resource →</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mock-panel catalog-unified-panel ${activePanel === 'details' ? 'active' : ''}" data-panel="details">
+              <div class="mock-details-scroll catalog-unified-details-scroll skill-edit-form">
+                <div class="skill-edit-section">
+                  <div class="skill-edit-section__header"><div class="skill-edit-section__title">Identity</div></div>
+                  <div class="skill-edit-section__body">
+                    <div class="form-group"><label class="form-label">Name *</label><input class="form-input" value="BGP Troubleshooting"></div>
+                    <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" rows="2">Advanced routing diagnostics…</textarea></div>
+                  </div>
+                </div>
+                <div class="skill-edit-section">
+                  <div class="skill-edit-section__header"><div class="skill-edit-section__title">Classification</div></div>
+                  <div class="skill-edit-section__body">
+                    <div class="skill-category-chips" style="display:flex;gap:6px;flex-wrap:wrap">
+                      <button type="button" class="mp-filter-chip skill-category-chip">Core</button>
+                      <button type="button" class="mp-filter-chip skill-category-chip active">Advanced</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="skill-edit-section">
+                  <div class="skill-edit-section__header"><div class="skill-edit-section__title">Associations</div></div>
+                  <div class="skill-edit-section__body skill-edit-row skill-edit-row--assoc">
+                    <div class="skill-assoc-section" style="min-height:100px;padding:12px 14px;border:1px solid var(--border-soft);border-radius:var(--radius-md)">
+                      <div class="skill-assoc-section__label">Teams</div>
+                    </div>
+                    <div class="skill-assoc-section" style="min-height:100px;padding:12px 14px;border:1px solid var(--border-soft);border-radius:var(--radius-md)">
+                      <div class="skill-assoc-section__label">Certificates</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer class="modal-footer sdm-footer catalog-skill-footer${footerDisplay}${dirtyClass}">
+          <span class="sdm-footer__status">${isDirty ? 'Pending changes — click Save Details to apply' : 'No pending changes'}</span>
+          <button type="button" class="btn btn-secondary">Discard Changes</button>
+          <button type="button" class="btn btn-primary">Save Details</button>
+        </footer>
+      `;
+    }
+
+    let currentView = 'content';
+
+    function render() {
+      const isDirty = currentView === 'dirty';
+      const panel = currentView === 'details' ? 'details' : 'content';
+      const html = buildModalInner(panel, isDirty);
+      document.getElementById('modalBaseline').innerHTML = html;
+      document.getElementById('modalPolish').innerHTML = html;
+      document.getElementById('modalBaseline').classList.toggle('dirty', isDirty);
+      document.getElementById('modalPolish').classList.toggle('dirty', isDirty);
+    }
+
+    document.querySelectorAll('.mockup-tab[data-view]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mockup-tab[data-view]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentView = btn.dataset.view;
+        render();
+      });
+    });
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      html.dataset.theme = html.dataset.theme === 'light' ? 'dark' : 'light';
+    });
+
+    render();
+  </script>
+</body>
+</html>

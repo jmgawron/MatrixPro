@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Semantic Color System (Brand Depth + Achievement Gold)</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=preview">
+  <style>
+    /* ─── Preview shell ─────────────────────────────────────────────── */
+    .color-mock {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px 24px 96px;
+    }
+
+    .color-mock__hero {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-xl);
+      padding: 28px 32px;
+      margin-bottom: 32px;
+      box-shadow: var(--shadow-panel);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .color-mock__hero::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--brand-gradient);
+    }
+
+    .color-mock__hero h1 {
+      font-size: clamp(26px, 3.5vw, 36px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+    }
+
+    .color-mock__hero p {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.65;
+      max-width: 72ch;
+    }
+
+    .color-mock__toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+      align-items: center;
+    }
+
+    .section-block {
+      margin-bottom: 52px;
+    }
+
+    .section-block__eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .section-block__title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .section-block__desc {
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 78ch;
+      margin-bottom: 20px;
+    }
+
+    .compare-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .compare-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 960px) {
+      .compare-2 { grid-template-columns: 1fr; }
+      .compare-3 { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .panel__label {
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .panel__label--current {
+      background: rgba(239, 68, 68, 0.08);
+      color: #f87171;
+    }
+
+    .panel__label--proposed {
+      background: rgba(92, 177, 255, 0.1);
+      color: var(--accent);
+    }
+
+    .panel__label--alt {
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text-secondary);
+    }
+
+    .panel__body {
+      padding: 20px;
+    }
+
+    /* ─── Audit table ─────────────────────────────────────────────── */
+    .audit-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .audit-table th,
+    .audit-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-soft);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .audit-table th {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      background: var(--bg-card-soft);
+    }
+
+    .swatch-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .swatch-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    [data-theme="light"] .swatch-dot {
+      border-color: rgba(15,23,42,0.12);
+    }
+
+    .mono { font-family: ui-monospace, monospace; font-size: 12px; color: var(--text-muted); }
+
+    /* ─── CURRENT production colors (mirrors style.css) ───────────── */
+    .current .chip-edu  { background: rgba(34,197,94,.12); color: #4ade80; border: 1px solid rgba(34,197,94,.25); }
+    .current .chip-exp  { background: rgba(6,182,212,.12); color: #22d3ee; border: 1px solid rgba(6,182,212,.25); }
+    .current .chip-xp   { background: rgba(168,85,247,.12); color: #c084fc; border: 1px solid rgba(168,85,247,.25); }
+
+    .current .cat-found { border-left: 4px solid #22c55e; }
+    .current .cat-core  { border-left: 4px solid #3b82f6; }
+    .current .cat-adv   { border-left: 4px solid #818cf8; }
+    .current .cat-ai    { border-left: 4px solid #f59e0b; }
+
+    .current .prof-1.active { background: #94a3b8; color: #fff; }
+    .current .prof-2.active { background: #22c55e; color: #fff; }
+    .current .prof-3.active { background: #06b6d4; color: #fff; }
+    .current .prof-4.active { background: #a855f7; color: #fff; }
+    .current .prof-5.active { background: #eab308; color: #000; }
+
+    .current .icon-edu { background: rgba(34,197,94,.12); color: #4ade80; }
+    .current .icon-exp { background: rgba(6,182,212,.12); color: #22d3ee; }
+    .current .icon-xp  { background: rgba(168,85,247,.12); color: #c084fc; }
+
+    .current .matrix-edu { background: rgba(34,197,94,.18); color: #4ade80; }
+    .current .matrix-exp { background: rgba(34,197,94,.42); color: #16a34a; }
+    .current .matrix-xp  { background: rgba(34,197,94,.75); color: #052e16; }
+
+    /* ─── Alternative A — cool hue spread (teal / blue / violet) ── */
+    .proposed-a-scope {
+      /* Teal → Blue → Indigo → Violet (~90° hue spread, still cool) */
+      --spectrum-edu-fg:   #2dd4bf;
+      --spectrum-edu-bg:   rgba(45, 212, 191, 0.14);
+      --spectrum-edu-bd:   rgba(45, 212, 191, 0.38);
+      --spectrum-exp-fg:   #5cb1ff;
+      --spectrum-exp-bg:   rgba(92, 177, 255, 0.14);
+      --spectrum-exp-bd:   rgba(92, 177, 255, 0.42);
+      --spectrum-xp-fg:    #a78bfa;
+      --spectrum-xp-bg:    rgba(167, 139, 250, 0.16);
+      --spectrum-xp-bd:    rgba(167, 139, 250, 0.42);
+
+      --cat-foundational-fg: #2dd4bf;
+      --cat-foundational-accent: #14b8a6;
+      --cat-core-fg:         #5cb1ff;
+      --cat-core-accent:     #3b82f6;
+      --cat-advanced-fg:     #818cf8;
+      --cat-advanced-accent: #6366f1;
+      --cat-ai-fg:           #c4b5fd;
+      --cat-ai-accent:       #8b5cf6;
+
+      --prof-1-fg: #64748b;
+      --prof-2-fg: #14b8a6;
+      --prof-3-fg: #5cb1ff;
+      --prof-4-fg: #6366f1;
+      --prof-5-fg: #7c3aed;
+    }
+
+    [data-theme="light"] .proposed-a-scope {
+      --spectrum-edu-fg:   #0d9488;
+      --spectrum-edu-bg:   rgba(13, 148, 136, 0.1);
+      --spectrum-edu-bd:   rgba(13, 148, 136, 0.28);
+      --spectrum-exp-fg:   #2563eb;
+      --spectrum-exp-bg:   rgba(37, 99, 235, 0.1);
+      --spectrum-exp-bd:   rgba(37, 99, 235, 0.3);
+      --spectrum-xp-fg:    #7c3aed;
+      --spectrum-xp-bg:    rgba(124, 58, 237, 0.1);
+      --spectrum-xp-bd:    rgba(124, 58, 237, 0.3);
+
+      --cat-foundational-fg: #0d9488;
+      --cat-foundational-accent: #14b8a6;
+      --cat-core-fg:         #2563eb;
+      --cat-core-accent:     #2563eb;
+      --cat-advanced-fg:     #4f46e5;
+      --cat-advanced-accent: #4f46e5;
+      --cat-ai-fg:           #7c3aed;
+      --cat-ai-accent:       #7c3aed;
+
+      --prof-1-fg: #64748b;
+      --prof-2-fg: #0d9488;
+      --prof-3-fg: #2563eb;
+      --prof-4-fg: #4f46e5;
+      --prof-5-fg: #6d28d9;
+    }
+
+    .proposed-a .chip-edu  { background: var(--spectrum-edu-bg); color: var(--spectrum-edu-fg); border: 1px solid var(--spectrum-edu-bd); }
+    .proposed-a .chip-exp  { background: var(--spectrum-exp-bg); color: var(--spectrum-exp-fg); border: 1px solid var(--spectrum-exp-bd); }
+    .proposed-a .chip-xp   { background: var(--spectrum-xp-bg);  color: var(--spectrum-xp-fg);  border: 1px solid var(--spectrum-xp-bd); }
+
+    .proposed-a .cat-found { border-left: 5px solid var(--cat-foundational-accent); }
+    .proposed-a .cat-core  { border-left: 5px solid var(--cat-core-accent); }
+    .proposed-a .cat-adv   { border-left: 5px solid var(--cat-advanced-accent); }
+    .proposed-a .cat-ai    { border-left: 5px solid var(--cat-ai-accent); }
+
+    .proposed-a .prof-1.active { background: var(--prof-1-fg); color: #fff; }
+    .proposed-a .prof-2.active { background: var(--prof-2-fg); color: #fff; }
+    .proposed-a .prof-3.active { background: var(--prof-3-fg); color: #0f172a; }
+    .proposed-a .prof-4.active { background: var(--prof-4-fg); color: #fff; }
+    .proposed-a .prof-5.active { background: var(--prof-5-fg); color: #fff; }
+
+    .proposed-a .icon-edu {
+      background: transparent;
+      color: var(--spectrum-edu-fg);
+      border: 2px dashed var(--spectrum-edu-bd);
+    }
+    .proposed-a .icon-exp {
+      background: var(--spectrum-exp-bg);
+      color: var(--spectrum-exp-fg);
+      border: 2px solid var(--spectrum-exp-bd);
+    }
+    .proposed-a .icon-xp {
+      background: var(--spectrum-xp-fg);
+      color: #0f172a;
+      border: 2px solid var(--spectrum-xp-bd);
+      box-shadow: 0 0 0 2px var(--spectrum-xp-bg);
+    }
+
+    .proposed-a .matrix-edu { background: rgba(45, 212, 191, 0.24); color: var(--spectrum-edu-fg); border: 1px solid rgba(45, 212, 191, 0.35); }
+    .proposed-a .matrix-exp { background: rgba(92, 177, 255, 0.36); color: var(--spectrum-exp-fg); border: 1px solid rgba(92, 177, 255, 0.45); }
+    .proposed-a .matrix-xp  { background: rgba(139, 92, 246, 0.52); color: #ede9fe; border: 1px solid rgba(167, 139, 250, 0.55); }
+
+    [data-theme="light"] .proposed-a .matrix-xp { color: #4c1d95; }
+    [data-theme="light"] .proposed-a .icon-xp { color: #fff; }
+    [data-theme="light"] .proposed-a .prof-3.active { color: #fff; }
+
+    /* ─── Proposed B — brand-depth monochromatic (recommended) ───── */
+    .proposed-b-scope {
+      --spectrum-edu-fg:   #94a3b8;
+      --spectrum-edu-bg:   rgba(148, 163, 184, 0.08);
+      --spectrum-edu-bd:   rgba(148, 163, 184, 0.38);
+      --spectrum-exp-fg:   #5cb1ff;
+      --spectrum-exp-bg:   rgba(92, 177, 255, 0.18);
+      --spectrum-exp-bd:   rgba(92, 177, 255, 0.48);
+      --spectrum-xp-fg:    #ffffff;
+      --spectrum-xp-bg:    linear-gradient(135deg, #5cb1ff 0%, #2563eb 100%);
+      --spectrum-xp-bd:    rgba(92, 177, 255, 0.65);
+      --spectrum-xp-glow:  rgba(92, 177, 255, 0.42);
+
+      --cat-foundational-fg: #94a3b8;
+      --cat-foundational-accent: #64748b;
+      --cat-core-fg:         #93c5fd;
+      --cat-core-accent:     #5cb1ff;
+      --cat-advanced-fg:     #5cb1ff;
+      --cat-advanced-accent: #3b82f6;
+      --cat-ai-fg:           #bfdbfe;
+      --cat-ai-accent:       #2563eb;
+
+      --prof-1-fg: #64748b;
+      --prof-2-fg: #475569;
+      --prof-3-fg: #93c5fd;
+      --prof-4-fg: #5cb1ff;
+      --prof-5-fg: #2563eb;
+
+      --status-mastered-fg:     #e5c76b;
+      --status-mastered-bg:     rgba(212, 175, 55, 0.16);
+      --status-mastered-border: rgba(212, 175, 55, 0.42);
+    }
+
+    [data-theme="light"] .proposed-b-scope {
+      --spectrum-edu-fg:   #64748b;
+      --spectrum-edu-bg:   rgba(100, 116, 139, 0.08);
+      --spectrum-edu-bd:   rgba(100, 116, 139, 0.28);
+      --spectrum-exp-fg:   #2563eb;
+      --spectrum-exp-bg:   rgba(37, 99, 235, 0.1);
+      --spectrum-exp-bd:   rgba(37, 99, 235, 0.32);
+      --spectrum-xp-fg:    #ffffff;
+      --spectrum-xp-bg:    linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      --spectrum-xp-bd:    rgba(37, 99, 235, 0.45);
+      --spectrum-xp-glow:  rgba(37, 99, 235, 0.28);
+
+      --cat-foundational-fg: #64748b;
+      --cat-foundational-accent: #94a3b8;
+      --cat-core-fg:         #2563eb;
+      --cat-core-accent:     #3b82f6;
+      --cat-advanced-fg:     #1d4ed8;
+      --cat-advanced-accent: #2563eb;
+      --cat-ai-fg:           #1e40af;
+      --cat-ai-accent:       #1d4ed8;
+
+      --prof-1-fg: #94a3b8;
+      --prof-2-fg: #64748b;
+      --prof-3-fg: #60a5fa;
+      --prof-4-fg: #2563eb;
+      --prof-5-fg: #1d4ed8;
+
+      --status-mastered-fg:     #92672a;
+      --status-mastered-bg:     rgba(146, 103, 42, 0.12);
+      --status-mastered-border: rgba(146, 103, 42, 0.32);
+    }
+
+    .proposed-b .cat-found { border-left: 4px solid var(--cat-foundational-accent); opacity: 0.92; }
+    .proposed-b .cat-core  { border-left: 4px solid var(--cat-core-accent); }
+    .proposed-b .cat-adv   { border-left: 5px solid var(--cat-advanced-accent); }
+    .proposed-b .cat-ai    { border-left: 6px solid var(--cat-ai-accent); box-shadow: inset 4px 0 12px rgba(37, 99, 235, 0.08); }
+
+    .proposed-b .prof-1.active { background: var(--prof-1-fg); color: #fff; }
+    .proposed-b .prof-2.active { background: var(--prof-2-fg); color: #fff; }
+    .proposed-b .prof-3.active { background: var(--prof-3-fg); color: #0f172a; }
+    .proposed-b .prof-4.active { background: var(--prof-4-fg); color: #0f172a; }
+    .proposed-b .prof-5.active { background: var(--prof-5-fg); color: #fff; }
+    [data-theme="light"] .proposed-b .prof-3.active,
+    [data-theme="light"] .proposed-b .prof-4.active { color: #fff; }
+
+    /* 3E icons — unified Exposure presentation (soft fill + brand ring) */
+    .proposed-b .icon-edu,
+    .proposed-b .icon-exp,
+    .proposed-b .icon-xp {
+      background: var(--spectrum-exp-bg);
+      color: var(--spectrum-exp-fg);
+      border: 2px solid var(--spectrum-exp-fg);
+    }
+
+    /* 3E chips — match icon treatment in Proposed B panels */
+    .proposed-b .chip-edu,
+    .proposed-b .chip-exp,
+    .proposed-b .chip-xp {
+      background: var(--spectrum-exp-bg);
+      color: var(--spectrum-exp-fg);
+      border: 1px solid var(--spectrum-exp-bd);
+      font-weight: 600;
+    }
+
+    .proposed-b .matrix-edu {
+      background: rgba(148, 163, 184, 0.14);
+      color: var(--spectrum-edu-fg);
+      border: 1px dashed rgba(148, 163, 184, 0.35);
+    }
+    .proposed-b .matrix-exp {
+      background: rgba(92, 177, 255, 0.28);
+      color: var(--spectrum-exp-fg);
+      border: 1px solid rgba(92, 177, 255, 0.42);
+    }
+    .proposed-b .matrix-xp {
+      background: linear-gradient(145deg, #5cb1ff, #2563eb);
+      color: #fff;
+      border: none;
+      box-shadow: 0 0 10px rgba(92, 177, 255, 0.35);
+    }
+
+    .proposed-b .status-mastered-proposed {
+      background: var(--status-mastered-bg);
+      color: var(--status-mastered-fg);
+      border-color: var(--status-mastered-border);
+    }
+
+    .depth-ladder {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .depth-step {
+      border-radius: var(--radius-md);
+      padding: 14px 12px;
+      text-align: center;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-card-soft);
+    }
+
+    .depth-step__visual {
+      height: 40px;
+      border-radius: 8px;
+      margin: 0 auto 10px;
+      max-width: 120px;
+    }
+
+    .depth-step__name {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .depth-step__hint {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .depth-step__visual.proposed-b {
+      background: var(--spectrum-exp-bg);
+      border: 2px solid var(--spectrum-exp-fg);
+    }
+
+    .icon-set-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 720px) {
+      .icon-set-grid { grid-template-columns: 1fr; }
+    }
+
+    .icon-set-card {
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 18px 16px;
+      text-align: center;
+    }
+
+    .icon-set-card__icons {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .icon-set-card__name {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .icon-set-card__meta {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .icon-set-card__hint {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .icon-set-card--recommended {
+      border-color: rgba(92, 177, 255, 0.35);
+      box-shadow: 0 0 0 1px rgba(92, 177, 255, 0.12);
+    }
+
+    .icon-legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .icon-legend-row strong { color: var(--text-primary); }
+
+    /* ─── Demo components ─────────────────────────────────────────── */
+    .chip-row, .icon-row, .prof-row, .matrix-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .demo-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .demo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+    }
+
+    .demo-icon svg { width: 18px; height: 18px; }
+
+    .demo-prof {
+      min-width: 36px;
+      height: 32px;
+      padding: 0 10px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-soft);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .demo-prof.active { border-color: transparent; }
+
+    .matrix-cell-demo {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .mini-card {
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      min-width: 180px;
+      flex: 1 1 180px;
+    }
+
+    .mini-card__title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .cat-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border-soft);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    .spectrum-ladder {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 720px) {
+      .spectrum-ladder { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .spectrum-step {
+      border-radius: var(--radius-md);
+      padding: 12px 10px;
+      text-align: center;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-card-soft);
+    }
+
+    .spectrum-step__swatch {
+      height: 28px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .spectrum-step__name {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .spectrum-step__hex {
+      font-size: 11px;
+      font-family: ui-monospace, monospace;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .hue-spread-bar {
+      height: 12px;
+      border-radius: 999px;
+      margin: 16px 0 8px;
+      background: linear-gradient(
+        90deg,
+        #64748b 0%,
+        #14b8a6 22%,
+        #5cb1ff 44%,
+        #6366f1 66%,
+        #8b5cf6 88%,
+        #7c3aed 100%
+      );
+      border: 1px solid var(--border-soft);
+    }
+
+    .hue-spread-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .rule-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .rule-grid { grid-template-columns: 1fr; }
+    }
+
+    .rule-card {
+      background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+
+    .rule-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .rule-card p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .status-chip-demo {
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid;
+    }
+
+    .status-planned    { background: var(--status-planned-bg); color: var(--status-planned-fg); border-color: var(--status-planned-border); }
+    .status-developing  { background: var(--status-developing-bg); color: var(--status-developing-fg); border-color: var(--status-developing-border); }
+    .status-mastered    { background: var(--status-mastered-bg); color: var(--status-mastered-fg); border-color: var(--status-mastered-border); }
+    .status-warning-demo { background: rgba(245,158,11,.12); color: #fbbf24; border-color: rgba(245,158,11,.28); }
+
+    .three-col-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 720px) {
+      .three-col-cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="color-mock">
+    <header class="color-mock__hero">
+      <h1>Semantic Color System — Brand Depth + Achievement Gold</h1>
+      <p>
+        MatrixPro’s shell is <strong>navy + accent blue</strong> (<code>#5cb1ff</code> / <code>#3b82f6</code>),
+        but functional highlights still pull from unrelated hues — green, cyan, purple, and amber —
+        across 3E icons, category rails, proficiency pickers, matrix cells, and plan status chips.
+        <strong>Proposed B (recommended)</strong> keeps progression inside the brand family and differentiates
+        3E with <em>fill weight</em> (ghost → soft → solid gradient), not extra hues.
+        <strong>Mastered</strong> moves from generic green to <em>achievement gold</em> — distinct from amber warnings.
+      </p>
+      <div class="color-mock__toolbar">
+        <button type="button" class="btn btn-secondary" id="themeToggle">Toggle light / dark</button>
+        <span class="mono">docs/design/semantic-color-system-mockup.html</span>
+      </div>
+    </header>
+
+    <!-- Audit -->
+    <section class="section-block">
+      <div class="section-block__eyebrow">01 — Audit</div>
+      <h2 class="section-block__title">Current production color map</h2>
+      <p class="section-block__desc">
+        Extracted from <code>frontend/css/style.css</code>, <code>my-team.js</code> (CATEGORY_ACCENT),
+        and component rules. Same concept often uses different hex values per surface.
+      </p>
+      <div class="panel">
+        <div class="panel__body" style="overflow-x:auto">
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>Semantic role</th>
+                <th>Surfaces</th>
+                <th>Current colors</th>
+                <th>Issue</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>3E — Education</strong></td>
+                <td>Sidebar icons, chips, modal tabs, SDM bubbles, home timeline, card dots</td>
+                <td><span class="swatch-inline"><span class="swatch-dot" style="background:#22c55e"></span><span class="mono">#22c55e green</span></span></td>
+                <td>Reads as “success”, not “learning tier”</td>
+              </tr>
+              <tr>
+                <td><strong>3E — Exposure</strong></td>
+                <td>Same as above + library level badges</td>
+                <td><span class="swatch-inline"><span class="swatch-dot" style="background:#06b6d4"></span><span class="mono">#06b6d4 cyan</span></span></td>
+                <td>Competes with brand accent; feels like a second primary</td>
+              </tr>
+              <tr>
+                <td><strong>3E — Experience</strong></td>
+                <td>Same as above + connector gradients</td>
+                <td><span class="swatch-inline"><span class="swatch-dot" style="background:#a855f7"></span><span class="mono">#a855f7 purple</span></span></td>
+                <td>Orphan hue — no tie to brand ladder</td>
+              </tr>
+              <tr>
+                <td><strong>Category — Foundational</strong></td>
+                <td>Catalog card rail, My Team KPI</td>
+                <td><span class="mono">#22c55e / #10b981 green</span></td>
+                <td>Conflicts with “mastered” green semantics</td>
+              </tr>
+              <tr>
+                <td><strong>Category — Core</strong></td>
+                <td>Rails, KPI, chips</td>
+                <td><span class="mono">#3b82f6 accent</span></td>
+                <td>✓ Already aligned</td>
+              </tr>
+              <tr>
+                <td><strong>Category — Advanced</strong></td>
+                <td>Rails, KPI, charts</td>
+                <td><span class="mono">#a855f7 / #818cf8 purple</span></td>
+                <td>Same purple as 3E Experience — ambiguous</td>
+              </tr>
+              <tr>
+                <td><strong>Category — AI &amp; Future</strong></td>
+                <td>Rails, KPI</td>
+                <td><span class="mono">#f59e0b amber</span></td>
+                <td>Only warm accent in a cool UI — feels like warning</td>
+              </tr>
+              <tr>
+                <td><strong>Proficiency L1–5</strong></td>
+                <td>Sidebar filters, modal pickers</td>
+                <td><span class="mono">slate → green → cyan → purple → yellow</span></td>
+                <td>Rainbow scale unrelated to brand or 3E</td>
+              </tr>
+              <tr>
+                <td><strong>Matrix 3E depth</strong></td>
+                <td>My Team matrix cells</td>
+                <td><span class="mono">green 18% → 42% → 75%</span></td>
+                <td>All-green ramp; depth ≠ brand</td>
+              </tr>
+              <tr>
+                <td><strong>Plan status</strong></td>
+                <td>Nav, chips, cards</td>
+                <td><span class="mono">slate / accent / green</span></td>
+                <td>✓ Keep — outcome semantics, not progression</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Design rules -->
+    <section class="section-block proposed-b-scope">
+      <div class="section-block__eyebrow">02 — Design rules</div>
+      <h2 class="section-block__title">Proposed B — brand-depth hierarchy</h2>
+      <div class="rule-grid">
+        <div class="rule-card">
+          <h4>Monochrome progression</h4>
+          <p>3E, categories, proficiency, and matrix depth stay on the <strong>brand blue ladder</strong>. Category rails and proficiency still deepen by weight; <strong>3E icons share one Exposure-style ring</strong> — Book, Flask, and Terminal differ by silhouette only.</p>
+        </div>
+        <div class="rule-card">
+          <h4>Outcome semantics</h4>
+          <p><strong>Gold</strong> = Mastered / certified complete.<br><strong>Amber</strong> = stale, pipeline, caution only.<br><strong>Red</strong> = danger / destructive only.<br>Retire green for Mastered — it competed with Education and felt generic.</p>
+        </div>
+        <div class="rule-card">
+          <h4>3E icon presentation</h4>
+          <p><strong>Book · Flask · Terminal</strong> silhouettes differentiate Education / Exposure / Experience. All three share the same <strong>Exposure-style</strong> chrome — soft brand fill + solid ring — so only the glyph changes, not the container.</p>
+        </div>
+      </div>
+
+      <div class="depth-ladder proposed-b-scope">
+        <div class="depth-step">
+          <div class="depth-step__visual proposed-b" style="display:grid;place-items:center;width:48px;height:48px;border-radius:50%;margin:0 auto 10px">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5cb1ff" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          </div>
+          <div class="depth-step__name">Education</div>
+          <div class="depth-step__hint">Open book · unified ring</div>
+        </div>
+        <div class="depth-step">
+          <div class="depth-step__visual proposed-b" style="display:grid;place-items:center;width:48px;height:48px;border-radius:50%;margin:0 auto 10px">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5cb1ff" stroke-width="1.5"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .899 1.45h12.762a1 1 0 0 0 .899-1.45L14.21 10.424a2 2 0 0 1-.211-.897V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>
+          </div>
+          <div class="depth-step__name">Exposure</div>
+          <div class="depth-step__hint">Lab flask · unified ring</div>
+        </div>
+        <div class="depth-step">
+          <div class="depth-step__visual proposed-b" style="display:grid;place-items:center;width:48px;height:48px;border-radius:50%;margin:0 auto 10px">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5cb1ff" stroke-width="1.5"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          </div>
+          <div class="depth-step__name">Experience</div>
+          <div class="depth-step__hint">Terminal · unified ring</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3E -->
+    <section class="section-block">
+      <div class="section-block__eyebrow">03 — 3E framework</div>
+      <h2 class="section-block__title">Education · Exposure · Experience</h2>
+      <p class="section-block__desc">My Plan sidebar icons, chips, skill modal tabs, SDM vertical track, home timeline, card footer dots.</p>
+      <div class="compare-3">
+        <div class="panel">
+          <div class="panel__label panel__label--current">Current — unrelated hues</div>
+          <div class="panel__body current">
+            <div class="chip-row" style="margin-bottom:16px">
+              <span class="demo-chip chip-edu">Education</span>
+              <span class="demo-chip chip-exp">Exposure</span>
+              <span class="demo-chip chip-xp">Experience</span>
+            </div>
+            <div class="icon-row">
+              <div class="demo-icon icon-edu" title="Education"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+              <div class="demo-icon icon-exp" title="Exposure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg></div>
+              <div class="demo-icon icon-xp" title="Experience"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel proposed-b-scope">
+          <div class="panel__label panel__label--proposed">Proposed B — Book · Flask · Terminal</div>
+          <div class="panel__body proposed-b">
+            <div class="chip-row" style="margin-bottom:16px">
+              <span class="demo-chip chip-edu">Education</span>
+              <span class="demo-chip chip-exp">Exposure</span>
+              <span class="demo-chip chip-xp">Experience</span>
+            </div>
+            <div class="icon-row">
+              <div class="demo-icon icon-edu" title="Education — book"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+              <div class="demo-icon icon-exp" title="Exposure — lab flask"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .899 1.45h12.762a1 1 0 0 0 .899-1.45L14.21 10.424a2 2 0 0 1-.211-.897V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></div>
+              <div class="demo-icon icon-xp" title="Experience — terminal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
+            </div>
+            <p class="mono" style="margin-top:14px;font-size:11px">Book · Flask · Terminal — unified soft brand ring on all three</p>
+          </div>
+        </div>
+        <div class="panel proposed-a-scope">
+          <div class="panel__label panel__label--alt">Alt A — teal / blue / violet</div>
+          <div class="panel__body proposed-a">
+            <div class="chip-row" style="margin-bottom:16px">
+              <span class="demo-chip chip-edu">Education</span>
+              <span class="demo-chip chip-exp">Exposure</span>
+              <span class="demo-chip chip-xp">Experience</span>
+            </div>
+            <div class="icon-row">
+              <div class="demo-icon icon-edu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+              <div class="demo-icon icon-exp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg></div>
+              <div class="demo-icon icon-xp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+            </div>
+            <p class="mono" style="margin-top:14px;font-size:11px">Dashed teal → solid blue → filled violet</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3E Icons -->
+    <section class="section-block proposed-b-scope">
+      <div class="section-block__eyebrow">03b — 3E iconography</div>
+      <h2 class="section-block__title">Book · Flask · Terminal</h2>
+      <p class="section-block__desc">
+        Selected icons: <strong>Book</strong> (Education), <strong>Lab flask</strong> (Exposure), <strong>Terminal prompt</strong> (Experience).
+        All three use the same Proposed B Exposure presentation — soft brand fill, solid brand ring, <code>currentColor</code> stroke — so stage is read from the silhouette only.
+      </p>
+
+      <div class="icon-set-grid">
+        <div class="icon-set-card icon-set-card--recommended">
+          <div class="icon-set-card__name">Education</div>
+          <div class="icon-set-card__icons proposed-b">
+            <div class="demo-icon icon-edu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+          </div>
+          <div class="icon-set-card__meta">Open book</div>
+          <div class="icon-set-card__hint">Courses, certs, structured reading</div>
+        </div>
+        <div class="icon-set-card icon-set-card--recommended">
+          <div class="icon-set-card__name">Exposure</div>
+          <div class="icon-set-card__icons proposed-b">
+            <div class="demo-icon icon-exp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .899 1.45h12.762a1 1 0 0 0 .899-1.45L14.21 10.424a2 2 0 0 1-.211-.897V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></div>
+          </div>
+          <div class="icon-set-card__meta">Lab flask</div>
+          <div class="icon-set-card__hint">Labs, shadowing, guided break-fix</div>
+        </div>
+        <div class="icon-set-card icon-set-card--recommended">
+          <div class="icon-set-card__name">Experience</div>
+          <div class="icon-set-card__icons proposed-b">
+            <div class="demo-icon icon-xp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
+          </div>
+          <div class="icon-set-card__meta">Terminal prompt</div>
+          <div class="icon-set-card__hint">CLI ownership, repro, production troubleshooting</div>
+        </div>
+      </div>
+
+      <div class="icon-legend-row proposed-b-scope">
+        <span><strong>All 3E icons</strong> — <code>background: var(--spectrum-exp-bg)</code></span>
+        <span><strong>Ring</strong> — <code>border: 2px solid var(--spectrum-exp-fg)</code></span>
+        <span><strong>Glyph</strong> — <code>color: var(--spectrum-exp-fg)</code></span>
+      </div>
+    </section>
+
+    <!-- Categories -->
+    <section class="section-block">
+      <div class="section-block__eyebrow">04 — Skill categories</div>
+      <h2 class="section-block__title">Foundational · Core · Advanced · AI &amp; Future</h2>
+      <p class="section-block__desc">Catalog card rails, My Plan group headers, My Team KPI cards. Proposed B uses a <strong>slate → light blue → brand → deep blue</strong> rail ladder — same family, increasing weight.</p>
+      <div class="compare-2">
+        <div class="panel">
+          <div class="panel__label panel__label--current">Current</div>
+          <div class="panel__body current">
+            <div class="three-col-cards">
+              <div class="mini-card cat-found"><div class="cat-header">Foundational</div><div class="mono">green rail</div></div>
+              <div class="mini-card cat-core"><div class="cat-header">Core</div><div class="mono">accent rail</div></div>
+              <div class="mini-card cat-adv"><div class="cat-header">Advanced</div><div class="mono">purple rail</div></div>
+            </div>
+            <div class="mini-card cat-ai" style="margin-top:12px"><div class="cat-header">AI &amp; Future Skills</div><div class="mono">amber rail — reads as warning</div></div>
+          </div>
+        </div>
+        <div class="panel proposed-b-scope">
+          <div class="panel__label panel__label--proposed">Proposed B — brand rail ladder</div>
+          <div class="panel__body proposed-b">
+            <div class="three-col-cards">
+              <div class="mini-card cat-found"><div class="cat-header" style="color:var(--cat-foundational-fg)">Foundational</div><div class="mono">slate #64748b · 4px</div></div>
+              <div class="mini-card cat-core"><div class="cat-header" style="color:var(--cat-core-fg)">Core</div><div class="mono">light blue #5cb1ff · 4px</div></div>
+              <div class="mini-card cat-adv"><div class="cat-header" style="color:var(--cat-advanced-fg)">Advanced</div><div class="mono">brand #3b82f6 · 5px</div></div>
+            </div>
+            <div class="mini-card cat-ai" style="margin-top:12px"><div class="cat-header" style="color:var(--cat-ai-fg)">AI &amp; Future Skills</div><div class="mono">deep blue #2563eb · 6px + inset glow</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Proficiency -->
+    <section class="section-block">
+      <div class="section-block__eyebrow">05 — Proficiency depth</div>
+      <h2 class="section-block__title">Levels 1–5</h2>
+      <p class="section-block__desc">Sidebar quick filters and modal proficiency pickers. Proposed B: slate baseline → deepening brand blues (no rainbow, no teal/violet).</p>
+      <div class="compare-2">
+        <div class="panel">
+          <div class="panel__label panel__label--current">Current — rainbow</div>
+          <div class="panel__body current">
+            <div class="prof-row">
+              <span class="demo-prof prof-1 active">1</span>
+              <span class="demo-prof prof-2 active">2</span>
+              <span class="demo-prof prof-3 active">3</span>
+              <span class="demo-prof prof-4 active">4</span>
+              <span class="demo-prof prof-5 active">5</span>
+            </div>
+          </div>
+        </div>
+        <div class="panel proposed-b-scope">
+          <div class="panel__label panel__label--proposed">Proposed B — brand depth ramp</div>
+          <div class="panel__body proposed-b">
+            <div class="prof-row">
+              <span class="demo-prof prof-1 active">1</span>
+              <span class="demo-prof prof-2 active">2</span>
+              <span class="demo-prof prof-3 active">3</span>
+              <span class="demo-prof prof-4 active">4</span>
+              <span class="demo-prof prof-5 active">5</span>
+            </div>
+            <p class="mono" style="margin-top:12px;font-size:11px">#64748b → #475569 → #93c5fd → #5cb1ff → #2563eb</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Matrix -->
+    <section class="section-block">
+      <div class="section-block__eyebrow">06 — Team matrix 3E depth</div>
+      <h2 class="section-block__title">Cell intensity</h2>
+      <p class="section-block__desc">Replace all-green opacity ramp with ghost slate → soft brand → solid gradient cells (matches 3E fill weight).</p>
+      <div class="compare-2">
+        <div class="panel">
+          <div class="panel__label panel__label--current">Current — green ramp</div>
+          <div class="panel__body current">
+            <div class="matrix-row">
+              <div class="matrix-cell-demo matrix-edu">E</div>
+              <div class="matrix-cell-demo matrix-exp">X</div>
+              <div class="matrix-cell-demo matrix-xp">★</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel proposed-b-scope">
+          <div class="panel__label panel__label--proposed">Proposed B — depth cells</div>
+          <div class="panel__body proposed-b">
+            <div class="matrix-row">
+              <div class="matrix-cell-demo matrix-edu">E</div>
+              <div class="matrix-cell-demo matrix-exp">X</div>
+              <div class="matrix-cell-demo matrix-xp">★</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Status -->
+    <section class="section-block">
+      <div class="section-block__eyebrow">07 — Outcome semantics</div>
+      <h2 class="section-block__title">Plan status &amp; Mastered color</h2>
+      <p class="section-block__desc">Planned and Developing stay as-is (slate + brand). Mastered moves from generic green to <strong>achievement gold</strong> — reads as certified/complete without colliding with 3E or warning amber.</p>
+      <div class="compare-2">
+        <div class="panel">
+          <div class="panel__label panel__label--current">Current — green Mastered</div>
+          <div class="panel__body">
+            <div class="status-row">
+              <span class="status-chip-demo status-planned">Planned</span>
+              <span class="status-chip-demo status-developing">Developing</span>
+              <span class="status-chip-demo status-mastered">Mastered</span>
+              <span class="status-chip-demo status-warning-demo">Stale / Pipeline</span>
+            </div>
+            <p class="mono" style="margin-top:12px;font-size:11px">Mastered: #22c55e green</p>
+          </div>
+        </div>
+        <div class="panel proposed-b-scope">
+          <div class="panel__label panel__label--proposed">Proposed B — gold Mastered</div>
+          <div class="panel__body">
+            <div class="status-row">
+              <span class="status-chip-demo status-planned">Planned</span>
+              <span class="status-chip-demo status-developing">Developing</span>
+              <span class="status-chip-demo status-mastered-proposed">Mastered</span>
+              <span class="status-chip-demo status-warning-demo">Stale / Pipeline</span>
+            </div>
+            <p class="mono" style="margin-top:12px;font-size:11px">Mastered: #e5c76b gold (dark) · #92672a (light)</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Implementation -->
+    <section class="section-block proposed-b-scope">
+      <div class="section-block__eyebrow">08 — Implementation</div>
+      <h2 class="section-block__title">Token block for style.css (Proposed B)</h2>
+      <p class="section-block__desc">Add to §7.1 after brand tokens. Replace hardcoded 3E/category/prof values in CSS + <code>my-team.js</code> CATEGORY_ACCENT. Update <code>--status-mastered-*</code> for gold.</p>
+      <div class="panel">
+        <div class="panel__body">
+<pre class="mono" style="font-size:12px;line-height:1.6;white-space:pre-wrap;color:var(--text-secondary)">/* Progression — brand depth (NOT outcomes) */
+--spectrum-edu-fg:    #94a3b8;   /* ghost slate */
+--spectrum-edu-bg:    rgba(148, 163, 184, 0.08);
+--spectrum-edu-bd:    rgba(148, 163, 184, 0.38);
+--spectrum-exp-fg:    #5cb1ff;   /* soft brand */
+--spectrum-exp-bg:    rgba(92, 177, 255, 0.18);
+--spectrum-exp-bd:    rgba(92, 177, 255, 0.48);
+--spectrum-xp-fg:     #ffffff;   /* solid gradient fill on icon/cell */
+--spectrum-xp-from:   #5cb1ff;
+--spectrum-xp-to:     #2563eb;
+
+/* Category rails — slate → light → brand → deep */
+--cat-foundational-accent: #64748b;
+--cat-core-accent:         #5cb1ff;
+--cat-advanced-accent:     #3b82f6;
+--cat-ai-accent:           #2563eb;
+
+/* Proficiency — brand depth ramp */
+--prof-1-accent: #64748b;
+--prof-2-accent: #475569;
+--prof-3-accent: #93c5fd;
+--prof-4-accent: #5cb1ff;
+--prof-5-accent: #2563eb;
+
+/* Mastered — achievement gold (replaces green) */
+--status-mastered-fg:     #e5c76b;
+--status-mastered-bg:     rgba(212, 175, 55, 0.16);
+--status-mastered-border: rgba(212, 175, 55, 0.42);
+/* light theme: fg #92672a, bg rgba(146,103,42,.12) */
+
+/* 3E icons — Book / Flask / Terminal; unified Exposure chrome on all three */
+/* .icon-edu, .icon-exp, .icon-xp → spectrum-exp-bg + 2px spectrum-exp-fg ring */</pre>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      root.setAttribute('data-theme', root.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+    });
+  </script>
+</body>
+</html>

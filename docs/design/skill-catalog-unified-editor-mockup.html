@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Catalog — Unified Editor Mockup</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-catalog-editor-v3">
+  <style>
+    body.mockup-page { margin: 0; min-height: 100vh; background: var(--bg-page); }
+    .mockup-chrome {
+      position: sticky; top: 0; z-index: 300;
+      background: var(--bg-panel); border-bottom: 1px solid var(--border-soft);
+      padding: 12px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+    }
+    .mockup-chrome h1 { font-size: 14px; font-weight: 700; margin: 0; }
+    .mockup-chrome p { font-size: 12px; color: var(--text-muted); margin: 0; flex: 1; min-width: 240px; }
+    .mockup-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .mockup-tab {
+      border: 1px solid var(--border-soft); background: var(--bg-card-soft);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    }
+    .mockup-tab.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+    .mockup-stage {
+      min-height: calc(100vh - 52px); display: grid; place-items: center;
+      padding: 24px;
+      background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0, 174, 239, 0.08), transparent 60%);
+    }
+    .mockup-dim { color: var(--text-muted); font-size: 12px; text-align: center; max-width: 640px; margin: 0 0 16px; line-height: 1.5; }
+
+    .mock-unified {
+      width: min(960px, 96vw); max-height: min(720px, 88vh);
+      display: flex; flex-direction: column;
+      background: var(--bg-panel); border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+    .mock-unified.is-maximized {
+      width: min(1280px, 96vw); max-height: min(900px, 92vh);
+    }
+
+    .mock-unified__tabs {
+      display: flex; gap: 0; margin-top: 12px; border-bottom: 1px solid var(--border-soft);
+    }
+    .mock-unified__tab {
+      padding: 10px 18px; font-size: 13px; font-weight: 600; color: var(--text-muted);
+      background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px;
+    }
+    .mock-unified__tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .mock-unified__panel { flex: 1; min-height: 0; display: none; flex-direction: column; }
+    .mock-unified__panel.active { display: flex; }
+
+    .mock-content-main { flex: 1; min-height: 0; display: grid; grid-template-columns: 300px 1fr; }
+    .mock-list-col { border-right: 1px solid var(--border-soft); display: flex; flex-direction: column; min-height: 0; }
+    .mock-list-scroll { flex: 1; overflow-y: auto; padding: 8px 8px 4px; min-height: 0; }
+    .mock-list-footer { padding: 10px; border-top: 1px solid var(--border-soft); position: relative; flex-shrink: 0; }
+
+    .mock-add-menu {
+      position: absolute; bottom: calc(100% + 4px); left: 10px; right: 10px;
+      background: var(--bg-panel); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-md);
+      padding: 6px; display: none; z-index: 5;
+    }
+    .mock-add-menu.open { display: block; }
+    .mock-add-menu button {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 8px 10px; border: none; background: none; color: var(--text-primary);
+      font-size: 13px; border-radius: var(--radius-sm); cursor: pointer; text-align: left;
+    }
+    .mock-add-menu button:hover { background: var(--accent-soft); color: var(--accent); }
+    .mock-add-menu .sdm-3e-section__bubble { width: 26px; height: 26px; flex-shrink: 0; }
+
+    .mock-reader-col { display: flex; flex-direction: column; min-height: 0; position: relative; }
+
+    /* Item editor fills reader column (Quill-style, larger than slide-over) */
+    .mock-item-editor {
+      flex: 1; min-height: 0; display: none; flex-direction: column; overflow: hidden;
+    }
+    .mock-item-editor.open { display: flex; }
+    .mock-item-editor__scroll { flex: 1; overflow-y: auto; padding: 16px 18px; }
+    .mock-item-editor__header { margin-bottom: 14px; }
+    .mock-item-editor__header h3 { margin: 0; font-size: 16px; font-weight: 700; }
+    .mock-item-editor__level { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .mock-quill-toolbar {
+      display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px;
+      border: 1px solid var(--border-soft); border-bottom: none;
+      border-radius: var(--radius-md) var(--radius-md) 0 0; background: var(--bg-card-soft);
+    }
+    .mock-quill-toolbar button {
+      min-width: 28px; height: 28px; border: 1px solid transparent; border-radius: var(--radius-sm);
+      background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .mock-quill-editor {
+      min-height: min(260px, 36vh); border: 1px solid var(--border-soft);
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+      padding: 12px 14px; background: var(--bg-input); font-size: 14px; line-height: 1.6;
+    }
+    .mock-reader-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .mock-reader-view.hidden { display: none; }
+
+    .mock-details-scroll { flex: 1; overflow-y: auto; padding: 16px 20px; }
+
+    .mock-readonly-badge {
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      padding: 3px 8px; border-radius: 999px; background: var(--bg-card-soft); border: 1px solid var(--border-soft);
+    }
+    .mock-unified[data-role="engineer"] .manager-only { display: none !important; }
+    .mock-unified[data-role="engineer"] .mock-readonly-badge { display: inline-flex; }
+    .mock-unified[data-role="manager"] .mock-readonly-badge { display: none; }
+
+    .mock-unified.dirty .sdm-footer { border-top-color: rgba(59, 130, 246, 0.35); }
+    .mock-unified.dirty .sdm-footer__status { color: var(--accent); }
+  </style>
+</head>
+<body class="mockup-page">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+    </symbol>
+    <symbol id="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/>
+    </symbol>
+    <symbol id="icon-education" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+    </symbol>
+    <symbol id="icon-exposure" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
+    </symbol>
+    <symbol id="icon-experience" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </symbol>
+  </svg>
+
+  <header class="mockup-chrome">
+    <h1>Skill Catalog — Unified Editor</h1>
+    <p>My Plan parity · vertical 3E track · unified Save Details / Discard · manager vs engineer RBAC</p>
+    <div class="mockup-tabs" role="tablist" aria-label="Mockup views">
+      <button type="button" class="mockup-tab active" data-view="default">Default</button>
+      <button type="button" class="mockup-tab" data-view="details">Details tab</button>
+      <button type="button" class="mockup-tab" data-view="item-editor">Item editor</button>
+      <button type="button" class="mockup-tab" data-view="unsaved">Unsaved changes</button>
+      <button type="button" class="mockup-tab" data-view="engineer">Engineer (browse)</button>
+      <button type="button" class="mockup-tab" data-view="maximized">Maximized</button>
+    </div>
+    <button type="button" class="mockup-tab" id="themeToggle">Light / Dark</button>
+  </header>
+
+  <main class="mockup-stage">
+    <p class="mockup-dim" id="viewHint">Default — Content tab with My Plan vertical 3E track. All edits stay pending until Save Details.</p>
+
+    <div class="mock-unified modal skill-detail-modal sdm-plan-modal catalog-skill-modal" id="unifiedModal" data-role="manager" role="dialog" aria-label="BGP Troubleshooting">
+      <div class="modal-body sdm-modal-body" style="display:flex;flex-direction:column;min-height:0;flex:1;padding:0">
+        <header class="sdm-header catalog-skill-header" style="padding:16px 20px 0;flex-shrink:0">
+          <div class="sdm-header__top">
+            <div class="catalog-skill-header__title-wrap">
+              <div class="catalog-skill-header__icon" aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+              </div>
+              <h1 class="sdm-header__title">BGP Troubleshooting</h1>
+            </div>
+            <div class="sdm-header__actions">
+              <span class="mock-readonly-badge">Browse only</span>
+              <div class="sdm-header__window-controls">
+                <button type="button" class="sdm-window-btn sdm-maximize-btn" id="maxBtn" title="Maximize" aria-label="Maximize">
+                  <svg width="1em" height="1em"><use href="#icon-maximize"/></svg>
+                </button>
+                <button type="button" class="sdm-window-btn sdm-close" aria-label="Close">×</button>
+              </div>
+            </div>
+          </div>
+          <p class="sdm-notes">Advanced routing diagnostics for enterprise and service provider environments.</p>
+
+          <div class="catalog-skill-meta">
+            <div class="catalog-skill-meta__row">
+              <span class="catalog-skill-meta__label">Category</span>
+              <div class="catalog-skill-meta__chips">
+                <span class="mp-modal-category-chip">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                  <span class="mp-modal-category-chip__name">Advanced</span>
+                </span>
+              </div>
+            </div>
+            <div class="catalog-skill-meta__row">
+              <span class="catalog-skill-meta__label">Teams</span>
+              <div class="catalog-skill-meta__chips">
+                <span class="triage-chip triage-signal chip-sm">TAC-ENT-ROUT-S1</span>
+                <span class="triage-chip triage-signal chip-sm">TAC-ENT-ROUT-S2</span>
+                <span class="triage-chip triage-signal chip-sm team-chip-overflow" tabindex="0" aria-label="1 more team">+1 more</span>
+              </div>
+            </div>
+            <div class="catalog-skill-meta__row">
+              <span class="catalog-skill-meta__label">Certifications</span>
+              <div class="catalog-skill-meta__chips">
+                <button type="button" class="meta-badge meta-badge--cert meta-badge--clickable">CCNP ENCOR</button>
+                <button type="button" class="meta-badge meta-badge--cert meta-badge--clickable">CCIE Enterprise Infrastructure</button>
+              </div>
+            </div>
+            <div class="catalog-skill-meta__row">
+              <span class="catalog-skill-meta__label">Tags</span>
+              <div class="catalog-skill-meta__chips">
+                <span class="triage-chip triage-feedback chip-sm">bgp</span>
+                <span class="triage-chip triage-feedback chip-sm">escalation</span>
+                <span class="triage-chip triage-feedback chip-sm">routing</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mock-unified__tabs manager-only" role="tablist">
+            <button type="button" class="mock-unified__tab active" data-tab="content" aria-selected="true">Content</button>
+            <button type="button" class="mock-unified__tab" data-tab="details" aria-selected="false">Details</button>
+          </div>
+        </header>
+
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">
+          <!-- Content tab -->
+          <div class="mock-unified__panel active" id="panelContent" role="tabpanel">
+            <div class="mock-content-main sdm-main">
+              <div class="mock-list-col sdm-list-col">
+                <div class="mock-list-scroll sdm-list-scroll">
+                  <!-- My Plan vertical 3E track -->
+                  <div class="sdm-3e-track">
+                    <div class="sdm-3e-section sdm-3e-section--education sdm-3e-section--focus">
+                      <div class="sdm-3e-section__rail">
+                        <div class="sdm-3e-section__bubble" aria-hidden="true"><svg><use href="#icon-education"/></svg></div>
+                        <div class="sdm-3e-section__connector" aria-hidden="true"></div>
+                      </div>
+                      <div class="sdm-3e-section__main">
+                        <button type="button" class="sdm-3e-section__header" aria-expanded="true">
+                          <span class="sdm-3e-section__label">Education</span>
+                          <span class="sdm-3e-section__count">2</span>
+                          <span class="sdm-3e-section__toggle" aria-hidden="true">−</span>
+                        </button>
+                        <div class="sdm-3e-section__body">
+                          <div class="sdm-list-item catalog-list-item active">
+                            <button type="button" class="sdm-list-item__body"><span class="sdm-list-item__title">Cisco Learning Network — BGP Fundamentals</span></button>
+                          </div>
+                          <div class="sdm-list-item catalog-list-item">
+                            <button type="button" class="sdm-list-item__body"><span class="sdm-list-item__title">RFC 4271 Reading Guide</span></button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="sdm-3e-section sdm-3e-section--exposure sdm-3e-section--collapsed">
+                      <div class="sdm-3e-section__rail">
+                        <div class="sdm-3e-section__bubble" aria-hidden="true"><svg><use href="#icon-exposure"/></svg></div>
+                        <div class="sdm-3e-section__connector" aria-hidden="true"></div>
+                      </div>
+                      <div class="sdm-3e-section__main">
+                        <button type="button" class="sdm-3e-section__header" aria-expanded="false">
+                          <span class="sdm-3e-section__label">Exposure</span>
+                          <span class="sdm-3e-section__count">1</span>
+                          <span class="sdm-3e-section__toggle" aria-hidden="true">+</span>
+                        </button>
+                        <div class="sdm-3e-section__body">
+                          <div class="sdm-list-item catalog-list-item">
+                            <button type="button" class="sdm-list-item__body"><span class="sdm-list-item__title">Shadow senior on BGP escalation SR</span></button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="sdm-3e-section sdm-3e-section--experience sdm-3e-section--collapsed sdm-3e-section--last">
+                      <div class="sdm-3e-section__rail">
+                        <div class="sdm-3e-section__bubble" aria-hidden="true"><svg><use href="#icon-experience"/></svg></div>
+                      </div>
+                      <div class="sdm-3e-section__main">
+                        <button type="button" class="sdm-3e-section__header" aria-expanded="false">
+                          <span class="sdm-3e-section__label">Experience</span>
+                          <span class="sdm-3e-section__count">1</span>
+                          <span class="sdm-3e-section__toggle" aria-hidden="true">+</span>
+                        </button>
+                        <div class="sdm-3e-section__body">
+                          <div class="sdm-list-item catalog-list-item">
+                            <button type="button" class="sdm-list-item__body"><span class="sdm-list-item__title">Own end-to-end BGP outage RCA</span></button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="mock-list-footer manager-only">
+                  <button type="button" class="btn btn-secondary btn-sm" id="addItemBtn">+ Add Item ▾</button>
+                  <div class="mock-add-menu" id="addMenu">
+                    <button type="button" data-level="Education"><span class="sdm-3e-section__bubble sdm-3e-section--education"><svg width="14" height="14"><use href="#icon-education"/></svg></span> Education</button>
+                    <button type="button" data-level="Exposure"><span class="sdm-3e-section__bubble sdm-3e-section--exposure"><svg width="14" height="14"><use href="#icon-exposure"/></svg></span> Exposure</button>
+                    <button type="button" data-level="Experience"><span class="sdm-3e-section__bubble sdm-3e-section--experience"><svg width="14" height="14"><use href="#icon-experience"/></svg></span> Experience</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mock-reader-col sdm-reader-col">
+                <div class="mock-reader-view" id="readerView">
+                  <div class="sdm-reader-toolbar catalog-skill-reader-toolbar">
+                    <div class="sdm-reader-toolbar__left">
+                      <div class="sdm-reader-actions manager-only">
+                        <button type="button" class="btn btn-secondary btn-sm" id="editItemBtn">Edit</button>
+                        <button type="button" class="btn btn-danger btn-sm" id="deleteItemBtn">Delete</button>
+                      </div>
+                    </div>
+                    <div class="sdm-reader-meta">course · Education</div>
+                  </div>
+                  <div class="sdm-reader-scroll">
+                    <div class="sdm-reader-content">
+                      <h2 class="sdm-reader-title">Cisco Learning Network — BGP Fundamentals</h2>
+                      <div class="sdm-reader-prose"><p>Structured learning path covering BGP path selection, attributes, and common misconfiguration patterns in enterprise networks.</p></div>
+                      <a class="skill-detail-accordion-link sdm-reader-link" href="#">Open resource →</a>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mock-item-editor manager-only" id="itemEditor">
+                  <div class="mock-item-editor__scroll">
+                    <div class="mock-item-editor__header">
+                      <h3 id="itemEditorTitle">Edit Content Item</h3>
+                      <div class="mock-item-editor__level">Level: <strong id="editorLevel">Education</strong> · changes pending until Save Details</div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Title *</label><input class="form-input" id="itemTitle" type="text" value="Cisco Learning Network — BGP Fundamentals"></div>
+                    <div class="form-group"><label class="form-label">Type *</label><select class="form-select" id="itemType"><option selected>Course</option><option>Reading</option><option>Link</option><option>Action</option></select></div>
+                    <div class="form-group">
+                      <label class="form-label">Description</label>
+                      <div class="mock-quill-toolbar" role="toolbar"><button type="button"><strong>B</strong></button><button type="button"><em>I</em></button><button type="button">H2</button><button type="button">H3</button><button type="button">Link</button><button type="button">List</button></div>
+                      <div class="mock-quill-editor" id="itemDescription" contenteditable="true"><p><strong>Learning objectives</strong></p><p>Cover BGP path selection, well-known communities, and common misconfiguration patterns. Include lab prerequisites and escalation criteria.</p></div>
+                    </div>
+                    <div class="form-group"><label class="form-label">URL</label><input class="form-input" id="itemUrl" type="url" placeholder="https://…"></div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="closeItemEditor">Back to preview</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Details tab (manager only) -->
+          <div class="mock-unified__panel" id="panelDetails" role="tabpanel">
+            <div class="mock-details-scroll skill-edit-form">
+              <div class="skill-edit-section">
+                <div class="skill-edit-section__header"><div class="skill-edit-section__title">Identity</div></div>
+                <div class="skill-edit-section__body">
+                  <div class="form-group"><label class="form-label">Name *</label><input class="form-input detail-field" id="detailName" value="BGP Troubleshooting"></div>
+                  <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea detail-field" id="detailDesc" rows="3">Advanced routing diagnostics for enterprise and service provider environments.</textarea></div>
+                  <div class="form-group"><label class="form-label">Tags</label><input class="form-input detail-field" id="detailTags" value="bgp, escalation"></div>
+                </div>
+              </div>
+              <div class="skill-edit-section">
+                <div class="skill-edit-section__header"><div class="skill-edit-section__title">Classification</div></div>
+                <div class="skill-edit-section__body skill-edit-classification-row">
+                  <label class="toggle-switch"><input type="checkbox" class="toggle-switch__input detail-field" id="detailNtech"><span class="toggle-switch__track"><span class="toggle-switch__thumb"></span></span> Non-Technical Skill</label>
+                  <div class="skill-category-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+                    <button type="button" class="mp-filter-chip skill-category-chip detail-field">Foundational</button>
+                    <button type="button" class="mp-filter-chip skill-category-chip detail-field">Core</button>
+                    <button type="button" class="mp-filter-chip skill-category-chip active detail-field">Advanced</button>
+                  </div>
+                </div>
+              </div>
+              <div class="skill-edit-section">
+                <div class="skill-edit-section__header"><div class="skill-edit-section__title">Associations</div></div>
+                <div class="skill-edit-section__body skill-edit-row skill-edit-row--assoc">
+                  <div class="skill-assoc-section" style="min-height:120px;padding:12px;border:1px solid var(--border-soft);border-radius:var(--radius-md)">
+                    <div class="skill-assoc-section__label">Teams</div>
+                    <p style="font-size:12px;color:var(--text-muted);margin:8px 0 0">Shift filter + combobox (existing control)</p>
+                  </div>
+                  <div class="skill-assoc-section" style="min-height:120px;padding:12px;border:1px solid var(--border-soft);border-radius:var(--radius-md)">
+                    <div class="skill-assoc-section__label">Certificates</div>
+                    <p style="font-size:12px;color:var(--text-muted);margin:8px 0 0">Combobox multi (existing control)</p>
+                  </div>
+                </div>
+              </div>
+              <div class="skill-edit-section">
+                <div class="skill-edit-section__header"><div class="skill-edit-section__title">Visual</div></div>
+                <div class="skill-edit-section__body">
+                  <div class="skill-icon-picker skill-icon-picker--collapsed">
+                    <div class="icon-picker-preview">
+                      <div class="icon-picker-preview__swatch">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4"/></svg>
+                      </div>
+                      <div class="icon-picker-preview__name">routing</div>
+                      <button type="button" class="icon-picker-preview__toggle detail-field">Change…</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="modal-footer sdm-footer" id="modalFooter">
+        <span class="sdm-footer__status" id="footerStatus">No pending changes</span>
+        <button type="button" class="btn btn-secondary manager-only" id="discardBtn">Discard Changes</button>
+        <button type="button" class="btn btn-primary manager-only" id="saveBtn">Save Details</button>
+        <button type="button" class="btn btn-secondary engineer-only" id="closeBtn">Close</button>
+      </footer>
+    </div>
+  </main>
+
+  <style>
+    .mock-unified[data-role="engineer"] .engineer-only { display: inline-flex; }
+    .mock-unified[data-role="manager"] .engineer-only { display: none; }
+    .mock-unified[data-role="engineer"] #discardBtn,
+    .mock-unified[data-role="engineer"] #saveBtn { display: none; }
+  </style>
+
+  <script>
+    const modal = document.getElementById('unifiedModal');
+    const footer = document.getElementById('modalFooter');
+    const footerStatus = document.getElementById('footerStatus');
+    const discardBtn = document.getElementById('discardBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const panelContent = document.getElementById('panelContent');
+    const panelDetails = document.getElementById('panelDetails');
+    const tabs = document.querySelectorAll('.mock-unified__tab[data-tab]');
+    const viewTabs = document.querySelectorAll('.mockup-tab[data-view]');
+    const viewHint = document.getElementById('viewHint');
+    const addBtn = document.getElementById('addItemBtn');
+    const addMenu = document.getElementById('addMenu');
+    const itemEditor = document.getElementById('itemEditor');
+    const readerView = document.getElementById('readerView');
+    const editItemBtn = document.getElementById('editItemBtn');
+    const closeItemEditor = document.getElementById('closeItemEditor');
+    const editorLevel = document.getElementById('editorLevel');
+    const itemEditorTitle = document.getElementById('itemEditorTitle');
+    const maxBtn = document.getElementById('maxBtn');
+
+    const saved = {
+      detailName: 'BGP Troubleshooting',
+      detailDesc: 'Advanced routing diagnostics for enterprise and service provider environments.',
+      detailTags: 'bgp, escalation',
+      itemTitle: 'Cisco Learning Network — BGP Fundamentals',
+      itemDescription: '<p><strong>Learning objectives</strong></p><p>Cover BGP path selection, well-known communities, and common misconfiguration patterns. Include lab prerequisites and escalation criteria.</p>',
+    };
+
+    let isMaximized = false;
+    let itemDraftDirty = false;
+    let detailsDirty = false;
+
+    function setRole(role) {
+      modal.dataset.role = role;
+      updateDirtyUI();
+    }
+
+    function isDirty() {
+      if (modal.dataset.role === 'engineer') return false;
+      if (detailsDirty || itemDraftDirty) return true;
+      const name = document.getElementById('detailName')?.value;
+      const desc = document.getElementById('detailDesc')?.value;
+      const tags = document.getElementById('detailTags')?.value;
+      if (name !== saved.detailName || desc !== saved.detailDesc || tags !== saved.detailTags) return true;
+      if (itemEditor.classList.contains('open')) {
+        const t = document.getElementById('itemTitle')?.value;
+        const d = document.getElementById('itemDescription')?.innerHTML;
+        if (t !== saved.itemTitle || d !== saved.itemDescription) return true;
+      }
+      return false;
+    }
+
+    function updateDirtyUI() {
+      const dirty = isDirty();
+      modal.classList.toggle('dirty', dirty);
+      footer.classList.toggle('sdm-footer--dirty', dirty);
+      if (modal.dataset.role === 'engineer') {
+        footerStatus.textContent = 'Browse only — no editing available';
+        return;
+      }
+      footerStatus.textContent = dirty
+        ? 'Pending changes — click Save Details to apply'
+        : 'No pending changes';
+    }
+
+    function setEditorTab(tab) {
+      if (modal.dataset.role === 'engineer') tab = 'content';
+      tabs.forEach(t => {
+        const on = t.dataset.tab === tab;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      panelContent.classList.toggle('active', tab === 'content');
+      panelDetails.classList.toggle('active', tab === 'details');
+      updateDirtyUI();
+    }
+
+    function openItemEditor(mode, level) {
+      itemEditorTitle.textContent = mode === 'add' ? 'Add Content Item' : 'Edit Content Item';
+      editorLevel.textContent = level || 'Education';
+      if (mode === 'add') {
+        document.getElementById('itemTitle').value = '';
+        document.getElementById('itemDescription').innerHTML = '<p>Describe learning objectives, prerequisites, and escalation paths…</p>';
+      }
+      readerView.classList.add('hidden');
+      itemEditor.classList.add('open');
+      itemDraftDirty = mode === 'add';
+      updateDirtyUI();
+    }
+
+    function closeItemEditorPanel() {
+      itemEditor.classList.remove('open');
+      readerView.classList.remove('hidden');
+      updateDirtyUI();
+    }
+
+    function discardAll() {
+      document.getElementById('detailName').value = saved.detailName;
+      document.getElementById('detailDesc').value = saved.detailDesc;
+      document.getElementById('detailTags').value = saved.detailTags;
+      document.getElementById('itemTitle').value = saved.itemTitle;
+      document.getElementById('itemDescription').innerHTML = saved.itemDescription;
+      itemDraftDirty = false;
+      detailsDirty = false;
+      closeItemEditorPanel();
+      updateDirtyUI();
+    }
+
+    function saveAll() {
+      saved.detailName = document.getElementById('detailName').value;
+      saved.detailDesc = document.getElementById('detailDesc').value;
+      saved.detailTags = document.getElementById('detailTags').value;
+      saved.itemTitle = document.getElementById('itemTitle').value;
+      saved.itemDescription = document.getElementById('itemDescription').innerHTML;
+      itemDraftDirty = false;
+      detailsDirty = false;
+      closeItemEditorPanel();
+      updateDirtyUI();
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => setEditorTab(t.dataset.tab)));
+
+    document.querySelectorAll('.detail-field').forEach(el => {
+      el.addEventListener('input', () => { detailsDirty = true; updateDirtyUI(); });
+      el.addEventListener('change', () => { detailsDirty = true; updateDirtyUI(); });
+    });
+    ['itemTitle', 'itemDescription', 'itemUrl', 'itemType'].forEach(id => {
+      const el = document.getElementById(id);
+      el?.addEventListener('input', () => { itemDraftDirty = true; updateDirtyUI(); });
+    });
+    document.getElementById('itemDescription')?.addEventListener('input', () => { itemDraftDirty = true; updateDirtyUI(); });
+
+    editItemBtn?.addEventListener('click', () => openItemEditor('edit', 'Education'));
+    closeItemEditor?.addEventListener('click', closeItemEditorPanel);
+    discardBtn.addEventListener('click', discardAll);
+    saveBtn.addEventListener('click', saveAll);
+    document.getElementById('deleteItemBtn')?.addEventListener('click', () => { itemDraftDirty = true; updateDirtyUI(); });
+
+    addBtn?.addEventListener('click', () => addMenu.classList.toggle('open'));
+    addMenu?.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        addMenu.classList.remove('open');
+        setEditorTab('content');
+        openItemEditor('add', btn.dataset.level);
+      });
+    });
+
+    maxBtn.addEventListener('click', () => {
+      isMaximized = !isMaximized;
+      modal.classList.toggle('is-maximized', isMaximized);
+      modal.classList.toggle('sdm-plan-modal--maximized', isMaximized);
+      maxBtn.innerHTML = isMaximized
+        ? '<svg width="1em" height="1em"><use href="#icon-minimize"/></svg>'
+        : '<svg width="1em" height="1em"><use href="#icon-maximize"/></svg>';
+      maxBtn.title = isMaximized ? 'Restore' : 'Maximize';
+      maxBtn.setAttribute('aria-label', isMaximized ? 'Restore window size' : 'Maximize');
+    });
+
+    viewTabs.forEach(vt => vt.addEventListener('click', () => {
+      viewTabs.forEach(x => x.classList.remove('active'));
+      vt.classList.add('active');
+      const view = vt.dataset.view;
+      closeItemEditorPanel();
+      addMenu?.classList.remove('open');
+      modal.classList.remove('is-maximized', 'sdm-plan-modal--maximized');
+      isMaximized = false;
+      maxBtn.innerHTML = '<svg width="1em" height="1em"><use href="#icon-maximize"/></svg>';
+      discardAll();
+
+      if (view === 'default') {
+        setRole('manager');
+        setEditorTab('content');
+        viewHint.textContent = 'Default — vertical 3E track (My Plan parity). Edits stay pending until Save Details.';
+      } else if (view === 'details') {
+        setRole('manager');
+        setEditorTab('details');
+        viewHint.textContent = 'Details tab — attributes + icon picker. All changes pending until Save Details.';
+      } else if (view === 'item-editor') {
+        setRole('manager');
+        setEditorTab('content');
+        openItemEditor('add', 'Exposure');
+        viewHint.textContent = 'Item editor — full reader column with rich text. Saved only via footer Save Details.';
+      } else if (view === 'unsaved') {
+        setRole('manager');
+        setEditorTab('details');
+        document.getElementById('detailName').value = 'BGP Troubleshooting (edited)';
+        detailsDirty = true;
+        updateDirtyUI();
+        viewHint.textContent = 'Unsaved state — footer shows Save Details + Discard Changes (My Plan pattern).';
+      } else if (view === 'engineer') {
+        setRole('engineer');
+        setEditorTab('content');
+        viewHint.textContent = 'Engineer — read-only browse. No Details tab, Add Item, or edit actions.';
+      } else if (view === 'maximized') {
+        setRole('manager');
+        setEditorTab('content');
+        modal.classList.add('is-maximized', 'sdm-plan-modal--maximized');
+        isMaximized = true;
+        maxBtn.innerHTML = '<svg width="1em" height="1em"><use href="#icon-minimize"/></svg>';
+        viewHint.textContent = 'Maximized — same window controls as My Plan modal.';
+      }
+    }));
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    });
+
+    // 3E section expand/collapse demo
+    document.querySelectorAll('.sdm-3e-section__header').forEach(hdr => {
+      hdr.addEventListener('click', () => {
+        const section = hdr.closest('.sdm-3e-section');
+        const expanded = hdr.getAttribute('aria-expanded') === 'true';
+        hdr.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+        section.classList.toggle('sdm-3e-section--collapsed', expanded);
+        hdr.querySelector('.sdm-3e-section__toggle').textContent = expanded ? '+' : '−';
+      });
+    });
+
+    updateDirtyUI();
+  </script>
+</body>
+</html>

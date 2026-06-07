@@ -1,5 +1,7 @@
 import { Store } from '../state.js';
 import { api } from '../api.js';
+import { initBrandLogo3D } from '../components/brand-logo-3d.js?v=6';
+import { threeEIcon } from '../components/three-e-icons.js?v=1';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -61,6 +63,9 @@ function ctaButton(href, label, variant = 'primary') {
 
 const BRAND_TILE_HTML = '<svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--dark"><use href="#mp-icon-dark"/></svg><svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--light"><use href="#mp-icon-light"/></svg>';
 
+/** @type {(() => void) | null} */
+let _brandLogoCleanup = null;
+
 const ICONS = {
   eyebrow: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
@@ -72,19 +77,25 @@ const ICONS = {
 
 const THREE_E_STEPS = [
   {
+    phase: 'education',
+    index: '01',
     title: 'Education',
     desc: 'Structured learning — courses, reading, and certifications that build your foundation.',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+    icon: threeEIcon('education', 28),
   },
   {
+    phase: 'exposure',
+    index: '02',
     title: 'Exposure',
     desc: 'Hands-on practice through labs, shadowing, and guided real-world tasks.',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',
+    icon: threeEIcon('exposure', 28),
   },
   {
+    phase: 'experience',
+    index: '03',
     title: 'Experience',
     desc: 'Mastery through complex scenarios, mentoring others, and driving outcomes.',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    icon: threeEIcon('experience', 28),
   },
 ];
 
@@ -318,7 +329,7 @@ function buildGuestHeroColumn() {
 
   col.appendChild(h('p', {
     className: 'hm-a__lead hm-a__lead--guest',
-    textContent: 'MatrixPro gives TAC engineers a structured path from learning to mastery — track development plans, explore the skill catalog, and grow through the 3E model.',
+    textContent: 'Structured skill development for TAC engineers — development plans, the skill catalog, and the 3E model in one place.',
   }));
 
   const cta = h('div', { className: 'hm-a__cta hm-a__cta--guest' });
@@ -330,25 +341,9 @@ function buildGuestHeroColumn() {
 
 function buildBrandShowcase() {
   const aside = h('aside', { className: 'hm-a__brand-showcase', 'aria-label': 'MatrixPro logo' });
-
-  const orbit = h('div', { className: 'hm-a__brand-orbit' });
-  const stage = h('div', { className: 'hm-a__brand-stage' });
-  stage.appendChild(h('div', { className: 'hm-a__brand-glow' }));
-  stage.appendChild(h('div', { className: 'hm-a__brand-ring hm-a__brand-ring--1' }));
-  stage.appendChild(h('div', { className: 'hm-a__brand-ring hm-a__brand-ring--2' }));
-  stage.appendChild(h('div', { className: 'hm-a__brand-shimmer', 'aria-hidden': 'true' }));
-
-  const logo3d = h('div', { className: 'hm-a__brand-logo-3d' });
-  const logoWrap = h('span', { className: 'brand-tile hm-a__brand-logo', 'aria-hidden': 'true' });
-  logoWrap.innerHTML = BRAND_TILE_HTML;
-  logo3d.appendChild(logoWrap);
-  logo3d.appendChild(h('span', { className: 'hm-a__brand-shadow', 'aria-hidden': 'true' }));
-  stage.appendChild(logo3d);
-
-  orbit.appendChild(stage);
-  aside.appendChild(orbit);
-
-  return aside;
+  const host = h('div', { 'aria-hidden': 'true' });
+  aside.appendChild(host);
+  return { aside, viewport: host };
 }
 
 function buildHeroColumn(user) {
@@ -403,23 +398,35 @@ function buildHeroColumn(user) {
   return col;
 }
 
-function build3ETimeline({ compact = false } = {}) {
+function build3ETimeline() {
   const wrap = h('div', {
     id: 'home-3e',
-    className: compact ? 'hm-a__3e hm-a__3e--compact' : 'hm-a__3e',
+    className: 'hm-a__3e',
   });
-  wrap.appendChild(h('div', {
+
+  const header = h('header', { className: 'hm-a__3e-header' });
+  header.appendChild(h('span', { className: 'hm-a__3e-header-rule', 'aria-hidden': 'true' }));
+  header.appendChild(h('div', {
     className: 'hm-a__section-label',
     textContent: 'The 3E development model',
   }));
+  header.appendChild(h('span', { className: 'hm-a__3e-header-rule', 'aria-hidden': 'true' }));
+  wrap.appendChild(header);
+
   const timeline = h('div', { className: 'hm-a__timeline' });
-  THREE_E_STEPS.forEach(({ title, desc, icon }) => {
-    const step = h('div', { className: 'hm-a__step' });
+  THREE_E_STEPS.forEach(({ phase, index, title, desc, icon }) => {
+    const step = h('article', {
+      className: 'hm-a__step',
+      'data-phase': phase,
+    });
+    const card = h('div', { className: 'hm-a__step-card' });
+    card.appendChild(h('span', { className: 'hm-a__step-index', textContent: index }));
     const iconWrap = h('div', { className: 'hm-a__step-icon' });
     iconWrap.innerHTML = icon;
-    step.appendChild(iconWrap);
-    step.appendChild(h('h3', { textContent: title }));
-    step.appendChild(h('p', { textContent: desc }));
+    card.appendChild(iconWrap);
+    card.appendChild(h('h3', { textContent: title }));
+    card.appendChild(h('p', { textContent: desc }));
+    step.appendChild(card);
     timeline.appendChild(step);
   });
   wrap.appendChild(timeline);
@@ -429,6 +436,8 @@ function build3ETimeline({ compact = false } = {}) {
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
 export function mountHome(container) {
+  _brandLogoCleanup?.();
+  _brandLogoCleanup = null;
   container.innerHTML = '';
 
   const user = Store.get('user');
@@ -445,11 +454,17 @@ export function mountHome(container) {
   } else {
     heroGrid.classList.add('hm-a__hero-grid--guest');
     heroGrid.appendChild(buildGuestHeroColumn());
-    heroGrid.appendChild(buildBrandShowcase());
+    const showcase = buildBrandShowcase();
+    heroGrid.appendChild(showcase.aside);
+    try {
+      _brandLogoCleanup = initBrandLogo3D(showcase.viewport);
+    } catch (err) {
+      console.warn('Brand logo 3D init failed:', err);
+    }
   }
 
   inner.appendChild(heroGrid);
-  inner.appendChild(build3ETimeline({ compact: !user }));
+  inner.appendChild(build3ETimeline());
   page.appendChild(inner);
 
   if (!user) {
@@ -463,4 +478,9 @@ export function mountHome(container) {
   }
 
   container.appendChild(page);
+
+  return () => {
+    _brandLogoCleanup?.();
+    _brandLogoCleanup = null;
+  };
 }

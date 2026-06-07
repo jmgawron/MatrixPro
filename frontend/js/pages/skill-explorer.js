@@ -180,30 +180,43 @@ function buildSearchSection() {
   controls.appendChild(searchWrap);
 
   // Status filter toggles
-  const statusFilters = createElement('div', { className: 'cat-shift-filters' });
+  const statusFilters = createElement('div', {
+    className: 'cat-shift-filters',
+    role: 'group',
+    'aria-label': 'Filter by plan status',
+  });
+  const statusLabel = createElement('span', { className: 'cat-shift-filters__label' });
+  statusLabel.textContent = 'Status';
+  statusFilters.appendChild(statusLabel);
+
+  const statusChips = createElement('div', { className: 'cat-shift-filters__chips' });
   const statuses = [
     { value: 'planned', label: 'Planned' },
     { value: 'developing', label: 'Developing' },
     { value: 'mastered', label: 'Mastered' },
   ];
   statuses.forEach(({ value, label }) => {
-    const btn = createElement('button', { className: 'cat-shift-btn active' });
+    const btn = createElement('button', { type: 'button', className: 'cat-shift-btn active' });
     btn.textContent = label;
     btn.dataset.status = value;
+    btn.setAttribute('aria-pressed', 'true');
     btn.addEventListener('click', () => {
       if (_activeStatuses.has(value)) {
         if (_activeStatuses.size > 1) {
           _activeStatuses.delete(value);
           btn.classList.remove('active');
+          btn.setAttribute('aria-pressed', 'false');
         }
       } else {
         _activeStatuses.add(value);
         btn.classList.add('active');
+        btn.setAttribute('aria-pressed', 'true');
       }
       runSearch();
     });
-    statusFilters.appendChild(btn);
+    statusChips.appendChild(btn);
   });
+  statusFilters.appendChild(statusChips);
   controls.appendChild(statusFilters);
 
   // Search button

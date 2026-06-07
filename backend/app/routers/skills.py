@@ -8,7 +8,14 @@ from app.database import get_db
 from app.dependencies import get_current_user, require_role
 from app.models.catalog import Certificate, SkillCertificate
 from app.models.org import Domain, Team
-from app.models.plan import DevelopmentPlan, PlanSkill
+from app.models.plan import (
+    DevelopmentPlan,
+    HiddenCatalogContent,
+    PlanSkill,
+    UserCatalogDisplayOrder,
+    UserContentCompletion,
+    UserContentOverride,
+)
 from app.models.skill import (
     Skill,
     SkillCategory,
@@ -132,7 +139,17 @@ def _manager_accessible_team_ids(current_user: User, db: Session) -> set[int]:
     return allowed
 
 
+def _existing_skill_team_ids(db: Session, skill_id: int) -> set[int]:
+    rows = (
+        db.query(SkillTeam.team_id)
+        .filter(SkillTeam.skill_id == skill_id)
+        .all()
+    )
+    return {row[0] for row in rows}
+
+
 def _check_manager_team_access(current_user: User, team_ids: list[int], db: Session):
+    """Strict check for create / net-new team assignments."""
     if current_user.role == UserRole.admin:
         return
     if current_user.role != UserRole.manager:
@@ -146,6 +163,42 @@ def _check_manager_team_access(current_user: User, team_ids: list[int], db: Sess
             status_code=403,
             detail=f"Not authorized to assign skills to team(s): {invalid}",
         )
+
+
+def _check_manager_skill_edit_access(current_user: User, skill_id: int, db: Session):
+    """Managers may edit skills assigned to at least one team they manage."""
+    if current_user.role == UserRole.admin:
+        return
+    if current_user.role != UserRole.manager:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    allowed = _manager_accessible_team_ids(current_user, db)
+    existing = _existing_skill_team_ids(db, skill_id)
+    if existing and not existing.intersection(allowed):
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to edit this skill",
+        )
+
+
+def _resolve_manager_team_ids(
+    current_user: User,
+    skill_id: int,
+    requested: list[int],
+    db: Session,
+) -> list[int]:
+    """Merge team assignments: managers control only their teams; other shifts stay."""
+    allowed = _manager_accessible_team_ids(current_user, db)
+    existing = _existing_skill_team_ids(db, skill_id)
+    requested_set = set(requested)
+    forbidden_new = requested_set - allowed - existing
+    if forbidden_new:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Not authorized to assign skills to team(s): {sorted(forbidden_new)}",
+        )
+    preserved = existing - allowed
+    final = preserved | (requested_set & allowed)
+    return sorted(final)
 
 
 @router.get("/", response_model=list[SkillResponse])
@@ -282,7 +335,8 @@ def create_skill(
         db.add(SkillTag(skill_id=skill.id, tag_id=tag.id))
 
     _sync_certificate_m2m(db, skill.id, data.certificate_ids)
-    _sync_category_m2m(db, skill.id, data.category_ids)
+    category_ids = [] if data.is_non_technical else data.category_ids
+    _sync_category_m2m(db, skill.id, category_ids)
 
     db.commit()
 
@@ -455,8 +509,7 @@ def update_skill(
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    if data.team_ids is not None:
-        _check_manager_team_access(current_user, data.team_ids, db)
+    _check_manager_skill_edit_access(current_user, skill_id, db)
 
     updated = False
 
@@ -524,6 +577,10 @@ def update_skill(
                     ),
                 )
 
+        if data.is_non_technical:
+            # Non-technical skills are not grouped by proficiency categories.
+            data.category_ids = []
+
     if data.name is not None:
         skill.name = data.name
         updated = True
@@ -541,11 +598,16 @@ def update_skill(
         updated = True
 
     if data.team_ids is not None:
-        for tid in data.team_ids:
+        team_ids = data.team_ids
+        if current_user.role == UserRole.manager:
+            team_ids = _resolve_manager_team_ids(
+                current_user, skill_id, team_ids, db
+            )
+        for tid in team_ids:
             if not db.query(Team).filter(Team.id == tid).first():
                 raise HTTPException(status_code=400, detail=f"Team {tid} not found")
         db.query(SkillTeam).filter(SkillTeam.skill_id == skill_id).delete()
-        for tid in data.team_ids:
+        for tid in team_ids:
             db.add(SkillTeam(skill_id=skill_id, team_id=tid))
         updated = True
 
@@ -565,7 +627,20 @@ def update_skill(
         updated = True
 
     if data.category_ids is not None:
-        _sync_category_m2m(db, skill_id, data.category_ids)
+        ntech_team_ids = {
+            t.id
+            for t in db.query(Team).filter(Team.name.like("TAC-NTECH-GEN-%")).all()
+        }
+        current_team_ids = [
+            st.team_id
+            for st in db.query(SkillTeam).filter(SkillTeam.skill_id == skill_id).all()
+        ]
+        is_ntech = (
+            data.is_non_technical
+            if data.is_non_technical is not None
+            else any(tid in ntech_team_ids for tid in current_team_ids)
+        )
+        _sync_category_m2m(db, skill_id, [] if is_ntech else data.category_ids)
         updated = True
 
     if updated:
@@ -787,6 +862,8 @@ def add_skill_content(
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
+    _check_manager_skill_edit_access(current_user, skill_id, db)
+
     if data.level not in (1, 2, 3, 4, 5):
         raise HTTPException(status_code=400, detail="Level must be between 1 and 5")
 
@@ -852,6 +929,8 @@ def reorder_skill_content(
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
+    _check_manager_skill_edit_access(current_user, skill_id, db)
+
     for item in data.items:
         content = (
             db.query(SkillLevelContent)
@@ -890,6 +969,8 @@ def update_skill_content(
     if content is None:
         raise HTTPException(status_code=404, detail="Content item not found")
 
+    _check_manager_skill_edit_access(current_user, skill_id, db)
+
     if data.level is not None:
         if data.level not in (1, 2, 3, 4, 5):
             raise HTTPException(status_code=400, detail="Level must be between 1 and 5")
@@ -911,6 +992,22 @@ def update_skill_content(
     return content
 
 
+def _purge_catalog_content_plan_refs(db: Session, content_id: int) -> None:
+    """Remove plan-side rows that FK to a catalog content item before hard-delete."""
+    db.query(UserContentCompletion).filter(
+        UserContentCompletion.content_id == content_id
+    ).delete(synchronize_session=False)
+    db.query(UserContentOverride).filter(
+        UserContentOverride.content_id == content_id
+    ).delete(synchronize_session=False)
+    db.query(HiddenCatalogContent).filter(
+        HiddenCatalogContent.content_id == content_id
+    ).delete(synchronize_session=False)
+    db.query(UserCatalogDisplayOrder).filter(
+        UserCatalogDisplayOrder.content_id == content_id
+    ).delete(synchronize_session=False)
+
+
 @router.delete("/{skill_id}/content/{content_id}")
 def delete_skill_content(
     skill_id: int,
@@ -928,6 +1025,9 @@ def delete_skill_content(
     if content is None:
         raise HTTPException(status_code=404, detail="Content item not found")
 
+    _check_manager_skill_edit_access(current_user, skill_id, db)
+
+    _purge_catalog_content_plan_refs(db, content_id)
     db.delete(content)
     db.commit()
     return {"detail": "Content item deleted"}

@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Visual Language · Module Review</title>
+  <style>
+    /* ── Target visual language (from home-hero-3d-logo-mockup) ── */
+    :root {
+      --bg-page: #070b12;
+      --bg-panel: #0d1119;
+      --bg-card: #121824;
+      --bg-card-soft: #161f2e;
+      --border-soft: rgba(255,255,255,.07);
+      --text-primary: #e8eef7;
+      --text-secondary: #9fb0c9;
+      --text-muted: #6b7f9d;
+      --accent: #5cb1ff;
+      --accent-strong: #3b82f6;
+      --accent-glow: rgba(92,177,255,.35);
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+      --shadow-panel: 0 24px 64px rgba(0,0,0,.28);
+      --status-planned-fg: #94a3b8;
+      --status-planned-bg: rgba(148,163,184,.15);
+      --status-developing-fg: #5cb1ff;
+      --status-developing-bg: rgba(92,177,255,.12);
+      --status-mastered-fg: #22c55e;
+      --status-mastered-bg: rgba(34,197,94,.12);
+    }
+    [data-theme="light"] {
+      --bg-page: #f4f7fc;
+      --bg-panel: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-soft: #f1f5f9;
+      --border-soft: rgba(15,23,42,.08);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --accent: #3b82f6;
+      --accent-strong: #2563eb;
+      --accent-glow: rgba(59,130,246,.22);
+      --shadow-panel: 0 20px 48px rgba(15,23,42,.08);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, system-ui, sans-serif;
+      background:
+        radial-gradient(1200px 700px at 85% -5%, var(--accent-glow), transparent 55%),
+        radial-gradient(900px 500px at 0% 100%, rgba(37,99,235,.12), transparent 60%),
+        var(--bg-page);
+      color: var(--text-primary);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .hub { max-width: 1180px; margin: 0 auto; padding: 28px 24px 80px; }
+
+    .hub-head {
+      display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-start;
+      justify-content: space-between; margin-bottom: 28px; padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .eyebrow {
+      color: var(--accent); font-size: 11px; font-weight: 700;
+      letter-spacing: .16em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .hub-head h1 { margin: 0 0 8px; font-size: clamp(26px, 3.5vw, 36px); font-weight: 800; letter-spacing: -.02em; }
+    .hub-head .lead { margin: 0; max-width: 58ch; color: var(--text-secondary); font-size: 15px; line-height: 1.65; }
+    .hub-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .btn {
+      appearance: none; border: 1px solid var(--border-soft); background: var(--bg-card);
+      color: var(--text-primary); border-radius: 999px; padding: 9px 16px; font-size: 13px;
+      font-weight: 600; cursor: pointer; transition: border-color .15s, box-shadow .15s;
+    }
+    .btn:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+    .btn-primary { background: var(--accent-strong); border-color: transparent; color: #fff; box-shadow: 0 10px 28px rgba(59,130,246,.35); }
+    .btn-primary:hover { box-shadow: 0 10px 28px rgba(59,130,246,.45), 0 0 0 3px var(--accent-glow); }
+
+    /* Stepper */
+    .stepper {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .step-dot {
+      width: 32px; height: 32px; border-radius: 999px; border: 1px solid var(--border-soft);
+      background: var(--bg-card); color: var(--text-muted); font-size: 11px; font-weight: 700;
+      cursor: pointer; display: grid; place-items: center; transition: all .15s;
+    }
+    .step-dot:hover { border-color: var(--accent); color: var(--accent); }
+    .step-dot.active { background: rgba(92,177,255,.12); border-color: var(--accent); color: var(--accent); }
+    .step-dot.done { color: var(--status-mastered-fg); border-color: rgba(34,197,94,.35); }
+
+    .module-panel {
+      background: var(--bg-card); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-panel);
+    }
+    [data-theme="light"] .module-panel { box-shadow: var(--shadow-panel); }
+
+    .module-panel__head {
+      padding: 14px 22px; border-bottom: 1px solid var(--border-soft);
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+    }
+    .panel-label { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); }
+    .module-panel__title { margin: 4px 0 0; font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+    .badge {
+      font-size: 10px; letter-spacing: .08em; padding: 4px 10px; border-radius: 999px;
+      background: rgba(92,177,255,.12); color: var(--accent); border: 1px solid rgba(92,177,255,.25);
+      text-transform: uppercase; font-weight: 700;
+    }
+    .badge--stub { background: rgba(245,158,11,.12); color: #fbbf24; border-color: rgba(245,158,11,.3); }
+    .badge--ready { background: rgba(34,197,94,.12); color: #4ade80; border-color: rgba(34,197,94,.3); }
+
+    .module-panel__body { padding: 24px 22px 28px; }
+    .module-grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: 24px; align-items: start; }
+    @media (max-width: 900px) { .module-grid { grid-template-columns: 1fr; } }
+
+    .copy-block h3 { margin: 0 0 10px; font-size: 15px; font-weight: 700; }
+    .copy-block p, .copy-block li { font-size: 14px; line-height: 1.65; color: var(--text-secondary); }
+    .copy-block ul { margin: 0 0 16px; padding-left: 1.2em; }
+    .copy-block ul:last-child { margin-bottom: 0; }
+    .delta-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+    .delta-table th, .delta-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+    .delta-table th { color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+
+    .mock-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .mock-links a {
+      font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none;
+      padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(92,177,255,.3);
+      background: rgba(92,177,255,.08);
+    }
+    .mock-links a:hover { background: rgba(92,177,255,.16); }
+
+    .preview-frame {
+      background: var(--bg-panel); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg); overflow: hidden; min-height: 320px;
+    }
+    .preview-frame__label {
+      padding: 10px 14px; font-size: 10px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border-soft);
+      background: rgba(255,255,255,.02);
+    }
+    .preview-frame__body { padding: 16px; }
+    .preview-frame iframe {
+      display: block; width: 100%; height: 420px; border: 0; background: var(--bg-page);
+    }
+
+    .nav-footer {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      margin-top: 20px; flex-wrap: wrap;
+    }
+    .progress-text { font-size: 13px; color: var(--text-muted); }
+
+    /* Inline mini-previews */
+    .mini-nav {
+      display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+      background: color-mix(in srgb, var(--bg-panel) 88%, transparent);
+      backdrop-filter: blur(12px); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg); margin-bottom: 12px;
+    }
+    .mini-nav__brand { font-weight: 800; font-size: 14px; color: var(--accent); }
+    .mini-nav__links { display: flex; gap: 4px; margin-left: auto; }
+    .mini-nav__link {
+      font-size: 12px; font-weight: 600; color: var(--text-muted); padding: 6px 10px;
+      border-radius: 999px;
+    }
+    .mini-nav__link.active { background: rgba(92,177,255,.12); color: var(--accent); }
+
+    .status-chip {
+      display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 999px;
+      font-size: 12px; font-weight: 600; border: 1px solid transparent;
+    }
+    .status-chip--planned { background: var(--status-planned-bg); color: var(--status-planned-fg); border-color: rgba(148,163,184,.35); }
+    .status-chip--developing { background: var(--status-developing-bg); color: var(--status-developing-fg); border-color: rgba(92,177,255,.35); }
+    .status-chip--mastered { background: var(--status-mastered-bg); color: var(--status-mastered-fg); border-color: rgba(34,197,94,.35); }
+
+    .token-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    .token-swatch {
+      width: 64px; height: 48px; border-radius: 8px; border: 1px solid var(--border-soft);
+      position: relative;
+    }
+    .token-swatch span {
+      position: absolute; bottom: -18px; left: 0; font-size: 9px; color: var(--text-muted); white-space: nowrap;
+    }
+
+    .skill-card-mini {
+      background: linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      backdrop-filter: blur(12px); border: 1px solid var(--border-soft);
+      border-left: 4px solid var(--accent); border-radius: var(--radius-md);
+      padding: 14px; max-width: 280px;
+    }
+    .skill-card-mini h4 { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
+    .skill-card-mini p { margin: 0 0 10px; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    .skill-card-mini .bar { height: 4px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
+    .skill-card-mini .bar i { display: block; height: 100%; width: 62%; background: var(--accent); border-radius: inherit; }
+
+    .matrix-mini {
+      display: grid; grid-template-columns: 120px repeat(3, 1fr); gap: 1px;
+      background: var(--border-soft); border-radius: var(--radius-md); overflow: hidden; font-size: 11px;
+    }
+    .matrix-mini div { background: var(--bg-card-soft); padding: 8px 10px; }
+    .matrix-mini .head { background: var(--bg-panel); font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
+    .matrix-mini .cell-dev { color: var(--status-developing-fg); font-weight: 700; }
+
+    .module-step { display: none; }
+    .module-step.active { display: block; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="hub">
+    <header class="hub-head">
+      <div>
+        <div class="eyebrow">Design system rollout</div>
+        <h1>Visual language · module by module</h1>
+        <p class="lead">Investigation hub for aligning production UI with mockup style (CSS only — no functional changes). Use the stepper or Next / Previous to review each module.</p>
+      </div>
+      <div class="hub-controls">
+        <button type="button" class="btn" id="btnTheme" aria-pressed="false">Light theme</button>
+        <a class="btn" href="visual-language-system.md">Read brief (MD)</a>
+      </div>
+    </header>
+
+    <nav class="stepper" id="stepper" aria-label="Module steps"></nav>
+
+    <div id="modules">
+
+      <!-- 0 Foundation -->
+      <section class="module-step active" data-step="0" data-id="foundation">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div>
+              <div class="panel-label">Module 0 of 12</div>
+              <h2 class="module-panel__title">Design foundation</h2>
+            </div>
+            <span class="badge badge--ready">Mockup ready</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <h3>What changes</h3>
+                <p>Central token migration + unified status chips before touching any page. Everything else inherits from here.</p>
+                <ul>
+                  <li>Darker navy page bg + <strong>--accent-glow</strong> mesh</li>
+                  <li>Dark accent ink <strong>#5cb1ff</strong> vs button blue <strong>#3b82f6</strong></li>
+                  <li><strong>--radius-xl: 28px</strong> for panels/modals</li>
+                  <li>Status chips: planned / developing / mastered (one palette app-wide)</li>
+                  <li>Pill buttons + 150ms accent glow ring on hover</li>
+                </ul>
+                <div class="mock-links">
+                  <a href="visual-consistency-preview.html" target="_blank">Open full preview →</a>
+                  <a href="home-hero-3d-logo-mockup.html" target="_blank">Canonical tokens →</a>
+                </div>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Target tokens &amp; chips</div>
+                <div class="preview-frame__body">
+                  <div class="token-row">
+                    <div class="token-swatch" style="background:#070b12"><span>page</span></div>
+                    <div class="token-swatch" style="background:#121824"><span>card</span></div>
+                    <div class="token-swatch" style="background:#5cb1ff"><span>accent</span></div>
+                    <div class="token-swatch" style="background:#3b82f6"><span>CTA</span></div>
+                  </div>
+                  <p style="font-size:13px;color:var(--text-muted);margin:28px 0 10px">Unified status chips</p>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <span class="status-chip status-chip--planned">Planned</span>
+                    <span class="status-chip status-chip--developing">Developing</span>
+                    <span class="status-chip status-chip--mastered">Mastered</span>
+                  </div>
+                  <p style="font-size:13px;color:var(--text-muted);margin:20px 0 10px">Controls</p>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button type="button" class="btn btn-primary">Primary CTA</button>
+                    <button type="button" class="btn">Pill secondary</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 1 Global shell -->
+      <section class="module-step" data-step="1" data-id="shell">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div><div class="panel-label">Module 1 of 12</div><h2 class="module-panel__title">Global shell (nav + page atmosphere)</h2></div>
+            <span class="badge badge--stub">Stub preview</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <h3>Production gap</h3>
+                <ul>
+                  <li>Nav is flat — no glass blur or accent hairline</li>
+                  <li>Only Home has mesh glow; other pages feel colder</li>
+                  <li>Active nav link styling differs from mockup pill pattern</li>
+                </ul>
+                <h3>Target (CSS only)</h3>
+                <ul>
+                  <li>Sticky nav: <code>backdrop-filter: blur(12px)</code> + soft border</li>
+                  <li>Reuse <code>.page-mesh</code> on all main pages</li>
+                  <li>Active route = accent pill (match mockup chrome tabs)</li>
+                </ul>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Proposed nav chrome</div>
+                <div class="preview-frame__body">
+                  <div class="mini-nav">
+                    <span class="mini-nav__brand">◆ MatrixPro</span>
+                    <div class="mini-nav__links">
+                      <span class="mini-nav__link">Home</span>
+                      <span class="mini-nav__link active">My Plan</span>
+                      <span class="mini-nav__link">Catalog</span>
+                      <span class="mini-nav__link">My Team</span>
+                    </div>
+                  </div>
+                  <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin:0">Page content sits below a radial mesh identical to home-hero mockup — same glow positions, scoped per route.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 2 Home -->
+      <section class="module-step" data-step="2" data-id="home">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div><div class="panel-label">Module 2 of 12</div><h2 class="module-panel__title">Home page</h2></div>
+            <span class="badge badge--ready">Mockup ready</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <h3>Mockups</h3>
+                <ul>
+                  <li><strong>Command Center</strong> — split hero + activity feed (logged-in)</li>
+                  <li><strong>3D brand logo</strong> — guest showcase (partially shipped)</li>
+                  <li>Gradient headline, pill CTAs, editorial 3E timeline</li>
+                </ul>
+                <div class="mock-links">
+                  <a href="home-page-redesign-mockups.html" target="_blank">Home concepts A/B/C →</a>
+                  <a href="home-hero-3d-logo-mockup.html" target="_blank">3D logo mockup →</a>
+                </div>
+                <table class="delta-table">
+                  <tr><th>Area</th><th>Adjust</th></tr>
+                  <tr><td>Guest hero</td><td>Panel typography + CTA pills to mockup spec</td></tr>
+                  <tr><td>Logged-in</td><td>News panel glass cards + compact stats strip</td></tr>
+                  <tr><td>3E section</td><td>Timeline circles + uppercase section label</td></tr>
+                </table>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Embedded — home concepts</div>
+                <iframe src="home-page-redesign-mockups.html" title="Home mockups" loading="lazy"></iframe>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 3 Login -->
+      <section class="module-step" data-step="3" data-id="login">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div><div class="panel-label">Module 3 of 12</div><h2 class="module-panel__title">Login</h2></div>
+            <span class="badge badge--stub">Stub preview</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <h3>Production gap</h3>
+                <p>Functional login form with minimal branding — no mesh, no brand lockup, generic card.</p>
+                <h3>Target</h3>
+                <ul>
+                  <li>Centered glass card, <code>--radius-xl</code>, panel shadow</li>
+                  <li>Brand tile + wordmark above form (reuse home hero lockup)</li>
+                  <li>Same gradient mesh as guest home</li>
+                </ul>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Proposed login card</div>
+                <div class="preview-frame__body" style="display:grid;place-items:center;min-height:280px">
+                  <div style="width:min(100%,360px);background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--radius-xl);padding:32px;box-shadow:var(--shadow-panel)">
+                    <div style="text-align:center;margin-bottom:24px">
+                      <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#818cf8);margin:0 auto 12px"></div>
+                      <div style="font-weight:800;font-size:20px">MatrixPro</div>
+                      <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Sign in to continue</div>
+                    </div>
+                    <div style="height:36px;background:var(--bg-card-soft);border-radius:8px;margin-bottom:10px;border:1px solid var(--border-soft)"></div>
+                    <div style="height:36px;background:var(--bg-card-soft);border-radius:8px;margin-bottom:16px;border:1px solid var(--border-soft)"></div>
+                    <button type="button" class="btn btn-primary" style="width:100%;border-radius:12px">Sign In</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 4 My Plan -->
+      <section class="module-step" data-step="4" data-id="my-plan">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div><div class="panel-label">Module 4 of 12</div><h2 class="module-panel__title">My Plan</h2></div>
+            <span class="badge badge--ready">Mockup ready</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <h3>Mockups cover</h3>
+                <ul>
+                  <li>Command strip header + horizontal category pills</li>
+                  <li>Refined skill cards (single progress bar, category rail)</li>
+                  <li>Skill detail modal + Library modal + Reporting</li>
+                </ul>
+                <div class="mock-links">
+                  <a href="my-plan-visual-redesign-mockups.html" target="_blank">My Plan concepts →</a>
+                  <a href="skill-detail-modal-mockup.html" target="_blank">Skill detail modal →</a>
+                  <a href="library-modal-redesign-mockup.html" target="_blank">Library modal →</a>
+                  <a href="my-plan-reporting-mockup.html" target="_blank">Reporting →</a>
+                </div>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Embedded — My Plan recommended</div>
+                <iframe src="my-plan-visual-redesign-mockups.html" title="My Plan mockups" loading="lazy"></iframe>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 5 Catalog -->
+      <section class="module-step" data-step="5" data-id="catalog">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div><div class="panel-label">Module 5 of 12</div><h2 class="module-panel__title">Catalog Explorer</h2></div>
+            <span class="badge badge--ready">Mockup ready</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <div class="mock-links">
+                  <a href="catalog-visual-redesign-mockups.html" target="_blank">Catalog concepts A/B/C →</a>
+                  <a href="skill-card-demo.html" target="_blank">Glass skill cards →</a>
+                </div>
+                <table class="delta-table">
+                  <tr><th>Area</th><th>Adjust</th></tr>
+                  <tr><td>Hero</td><td>Compact context strip vs large stat blocks</td></tr>
+                  <tr><td>Tabs</td><td>Segmented pills with counts</td></tr>
+                  <tr><td>Cards</td><td>Category left rail + 2-line clamp + glass optional</td></tr>
+                  <tr><td>Tree</td><td>Panel header + domain group labels</td></tr>
+                </table>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Embedded — Catalog concept A</div>
+                <iframe src="catalog-visual-redesign-mockups.html" title="Catalog mockups" loading="lazy"></iframe>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 6 Catalog modal -->
+      <section class="module-step" data-step="6" data-id="catalog-modal">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div><div class="panel-label">Module 6 of 12</div><h2 class="module-panel__title">Catalog skill modal (unified editor)</h2></div>
+            <span class="badge badge--ready">Mockup ready</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <p>Premium modal chrome: gradient top hairline, glass meta panel, pill tabs, polished 3E rail — layout unchanged.</p>
+                <div class="mock-links">
+                  <a href="skill-catalog-modal-visual-polish-mockup.html" target="_blank">Visual polish →</a>
+                  <a href="skill-catalog-unified-editor-mockup.html" target="_blank">Unified editor →</a>
+                  <a href="skill-modal-3e-rail-mockup.html" target="_blank">3E rail detail →</a>
+                </div>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Embedded — modal polish</div>
+                <iframe src="skill-catalog-modal-visual-polish-mockup.html" title="Catalog modal polish" loading="lazy"></iframe>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 7 Skill detail -->
+      <section class="module-step" data-step="7" data-id="skill-detail">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div><div class="panel-label">Module 7 of 12</div><h2 class="module-panel__title">Skill detail modal (My Plan)</h2></div>
+            <span class="badge badge--ready">Mockup ready</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <p>Share catalog modal chrome kit — same header band, meta glass, 3E track styling, reader column contrast.</p>
+                <div class="mock-links">
+                  <a href="skill-detail-modal-mockup.html" target="_blank">Skill detail mockup →</a>
+                </div>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Embedded — skill detail</div>
+                <iframe src="skill-detail-modal-mockup.html" title="Skill detail mockup" loading="lazy"></iframe>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 8 Library -->
+      <section class="module-step" data-step="8" data-id="library">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div><div class="panel-label">Module 8 of 12</div><h2 class="module-panel__title">Library modal (Add My Item)</h2></div>
+            <span class="badge badge--ready">Shipped — polish optional</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <p>Production §7.20 largely matches mockup. Optional pass: align tab pills + card hover with catalog modal polish.</p>
+                <div class="mock-links">
+                  <a href="library-modal-redesign-mockup.html" target="_blank">Library mockup →</a>
+                </div>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Embedded — library v2</div>
+                <iframe src="library-modal-redesign-mockup.html" title="Library modal" loading="lazy"></iframe>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 9 My Team -->
+      <section class="module-step" data-step="9" data-id="my-team">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div><div class="panel-label">Module 9 of 12</div><h2 class="module-panel__title">My Team matrix</h2></div>
+            <span class="badge badge--stub">Stub preview</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <h3>Proposed direction (CSS only)</h3>
+                <ul>
+                  <li>Glass shell wrapping matrix + charts (Catalog Concept C density)</li>
+                  <li>Sticky header row: accent underline + frosted bg</li>
+                  <li>Status cells use unified chips (not ad-hoc colors)</li>
+                  <li>Bulk-assign bar: pill secondary + primary pattern from mockup</li>
+                </ul>
+                <p><em>Full interactive mockup — next design sprint after Catalog + My Plan approval.</em></p>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Matrix chrome stub</div>
+                <div class="preview-frame__body">
+                  <div class="matrix-mini">
+                    <div class="head">Engineer</div><div class="head">L2 Switch</div><div class="head">VLANs</div><div class="head">STP</div>
+                    <div>bob@</div><div class="cell-dev">Dev</div><div>Mast</div><div>Plan</div>
+                    <div>caden@</div><div>Mast</div><div class="cell-dev">Dev</div><div class="cell-dev">Dev</div>
+                  </div>
+                  <div style="margin-top:14px;display:flex;gap:8px">
+                    <span class="status-chip status-chip--developing">Developing</span>
+                    <span class="status-chip status-chip--mastered">Mastered</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 10 Explorer -->
+      <section class="module-step" data-step="10" data-id="explorer">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div><div class="panel-label">Module 10 of 12</div><h2 class="module-panel__title">Skill Explorer</h2></div>
+            <span class="badge badge--stub">Stub preview</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <ul>
+                  <li>Search hero: glass field + mesh (Catalog command strip)</li>
+                  <li>Compare panel: xl panel + panel-label headers</li>
+                  <li>Overlap viz: accent gradient bars, not flat cyan blocks</li>
+                </ul>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Card + search stub</div>
+                <div class="preview-frame__body">
+                  <input type="text" placeholder="Search skills…" readonly style="width:100%;padding:12px 16px;border-radius:999px;border:1px solid var(--border-soft);background:rgba(255,255,255,.04);color:var(--text-primary);margin-bottom:14px;font-size:14px">
+                  <div class="skill-card-mini">
+                    <h4>OSPF Multi-Area Design</h4>
+                    <p>Core · ENT Routing · 4 teams</p>
+                    <div class="bar"><i></i></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 11 Admin -->
+      <section class="module-step" data-step="11" data-id="admin">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div><div class="panel-label">Module 11 of 12</div><h2 class="module-panel__title">Admin panel</h2></div>
+            <span class="badge badge--stub">Stub preview</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <ul>
+                  <li>Tab bar → segmented pills (Users / Teams / Domains…)</li>
+                  <li>Tables inside single xl panel with panel-label</li>
+                  <li>Row hover: <code>--bg-hover</code> + soft accent left rail on selection</li>
+                </ul>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Admin table stub</div>
+                <div class="preview-frame__body" style="padding:0">
+                  <div class="panel-label" style="padding:12px 16px;border-bottom:1px solid var(--border-soft)">Users · 48</div>
+                  <div style="padding:12px 16px;font-size:13px;display:grid;grid-template-columns:1fr 1fr 80px;gap:8px;color:var(--text-secondary)">
+                    <div style="color:var(--text-muted);font-size:11px;font-weight:700;text-transform:uppercase">Email</div>
+                    <div style="color:var(--text-muted);font-size:11px;font-weight:700;text-transform:uppercase">Role</div>
+                    <div></div>
+                    <div>alice@matrixpro.com</div><div>Manager</div><div style="color:var(--accent);font-weight:600">Edit</div>
+                    <div style="background:rgba(92,177,255,.06);margin:0 -16px;padding:8px 16px;grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 80px;border-left:3px solid var(--accent)">bob@matrixpro.com</div><div style="background:rgba(92,177,255,.06);padding:8px 0">Engineer</div><div style="background:rgba(92,177,255,.06);padding:8px 0;color:var(--accent);font-weight:600">Edit</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 12 Settings -->
+      <section class="module-step" data-step="12" data-id="settings">
+        <article class="module-panel">
+          <div class="module-panel__head">
+            <div><div class="panel-label">Module 12 of 12</div><h2 class="module-panel__title">Settings</h2></div>
+            <span class="badge badge--stub">Stub preview</span>
+          </div>
+          <div class="module-panel__body">
+            <div class="module-grid">
+              <div class="copy-block">
+                <ul>
+                  <li>Single xl panel, max-width 560px centered</li>
+                  <li>Section labels: editorial uppercase (mockup panel-label)</li>
+                  <li>Avatar picker: pill grid matching skill category chips</li>
+                </ul>
+                <p><strong>Rollout complete</strong> when all 12 modules approved — implement as CSS-only phases per module.</p>
+              </div>
+              <div class="preview-frame">
+                <div class="preview-frame__label">Settings form stub</div>
+                <div class="preview-frame__body">
+                  <div style="max-width:400px;margin:0 auto;background:var(--bg-card);border:1px solid var(--border-soft);border-radius:var(--radius-xl);padding:24px;box-shadow:var(--shadow-panel)">
+                    <div class="panel-label" style="margin-bottom:12px">Profile</div>
+                    <div style="height:32px;background:var(--bg-card-soft);border-radius:8px;margin-bottom:12px;border:1px solid var(--border-soft)"></div>
+                    <div style="height:32px;background:var(--bg-card-soft);border-radius:8px;margin-bottom:20px;border:1px solid var(--border-soft)"></div>
+                    <div class="panel-label" style="margin-bottom:12px">Avatar</div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                      <span style="width:40px;height:40px;border-radius:999px;background:rgba(92,177,255,.2);border:2px solid var(--accent)"></span>
+                      <span style="width:40px;height:40px;border-radius:999px;background:var(--bg-card-soft);border:1px solid var(--border-soft)"></span>
+                      <span style="width:40px;height:40px;border-radius:999px;background:var(--bg-card-soft);border:1px solid var(--border-soft)"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+    </div>
+
+    <footer class="nav-footer">
+      <button type="button" class="btn" id="btnPrev" disabled>← Previous</button>
+      <span class="progress-text" id="progressText">Module 1 of 13 — Design foundation</span>
+      <button type="button" class="btn btn-primary" id="btnNext">Next module →</button>
+    </footer>
+  </div>
+
+  <script>
+    const MODULES = [
+      'Design foundation', 'Global shell', 'Home page', 'Login', 'My Plan',
+      'Catalog Explorer', 'Catalog skill modal', 'Skill detail modal', 'Library modal',
+      'My Team matrix', 'Skill Explorer', 'Admin panel', 'Settings',
+    ];
+    let step = 0;
+    const steps = document.querySelectorAll('.module-step');
+    const stepper = document.getElementById('stepper');
+    const progressText = document.getElementById('progressText');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const btnTheme = document.getElementById('btnTheme');
+
+    MODULES.forEach((name, i) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'step-dot' + (i === 0 ? ' active' : '');
+      dot.textContent = i;
+      dot.title = name;
+      dot.setAttribute('aria-label', `Module ${i}: ${name}`);
+      dot.addEventListener('click', () => goTo(i));
+      stepper.appendChild(dot);
+    });
+
+    function goTo(n) {
+      step = Math.max(0, Math.min(MODULES.length - 1, n));
+      steps.forEach((el, i) => el.classList.toggle('active', i === step));
+      stepper.querySelectorAll('.step-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === step);
+        dot.classList.toggle('done', i < step);
+      });
+      progressText.textContent = `Module ${step + 1} of ${MODULES.length} — ${MODULES[step]}`;
+      btnPrev.disabled = step === 0;
+      btnNext.textContent = step === MODULES.length - 1 ? 'Finish review' : 'Next module →';
+      window.location.hash = steps[step].dataset.id || '';
+    }
+
+    btnPrev.addEventListener('click', () => goTo(step - 1));
+    btnNext.addEventListener('click', () => {
+      if (step < MODULES.length - 1) goTo(step + 1);
+    });
+
+    btnTheme.addEventListener('click', () => {
+      const light = document.documentElement.dataset.theme === 'light';
+      if (light) {
+        document.documentElement.removeAttribute('data-theme');
+        btnTheme.textContent = 'Light theme';
+        btnTheme.setAttribute('aria-pressed', 'false');
+      } else {
+        document.documentElement.dataset.theme = 'light';
+        btnTheme.textContent = 'Dark theme';
+        btnTheme.setAttribute('aria-pressed', 'true');
+      }
+    });
+
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+      const idx = [...steps].findIndex(s => s.dataset.id === hash);
+      if (idx >= 0) goTo(idx);
+    } else {
+      goTo(0);
+    }
+  </script>
+</body>
+</html>

@@ -6,6 +6,7 @@ import { showModal, showConfirm } from '../components/modal.js';
 import { createElement } from '../utils/dom.js';
 import { getSkillIconSVG, SKILL_ICONS, ICON_CATEGORIES } from '../components/icons.js';
 import { createComboboxMulti } from '../components/combobox-multi.js';
+import { openCatalogSkillEditor } from '../components/catalog-skill-editor.js?v=11';
 
 // ─── Category icon catalog (mirrors my-plan.js SVG_ICONS for chip parity) ───
 const CATEGORY_SVG_ICONS = {
@@ -365,7 +366,7 @@ function buildToolbar() {
   const user = Store.get('user');
   const isAdmin = user?.role === 'admin';
   const isManager = user?.role === 'manager';
-  const canEdit = isAdmin || isManager;
+  const canEditCatalog = isAdmin || isManager;
 
   const leftGroup = createElement('div', { className: 'cat-toolbar-left' });
 
@@ -433,29 +434,42 @@ function buildToolbar() {
   sortWrap.appendChild(sortBtn);
 
   // Shift filter toggles (org tab only)
-  const shiftFiltersEl = createElement('div', { className: 'cat-shift-filters' });
+  const shiftFiltersEl = createElement('div', {
+    className: 'cat-shift-filters',
+    role: 'group',
+    'aria-label': 'Filter by shift',
+  });
+  const shiftLabel = createElement('span', { className: 'cat-shift-filters__label' });
+  shiftLabel.textContent = 'Shifts';
+  shiftFiltersEl.appendChild(shiftLabel);
+
+  const shiftChips = createElement('div', { className: 'cat-shift-filters__chips' });
   for (let i = 1; i <= 4; i++) {
-    const btn = createElement('button', { className: 'cat-shift-btn active' });
+    const btn = createElement('button', { type: 'button', className: 'cat-shift-btn active' });
     btn.textContent = `Shift ${i}`;
     btn.dataset.shift = String(i);
+    btn.setAttribute('aria-pressed', 'true');
     btn.addEventListener('click', () => {
       const shift = i;
       if (_activeShifts.has(shift)) {
         if (_activeShifts.size > 1) {
           _activeShifts.delete(shift);
           btn.classList.remove('active');
+          btn.setAttribute('aria-pressed', 'false');
         }
       } else {
         _activeShifts.add(shift);
         btn.classList.add('active');
+        btn.setAttribute('aria-pressed', 'true');
       }
       delete _treeCache['org'];
       loadTabTree('org', _treeEl);
       fetchAndRenderSkills();
       recomputeFilteredStats();
     });
-    shiftFiltersEl.appendChild(btn);
+    shiftChips.appendChild(btn);
   }
+  shiftFiltersEl.appendChild(shiftChips);
   leftGroup.appendChild(shiftFiltersEl);
 
   // Tag search
@@ -478,7 +492,7 @@ function buildToolbar() {
   leftGroup.appendChild(sortWrap);
 
   // Archived toggle (admin and manager only)
-  if (canEdit) {
+  if (canEditCatalog) {
     const archivedLabel = createElement('label', { className: 'catalog-checkbox-label' });
     const archivedCheck = createElement('input', { type: 'checkbox', id: 'cat-archived-check' });
     archivedCheck.addEventListener('change', () => {
@@ -495,7 +509,7 @@ function buildToolbar() {
   const rightGroup = createElement('div', { className: 'cat-toolbar-right' });
 
   // Add New Skill button (admin and manager only, not in plan-add mode)
-  if (canEdit && !_addMode) {
+  if (canEditCatalog && !_addMode) {
     const addBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
     addBtn.textContent = 'Add New Skill';
     addBtn.addEventListener('click', () => openSkillModal(null));
@@ -1017,12 +1031,16 @@ function buildSkillCard(skill) {
   const user = Store.get('user');
   const isAdmin = user?.role === 'admin';
   const isManager = user?.role === 'manager';
-  const canEdit = isAdmin || isManager;
+  const canEdit = canEditCatalogSkill(skill, user);
 
   const card = createElement('div', {
     className: skill.is_archived ? 'tool-card tool-card--archived' : 'tool-card',
   });
   card.dataset.skillId = skill.id;
+  const primaryCategory = skill.categories?.[0];
+  if (primaryCategory?.slug) {
+    card.dataset.categorySlug = primaryCategory.slug;
+  }
 
   // Header row with name and admin/manager actions
   const headerRow = createElement('div', { className: 'tool-card-header' });
@@ -1251,611 +1269,71 @@ function switchTabAndFilter(tabId, filterType, filterId, filterLabel) {
   fetchAndRenderSkills();
 }
 
-// ─── Skill Detail Modal ───────────────────────────────────────────────────────
+// ─── Editor helpers (unified skill editor) ───────────────────────────────────
+
+/** Managers may edit only skills assigned to their own team (admins: all). */
+function canEditCatalogSkill(skill, user = Store.get('user')) {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  if (user.role !== 'manager') return false;
+  if (!skill?.id) return true; // create flow
+  const allowed = new Set();
+  if (user.team_id != null) allowed.add(Number(user.team_id));
+  const skillTeamIds = Array.isArray(skill.teams)
+    ? skill.teams.map(t => Number(t.id)).filter(Number.isFinite)
+    : (Array.isArray(skill.team_ids) ? skill.team_ids.map(Number).filter(Number.isFinite) : []);
+  return skillTeamIds.some(id => allowed.has(id));
+}
+
+function getEditorHelpers() {
+  return {
+    buildSkillForm,
+    readSkillForm,
+    validateSkillForm,
+    loadFormData,
+    canEditCatalogSkill,
+    refreshCatalog: () => {
+      _formDataCache = null;
+      delete _treeCache[_activeTab];
+      fetchAndRenderSkills();
+    },
+    switchTabAndFilter,
+  };
+}
+
+async function loadFormData() {
+  if (_formDataCache) return _formDataCache;
+  const [orgTree, certTree] = await Promise.all([
+    api.get('/api/catalog/org-tree'),
+    api.get('/api/catalog/cert-tree'),
+  ]);
+
+  const teams = [];
+  (Array.isArray(orgTree) ? orgTree : []).forEach(domain => {
+    (Array.isArray(domain.teams) ? domain.teams : []).forEach(t => {
+      teams.push({ id: t.id, name: t.name, shift: t.shift });
+    });
+  });
+
+  const certificates = [];
+  (Array.isArray(certTree) ? certTree : []).forEach(cd => {
+    (Array.isArray(cd.certificates) ? cd.certificates : []).forEach(c => {
+      certificates.push({ id: c.id, name: c.name, domain: cd.name });
+    });
+  });
+
+  _formDataCache = {
+    teams,
+    certificates,
+    orgTree: Array.isArray(orgTree) ? orgTree : [],
+    certTree: Array.isArray(certTree) ? certTree : [],
+  };
+  return _formDataCache;
+}
+
+// ─── Skill Detail Modal (delegates to unified editor) ─────────────────────────
 function showSkillDetailModal(skill) {
-  const modalRoot = document.getElementById('modalRoot');
-  if (!modalRoot) return;
-
-  const LEVEL_CONFIG = [
-    {
-      key: 'education',
-      label: 'Education',
-      chipClass: 'chip-education',
-      icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
-    },
-    {
-      key: 'exposure',
-      label: 'Exposure',
-      chipClass: 'chip-exposure',
-      icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',
-    },
-    {
-      key: 'experience',
-      label: 'Experience',
-      chipClass: 'chip-experience',
-      icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
-    },
-  ];
-  const LEVEL_MAP = { 1: 'education', 2: 'exposure', 3: 'experience' };
-  const LEVEL_REVERSE = { education: 1, exposure: 2, experience: 3 };
-  const SECTION_ORDER = ['education', 'exposure', 'experience'];
-
-  const user = Store.get('user');
-  const canEdit = user?.role === 'admin' || user?.role === 'manager';
-
-  const overlay = createElement('div', { className: 'modal-overlay' });
-  const modal = createElement('div', {
-    className: 'modal skill-detail-modal sdm-plan-modal catalog-skill-modal',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-label': `${skill.name} — Skill catalog`,
-  });
-
-  const body = createElement('div', { className: 'modal-body sdm-modal-body' });
-
-  /* ── Sticky information header ─────────────────────────────────────── */
-  const headerBlock = createElement('header', { className: 'sdm-header catalog-skill-header' });
-  const headerTop = createElement('div', { className: 'sdm-header__top' });
-  const titleWrap = createElement('div', { className: 'catalog-skill-header__title-wrap' });
-  if (skill.icon && SKILL_ICONS[skill.icon]) {
-    const skillIconWrap = createElement('div', { className: 'catalog-skill-header__icon', 'aria-hidden': 'true' });
-    skillIconWrap.innerHTML = getSkillIconSVG(skill.icon, 26);
-    titleWrap.appendChild(skillIconWrap);
-  }
-  const titleEl = createElement('h1', { className: 'sdm-header__title' });
-  titleEl.textContent = skill.name;
-  titleWrap.appendChild(titleEl);
-  const closeBtn = createElement('button', { className: 'sdm-close', 'aria-label': 'Close' });
-  closeBtn.textContent = '\u2715';
-  headerTop.appendChild(titleWrap);
-  headerTop.appendChild(closeBtn);
-  headerBlock.appendChild(headerTop);
-
-  if (skill.is_archived) {
-    const archivedBadge = createElement('div', { className: 'catalog-skill-archived' });
-    archivedBadge.textContent = 'Archived';
-    headerBlock.appendChild(archivedBadge);
-  }
-
-  const descText = (skill.description || '').trim();
-  const descEl = createElement('p', { className: 'sdm-notes' });
-  if (descText) {
-    descEl.textContent = descText;
-  } else {
-    descEl.classList.add('sdm-notes--empty');
-  }
-  const descToggle = createElement('button', { type: 'button', className: 'sdm-notes-toggle' });
-  descToggle.textContent = 'Show more';
-  descToggle.hidden = true;
-  let descExpanded = false;
-  function updateDescDisplay() {
-    if (!descText) {
-      descToggle.hidden = true;
-      return;
-    }
-    descEl.textContent = descText;
-    const overflow = descText.length > 140;
-    descToggle.hidden = !overflow;
-    descToggle.classList.toggle('visible', overflow);
-    descToggle.textContent = descExpanded ? 'Show less' : 'Show more';
-    descEl.classList.toggle('sdm-notes--long', descExpanded);
-  }
-  updateDescDisplay();
-  descToggle.addEventListener('click', () => {
-    descExpanded = !descExpanded;
-    updateDescDisplay();
-  });
-  headerBlock.appendChild(descEl);
-  headerBlock.appendChild(descToggle);
-
-  const metaPanel = createElement('div', { className: 'catalog-skill-meta' });
-  const categories = Array.isArray(skill.categories) ? skill.categories : [];
-  const teams = Array.isArray(skill.teams) ? skill.teams : [];
-  const certificates = Array.isArray(skill.certificates) ? skill.certificates : [];
-  const tags = Array.isArray(skill.tags) ? skill.tags : [];
-
-  function appendMetaRow(labelText, chipsBuilder) {
-    const chips = chipsBuilder();
-    if (!chips.length) return;
-    const row = createElement('div', { className: 'catalog-skill-meta__row' });
-    const label = createElement('span', { className: 'catalog-skill-meta__label' });
-    label.textContent = labelText;
-    const chipWrap = createElement('div', { className: 'catalog-skill-meta__chips' });
-    chips.forEach(chip => chipWrap.appendChild(chip));
-    row.appendChild(label);
-    row.appendChild(chipWrap);
-    metaPanel.appendChild(row);
-  }
-
-  appendMetaRow('Category', () => categories.map(cat => {
-    const chip = createElement('span', { className: 'mp-modal-category-chip' });
-    chip.appendChild(categoryIconSpan(cat.slug, '14px'));
-    const name = createElement('span', { className: 'mp-modal-category-chip__name' });
-    name.textContent = cat.name;
-    chip.appendChild(name);
-    return chip;
-  }));
-
-  appendMetaRow('Teams', () => {
-    const VISIBLE = 3;
-    const chips = [];
-    teams.slice(0, VISIBLE).forEach(team => {
-      const chip = createElement('span', { className: 'triage-chip triage-signal chip-sm' });
-      chip.textContent = team.name || team;
-      chips.push(chip);
-    });
-    if (teams.length > VISIBLE) {
-      const hidden = teams.slice(VISIBLE);
-      const overflow = createElement('span', {
-        className: 'triage-chip triage-signal chip-sm team-chip-overflow',
-        tabindex: '0',
-        'aria-label': `${hidden.length} more teams`,
-      });
-      overflow.textContent = `+${hidden.length} more`;
-      const popover = createElement('span', { className: 'team-chip-overflow__popover', role: 'tooltip' });
-      hidden.forEach(team => {
-        const line = createElement('span', { className: 'team-chip-overflow__item' });
-        line.textContent = team.name || team;
-        popover.appendChild(line);
-      });
-      overflow.appendChild(popover);
-      chips.push(overflow);
-    }
-    return chips;
-  });
-
-  appendMetaRow('Certifications', () => certificates.map(cert => {
-    const chip = createElement('button', {
-      type: 'button',
-      className: 'meta-badge meta-badge--cert meta-badge--clickable',
-    });
-    chip.textContent = cert.name || cert;
-    chip.addEventListener('click', () => {
-      closeModal();
-      switchTabAndFilter('cert', 'cert_id', cert.id, cert.name);
-    });
-    return chip;
-  }));
-
-  appendMetaRow('Tags', () => tags.map(tag => {
-    const chip = createElement('span', { className: 'triage-chip triage-feedback chip-sm' });
-    chip.textContent = tag.name || tag;
-    return chip;
-  }));
-
-  if (metaPanel.children.length) headerBlock.appendChild(metaPanel);
-  body.appendChild(headerBlock);
-
-  /* ── Master–detail content area ──────────────────────────────────────── */
-  const mainArea = createElement('div', { className: 'sdm-main' });
-  const listCol = createElement('div', { className: 'sdm-list-col' });
-  const listScroll = createElement('div', { className: 'sdm-list-scroll' });
-  const listFooter = createElement('div', { className: 'sdm-list-footer catalog-skill-list-footer' });
-  listCol.appendChild(listScroll);
-  listCol.appendChild(listFooter);
-
-  const readerCol = createElement('div', { className: 'sdm-reader-col' });
-  const readerToolbar = createElement('div', { className: 'sdm-reader-toolbar catalog-skill-reader-toolbar' });
-  const readerToolbarLeft = createElement('div', { className: 'sdm-reader-toolbar__left' });
-  const readerActions = createElement('div', { className: 'sdm-reader-actions' });
-  readerToolbarLeft.appendChild(readerActions);
-  const readerMeta = createElement('div', { className: 'sdm-reader-meta' });
-  readerToolbar.appendChild(readerToolbarLeft);
-  readerToolbar.appendChild(readerMeta);
-  const readerScroll = createElement('div', { className: 'sdm-reader-scroll' });
-  const readerContent = createElement('div', { className: 'sdm-reader-content' });
-  readerScroll.appendChild(readerContent);
-  readerCol.appendChild(readerToolbar);
-  readerCol.appendChild(readerScroll);
-
-  mainArea.appendChild(listCol);
-  mainArea.appendChild(readerCol);
-  body.appendChild(mainArea);
-
-  const footer = createElement('div', { className: 'modal-footer sdm-footer catalog-skill-footer' });
-  const footerStatus = createElement('span', { className: 'sdm-footer__status catalog-skill-footer__hint' });
-  footerStatus.textContent = 'Expand a section to browse learning items.';
-  const footerActions = createElement('div', { className: 'catalog-skill-footer__actions' });
-  const closeFooterBtn = createElement('button', { type: 'button', className: 'btn btn-secondary' });
-  closeFooterBtn.textContent = 'Close';
-  footerActions.appendChild(closeFooterBtn);
-  footer.appendChild(footerStatus);
-  footer.appendChild(footerActions);
-  modal.appendChild(body);
-  modal.appendChild(footer);
-  overlay.appendChild(modal);
-  modalRoot.appendChild(overlay);
-
-  let contentGroups = { education: [], exposure: [], experience: [] };
-  let contentLoading = true;
-  let selectedItemId = null;
-  const expandedSections = { education: false, exposure: false, experience: false };
-  let dragSrcEl = null;
-  let dragSectionKey = null;
-
-  function closeModal() {
-    overlay.classList.remove('open');
-    setTimeout(() => overlay.remove(), 200);
-    document.removeEventListener('keydown', onKeyDown);
-  }
-
-  function onKeyDown(e) {
-    if (e.key === 'Escape') {
-      closeModal();
-      return;
-    }
-    if (e.key === 'Tab') {
-      const focusable = modal.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey) {
-        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
-      } else if (document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-  }
-
-  closeBtn.addEventListener('click', closeModal);
-  closeFooterBtn.addEventListener('click', closeModal);
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) closeModal();
-  });
-  document.addEventListener('keydown', onKeyDown);
-
-  requestAnimationFrame(() => {
-    overlay.classList.add('open');
-    closeBtn.focus();
-  });
-
-  function sortedItems(key) {
-    return contentGroups[key].slice().sort((a, b) => {
-      const pd = (a.position ?? 0) - (b.position ?? 0);
-      return pd !== 0 ? pd : a.id - b.id;
-    });
-  }
-
-  function findItemById(id) {
-    for (const key of SECTION_ORDER) {
-      const hit = contentGroups[key].find(item => item.id === id);
-      if (hit) return hit;
-    }
-    return null;
-  }
-
-  function selectableItems() {
-    return SECTION_ORDER.flatMap(key => (
-      expandedSections[key] ? sortedItems(key) : []
-    ));
-  }
-
-  function ensureSelectedVisible() {
-    if (selectedItemId && selectableItems().some(i => i.id === selectedItemId)) return;
-    const first = selectableItems()[0];
-    selectedItemId = first ? first.id : null;
-  }
-
-  function updateFooterHint() {
-    const total = SECTION_ORDER.reduce((n, k) => n + contentGroups[k].length, 0);
-    if (contentLoading) {
-      footerStatus.textContent = 'Loading learning content…';
-    } else if (!total) {
-      footerStatus.textContent = 'No catalog content items yet.';
-    } else if (!selectedItemId) {
-      footerStatus.textContent = 'Expand a section and select an item to view details.';
-    } else {
-      footerStatus.textContent = 'Browse Education, Exposure, and Experience content.';
-    }
-  }
-
-  function renderAddButtons() {
-    listFooter.innerHTML = '';
-    if (!canEdit || contentLoading) return;
-    const addWrap = createElement('div', { className: 'catalog-skill-add-wrap' });
-    LEVEL_CONFIG.forEach(({ key, label }) => {
-      const btn = createElement('button', { type: 'button', className: 'btn btn-secondary btn-sm catalog-skill-add-btn' });
-      btn.textContent = `+ ${label}`;
-      btn.addEventListener('click', () => {
-        showContentEditModal(skill.id, LEVEL_REVERSE[key], null, () => refreshModalContent());
-      });
-      addWrap.appendChild(btn);
-    });
-    listFooter.appendChild(addWrap);
-  }
-
-  function renderList() {
-    listScroll.innerHTML = '';
-
-    if (contentLoading) {
-      const sk = createElement('div', { className: 'skeleton-list' });
-      for (let i = 0; i < 4; i++) {
-        sk.appendChild(createElement('div', { className: 'skeleton skeleton-row' }));
-      }
-      listScroll.appendChild(sk);
-      return;
-    }
-
-    SECTION_ORDER.forEach(secKey => {
-      const items = sortedItems(secKey);
-      const cfg = LEVEL_CONFIG.find(l => l.key === secKey);
-      const expanded = expandedSections[secKey];
-      const section = createElement('div', {
-        className: 'sdm-tree-section catalog-tree-section'
-          + (expanded ? '' : ' sdm-tree-section--collapsed'),
-        'data-section': secKey,
-      });
-
-      const hdr = createElement('button', {
-        type: 'button',
-        className: 'sdm-tree-section__header',
-        'aria-expanded': String(expanded),
-      });
-      const toggleGlyph = createElement('span', { className: 'sdm-tree-section__toggle', 'aria-hidden': 'true' });
-      toggleGlyph.textContent = expanded ? '\u2212' : '+';
-      const hdrIcon = createElement('span', { className: 'catalog-tree-section__icon', 'aria-hidden': 'true' });
-      hdrIcon.innerHTML = cfg.icon;
-      const hdrLabel = createElement('span', { className: 'sdm-tree-section__label' });
-      hdrLabel.textContent = cfg.label;
-      const hdrCount = createElement('span', { className: 'sdm-tree-section__count' });
-      hdrCount.textContent = String(items.length);
-      hdr.appendChild(toggleGlyph);
-      hdr.appendChild(hdrIcon);
-      hdr.appendChild(hdrLabel);
-      hdr.appendChild(hdrCount);
-
-      hdr.addEventListener('click', () => {
-        expandedSections[secKey] = !expandedSections[secKey];
-        ensureSelectedVisible();
-        renderList();
-        renderReader();
-        updateFooterHint();
-      });
-
-      section.appendChild(hdr);
-
-      const sectionBody = createElement('div', { className: 'sdm-tree-section__body catalog-tree-section__body' });
-
-      if (!items.length) {
-        const empty = createElement('p', { className: 'catalog-tree-empty' });
-        empty.textContent = 'No items in this section yet.';
-        sectionBody.appendChild(empty);
-      } else {
-        items.forEach(item => {
-          const row = createElement('div', {
-            className: 'sdm-list-item catalog-list-item'
-              + (item.id === selectedItemId ? ' active' : ''),
-            'data-item-id': String(item.id),
-            'data-section': secKey,
-          });
-
-          if (canEdit) {
-            row.draggable = true;
-            row.addEventListener('dragstart', handleDragStart);
-            row.addEventListener('dragover', handleDragOver);
-            row.addEventListener('dragleave', handleDragLeave);
-            row.addEventListener('drop', handleDrop);
-            row.addEventListener('dragend', handleDragEnd);
-
-            const dragHandle = createElement('span', { className: 'drag-handle catalog-drag-handle', 'aria-hidden': 'true' });
-            dragHandle.textContent = '\u2630';
-            row.appendChild(dragHandle);
-          }
-
-          const textBtn = createElement('button', { type: 'button', className: 'sdm-list-item__body' });
-          const titleSpan = createElement('span', { className: 'sdm-list-item__title' });
-          titleSpan.textContent = item.title || 'Untitled';
-          const metaSpan = createElement('span', { className: 'sdm-list-item__meta' });
-          metaSpan.textContent = item.type || 'resource';
-          textBtn.appendChild(titleSpan);
-          textBtn.appendChild(metaSpan);
-          textBtn.addEventListener('click', () => {
-            selectedItemId = item.id;
-            renderList();
-            renderReader();
-            updateFooterHint();
-          });
-          row.appendChild(textBtn);
-          sectionBody.appendChild(row);
-        });
-      }
-
-      section.appendChild(sectionBody);
-      listScroll.appendChild(section);
-    });
-
-    ensureSelectedVisible();
-  }
-
-  function handleDragStart(e) {
-    dragSrcEl = this;
-    dragSectionKey = this.dataset.section;
-    this.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', this.dataset.itemId);
-  }
-
-  function handleDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const target = this;
-    if (target === dragSrcEl || !target.classList.contains('catalog-list-item')) return;
-    if (target.dataset.section !== dragSectionKey) return;
-    const rect = target.getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    target.classList.toggle('drag-over-top', e.clientY < midY);
-    target.classList.toggle('drag-over-bottom', e.clientY >= midY);
-  }
-
-  function handleDragLeave() {
-    this.classList.remove('drag-over-top', 'drag-over-bottom');
-  }
-
-  async function handleDrop(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    const target = this;
-    target.classList.remove('drag-over-top', 'drag-over-bottom');
-    if (!dragSrcEl || dragSrcEl === target || target.dataset.section !== dragSectionKey) return;
-    const rect = target.getBoundingClientRect();
-    const body = target.parentNode;
-    if (e.clientY < rect.top + rect.height / 2) {
-      body.insertBefore(dragSrcEl, target);
-    } else {
-      body.insertBefore(dragSrcEl, target.nextSibling);
-    }
-    await persistReorder(dragSectionKey, body);
-  }
-
-  function handleDragEnd() {
-    this.classList.remove('dragging');
-    listScroll.querySelectorAll('.catalog-list-item').forEach(el => {
-      el.classList.remove('drag-over-top', 'drag-over-bottom');
-    });
-    dragSrcEl = null;
-    dragSectionKey = null;
-  }
-
-  async function persistReorder(sectionKey, bodyEl) {
-    const reorderItems = [...bodyEl.querySelectorAll('.catalog-list-item')].map((el, idx) => ({
-      id: parseInt(el.dataset.itemId, 10),
-      position: idx,
-    }));
-    try {
-      await api.put(`/api/skills/${skill.id}/content/reorder`, { items: reorderItems });
-      const reordered = reorderItems.map(r => findItemById(r.id)).filter(Boolean);
-      reordered.forEach((item, idx) => { item.position = idx; });
-      contentGroups[sectionKey] = reordered;
-      showToast('Order saved', 'success');
-    } catch (err) {
-      showToast(err.message || 'Failed to save order', 'error');
-      refreshModalContent();
-    }
-  }
-
-  function renderReader() {
-    readerContent.innerHTML = '';
-    readerActions.innerHTML = '';
-    const item = selectedItemId ? findItemById(selectedItemId) : null;
-
-    if (!item || contentLoading || !selectableItems().some(i => i.id === selectedItemId)) {
-      readerToolbar.hidden = true;
-      readerContent.innerHTML = '<p class="sdm-reader-empty">Select an item from an expanded section to view content.</p>';
-      return;
-    }
-
-    readerToolbar.hidden = false;
-    const secKey = LEVEL_MAP[item.level];
-    const cfg = LEVEL_CONFIG.find(l => l.key === secKey) || LEVEL_CONFIG[0];
-    readerMeta.textContent = `${cfg.label} · ${item.type || 'resource'}`;
-
-    if (canEdit) {
-      const editBtn = createElement('button', {
-        type: 'button',
-        className: 'btn btn-secondary btn-sm',
-        'aria-label': 'Edit item',
-      });
-      editBtn.textContent = 'Edit';
-      editBtn.addEventListener('click', () => {
-        showContentEditModal(skill.id, item.level, item, () => refreshModalContent());
-      });
-
-      const deleteBtn = createElement('button', {
-        type: 'button',
-        className: 'btn btn-danger btn-sm',
-        'aria-label': 'Delete item',
-      });
-      deleteBtn.textContent = 'Delete';
-      deleteBtn.addEventListener('click', async () => {
-        const confirmed = await showConfirm(`Delete "${item.title || 'this item'}"? This cannot be undone.`, true);
-        if (!confirmed) return;
-        try {
-          await api.del(`/api/skills/${skill.id}/content/${item.id}`);
-          showToast('Content item deleted', 'success');
-          if (selectedItemId === item.id) selectedItemId = null;
-          refreshModalContent();
-        } catch (err) {
-          showToast(err.message || 'Failed to delete item', 'error');
-        }
-      });
-
-      readerActions.appendChild(editBtn);
-      readerActions.appendChild(deleteBtn);
-    }
-
-    const titleH = createElement('h2', { className: 'sdm-reader-title' });
-    titleH.textContent = item.title || 'Untitled';
-    readerContent.appendChild(titleH);
-
-    if (item.description) {
-      const prose = createElement('div', { className: 'sdm-reader-prose' });
-      prose.innerHTML = item.description;
-      readerContent.appendChild(prose);
-    }
-
-    if (item.url) {
-      const link = createElement('a', {
-        className: 'skill-detail-accordion-link sdm-reader-link',
-        href: item.url,
-        target: '_blank',
-        rel: 'noopener noreferrer',
-      });
-      link.textContent = 'Open resource';
-      readerContent.appendChild(link);
-    }
-  }
-
-  function applyContent(rawContent) {
-    contentGroups = { education: [], exposure: [], experience: [] };
-    (Array.isArray(rawContent) ? rawContent : [])
-      .filter(row => row && row.title && String(row.title).trim() !== '' && [1, 2, 3].includes(row.level))
-      .forEach(row => {
-        const k = LEVEL_MAP[row.level];
-        if (k) contentGroups[k].push(row);
-      });
-    contentLoading = false;
-    renderAddButtons();
-    renderList();
-    renderReader();
-    updateFooterHint();
-  }
-
-  function refreshModalContent() {
-    contentLoading = true;
-    renderAddButtons();
-    renderList();
-    renderReader();
-    updateFooterHint();
-    api.get(`/api/skills/${skill.id}/content`)
-      .then(applyContent)
-      .catch(() => {
-        contentLoading = false;
-        listScroll.innerHTML = '';
-        const errEl = createElement('div', { className: 'empty-state empty-state--compact' });
-        errEl.textContent = 'Unable to reload content.';
-        listScroll.appendChild(errEl);
-        updateFooterHint();
-      });
-  }
-
-  renderAddButtons();
-  renderList();
-  renderReader();
-  updateFooterHint();
-
-  api.get(`/api/skills/${skill.id}/content`)
-    .then(applyContent)
-    .catch(() => {
-      contentLoading = false;
-      listScroll.innerHTML = '';
-      const errEl = createElement('div', { className: 'empty-state empty-state--compact' });
-      errEl.textContent = 'Unable to load learning content.';
-      listScroll.appendChild(errEl);
-      updateFooterHint();
-    });
+  openCatalogSkillEditor(skill, { initialTab: 'content' }, getEditorHelpers());
 }
 
 // ─── Content Edit Modal ───────────────────────────────────────────────────────
@@ -2051,116 +1529,27 @@ function showContentEditModal(skillId, levelInt, existingItem, onSaved) {
   document.addEventListener('keydown', onContentKeyDown);
 }
 
-// ─── Skill Create/Edit Modal ──────────────────────────────────────────────────
+// ─── Skill Create/Edit Modal (delegates to unified editor) ───────────────────
 
 async function openSkillModal(existingSkill) {
-  const isEdit = !!existingSkill;
-  const user = Store.get('user');
-  const isAdmin = user?.role === 'admin';
-  const isManager = user?.role === 'manager';
-
-  if (!_formDataCache) {
-    try {
-      const [orgTree, certTree] = await Promise.all([
-        api.get('/api/catalog/org-tree'),
-        api.get('/api/catalog/cert-tree'),
-      ]);
-
-      const teams = [];
-      (Array.isArray(orgTree) ? orgTree : []).forEach(domain => {
-        (Array.isArray(domain.teams) ? domain.teams : []).forEach(t => {
-          teams.push({ id: t.id, name: t.name, shift: t.shift });
-        });
-      });
-
-      const certificates = [];
-      (Array.isArray(certTree) ? certTree : []).forEach(cd => {
-        (Array.isArray(cd.certificates) ? cd.certificates : []).forEach(c => {
-          certificates.push({ id: c.id, name: c.name, domain: cd.name });
-        });
-      });
-
-      _formDataCache = { teams, certificates, orgTree: Array.isArray(orgTree) ? orgTree : [], certTree: Array.isArray(certTree) ? certTree : [] };
-    } catch (err) {
-      showToast('Failed to load form data', 'error');
-      return;
-    }
+  try {
+    await loadFormData();
+  } catch {
+    showToast('Failed to load form data', 'error');
+    return;
   }
-
-  let initialIsNonTechnical = false;
-  let reclassifyPreview = null;
-  if (isEdit) {
-    try {
-      reclassifyPreview = await api.get(`/api/skills/${existingSkill.id}/reclassify-preview`);
-      initialIsNonTechnical = reclassifyPreview.current_is_non_technical;
-    } catch (err) {
-      console.warn('Failed to load reclassify preview', err);
-    }
-  }
-
-  const formEl = buildSkillForm(existingSkill, _formDataCache, isAdmin, isManager, user, initialIsNonTechnical);
-
-  showModal({
-    title: isEdit ? 'Edit Skill' : 'Create Skill',
-    body: formEl,
-    modalClass: 'modal-skill-edit',
-    confirmText: isEdit ? 'Save Changes' : 'Create Skill',
-    cancelText: 'Cancel',
-    onConfirm: async () => {
-      const formData = readSkillForm(formEl);
-      const errors = validateSkillForm(formData);
-
-      if (errors.length) {
-        showToast(errors[0], 'warning');
-        return;
-      }
-
-      if (isEdit && formData.is_non_technical !== initialIsNonTechnical) {
-        const affectedCount = reclassifyPreview?.engineers_affected || 0;
-        const targetDesc = formData.is_non_technical ? 'the NTECH-GEN shifts' : 'regular teams';
-        const msg = `Reclassifying this skill will clear its current team assignments and reassign it to ${targetDesc}. ${affectedCount} engineer(s) currently have this skill in their plan — their plan entries will be preserved as personal artifacts. Continue?`;
-        const confirmed = await showConfirm({
-          title: "Reclassify skill",
-          body: msg,
-          danger: true
-        });
-        if (!confirmed) return;
-      }
-
-      try {
-        if (isEdit) {
-          await api.put(`/api/skills/${existingSkill.id}`, formData);
-          showToast('Skill updated successfully', 'success');
-        } else {
-          await api.post('/api/skills/', formData);
-          showToast('Skill created successfully', 'success');
-        }
-        _formDataCache = null;
-        delete _treeCache[_activeTab];
-        fetchAndRenderSkills();
-      } catch (err) {
-        showToast(err.detail || err.message || 'Failed to save skill', 'error');
-      }
-    },
-  });
-
-  requestAnimationFrame(() => {
-    const modal = formEl.closest('.modal-skill-edit');
-    if (modal) {
-      const header = modal.querySelector('.modal-header');
-      const footer = modal.querySelector('.modal-footer');
-      const body = modal.querySelector('.modal-body');
-      if (header && footer && body) {
-        header.classList.add('skill-edit-modal__sticky-header');
-        footer.classList.add('skill-edit-modal__sticky-footer');
-        body.insertBefore(header, body.firstChild);
-        body.appendChild(footer);
-      }
-    }
-  });
+  openCatalogSkillEditor(existingSkill, { initialTab: 'details' }, getEditorHelpers());
 }
 
-function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonTechnical = false) {
+function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonTechnical = false, formHooks = {}) {
+  const notifyChange = () => formHooks.notifyChange?.();
+  const beginAsync = () => formHooks.beginAsync?.();
+  const endAsync = () => formHooks.endAsync?.();
+  const trackAsync = (promise) => {
+    beginAsync();
+    Promise.resolve(promise).finally(endAsync);
+  };
+
   const form = createElement('div', { className: 'catalog-form skill-edit-form' });
   const isCreateMode = !skill;
 
@@ -2185,7 +1574,7 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
     placeholder: 'Describe what this skill covers...',
   }, false);
   const descTextarea = descGroup.querySelector('#skill-desc');
-  if (descTextarea) descTextarea.textContent = skill?.description || '';
+  if (descTextarea) descTextarea.value = skill?.description || '';
   
   const tagsGroup = buildFormGroup('Tags', 'skill-tags', 'input', {
     type: 'text',
@@ -2238,8 +1627,10 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
   toggleGroup.appendChild(ntechHint);
   toggleRow.appendChild(toggleGroup);
 
-  const categoryGroup = buildSkillCategoryPicker(skill);
-  toggleRow.appendChild(categoryGroup);
+  const categoryGroupTechnical = buildSkillCategoryPicker(skill, { trackAsync, notifyChange });
+  categoryGroupTechnical.classList.add('skill-category-picker--technical');
+  toggleRow.appendChild(categoryGroupTechnical);
+
   classBody.appendChild(toggleRow);
   classSection.appendChild(classBody);
   form.appendChild(classSection);
@@ -2274,15 +1665,20 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
   const shiftToggleGroup = createElement('div', { className: 'skill-shift-filter', role: 'group', 'aria-label': 'Filter by shift' });
   const activeShifts = new Set([1, 2, 3, 4]);
   [1, 2, 3, 4].forEach(s => {
-    const btn = createElement('button', { type: 'button', className: 'skill-shift-filter__btn is-active' });
+    const btn = createElement('button', { type: 'button', className: 'skill-shift-filter__btn is-active cat-shift-btn active' });
     btn.textContent = `Shift ${s}`;
+    btn.setAttribute('aria-pressed', 'true');
     btn.addEventListener('click', () => {
       if (activeShifts.has(s)) {
-        activeShifts.delete(s);
-        btn.classList.remove('is-active');
+        if (activeShifts.size > 1) {
+          activeShifts.delete(s);
+          btn.classList.remove('is-active', 'active');
+          btn.setAttribute('aria-pressed', 'false');
+        }
       } else {
         activeShifts.add(s);
-        btn.classList.add('is-active');
+        btn.classList.add('is-active', 'active');
+        btn.setAttribute('aria-pressed', 'true');
       }
       rebuildTeamCombo();
     });
@@ -2301,7 +1697,10 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
       selectedValues: currentSelected,
       placeholder: 'Search and add teams…',
       emptyText: 'No teams match',
-      onChange: (vals) => { teamsBadge.textContent = String(vals.length); },
+      onChange: (vals) => {
+        teamsBadge.textContent = String(vals.length);
+        notifyChange();
+      },
       onOpen: () => scrollAssocIntoView(teamsPanel),
     });
     if (form._teamCombo) {
@@ -2317,47 +1716,83 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
 
   // NTECH-GEN (Non-Technical) Panel
   const ntechTeamsPanel = createElement('div', { className: 'skill-assoc-section skill-form__ntech-teams' });
+  const ntechTeamsHeader = createElement('div', { className: 'skill-assoc-section__header' });
+  const ntechTeamsLabel = createElement('div', { className: 'skill-assoc-section__label' });
+  ntechTeamsLabel.textContent = 'Shift Teams';
+  const ntechTeamsBadge = createElement('span', { className: 'skill-assoc-section__badge' });
+  ntechTeamsHeader.appendChild(ntechTeamsLabel);
+  ntechTeamsHeader.appendChild(ntechTeamsBadge);
+  ntechTeamsPanel.appendChild(ntechTeamsHeader);
+
   const ntechInfo = createElement('div', { className: 'skill-form__ntech-info' });
-  ntechInfo.innerHTML = '<span class="ntech-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span> Will be assigned to: NTECH-GEN domain';
+  ntechInfo.innerHTML = '<span class="ntech-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span> Assigned to the NTECH-GEN domain across selected shifts';
   ntechTeamsPanel.appendChild(ntechInfo);
-  const ntechChecksContainer = createElement('div', { className: 'skill-form__ntech-checks' });
+
+  const ntechChecksContainer = createElement('div', { className: 'skill-ntech-select-grid' });
   ntechTeamsPanel.appendChild(ntechChecksContainer);
+
+  function updateNtechTeamsBadge() {
+    const count = ntechChecksContainer.querySelectorAll('.ntech-team-cb:checked').length;
+    ntechTeamsBadge.textContent = String(count);
+  }
 
   let fetchedNTech = false;
   async function loadNTechTeams() {
     if (fetchedNTech) return;
     fetchedNTech = true;
-    ntechChecksContainer.innerHTML = 'Loading...';
+    beginAsync();
+    ntechChecksContainer.innerHTML = '';
+    const loading = createElement('div', { className: 'form-hint catalog-form-hint' });
+    loading.textContent = 'Loading shift teams…';
+    ntechChecksContainer.appendChild(loading);
     try {
       const ntechTeams = await api.get('/api/skills/ntech-teams');
       ntechChecksContainer.innerHTML = '';
       ntechTeams.forEach(t => {
-        const lbl = createElement('label', { className: 'ntech-team-label' });
-        // If edit mode and currently non-tech, check if this team is in existingTeamIds
         const isChecked = isCreateMode ? true : (initialIsNonTechnical ? existingTeamIds.has(Number(t.id)) : true);
-        const cb = createElement('input', { type: 'checkbox', value: t.id, checked: isChecked, className: 'ntech-team-cb' });
-        lbl.appendChild(cb);
-        lbl.appendChild(document.createTextNode(` ${t.name}`));
-        ntechChecksContainer.appendChild(lbl);
+        const card = buildNtechSelectCard({
+          value: t.id,
+          label: t.name,
+          description: t.shift ? `Follow-the-sun · Shift ${t.shift}` : 'General non-technical team',
+          checked: isChecked,
+          inputClass: 'ntech-team-cb',
+        });
+        const iconWrap = card.querySelector('.skill-ntech-select-card__icon');
+        if (iconWrap) iconWrap.innerHTML = getSkillIconSVG('users', 18);
+        card.querySelector('.ntech-team-cb')?.addEventListener('change', () => {
+          updateNtechTeamsBadge();
+          notifyChange();
+        });
+        ntechChecksContainer.appendChild(card);
       });
-    } catch (err) {
-      ntechChecksContainer.innerHTML = 'Failed to load NTECH teams.';
+      updateNtechTeamsBadge();
+    } catch {
+      ntechChecksContainer.innerHTML = '';
+      const err = createElement('div', { className: 'form-hint' });
+      err.textContent = 'Failed to load NTECH teams.';
+      ntechChecksContainer.appendChild(err);
+    } finally {
+      endAsync();
     }
   }
 
-  // Toggle Logic
-  function updateAssociationsVisibility() {
-    if (toggleInput.checked) {
-      teamsPanel.style.display = 'none';
-      ntechTeamsPanel.style.display = 'block';
+  // Toggle Logic — must run after all panels (incl. certsPanel) are created
+  function setPanelVisible(el, visible) {
+    el.hidden = !visible;
+    el.classList.toggle('hidden', !visible);
+  }
+
+  function updateClassificationMode() {
+    const isNtech = toggleInput.checked;
+    setPanelVisible(categoryGroupTechnical, !isNtech);
+    setPanelVisible(teamsPanel, !isNtech);
+    setPanelVisible(ntechTeamsPanel, isNtech);
+    setPanelVisible(certsPanel, !isNtech);
+    assocBody.classList.toggle('skill-edit-row--assoc--ntech', isNtech);
+    if (isNtech) {
       loadNTechTeams();
-    } else {
-      teamsPanel.style.display = 'block';
-      ntechTeamsPanel.style.display = 'none';
     }
   }
-  toggleInput.addEventListener('change', updateAssociationsVisibility);
-  updateAssociationsVisibility();
 
   assocBody.appendChild(teamsPanel);
   assocBody.appendChild(ntechTeamsPanel);
@@ -2387,7 +1822,10 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
     selectedValues: Array.from(existingCertIds),
     placeholder: 'Search and add certificates…',
     emptyText: 'No certificates match',
-    onChange: (vals) => { certsBadge.textContent = String(vals.length); },
+    onChange: (vals) => {
+      certsBadge.textContent = String(vals.length);
+      notifyChange();
+    },
     onOpen: () => scrollAssocIntoView(certsPanel),
   });
   certsPanel.appendChild(certCombo.element);
@@ -2395,6 +1833,11 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
   form._certCombo = certCombo;
 
   assocBody.appendChild(certsPanel);
+  toggleInput.addEventListener('change', () => {
+    updateClassificationMode();
+    notifyChange();
+  });
+  updateClassificationMode();
   assocSection.appendChild(assocBody);
   form.appendChild(assocSection);
 
@@ -2407,7 +1850,7 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
   visualSection.appendChild(visualHeader);
 
   const visualBody = createElement('div', { className: 'skill-edit-section__body' });
-  visualBody.appendChild(buildIconPicker(skill?.icon || null));
+  visualBody.appendChild(buildIconPicker(skill?.icon || null, { notifyChange }));
   visualSection.appendChild(visualBody);
   form.appendChild(visualSection);
 
@@ -2458,7 +1901,8 @@ function buildTeamOptions(orgTree) {
 }
 
 
-function buildSkillCategoryPicker(skill) {
+function buildSkillCategoryPicker(skill, hooks = {}) {
+  const { trackAsync, notifyChange } = hooks;
   const group = createElement('div', { className: 'form-group skill-category-picker' });
   const label = createElement('div', { className: 'form-label' });
   label.textContent = 'Categories';
@@ -2476,7 +1920,7 @@ function buildSkillCategoryPicker(skill) {
     Array.isArray(skill?.categories) ? skill.categories.map(c => Number(c.id)) : []
   );
 
-  getCategories().then(categories => {
+  trackAsync?.(getCategories().then(categories => {
     chips.innerHTML = '';
     if (!Array.isArray(categories) || categories.length === 0) {
       const empty = createElement('div', { className: 'form-hint' });
@@ -2510,20 +1954,54 @@ function buildSkillCategoryPicker(skill) {
         chip.classList.toggle('active', next);
         chip.setAttribute('aria-pressed', next ? 'true' : 'false');
         cb.checked = next;
+        notifyChange?.();
       });
 
       chips.appendChild(chip);
     });
   }).catch(() => {
+    chips.innerHTML = '';
     const err = createElement('div', { className: 'form-hint' });
     err.textContent = 'Failed to load categories.';
     chips.appendChild(err);
-  });
+  }));
 
   return group;
 }
 
-function buildIconPicker(selectedIcon) {
+function buildNtechSelectCard({ value, label, description, checked, inputClass, dataset = {} }) {
+  const card = createElement('label', { className: 'skill-ntech-select-card' });
+  const cb = createElement('input', {
+    type: 'checkbox',
+    className: inputClass,
+    value: String(value),
+  });
+  if (checked) cb.checked = true;
+  Object.entries(dataset).forEach(([key, val]) => {
+    cb.dataset[key] = String(val);
+  });
+
+  const iconWrap = createElement('span', { className: 'skill-ntech-select-card__icon', 'aria-hidden': 'true' });
+  const body = createElement('div', { className: 'skill-ntech-select-card__body' });
+  const title = createElement('div', { className: 'skill-ntech-select-card__title' });
+  title.textContent = label;
+  body.appendChild(title);
+  if (description) {
+    const desc = createElement('div', { className: 'skill-ntech-select-card__desc' });
+    desc.textContent = description;
+    body.appendChild(desc);
+  }
+  const check = createElement('span', { className: 'skill-ntech-select-card__check', 'aria-hidden': 'true' });
+
+  card.appendChild(cb);
+  card.appendChild(iconWrap);
+  card.appendChild(body);
+  card.appendChild(check);
+  return card;
+}
+
+function buildIconPicker(selectedIcon, hooks = {}) {
+  const notifyChange = () => hooks.notifyChange?.();
   const group = createElement('div', { className: 'form-group skill-icon-picker-group' });
   const label = createElement('div', { className: 'form-label' });
   label.textContent = 'Icon';
@@ -2585,6 +2063,7 @@ function buildIconPicker(selectedIcon) {
           hiddenInput.value = key;
           previewSwatch.innerHTML = getSkillIconSVG(key, 22);
           previewName.textContent = key;
+          notifyChange();
         });
         grid.appendChild(opt);
       });
@@ -2638,28 +2117,30 @@ function readSkillForm(formEl) {
 
   let team_ids = [];
   let is_non_technical = false;
+  let category_ids = [];
+  let certificate_ids = [];
 
   if (formEl._ntechCheckbox && formEl._ntechCheckbox.checked) {
     is_non_technical = true;
     team_ids = Array.from(formEl.querySelectorAll('.ntech-team-cb:checked'))
       .map(cb => Number(cb.value))
       .filter(Number.isFinite);
+    category_ids = [];
+    certificate_ids = [];
   } else {
-    team_ids = formEl._teamCombo 
+    team_ids = formEl._teamCombo
       ? formEl._teamCombo.getSelected().map(Number).filter(Number.isFinite)
+      : [];
+    category_ids = Array.from(formEl.querySelectorAll('.skill-category-item__cb:checked'))
+      .map(cb => Number(cb.dataset.categoryId))
+      .filter(Number.isFinite);
+    certificate_ids = formEl._certCombo
+      ? formEl._certCombo.getSelected().map(Number).filter(Number.isFinite)
       : [];
   }
 
-  const certificate_ids = formEl._certCombo
-    ? formEl._certCombo.getSelected().map(Number).filter(Number.isFinite)
-    : [];
-
   const tagsRaw = formEl.querySelector('#skill-tags')?.value.trim() || '';
   const tag_names = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
-
-  const category_ids = Array.from(formEl.querySelectorAll('.skill-category-item__cb:checked'))
-    .map(cb => Number(cb.dataset.categoryId))
-    .filter(Number.isFinite);
 
   return { name, description, icon, team_ids, certificate_ids, tag_names, category_ids, is_non_technical };
 }

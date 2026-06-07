@@ -72,7 +72,7 @@ else
     cd "$PROJECT_ROOT/backend"
     # shellcheck disable=SC1091
     source venv/bin/activate
-    nohup uvicorn app.main:app --host 0.0.0.0 --port "$BACKEND_PORT" \
+    nohup uvicorn app.main:app --host 0.0.0.0 --port "$BACKEND_PORT" --reload \
         >> "$LOG_DIR/backend.log" 2>&1 &
     BACKEND_PID=$!
     cd "$PROJECT_ROOT"

@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Home Hero 3D Logo Mockup</title>
+  <style>
+    :root {
+      --bg-page: #070b12;
+      --bg-panel: #0d1119;
+      --bg-card: #121824;
+      --border-soft: rgba(255,255,255,.07);
+      --text-primary: #e8eef7;
+      --text-secondary: #9fb0c9;
+      --text-muted: #6b7f9d;
+      --accent: #5cb1ff;
+      --accent-strong: #3b82f6;
+      --accent-glow: rgba(92,177,255,.35);
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+    }
+    [data-theme="light"] {
+      --bg-page: #f4f7fc;
+      --bg-panel: #ffffff;
+      --bg-card: #ffffff;
+      --border-soft: rgba(15,23,42,.08);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --accent: #3b82f6;
+      --accent-strong: #2563eb;
+      --accent-glow: rgba(59,130,246,.22);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, system-ui, sans-serif;
+      background:
+        radial-gradient(1200px 700px at 85% -5%, var(--accent-glow), transparent 55%),
+        radial-gradient(900px 500px at 0% 100%, rgba(37,99,235,.12), transparent 60%),
+        var(--bg-page);
+      color: var(--text-primary);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 40px 28px 80px; }
+
+    .page-head {
+      display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+      gap: 20px; margin-bottom: 36px; padding-bottom: 28px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .eyebrow {
+      color: var(--accent); font-size: 11px; font-weight: 700;
+      letter-spacing: .16em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    h1 { margin: 0 0 10px; font-size: clamp(28px, 4vw, 38px); font-weight: 700; letter-spacing: -.02em; }
+    .lead { margin: 0; max-width: 680px; color: var(--text-secondary); line-height: 1.65; font-size: 15px; }
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .btn {
+      appearance: none; border: 1px solid var(--border-soft); background: var(--bg-card);
+      color: var(--text-primary); border-radius: 999px; padding: 9px 16px; font-size: 13px;
+      font-weight: 600; cursor: pointer; transition: border-color .15s, box-shadow .15s;
+    }
+    .btn:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .btn.active { background: rgba(92,177,255,.12); border-color: var(--accent); color: var(--accent); }
+
+    .grid-hero {
+      display: grid; grid-template-columns: 1.05fr .95fr; gap: 24px; align-items: stretch;
+    }
+    @media (max-width: 960px) { .grid-hero { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: var(--bg-card); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-xl); overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,.28);
+    }
+    [data-theme="light"] .panel { box-shadow: 0 20px 48px rgba(15,23,42,.08); }
+
+    .panel-label {
+      padding: 14px 20px; font-size: 11px; font-weight: 700; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--text-muted);
+      border-bottom: 1px solid var(--border-soft);
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    }
+    .badge {
+      font-size: 10px; letter-spacing: .08em; padding: 4px 10px; border-radius: 999px;
+      background: rgba(92,177,255,.12); color: var(--accent); border: 1px solid rgba(92,177,255,.25);
+    }
+
+    /* ── Home hero preview ── */
+    .hero-preview {
+      position: relative; min-height: 520px; padding: 36px 32px 40px;
+      background:
+        radial-gradient(500px 280px at 72% 18%, rgba(92,177,255,.14), transparent 70%),
+        linear-gradient(180deg, rgba(255,255,255,.02), transparent 40%),
+        var(--bg-panel);
+    }
+    [data-theme="light"] .hero-preview {
+      background:
+        radial-gradient(500px 280px at 72% 18%, rgba(59,130,246,.08), transparent 70%),
+        linear-gradient(180deg, #fff, #f8fafc);
+    }
+    .hero-preview .eyebrow-sm {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 18px;
+    }
+    .hero-preview h2 {
+      margin: 0 0 14px; font-size: clamp(26px, 3.2vw, 38px); line-height: 1.12;
+      font-weight: 800; letter-spacing: -.03em; max-width: 14ch;
+    }
+    .hero-preview h2 span {
+      background: linear-gradient(135deg, var(--accent), #818cf8 55%, #38bdf8);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .hero-preview .subcopy {
+      margin: 0 0 24px; max-width: 42ch; color: var(--text-secondary);
+      font-size: 14px; line-height: 1.65;
+    }
+    .hero-preview .cta-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .cta {
+      display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px;
+      border-radius: 12px; font-size: 14px; font-weight: 600; text-decoration: none;
+    }
+    .cta-primary { background: var(--accent-strong); color: #fff; box-shadow: 0 10px 28px rgba(59,130,246,.35); }
+    .cta-secondary { background: transparent; color: var(--text-primary); border: 1px solid var(--border-soft); }
+
+    .hero-layout {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center;
+    }
+    @media (max-width: 720px) { .hero-layout { grid-template-columns: 1fr; } }
+
+    .canvas-wrap {
+      position: relative;
+      min-height: 320px;
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+      aspect-ratio: 1;
+    }
+    .canvas-wrap canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 320px;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 50% 45%, rgba(92,177,255,.12), transparent 62%),
+        rgba(0,0,0,.25);
+    }
+    [data-theme="light"] .canvas-wrap canvas {
+      background:
+        radial-gradient(circle at 50% 45%, rgba(59,130,246,.08), transparent 62%),
+        rgba(255,255,255,.5);
+    }
+    #canvas3d { position: relative; z-index: 2; }
+    #canvas3d.is-ready { background: transparent !important; }
+
+    .canvas-status {
+      position: absolute; inset: 0; z-index: 4; display: grid; place-items: center;
+      padding: 24px; text-align: center; pointer-events: none;
+      font-size: 13px; color: var(--text-secondary);
+    }
+    .canvas-status.hidden { display: none; }
+    .canvas-status strong { display: block; color: var(--accent); margin-bottom: 6px; font-size: 14px; }
+
+    .canvas-error {
+      position: absolute; inset: auto 12px 12px 12px; z-index: 5; display: none;
+      padding: 12px 14px; border-radius: 12px; text-align: left;
+      background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.35);
+      color: var(--text-secondary); font-size: 12px; line-height: 1.55;
+      pointer-events: none;
+    }
+    .canvas-error.visible { display: block; }
+    .canvas-error strong { color: var(--accent); }
+    .canvas-error code { color: var(--text-primary); font-size: 11px; }
+
+    .canvas-wrap.fallback-mode #canvas3d { display: none; }
+    .canvas-wrap.fallback-mode .logo-3d-fallback { display: grid; }
+    .canvas-wrap.webgl-mode .logo-3d-fallback { display: none; }
+    .canvas-wrap.webgl-mode #canvas3d { display: block; }
+
+    .serve-banner {
+      margin-bottom: 20px; padding: 12px 16px; border-radius: 12px;
+      background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.35);
+      color: #fcd34d; font-size: 13px; line-height: 1.5;
+    }
+    .serve-banner.hidden { display: none; }
+    .serve-banner code { color: #fef3c7; }
+
+    /* CSS 3D fallback — layered SVG slices at different Z depths */
+    .logo-3d-fallback {
+      position: absolute; inset: 0; z-index: 3;
+      display: grid; place-items: center;
+      perspective: 960px; perspective-origin: 50% 44%;
+      touch-action: none; cursor: grab;
+    }
+    .logo-3d-fallback.is-dragging { cursor: grabbing; }
+    .logo-3d-fallback.hidden { display: none; }
+    .logo-3d-fallback__scene {
+      width: min(80%, 240px); aspect-ratio: 1; position: relative;
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+    .logo-3d-fallback__scene.motion-on {
+      animation: css3d-spin 11s ease-in-out infinite;
+    }
+    .logo-3d-fallback__layer {
+      position: absolute; inset: 0;
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+    }
+    .logo-3d-fallback__layer svg {
+      display: block; width: 100%; height: 100%;
+      overflow: visible;
+    }
+    .logo-3d-fallback__layer--plate {
+      transform: translateZ(0);
+      border-radius: 18%;
+      box-shadow: 0 18px 40px rgba(0,0,0,.35);
+    }
+    .logo-3d-fallback__layer--brackets {
+      transform: translateZ(14px);
+      filter: drop-shadow(0 4px 8px rgba(92,177,255,.25));
+    }
+    .logo-3d-fallback__layer--grid {
+      transform: translateZ(30px);
+      filter: drop-shadow(0 8px 16px rgba(92,177,255,.35));
+    }
+    .logo-3d-fallback__shadow {
+      position: absolute; left: 50%; bottom: 6%; width: 55%; height: 10%;
+      margin-left: -27.5%; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(92,177,255,.35), transparent 70%);
+      transform: rotateX(82deg) translateZ(-20px);
+      filter: blur(8px); pointer-events: none;
+    }
+
+    @keyframes css3d-spin {
+      0%, 100% { transform: rotateX(11deg) rotateY(-16deg); }
+      50% { transform: rotateX(-7deg) rotateY(14deg) translateY(-6px); }
+    }
+    .canvas-wrap .halo {
+      position: absolute; inset: 8%; border-radius: 50%; pointer-events: none;
+      background: radial-gradient(circle, var(--accent-glow), transparent 68%);
+      filter: blur(18px); opacity: .85; z-index: 0;
+    }
+    .canvas-wrap .ring {
+      position: absolute; inset: -4%; border-radius: 50%; pointer-events: none; z-index: 0;
+      border: 1px dashed rgba(92,177,255,.18);
+      animation: ring-spin 24s linear infinite;
+    }
+    .canvas-wrap .ring--2 { inset: -10%; opacity: .5; animation-duration: 36s; animation-direction: reverse; }
+
+    /* ── Compare strip ── */
+    .compare { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 720px) { .compare { grid-template-columns: 1fr; } }
+    .compare-card { padding: 22px; }
+    .compare-card h3 { margin: 0 0 8px; font-size: 15px; font-weight: 700; }
+    .compare-card p { margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+    .compare-card ul { margin: 12px 0 0; padding-left: 18px; color: var(--text-secondary); font-size: 13px; line-height: 1.55; }
+
+    .flat-demo {
+      margin-top: 16px; height: 160px; display: grid; place-items: center;
+      background: rgba(0,0,0,.18); border-radius: 16px; border: 1px solid var(--border-soft);
+      perspective: 800px;
+    }
+    [data-theme="light"] .flat-demo { background: rgba(15,23,42,.04); }
+    .flat-tile {
+      width: 96px; height: 96px; border-radius: 22px; overflow: hidden;
+      animation: flat-tilt 9s ease-in-out infinite;
+      box-shadow: 0 16px 40px rgba(0,114,255,.25);
+    }
+    .flat-tile svg { display: block; width: 100%; height: 100%; }
+
+    .spec-grid {
+      margin-top: 24px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    }
+    @media (max-width: 900px) { .spec-grid { grid-template-columns: 1fr; } }
+    .spec { padding: 20px; }
+    .spec h4 { margin: 0 0 6px; font-size: 13px; font-weight: 700; }
+    .spec p { margin: 0; font-size: 12px; color: var(--text-secondary); line-height: 1.55; }
+
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i {
+      width: 12px; height: 12px; border-radius: 4px; display: inline-block;
+    }
+    .legend .dev { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+    .legend .plan { background: transparent; border: 2px solid var(--accent); border-radius: 50%; width: 12px; height: 12px; }
+    .legend .mas { background: linear-gradient(135deg, var(--accent), #818cf8); }
+
+    @keyframes ring-spin { to { transform: rotate(360deg); } }
+    @keyframes flat-tilt {
+      0%, 100% { transform: rotateX(10deg) rotateY(-14deg); }
+      33% { transform: rotateX(-6deg) rotateY(12deg) translateY(-6px); }
+      66% { transform: rotateX(8deg) rotateY(-8deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .flat-tile, .ring, .logo-3d-fallback__scene { animation: none !important; }
+      .flat-tile { transform: rotateX(8deg) rotateY(-10deg); }
+      .logo-3d-fallback__scene { transform: rotateX(10deg) rotateY(-14deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="serve-banner hidden" id="serveBanner">
+      ⚠️ Open this mockup via a local server so WebGL can load (double-clicking the file blocks Three.js).
+      Run: <code>cd docs/design && python3 -m http.server 8765</code> then visit
+      <code>http://localhost:8765/home-hero-3d-logo-mockup.html</code>
+    </div>
+    <header class="page-head">
+      <div>
+        <div class="eyebrow">Design proposal · Home hero</div>
+        <h1>Extruded 3D Matrix Logo</h1>
+        <p class="lead">
+          True volumetric geometry derived from the existing <code>mp-icon-dark</code> / <code>mp-icon-light</code> SVG —
+          matrix brackets, 3×3 status grid (developing · planned · mastered), physical depth, emissive accent, and
+          status-aware cell animation. Intended to replace the current CSS-tilt flat icon in the brand showcase.
+        </p>
+        <div class="legend" style="margin-top:16px">
+          <span><i class="dev"></i> Developing — solid extruded tile</span>
+          <span><i class="plan"></i> Planned — ring / hollow cylinder</span>
+          <span><i class="mas"></i> Mastered — tile + embossed check</span>
+        </div>
+      </div>
+      <div class="controls">
+        <button type="button" class="btn active" id="btnDark" aria-pressed="true">Dark</button>
+        <button type="button" class="btn" id="btnLight" aria-pressed="false">Light</button>
+        <button type="button" class="btn" id="btnMotion" aria-pressed="true">Motion on</button>
+        <button type="button" class="btn" id="btnOverlay" aria-pressed="false">SVG overlay</button>
+      </div>
+    </header>
+
+    <div class="grid-hero">
+      <!-- Hero context -->
+      <section class="panel">
+        <div class="panel-label">
+          <span>Home page context</span>
+          <span class="badge">Proposed hero</span>
+        </div>
+        <div class="hero-preview">
+          <div class="hero-layout">
+            <div>
+              <div class="eyebrow-sm">◆ TAC Skill Development</div>
+              <h2>Your skills.<br><span>Your plan.<br>Your growth.</span></h2>
+              <p class="subcopy">MatrixPro provides the structure to turn learning into measurable progress across Education, Exposure, and Experience.</p>
+              <div class="cta-row">
+                <a class="cta cta-primary" href="#">Go to My Plan →</a>
+                <a class="cta cta-secondary" href="#">Browse Catalog</a>
+              </div>
+            </div>
+            <div class="canvas-wrap fallback-mode" id="canvasWrap" aria-label="3D MatrixPro logo preview">
+              <div class="halo"></div>
+              <div class="ring"></div>
+              <div class="ring ring--2"></div>
+              <div class="logo-3d-fallback" id="cssFallback">
+                <div class="logo-3d-fallback__scene" id="cssFallbackScene"></div>
+              </div>
+        <div class="canvas-status hidden" id="canvasStatus">
+          <div><strong>Loading 3D preview…</strong></div>
+        </div>
+              <div class="canvas-error" id="canvasNotice"></div>
+              <canvas id="canvas3d" aria-hidden="true"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Technical panel -->
+      <section class="panel">
+        <div class="panel-label"><span>Geometry breakdown</span></div>
+        <div class="compare-card">
+          <h3>From flat SVG → volumetric scene</h3>
+          <p>Each SVG primitive maps to an extruded mesh with independent depth and animation channel.</p>
+          <ul>
+            <li><strong>Base plate</strong> — rounded box, 12px corner radius, subtle bevel</li>
+            <li><strong>Brackets</strong> — tube geometry along bracket paths, glass-metallic stroke</li>
+            <li><strong>Developing cells</strong> — extruded rounded rects, emissive pulse (z-lift)</li>
+            <li><strong>Planned cells</strong> — torus rings, opacity breathe</li>
+            <li><strong>Mastered cells</strong> — extruded tile + check emboss, specular highlight sweep</li>
+          </ul>
+        </div>
+        <div class="compare-card" style="border-top:1px solid var(--border-soft)">
+          <h3>Animation choreography</h3>
+          <ul>
+            <li>Slow orbital camera + 8° idle yaw on the logo group</li>
+            <li>Staggered cell pulses mapped to plan status semantics</li>
+            <li>Rim light orbit + bloom on accent emissive (Three.js UnrealBloomPass)</li>
+            <li><code>prefers-reduced-motion</code> → static pose, bloom only</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <div class="compare">
+      <section class="panel compare-card">
+        <div class="panel-label"><span>Current — CSS 3D tilt</span></div>
+        <p>Flat SVG texture on a card; <code>rotateX/Y</code> simulates depth. No real geometry or parallax between grid cells.</p>
+        <div class="flat-demo">
+          <div class="flat-tile" id="flatTile"></div>
+        </div>
+      </section>
+      <section class="panel compare-card">
+        <div class="panel-label"><span>Proposed — extruded WebGL</span></div>
+        <p>Real mesh depth: brackets stand off the plate, status tiles float at different Z, lighting creates specular edges. Reads as a crafted object, not a spinning sticker.</p>
+        <p>Drag the hero canvas to orbit · scroll to zoom · use <strong>SVG overlay</strong> to verify shape alignment</p>
+      </section>
+    </div>
+
+    <div class="spec-grid">
+      <section class="panel spec">
+        <h4>Stack (production)</h4>
+        <p>Three.js r162+ as ES module (~45KB gzipped tree-shaken). Lazy-load on home route mount. Fallback to flat SVG if WebGL unavailable.</p>
+      </section>
+      <section class="panel spec">
+        <h4>Performance target</h4>
+        <p>&lt;16ms/frame on M1 / integrated GPU. ~120 triangles. Single draw-call batch via merged geometry optional. Pause when tab hidden.</p>
+      </section>
+      <section class="panel spec">
+        <h4>Theme sync</h4>
+        <p>Material palette swaps on <code>[data-theme]</code> — navy plate + #5cb1ff ink (dark), white plate + #3b82f6 ink (light). Same topology both themes.</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- Flat comparison tile -->
+  <template id="svgDark">
+    <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+      <rect width="256" height="256" fill="#0a1628"/>
+      <g fill="none" stroke="#7cc1ff" stroke-width="6" stroke-linecap="round">
+        <path d="M 60 44 Q 36 44 36 68 L 36 188 Q 36 212 60 212"/>
+        <path d="M 196 44 Q 220 44 220 68 L 220 188 Q 220 212 196 212"/>
+      </g>
+      <rect x="64" y="60" width="36" height="36" rx="8" fill="#5cb1ff"/>
+      <circle cx="128" cy="78" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+      <g transform="translate(156 60)"><rect width="36" height="36" rx="8" fill="#5cb1ff"/><path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <circle cx="82" cy="128" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+      <rect x="110" y="110" width="36" height="36" rx="8" fill="#5cb1ff"/>
+      <g transform="translate(156 110)"><rect width="36" height="36" rx="8" fill="#5cb1ff"/><path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <rect x="64" y="160" width="36" height="36" rx="8" fill="#5cb1ff"/>
+      <g transform="translate(110 160)"><rect width="36" height="36" rx="8" fill="#5cb1ff"/><path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <circle cx="174" cy="178" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+    </svg>
+  </template>
+  <template id="svgLight">
+    <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+      <rect width="256" height="256" fill="#ffffff"/>
+      <g fill="none" stroke="#3b82f6" stroke-width="6" stroke-linecap="round">
+        <path d="M 60 44 Q 36 44 36 68 L 36 188 Q 36 212 60 212"/>
+        <path d="M 196 44 Q 220 44 220 68 L 220 188 Q 220 212 196 212"/>
+      </g>
+      <rect x="64" y="60" width="36" height="36" rx="8" fill="#3b82f6"/>
+      <circle cx="128" cy="78" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+      <g transform="translate(156 60)"><rect width="36" height="36" rx="8" fill="#3b82f6"/><path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <circle cx="82" cy="128" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+      <rect x="110" y="110" width="36" height="36" rx="8" fill="#3b82f6"/>
+      <g transform="translate(156 110)"><rect width="36" height="36" rx="8" fill="#3b82f6"/><path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <rect x="64" y="160" width="36" height="36" rx="8" fill="#3b82f6"/>
+      <g transform="translate(110 160)"><rect width="36" height="36" rx="8" fill="#3b82f6"/><path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <circle cx="174" cy="178" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+    </svg>
+  </template>
+
+  <!-- Layered CSS 3D slices (plate / brackets / grid) -->
+  <template id="layerPlate-dark">
+    <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"><rect width="256" height="256" rx="48" fill="#0a1628"/></svg>
+  </template>
+  <template id="layerBrackets-dark">
+    <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="#7cc1ff" stroke-width="6" stroke-linecap="round">
+        <path d="M 60 44 Q 36 44 36 68 L 36 188 Q 36 212 60 212"/>
+        <path d="M 196 44 Q 220 44 220 68 L 220 188 Q 220 212 196 212"/>
+      </g>
+    </svg>
+  </template>
+  <template id="layerGrid-dark">
+    <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+      <rect x="64" y="60" width="36" height="36" rx="8" fill="#5cb1ff"/>
+      <circle cx="128" cy="78" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+      <g transform="translate(156 60)"><rect width="36" height="36" rx="8" fill="#5cb1ff"/><path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <circle cx="82" cy="128" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+      <rect x="110" y="110" width="36" height="36" rx="8" fill="#5cb1ff"/>
+      <g transform="translate(156 110)"><rect width="36" height="36" rx="8" fill="#5cb1ff"/><path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <rect x="64" y="160" width="36" height="36" rx="8" fill="#5cb1ff"/>
+      <g transform="translate(110 160)"><rect width="36" height="36" rx="8" fill="#5cb1ff"/><path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <circle cx="174" cy="178" r="16" fill="none" stroke="#5cb1ff" stroke-width="4"/>
+    </svg>
+  </template>
+  <template id="layerPlate-light">
+    <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"><rect width="256" height="256" rx="48" fill="#ffffff"/></svg>
+  </template>
+  <template id="layerBrackets-light">
+    <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="#3b82f6" stroke-width="6" stroke-linecap="round">
+        <path d="M 60 44 Q 36 44 36 68 L 36 188 Q 36 212 60 212"/>
+        <path d="M 196 44 Q 220 44 220 68 L 220 188 Q 220 212 196 212"/>
+      </g>
+    </svg>
+  </template>
+  <template id="layerGrid-light">
+    <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+      <rect x="64" y="60" width="36" height="36" rx="8" fill="#3b82f6"/>
+      <circle cx="128" cy="78" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+      <g transform="translate(156 60)"><rect width="36" height="36" rx="8" fill="#3b82f6"/><path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <circle cx="82" cy="128" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+      <rect x="110" y="110" width="36" height="36" rx="8" fill="#3b82f6"/>
+      <g transform="translate(156 110)"><rect width="36" height="36" rx="8" fill="#3b82f6"/><path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#0a1628" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <rect x="64" y="160" width="36" height="36" rx="8" fill="#3b82f6"/>
+      <g transform="translate(110 160)"><rect width="36" height="36" rx="8" fill="#3b82f6"/><path d="M 9 19 L 16 26 L 27 13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <circle cx="174" cy="178" r="16" fill="none" stroke="#3b82f6" stroke-width="4"/>
+    </svg>
+  </template>
+
+  <script>
+  (function bootstrapLogoMockup() {
+    const wrap = document.getElementById('canvasWrap');
+    const scene = document.getElementById('cssFallbackScene');
+    const fallback = document.getElementById('cssFallback');
+    const statusEl = document.getElementById('canvasStatus');
+    const noticeEl = document.getElementById('canvasNotice');
+    const serveBanner = document.getElementById('serveBanner');
+
+    const state = {
+      theme: 'dark',
+      motion: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      mode: 'fallback',
+      drag: { active: false, x: 0, y: 0, rotX: 11, rotY: -16 },
+    };
+
+    if (location.protocol === 'file:') {
+      serveBanner.classList.remove('hidden');
+    }
+
+    function hideStatus() { statusEl.classList.add('hidden'); }
+    function showNotice(html) {
+      noticeEl.classList.add('visible');
+      noticeEl.innerHTML = html;
+    }
+
+    function probeWebGL() {
+      try {
+        const test = document.createElement('canvas');
+        const attrs = { failIfMajorPerformanceCaveat: false, antialias: false };
+        return !!(test.getContext('webgl2', attrs) || test.getContext('webgl', attrs) || test.getContext('experimental-webgl', attrs));
+      } catch { return false; }
+    }
+
+    function layerTpl(name) {
+      return document.getElementById(`layer${name}-${state.theme}`);
+    }
+
+    function buildLayeredFallback() {
+      scene.innerHTML = '';
+      scene.classList.toggle('motion-on', state.motion && state.mode === 'fallback');
+      [
+        ['plate', 'logo-3d-fallback__layer--plate'],
+        ['Brackets', 'logo-3d-fallback__layer--brackets'],
+        ['Grid', 'logo-3d-fallback__layer--grid'],
+      ].forEach(([key, cls]) => {
+        const tpl = layerTpl(key === 'plate' ? 'Plate' : key);
+        if (!tpl) return;
+        const layer = document.createElement('div');
+        layer.className = `logo-3d-fallback__layer ${cls}`;
+        layer.appendChild(tpl.content.cloneNode(true));
+        scene.appendChild(layer);
+      });
+      const shadow = document.createElement('div');
+      shadow.className = 'logo-3d-fallback__shadow';
+      shadow.setAttribute('aria-hidden', 'true');
+      scene.appendChild(shadow);
+      applySceneTransform();
+    }
+
+    function applySceneTransform() {
+      if (state.motion && state.mode === 'fallback') {
+        scene.style.transform = '';
+        return;
+      }
+      scene.style.transform = `rotateX(${state.drag.rotX}deg) rotateY(${state.drag.rotY}deg)`;
+    }
+
+    function setTheme(next) {
+      state.theme = next;
+      document.documentElement.dataset.theme = next;
+      buildLayeredFallback();
+      updateFlatTile();
+      document.getElementById('btnDark').classList.toggle('active', next === 'dark');
+      document.getElementById('btnLight').classList.toggle('active', next === 'light');
+      document.getElementById('btnDark').setAttribute('aria-pressed', String(next === 'dark'));
+      document.getElementById('btnLight').setAttribute('aria-pressed', String(next === 'light'));
+      window.__logoMockup?.onThemeChange?.(next);
+    }
+
+    function setMotion(on) {
+      state.motion = on;
+      scene.classList.toggle('motion-on', on && state.mode === 'fallback');
+      applySceneTransform();
+      document.getElementById('btnMotion').classList.toggle('active', on);
+      document.getElementById('btnMotion').textContent = on ? 'Motion on' : 'Motion off';
+      window.__logoMockup?.onMotionChange?.(on);
+    }
+
+    function activateFallbackMode(message) {
+      state.mode = 'fallback';
+      wrap.classList.add('fallback-mode');
+      wrap.classList.remove('webgl-mode');
+      fallback.classList.remove('hidden');
+      hideStatus();
+      buildLayeredFallback();
+      if (message) {
+        showNotice(`<strong>CSS layered 3D preview</strong> — ${message} Drag the logo to orbit.`);
+      }
+      document.getElementById('btnOverlay').disabled = true;
+      document.getElementById('btnOverlay').title = 'WebGL only';
+    }
+
+    function activateWebGLMode() {
+      state.mode = 'webgl';
+      wrap.classList.remove('fallback-mode');
+      wrap.classList.add('webgl-mode');
+      fallback.classList.add('hidden');
+      noticeEl.classList.remove('visible');
+      document.getElementById('btnOverlay').disabled = false;
+      document.getElementById('btnOverlay').removeAttribute('title');
+    }
+
+    function updateFlatTile() {
+      const tpl = document.getElementById(state.theme === 'dark' ? 'svgDark' : 'svgLight');
+      const host = document.getElementById('flatTile');
+      if (!host || !tpl) return;
+      host.innerHTML = '';
+      host.appendChild(tpl.content.cloneNode(true));
+    }
+
+    fallback.addEventListener('pointerdown', (e) => {
+      if (state.mode !== 'fallback') return;
+      state.drag.active = true;
+      state.drag.x = e.clientX;
+      state.drag.y = e.clientY;
+      fallback.classList.add('is-dragging');
+      scene.classList.remove('motion-on');
+      fallback.setPointerCapture(e.pointerId);
+    });
+    fallback.addEventListener('pointermove', (e) => {
+      if (!state.drag.active) return;
+      const dx = e.clientX - state.drag.x;
+      const dy = e.clientY - state.drag.y;
+      state.drag.x = e.clientX;
+      state.drag.y = e.clientY;
+      state.drag.rotY += dx * 0.35;
+      state.drag.rotX -= dy * 0.35;
+      state.drag.rotX = Math.max(-28, Math.min(28, state.drag.rotX));
+      applySceneTransform();
+    });
+    function endDrag(e) {
+      if (!state.drag.active) return;
+      state.drag.active = false;
+      fallback.classList.remove('is-dragging');
+      if (state.motion) scene.classList.add('motion-on');
+    }
+    fallback.addEventListener('pointerup', endDrag);
+    fallback.addEventListener('pointercancel', endDrag);
+
+    document.getElementById('btnDark').addEventListener('click', () => setTheme('dark'));
+    document.getElementById('btnLight').addEventListener('click', () => setTheme('light'));
+    document.getElementById('btnMotion').addEventListener('click', () => setMotion(!state.motion));
+
+    buildLayeredFallback();
+    updateFlatTile();
+    hideStatus();
+    document.getElementById('btnOverlay').disabled = true;
+
+    window.__logoMockup = {
+      state,
+      probeWebGL,
+      activateFallbackMode,
+      activateWebGLMode,
+      hideStatus,
+      setTheme,
+      setMotion,
+      buildLayeredFallback,
+      updateFlatTile,
+    };
+  })();
+  </script>
+
+  <script async src="https://ga.jspm.io/npm:es-module-shims@1.10.0/dist/es-module-shims.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    const boot = window.__logoMockup;
+    const canvas = document.getElementById('canvas3d');
+
+    function createWebGLRenderer(THREE, targetCanvas) {
+      const attempts = [
+        { antialias: true, alpha: true, powerPreference: 'default', failIfMajorPerformanceCaveat: false },
+        { antialias: false, alpha: true, powerPreference: 'default', failIfMajorPerformanceCaveat: false },
+        { antialias: false, alpha: true, powerPreference: 'low-power', failIfMajorPerformanceCaveat: false },
+      ];
+      let lastErr;
+      for (const opts of attempts) {
+        try {
+          return new THREE.WebGLRenderer({ canvas: targetCanvas, ...opts });
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+      throw lastErr || new Error('Error creating WebGL context.');
+    }
+
+    if (!boot.probeWebGL()) {
+      boot.activateFallbackMode('WebGL is not available in this browser.');
+    } else {
+      try {
+      const THREE = await import('three');
+      const { RoundedBoxGeometry } = await import('three/addons/geometries/RoundedBoxGeometry.js');
+      const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+      const { EffectComposer } = await import('three/addons/postprocessing/EffectComposer.js');
+      const { RenderPass } = await import('three/addons/postprocessing/RenderPass.js');
+      const { UnrealBloomPass } = await import('three/addons/postprocessing/UnrealBloomPass.js');
+
+    const PALETTE = {
+      dark: {
+        plate: 0x0a1628,
+        plateEdge: 0x142238,
+        accent: 0x5cb1ff,
+        accentDeep: 0x3b82f6,
+        bracket: 0x7cc1ff,
+        check: 0x0a1628,
+        bg: 0x070b12,
+        emissive: 0x5cb1ff,
+      },
+      light: {
+        plate: 0xffffff,
+        plateEdge: 0xe2e8f0,
+        accent: 0x3b82f6,
+        accentDeep: 0x2563eb,
+        bracket: 0x3b82f6,
+        check: 0xffffff,
+        bg: 0xf4f7fc,
+        emissive: 0x3b82f6,
+      },
+    };
+
+    let theme = boot.state.theme;
+    let motionEnabled = boot.state.motion;
+    let overlayVisible = false;
+    let overlayMesh = null;
+
+    /* ── Canonical SVG geometry (viewBox 0 0 256 256) ── */
+    const ICON_UNITS = 256;
+    const ICON_SIZE = 2.4;
+    const S = ICON_SIZE / ICON_UNITS;
+    const PLATE_DEPTH = 0.07;
+    const BRACKET_STROKE = 6;
+    const BRACKET_TUBE = (BRACKET_STROKE / 2) * S;
+    const TILE = 36;
+    const TILE_RX = 8;
+    const TILE_DEPTH = 0.13;
+    const RING_R = 16;
+    const RING_STROKE = 4;
+    const RING_TUBE = (RING_STROKE / 2) * S;
+
+    function sx(v) { return (v - ICON_UNITS / 2) * S; }
+    function sy(v) { return -(v - ICON_UNITS / 2) * S; }
+    function v3(x, y, z = 0) { return new THREE.Vector3(sx(x), sy(y), z); }
+
+    /** Exact grid from mp-icon-dark symbol */
+    const ICON_CELLS = [
+      { kind: 'developing', phase: 0.0, rect: [64, 60] },
+      { kind: 'planned',    phase: 0.4, ring: [128, 78] },
+      { kind: 'mastered',   phase: 0.8, rect: [156, 60] },
+      { kind: 'planned',    phase: 1.2, ring: [82, 128] },
+      { kind: 'developing', phase: 1.6, rect: [110, 110] },
+      { kind: 'mastered',   phase: 2.0, rect: [156, 110] },
+      { kind: 'developing', phase: 2.4, rect: [64, 160] },
+      { kind: 'mastered',   phase: 2.8, rect: [110, 160] },
+      { kind: 'planned',    phase: 3.2, ring: [174, 178] },
+    ];
+
+    const BRACKET_PATHS = {
+      left: [
+        { type: 'q', p0: [60, 44], p1: [36, 44], p2: [36, 68] },
+        { type: 'l', p0: [36, 68], p1: [36, 188] },
+        { type: 'q', p0: [36, 188], p1: [36, 212], p2: [60, 212] },
+      ],
+      right: [
+        { type: 'q', p0: [196, 44], p1: [220, 44], p2: [220, 68] },
+        { type: 'l', p0: [220, 68], p1: [220, 188] },
+        { type: 'q', p0: [220, 188], p1: [220, 212], p2: [196, 212] },
+      ],
+    };
+
+    const CHECK_LOCAL = [[9, 19], [16, 26], [27, 13]];
+
+    const renderer = createWebGLRenderer(THREE, canvas);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.35;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+    camera.position.set(0, 0, 3.55);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.enablePan = false;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.minDistance = 2.8;
+    controls.maxDistance = 5.5;
+    controls.target.set(0, 0, 0);
+    controls.autoRotate = motionEnabled;
+    controls.autoRotateSpeed = 0.45;
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.45, 0.4, 0.35);
+    composer.addPass(bloom);
+
+    const logoGroup = new THREE.Group();
+    scene.add(logoGroup);
+
+    const animCells = [];
+
+    function sampleQuadratic(p0, p1, p2, segments, z) {
+      const pts = [];
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const u = 1 - t;
+        const x = u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0];
+        const y = u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1];
+        pts.push(v3(x, y, z));
+      }
+      return pts;
+    }
+
+    function sampleLine(p0, p1, segments, z) {
+      const pts = [];
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        pts.push(v3(p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t, z));
+      }
+      return pts;
+    }
+
+    function buildBracketCurve(side, z) {
+      const segs = BRACKET_PATHS[side];
+      const points = [];
+      segs.forEach((seg, idx) => {
+        let part;
+        if (seg.type === 'q') {
+          part = sampleQuadratic(seg.p0, seg.p1, seg.p2, 28, z);
+        } else {
+          part = sampleLine(seg.p0, seg.p1, 32, z);
+        }
+        if (idx > 0) part.shift();
+        points.push(...part);
+      });
+      return new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.35);
+    }
+
+    function makeCheckShape() {
+      const shape = new THREE.Shape();
+      const cx = TILE / 2;
+      const cy = TILE / 2;
+      CHECK_LOCAL.forEach(([x, y], i) => {
+        const px = (x - cx) * S;
+        const py = -(y - cy) * S;
+        if (i === 0) shape.moveTo(px, py);
+        else shape.lineTo(px, py);
+      });
+      return shape;
+    }
+
+    function rectCenter(x, y) {
+      return [x + TILE / 2, y + TILE / 2];
+    }
+
+    function buildSvgOverlayTexture() {
+      const tpl = document.getElementById(theme === 'dark' ? 'svgDark' : 'svgLight');
+      const svgEl = tpl.content.querySelector('svg').cloneNode(true);
+      svgEl.setAttribute('width', '512');
+      svgEl.setAttribute('height', '512');
+      const xml = new XMLSerializer().serializeToString(svgEl);
+      const img = new Image();
+      const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
+      return new Promise((resolve, reject) => {
+        img.onload = () => {
+          const tex = new THREE.CanvasTexture(img);
+          tex.colorSpace = THREE.SRGBColorSpace;
+          resolve(tex);
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    async function syncOverlay() {
+      if (overlayMesh) {
+        logoGroup.remove(overlayMesh);
+        overlayMesh.geometry.dispose();
+        overlayMesh.material.map?.dispose();
+        overlayMesh.material.dispose();
+        overlayMesh = null;
+      }
+      if (!overlayVisible) return;
+      const tex = await buildSvgOverlayTexture();
+      overlayMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(ICON_SIZE, ICON_SIZE),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.42, depthWrite: false }),
+      );
+      overlayMesh.position.z = TILE_DEPTH + 0.04;
+      overlayMesh.renderOrder = 10;
+      logoGroup.add(overlayMesh);
+    }
+
+    function rebuildLogo() {
+      clearLights();
+      while (logoGroup.children.length) {
+        const c = logoGroup.children[0];
+        logoGroup.remove(c);
+        c.traverse?.(o => {
+          if (o.geometry) o.geometry.dispose();
+          if (o.material) {
+            if (Array.isArray(o.material)) o.material.forEach(m => m.dispose());
+            else o.material.dispose();
+          }
+        });
+      }
+      animCells.length = 0;
+
+      const p = PALETTE[theme];
+      const zBracket = PLATE_DEPTH / 2 + BRACKET_TUBE * 0.6;
+      const zTileBase = PLATE_DEPTH / 2 + TILE_DEPTH / 2;
+
+      /* Base plate — exact 256×256 SVG square */
+      const plateGeo = new THREE.BoxGeometry(ICON_SIZE, ICON_SIZE, PLATE_DEPTH);
+      const plateMat = new THREE.MeshPhysicalMaterial({
+        color: p.plate,
+        metalness: 0.2,
+        roughness: 0.45,
+        clearcoat: 0.4,
+        clearcoatRoughness: 0.3,
+      });
+      const plateMesh = new THREE.Mesh(plateGeo, plateMat);
+      plateMesh.position.z = 0;
+      logoGroup.add(plateMesh);
+
+      /* Brackets — tube along exact SVG quadratic + line paths */
+      const bracketMat = new THREE.MeshPhysicalMaterial({
+        color: p.bracket,
+        metalness: 0.75,
+        roughness: 0.22,
+        emissive: p.bracket,
+        emissiveIntensity: 0.12,
+      });
+      ['left', 'right'].forEach((side) => {
+        const curve = buildBracketCurve(side, zBracket);
+        const tubeGeo = new THREE.TubeGeometry(curve, 120, BRACKET_TUBE, 14, false);
+        const mesh = new THREE.Mesh(tubeGeo, bracketMat);
+        logoGroup.add(mesh);
+      });
+
+      /* Grid — rects 36×36 rx8, rings r16 stroke4, checks from SVG local path */
+      const tileW = TILE * S;
+      const tileR = TILE_RX * S;
+
+      ICON_CELLS.forEach((cell) => {
+        const g = new THREE.Group();
+        g.userData = { phase: cell.phase, kind: cell.kind, baseZ: zTileBase };
+
+        if (cell.kind === 'planned') {
+          const [cx, cy] = cell.ring;
+          g.position.set(sx(cx), sy(cy), zTileBase);
+          const torus = new THREE.Mesh(
+            new THREE.TorusGeometry(RING_R * S, RING_TUBE, 20, 64),
+            new THREE.MeshPhysicalMaterial({
+              color: p.accent,
+              metalness: 0.65,
+              roughness: 0.28,
+              emissive: p.emissive,
+              emissiveIntensity: 0.22,
+            }),
+          );
+          g.add(torus);
+          g.userData.mesh = torus;
+        } else {
+          const [rx, ry] = cell.rect;
+          const [cx, cy] = rectCenter(rx, ry);
+          g.position.set(sx(cx), sy(cy), zTileBase);
+          const tile = new THREE.Mesh(
+            new RoundedBoxGeometry(tileW, tileW, TILE_DEPTH, 5, tileR),
+            new THREE.MeshPhysicalMaterial({
+              color: p.accent,
+              metalness: 0.22,
+              roughness: 0.34,
+              emissive: p.emissive,
+              emissiveIntensity: cell.kind === 'mastered' ? 0.28 : 0.38,
+            }),
+          );
+          g.add(tile);
+          g.userData.mesh = tile;
+
+          if (cell.kind === 'mastered') {
+            const checkGeo = new THREE.ExtrudeGeometry(makeCheckShape(), {
+              depth: TILE_DEPTH * 0.45,
+              bevelEnabled: false,
+            });
+            checkGeo.center();
+            const check = new THREE.Mesh(
+              checkGeo,
+              new THREE.MeshStandardMaterial({ color: p.check, roughness: 0.45 }),
+            );
+            check.position.z = TILE_DEPTH / 2 + TILE_DEPTH * 0.12;
+            g.add(check);
+            g.userData.check = check;
+          }
+        }
+
+        logoGroup.add(g);
+        animCells.push(g);
+      });
+
+      /* Lighting */
+      scene.background = null;
+      const amb = new THREE.AmbientLight(0xffffff, theme === 'dark' ? 0.55 : 0.65);
+      const key = new THREE.DirectionalLight(0xffffff, theme === 'dark' ? 1.35 : 1.0);
+      key.position.set(2, 3, 4);
+      const rim = new THREE.PointLight(p.accent, theme === 'dark' ? 2.0 : 1.2, 14);
+      rim.position.set(-2.5, -1, 3);
+      const fill = new THREE.PointLight(0x818cf8, 0.45, 10);
+      fill.position.set(2, -2, 2);
+
+      logoGroup.userData.lights = [amb, key, rim, fill];
+      [amb, key, rim, fill].forEach(l => scene.add(l));
+      syncOverlay();
+    }
+
+    function clearLights() {
+      scene.children.filter(c => c.isLight).forEach(l => scene.remove(l));
+    }
+
+    boot.onThemeChange = (next) => {
+      theme = next;
+      clearLights();
+      rebuildLogo();
+    };
+    boot.onMotionChange = (on) => {
+      motionEnabled = on;
+      if (controls) controls.autoRotate = on;
+    };
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const w = Math.max(320, Math.floor(rect.width));
+      const h = Math.max(320, Math.floor(rect.height || rect.width));
+      renderer.setSize(w, h, false);
+      composer.setSize(w, h);
+      bloom.resolution.set(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      if (motionEnabled) {
+        logoGroup.rotation.x = Math.sin(t * 0.35) * 0.06 + 0.04;
+        logoGroup.rotation.y = Math.sin(t * 0.22) * 0.08;
+        logoGroup.position.y = Math.sin(t * 0.5) * 0.04;
+
+        animCells.forEach(g => {
+          const phase = g.userData.phase;
+          const pulse = 0.5 + 0.5 * Math.sin(t * 1.6 + phase);
+          if (g.userData.kind === 'developing') {
+            g.position.z = g.userData.baseZ + pulse * 0.025;
+            g.userData.mesh.material.emissiveIntensity = 0.28 + pulse * 0.22;
+          } else if (g.userData.kind === 'planned') {
+            g.userData.mesh.material.emissiveIntensity = 0.15 + pulse * 0.2;
+            g.scale.setScalar(0.98 + pulse * 0.04);
+          } else {
+            g.position.z = g.userData.baseZ + pulse * 0.02;
+            if (g.userData.check) {
+              g.userData.check.rotation.z = Math.sin(t * 2 + phase) * 0.04;
+            }
+          }
+        });
+
+        const rim = scene.children.find(c => c.isPointLight && c.color.getHex() === PALETTE[theme].accent);
+        if (rim) {
+          rim.position.x = Math.cos(t * 0.4) * 2.8;
+          rim.position.y = Math.sin(t * 0.55) * 1.8;
+        }
+      }
+
+      controls.update();
+      composer.render();
+    }
+
+    document.getElementById('btnOverlay').addEventListener('click', () => {
+      overlayVisible = !overlayVisible;
+      document.getElementById('btnOverlay').classList.toggle('active', overlayVisible);
+      document.getElementById('btnOverlay').setAttribute('aria-pressed', String(overlayVisible));
+      syncOverlay();
+    });
+
+    rebuildLogo();
+    boot.updateFlatTile();
+    requestAnimationFrame(() => {
+      resize();
+      boot.activateWebGLMode();
+      boot.hideStatus();
+      canvas.classList.add('is-ready');
+    });
+    new ResizeObserver(() => resize()).observe(canvas.parentElement);
+    window.addEventListener('resize', resize);
+    animate();
+
+      } catch (err) {
+        console.warn('WebGL mockup unavailable:', err);
+        boot.activateFallbackMode(
+          (err && err.message) ? err.message : 'WebGL could not start.'
+        );
+      }
+    }
+  </script>
+</body>
+</html>

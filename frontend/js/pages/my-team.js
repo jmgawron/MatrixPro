@@ -13,7 +13,7 @@ import {
   MATRIX_LEGEND_ITEMS,
   getLegendIcon,
   STALLED_DAYS,
-} from '../components/matrix-style.js?v=2';
+} from '../components/matrix-style.js?v=3';
 
 // ─── Category chip icons (match My Plan filter style) ──────────────────────
 const CATEGORY_CHIP_SVG = {
@@ -49,12 +49,16 @@ const CATEGORY_LABEL_FALLBACK = {
   ai_future: 'AI & Future Skills',
 };
 const CATEGORY_ACCENT = {
-  foundational: '#22c55e',
-  core: '#3b82f6',
-  advanced: '#a855f7',
-  ai_future: '#f59e0b',
+  foundational: 'var(--cat-foundational-accent)',
+  core: 'var(--cat-core-accent)',
+  advanced: 'var(--cat-advanced-accent)',
+  ai_future: 'var(--cat-ai-accent)',
   uncategorized: '#94a3b8',
 };
+
+function _cssVar(name, fallback) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+}
 const UNCATEGORIZED_SLUG = 'uncategorized';
 const UNCATEGORIZED_LABEL = 'Uncategorized';
 
@@ -2410,9 +2414,9 @@ function renderDrawerContent(drawerBody, engineerId, engineerName, plan) {
               if (s.status === 'mastered') return 100;
               return 0;
             }),
-            areaStyle: { opacity: 0.15, color: '#a855f7' },
-            lineStyle: { color: '#a855f7', width: 2 },
-            itemStyle: { color: '#a855f7' },
+            areaStyle: { opacity: 0.15, color: _cssVar('--cat-advanced-accent', '#3b82f6') },
+            lineStyle: { color: _cssVar('--cat-advanced-accent', '#3b82f6'), width: 2 },
+            itemStyle: { color: _cssVar('--cat-advanced-accent', '#3b82f6') },
           }],
         }],
       };

@@ -522,7 +522,7 @@ def _report_pdf_style() -> str:
     .badge-training { background: #1a2332; color: #6ee7b7; }
     .badge-developing { background: #1e3a5f; color: #93c5fd; }
     .badge-planned { background: #1f2937; color: #d1d5db; }
-    .badge-mastered { background: #14532d; color: #6ee7b7; }
+    .badge-mastered { background: #3d2e10; color: #e5c76b; }
     table { width: 100%; border-collapse: collapse; margin-top: 8px; }
     th {
         background: #161b22;

@@ -2,7 +2,7 @@ import { api } from '../api.js';
 import { Store } from '../state.js';
 import { Router } from '../router.js';
 import { showToast } from '../components/toast.js';
-import { mountHome } from './home.js?v=16';
+import { mountHome } from './home.js?v=19';
 
 const AUTH_ICON = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>

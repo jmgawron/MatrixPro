@@ -340,7 +340,7 @@ def landscape_charts(skills: list[dict]) -> dict:
     status_donut = [
         {"label": "Developing", "value": counts["developing"], "color": "#3b82f6"},
         {"label": "Planned", "value": counts["planned"], "color": "#94a3b8"},
-        {"label": "Mastered", "value": counts["mastered"], "color": "#22c55e"},
+        {"label": "Mastered", "value": counts["mastered"], "color": "#e5c76b"},
     ]
 
     buckets = {"0-25": 0, "26-50": 0, "51-75": 0, "76-99": 0, "100": 0}

@@ -5,9 +5,10 @@ import { showToast } from '../components/toast.js';
 import { showModal, showConfirm } from '../components/modal.js';
 import { el } from '../utils/dom.js';
 import { getSkillIconSVG } from '../components/icons.js';
-import { openLibraryModal } from '../components/library-modal.js?v=3';
+import { openLibraryModal } from '../components/library-modal.js?v=4';
 import { openReportingModal } from './my-plan-reports.js?v=4';
 import { renderDescription, mountMarkdownEditor } from '../components/markdown-editor.js';
+import { THREE_E_ICON_SVG, threeEIcon } from '../components/three-e-icons.js?v=1';
 
 const CONTENT_TYPE_OPTIONS = [
   { value: 'course', label: 'Course' },
@@ -17,11 +18,7 @@ const CONTENT_TYPE_OPTIONS = [
   { value: 'action', label: 'Action' },
 ];
 
-const THREE_E_SECTION_ICONS = {
-  education: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
-  exposure: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',
-  experience: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
-};
+const THREE_E_SECTION_ICONS = THREE_E_ICON_SVG;
 
 function normalizeOverrideEntry(val) {
   if (!val) return { description: '', type: null, url: null };
@@ -648,18 +645,9 @@ function renderQuickFilters() {
   const eContainer = el('div', { className: 'mp-3e-filters' });
   
   const eTypes = [
-    {
-      id: 'education', label: 'Education', class: 'filter-education',
-      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
-    },
-    {
-      id: 'exposure', label: 'Exposure', class: 'filter-exposure',
-      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>'
-    },
-    {
-      id: 'experience', label: 'Experience', class: 'filter-experience',
-      svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
-    }
+    { id: 'education', label: 'Education', class: 'filter-education', svg: threeEIcon('education', 20) },
+    { id: 'exposure', label: 'Exposure', class: 'filter-exposure', svg: threeEIcon('exposure', 20) },
+    { id: 'experience', label: 'Experience', class: 'filter-experience', svg: threeEIcon('experience', 20) },
   ];
   
   eTypes.forEach(t => {
@@ -873,15 +861,15 @@ function buildCard(planSkill, status, iconClass) {
     const indicators = el('span', { className: 'mp-card-3e-indicators' });
     if (focusArea === 'education') {
       const dot = el('span', { className: 'mp-card-3e-dot mp-card-3e-dot--edu', title: 'Education' });
-      dot.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
+      dot.innerHTML = threeEIcon('education', 12);
       indicators.appendChild(dot);
     } else if (focusArea === 'exposure') {
       const dot = el('span', { className: 'mp-card-3e-dot mp-card-3e-dot--exp', title: 'Exposure' });
-      dot.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
+      dot.innerHTML = threeEIcon('exposure', 12);
       indicators.appendChild(dot);
     } else if (focusArea === 'experience') {
       const dot = el('span', { className: 'mp-card-3e-dot mp-card-3e-dot--xp', title: 'Experience' });
-      dot.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+      dot.innerHTML = threeEIcon('experience', 12);
       indicators.appendChild(dot);
     }
     footer.appendChild(indicators);
@@ -926,22 +914,10 @@ function buildProficiencyBadge(level) {
     return badge;
   }
 
-  const mapping = {
-    1: { label: 'Beginner', bg: 'rgba(148,163,184,.15)', text: '#94a3b8', border: 'rgba(148,163,184,.3)' },
-    2: { label: 'Working', bg: 'rgba(34,197,94,.15)', text: '#4ade80', border: 'rgba(34,197,94,.3)' },
-    3: { label: 'Intermediate', bg: 'rgba(6,182,212,.15)', text: '#22d3ee', border: 'rgba(6,182,212,.3)' },
-    4: { label: 'Advanced', bg: 'rgba(168,85,247,.15)', text: '#c084fc', border: 'rgba(168,85,247,.3)' },
-    5: { label: 'Expert', bg: 'rgba(234,179,8,.15)', text: '#eab308', border: 'rgba(234,179,8,.3)' }
-  };
-  const m = mapping[level];
-  const badge = el('span', { className: 'triage-chip mp-prof-badge' });
+  const labels = { 1: 'Beginner', 2: 'Working', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert' };
+  const badge = el('span', { className: `triage-chip mp-prof-badge mp-prof-badge--${level}` });
   badge.textContent = `${level}`;
-  badge.title = m.label;
-  badge.style.background = m.bg;
-  badge.style.color = m.text;
-  badge.style.border = `1px solid ${m.border}`;
-  badge.style.fontSize = '11px';
-  badge.style.padding = '2px 8px';
+  badge.title = labels[level];
   return badge;
 }
 
@@ -1009,10 +985,16 @@ function updateGaugeElements(wrap, percent, progressCircle, text) {
     const dash = (percent / 100) * circumference;
     progressCircle.setAttribute('stroke-dasharray', `${dash} ${circumference}`);
     
-    let color = '#94a3b8';
-    if (percent >= 100) color = '#4ade80';
-    else if (percent >= 67) color = '#22d3ee';
-    else if (percent >= 34) color = '#3b82f6';
+    const rootStyle = getComputedStyle(document.documentElement);
+    const prof4 = rootStyle.getPropertyValue('--prof-4-fg').trim() || '#5cb1ff';
+    const prof3 = rootStyle.getPropertyValue('--prof-3-fg').trim() || '#93c5fd';
+    const prof1 = rootStyle.getPropertyValue('--prof-1-fg').trim() || '#64748b';
+    const mastered = rootStyle.getPropertyValue('--status-mastered-fg').trim() || '#e5c76b';
+
+    let color = prof1;
+    if (percent >= 100) color = mastered;
+    else if (percent >= 67) color = prof4;
+    else if (percent >= 34) color = prof3;
     
     progressCircle.setAttribute('stroke', color);
     text.textContent = `${Math.round(percent)}%`;

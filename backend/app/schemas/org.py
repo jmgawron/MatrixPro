@@ -46,6 +46,7 @@ class MatrixSkillInfo(BaseModel):
     name: str
     icon: str | None = None
     categories: list[CategoryInfo] = []
+    association_role: str = "owner"
 
 
 class MatrixCellInfo(BaseModel):
@@ -88,6 +89,7 @@ class PerSkillStat(BaseModel):
     status_counts: SkillStatusCounts
     last_activity_at: datetime | None = None
     categories: list[CategoryInfo] = []
+    association_role: str = "owner"
 
 
 class PerEngineerStat(BaseModel):

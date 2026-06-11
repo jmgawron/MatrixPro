@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MatrixPro — Category Toggle: 4 Variants (no icons)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#1a1d21; color:#e8eef7; padding:32px 32px 64px; }
+  h1 { font-size:21px; margin-bottom:6px; }
+  .intro { color:#9aa4b2; font-size:13px; margin-bottom:18px; max-width:920px; line-height:1.55; }
+  .v-title { font-size:15px; font-weight:800; margin:30px 0 4px; }
+  .v-title .tag { font-size:11px; font-weight:700; background:#2563eb; color:#fff; border-radius:5px; padding:2px 8px; margin-right:8px; vertical-align:1px; }
+  .v-sub { font-size:12px; color:#9aa4b2; margin-bottom:10px; max-width:900px; line-height:1.5; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:1040px; }
+  @media (max-width:980px){ .pair{grid-template-columns:1fr;} }
+
+  .stage { border-radius:12px; padding:18px 20px; border:1px solid rgba(255,255,255,.1); }
+  .light { background:#f8f8f7; color:#1c1917;
+    --txt:#1c1917; --txt2:#52514d; --txt3:#76746e; --card:#fff;
+    --bd:rgba(41,37,32,.1); --bd2:rgba(41,37,32,.15);
+    --off-track:rgba(41,37,32,.18); --off-knob:#fff; --seg-bg:rgba(41,37,32,.05); }
+  .dark { background:#070b12; color:#e8eef7;
+    --txt:#e8eef7; --txt2:#9fb0c9; --txt3:#6b7f9d; --card:#121824;
+    --bd:rgba(255,255,255,.09); --bd2:rgba(255,255,255,.15);
+    --off-track:rgba(255,255,255,.14); --off-knob:#9fb0c9; --seg-bg:rgba(255,255,255,.05); }
+
+  .light .t-found { --tier:#78716c; --tier-soft:rgba(120,113,108,.1); --tier-bd:rgba(120,113,108,.3); }
+  .light .t-core  { --tier:#2563eb; --tier-soft:rgba(37,99,235,.08); --tier-bd:rgba(37,99,235,.3); }
+  .light .t-adv   { --tier:#4f46e5; --tier-soft:rgba(79,70,229,.08); --tier-bd:rgba(79,70,229,.3); }
+  .light .t-ai    { --tier:#0e7490; --tier-soft:rgba(8,145,178,.09); --tier-bd:rgba(8,145,178,.32); }
+  .dark .t-found  { --tier:#a8a29e; --tier-soft:rgba(168,162,158,.12); --tier-bd:rgba(168,162,158,.35); }
+  .dark .t-core   { --tier:#5cb1ff; --tier-soft:rgba(92,177,255,.12); --tier-bd:rgba(92,177,255,.38); }
+  .dark .t-adv    { --tier:#818cf8; --tier-soft:rgba(129,140,248,.12); --tier-bd:rgba(129,140,248,.38); }
+  .dark .t-ai     { --tier:#22d3ee; --tier-soft:rgba(34,211,238,.1); --tier-bd:rgba(34,211,238,.35); }
+
+  .row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .n { font-size:10.5px; font-weight:700; opacity:.75; }
+
+  /* ── V1: switch-pill (no icon) ── */
+  .v1 { display:inline-flex; align-items:center; gap:9px; padding:7px 14px 7px 10px; border-radius:999px;
+    border:1px solid var(--tier-bd); background:var(--tier-soft); color:var(--tier);
+    font-size:12.5px; font-weight:600; cursor:pointer; transition:all .18s; }
+  .v1 .sw { width:26px; height:15px; border-radius:999px; background:var(--tier); position:relative; flex-shrink:0; }
+  .v1 .sw::after { content:''; position:absolute; top:2px; left:13px; width:11px; height:11px; border-radius:99px;
+    background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25); transition:left .18s; }
+  .v1.off { background:transparent; border-color:var(--bd2); color:var(--txt3); font-weight:500; }
+  .v1.off .sw { background:var(--off-track); }
+  .v1.off .sw::after { left:2px; background:var(--off-knob); }
+
+  /* ── V2: dot-pill ── */
+  .v2 { display:inline-flex; align-items:center; gap:8px; padding:7px 14px; border-radius:999px;
+    border:1px solid var(--tier-bd); background:var(--tier-soft); color:var(--tier);
+    font-size:12.5px; font-weight:600; cursor:pointer; transition:all .18s; }
+  .v2 .dot { width:9px; height:9px; border-radius:99px; background:var(--tier); flex-shrink:0; transition:all .18s; }
+  .v2.off { background:transparent; border-color:var(--bd2); color:var(--txt3); font-weight:500; }
+  .v2.off .dot { background:transparent; box-shadow:inset 0 0 0 1.5px var(--txt3); }
+
+  /* ── V3: underline tabs ── */
+  .v3row { display:flex; gap:4px; border-bottom:1px solid var(--bd); }
+  .v3 { position:relative; padding:8px 14px 10px; font-size:13px; font-weight:600; color:var(--tier);
+    cursor:pointer; transition:color .18s; }
+  .v3::after { content:''; position:absolute; left:10px; right:10px; bottom:-1px; height:3px; border-radius:3px 3px 0 0;
+    background:var(--tier); transition:opacity .18s; }
+  .v3.off { color:var(--txt3); font-weight:500; }
+  .v3.off::after { opacity:0; }
+  .v3 .n { margin-left:6px; }
+
+  /* ── V4: segmented bar ── */
+  .v4wrap { display:inline-flex; background:var(--seg-bg); border:1px solid var(--bd); border-radius:999px; padding:3px; gap:2px; }
+  .v4 { display:inline-flex; align-items:center; gap:7px; padding:6px 14px; border-radius:999px;
+    font-size:12.5px; font-weight:600; color:var(--tier); background:var(--card);
+    box-shadow:0 1px 2px rgba(0,0,0,.08), inset 0 0 0 1px var(--tier-bd); cursor:pointer; transition:all .18s; }
+  .v4.off { background:transparent; box-shadow:none; color:var(--txt3); font-weight:500; }
+  .v4 .n { opacity:.7; }
+</style>
+</head>
+<body>
+
+<h1>Category Toggles — 4 Variants (icon-free)</h1>
+<p class="intro">
+Same behavior in all four: <b>ON</b> shows the tier's entire section (header + cards), <b>OFF</b> hides it.
+All show the per-section skill count and use the tier color ramp (stone / blue / indigo / cyan). "Advanced" is shown
+OFF in each sample. Left = light, right = dark.
+</p>
+
+<div class="v-title"><span class="tag">V1</span>Switch-pill</div>
+<p class="v-sub">Pill with a miniature sliding switch — the most explicit "this is a visibility toggle" affordance. Knob slides, track fills with tier color.</p>
+<div class="pair">
+  <div class="stage light"><div class="row">
+    <span class="t-found v1"><span class="sw"></span>Foundational <span class="n">2</span></span>
+    <span class="t-core v1"><span class="sw"></span>Core <span class="n">3</span></span>
+    <span class="t-adv v1 off"><span class="sw"></span>Advanced <span class="n">1</span></span>
+    <span class="t-ai v1"><span class="sw"></span>AI &amp; Future <span class="n">1</span></span>
+  </div></div>
+  <div class="stage dark"><div class="row">
+    <span class="t-found v1"><span class="sw"></span>Foundational <span class="n">2</span></span>
+    <span class="t-core v1"><span class="sw"></span>Core <span class="n">3</span></span>
+    <span class="t-adv v1 off"><span class="sw"></span>Advanced <span class="n">1</span></span>
+    <span class="t-ai v1"><span class="sw"></span>AI &amp; Future <span class="n">1</span></span>
+  </div></div>
+</div>
+
+<div class="v-title"><span class="tag">V2</span>Dot-pill</div>
+<p class="v-sub">Quietest option: a tier-colored status dot inside the pill. ON = solid dot + tint; OFF = hollow dot, outlined. Reads like a legend that you can click.</p>
+<div class="pair">
+  <div class="stage light"><div class="row">
+    <span class="t-found v2"><span class="dot"></span>Foundational <span class="n">2</span></span>
+    <span class="t-core v2"><span class="dot"></span>Core <span class="n">3</span></span>
+    <span class="t-adv v2 off"><span class="dot"></span>Advanced <span class="n">1</span></span>
+    <span class="t-ai v2"><span class="dot"></span>AI &amp; Future <span class="n">1</span></span>
+  </div></div>
+  <div class="stage dark"><div class="row">
+    <span class="t-found v2"><span class="dot"></span>Foundational <span class="n">2</span></span>
+    <span class="t-core v2"><span class="dot"></span>Core <span class="n">3</span></span>
+    <span class="t-adv v2 off"><span class="dot"></span>Advanced <span class="n">1</span></span>
+    <span class="t-ai v2"><span class="dot"></span>AI &amp; Future <span class="n">1</span></span>
+  </div></div>
+</div>
+
+<div class="v-title"><span class="tag">V3</span>Underline tabs</div>
+<p class="v-sub">Most editorial — matches the numbered headers. Text + count with a 3px tier underline when ON; muted text, no underline when OFF. Sits flush over the grid like a tab bar.</p>
+<div class="pair">
+  <div class="stage light"><div class="v3row">
+    <span class="t-found v3">Foundational<span class="n">2</span></span>
+    <span class="t-core v3">Core<span class="n">3</span></span>
+    <span class="t-adv v3 off">Advanced<span class="n">1</span></span>
+    <span class="t-ai v3">AI &amp; Future<span class="n">1</span></span>
+  </div></div>
+  <div class="stage dark"><div class="v3row">
+    <span class="t-found v3">Foundational<span class="n">2</span></span>
+    <span class="t-core v3">Core<span class="n">3</span></span>
+    <span class="t-adv v3 off">Advanced<span class="n">1</span></span>
+    <span class="t-ai v3">AI &amp; Future<span class="n">1</span></span>
+  </div></div>
+</div>
+
+<div class="v-title"><span class="tag">V4</span>Segmented bar</div>
+<p class="v-sub">All four live in one recessed track; ON segments are raised white/dark chips with a tier ring, OFF segments sink into the track. Compact, reads as one control.</p>
+<div class="pair">
+  <div class="stage light"><div class="v4wrap">
+    <span class="t-found v4">Foundational <span class="n">2</span></span>
+    <span class="t-core v4">Core <span class="n">3</span></span>
+    <span class="t-adv v4 off">Advanced <span class="n">1</span></span>
+    <span class="t-ai v4">AI &amp; Future <span class="n">1</span></span>
+  </div></div>
+  <div class="stage dark"><div class="v4wrap">
+    <span class="t-found v4">Foundational <span class="n">2</span></span>
+    <span class="t-core v4">Core <span class="n">3</span></span>
+    <span class="t-adv v4 off">Advanced <span class="n">1</span></span>
+    <span class="t-ai v4">AI &amp; Future <span class="n">1</span></span>
+  </div></div>
+</div>
+
+<p class="intro" style="margin-top:26px;">
+All variants ship with the same logic fix: the auto-re-enable that currently undoes your toggle will run only on first
+load, so OFF stays off until you switch it back. Buttons keep <code>aria-pressed</code> for accessibility.
+</p>
+
+</body>
+</html>

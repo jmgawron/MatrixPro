@@ -19,6 +19,7 @@ from app.models.plan import (
 )
 from app.models.skill import Skill, SkillTeam
 from app.models.user import User, UserRole
+from app.services.skill_ownership import ROLE_CONSUMER, team_associated_skills
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 
@@ -276,14 +277,9 @@ def export_team_matrix_csv(
         .all()
     )
 
-    skill_ids = db.query(SkillTeam.skill_id).filter(SkillTeam.team_id == team_id).all()
-    skill_id_list = [row[0] for row in skill_ids]
-    skills = (
-        db.query(Skill)
-        .filter(Skill.id.in_(skill_id_list), Skill.is_archived == False)  # noqa: E712
-        .order_by(Skill.name)
-        .all()
-    )
+    associated = team_associated_skills(db, team_id)
+    skills = [skill for skill, _role in associated]
+    role_by_skill_id = {skill.id: role for skill, role in associated}
 
     engineer_ids = [e.id for e in engineers]
     plans = (
@@ -302,7 +298,10 @@ def export_team_matrix_csv(
     output = io.StringIO()
     writer = csv.writer(output)
 
-    header = ["Engineer Name"] + [s.name for s in skills]
+    header = ["Engineer Name"] + [
+        f"{s.name} [consumer]" if role_by_skill_id.get(s.id) == ROLE_CONSUMER else s.name
+        for s in skills
+    ]
     writer.writerow(header)
 
     for engineer in engineers:

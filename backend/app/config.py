@@ -32,6 +32,15 @@ class Settings:
         ).split(",")
         if origin.strip()
     ]
+    LOG_LEVEL: str = os.getenv("MATRIXPRO_LOG_LEVEL", "INFO")
+    LOG_TO_FILE: bool = os.getenv("MATRIXPRO_LOG_FILE", "0").lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    LOG_DIR: str = os.getenv("MATRIXPRO_LOG_DIR", str(_project_root / "logs"))
+    LOG_RETENTION_DAYS: int = int(os.getenv("MATRIXPRO_LOG_RETENTION_DAYS", "30"))
 
     def validate(self) -> None:
         if self.ENV.lower() in ("production", "prod"):

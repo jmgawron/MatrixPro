@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Catalog Page · Category Layout Propositions</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-cat-page">
+  <style>
+    /* ── Mockup chrome ── */
+    .cp-chrome {
+      position: sticky; top: 0; z-index: 900;
+      background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 12px 20px;
+    }
+    .cp-chrome__row {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+      max-width: 1400px; margin: 0 auto;
+    }
+    .cp-chrome h1 { font-size: 14px; font-weight: 800; margin: 0; }
+    .cp-chrome p { font-size: 11px; color: var(--text-muted); margin: 0; flex: 1; min-width: 200px; }
+    .cp-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .cp-tab {
+      border: 1px solid var(--border-soft); background: var(--bg-card-soft);
+      color: var(--text-secondary); font-size: 11px; font-weight: 600;
+      padding: 6px 11px; border-radius: 999px; cursor: pointer;
+    }
+    .cp-tab.active {
+      background: var(--accent-soft); border-color: var(--accent); color: var(--accent);
+    }
+    .cp-btn {
+      border: 1px solid var(--border-soft); background: var(--bg-card);
+      color: var(--text-secondary); font-size: 11px; font-weight: 600;
+      padding: 6px 10px; border-radius: var(--radius-sm); cursor: pointer;
+    }
+    .cp-link { font-size: 11px; color: var(--text-muted); text-decoration: none; border-bottom: 1px dashed var(--border-soft); }
+    .cp-link:hover { color: var(--accent); }
+
+    .cp-prop { display: none; }
+    .cp-prop.active { display: block; }
+
+    .cp-banner {
+      max-width: 1400px; margin: 0 auto; padding: 10px 24px 0;
+      font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+    }
+    .cp-banner strong { color: var(--text-primary); }
+
+    /* ── Aurora Slate cards (shared) ── */
+    .as-card {
+      --as-t1: var(--cat-core-accent); --as-t2: var(--accent-strong); --as-soft: var(--accent-soft);
+      --as-ring-a: rgba(107,127,157,.4); --as-ring-b: rgba(92,177,255,.5); --as-ring-c: rgba(59,130,246,.38);
+      position: relative; cursor: pointer; border-radius: 16px; padding: 2px; overflow: hidden;
+      background: linear-gradient(135deg, var(--as-ring-a), var(--as-ring-b), var(--as-ring-c), var(--as-ring-a));
+      background-size: 280% 280%; animation: as-aurora 14s ease infinite;
+      transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s;
+    }
+    .as-card[data-cat="foundational"] {
+      --as-t1: var(--cat-foundational-accent); --as-t2: var(--text-secondary); --as-soft: rgba(100,116,139,.12);
+      --as-ring-a: rgba(71,85,105,.32); --as-ring-b: rgba(148,163,184,.38); --as-ring-c: rgba(107,127,157,.32);
+    }
+    .as-card[data-cat="core"] { --as-t1: var(--cat-core-accent); --as-t2: var(--accent-strong); --as-soft: var(--accent-soft); }
+    .as-card[data-cat="advanced"] {
+      --as-t1: var(--cat-advanced-accent); --as-t2: #1e40af; --as-soft: rgba(59,130,246,.1);
+      --as-ring-a: rgba(71,85,105,.38); --as-ring-b: rgba(59,130,246,.42); --as-ring-c: rgba(37,99,235,.32);
+    }
+    .as-card[data-cat="ai"] {
+      --as-t1: var(--cat-ai-accent); --as-soft: rgba(37,99,235,.12);
+      --as-ring-a: rgba(59,130,246,.32); --as-ring-b: rgba(92,177,255,.4); --as-ring-c: rgba(29,78,216,.35);
+    }
+    @keyframes as-aurora { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+    @media (prefers-reduced-motion: reduce) { .as-card { animation: none !important; } }
+
+    .as-card__inner {
+      background: color-mix(in srgb, var(--bg-card) 94%, var(--bg-page));
+      border-radius: 14px; padding: 14px 14px 12px; min-height: 152px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06); position: relative;
+    }
+    [data-theme="light"] .as-card__inner { background: color-mix(in srgb, var(--bg-card) 96%, #fff); }
+    .as-card__glow {
+      position: absolute; top: -32px; right: -24px; width: 100px; height: 100px;
+      background: radial-gradient(circle, var(--as-soft), transparent 72%); pointer-events: none;
+    }
+    .as-card__head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
+    .as-card__icon {
+      width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(145deg, color-mix(in srgb, var(--as-t1) 85%, var(--bg-elevated)), color-mix(in srgb, var(--as-t2) 70%, #0f172a));
+      color: #e8eef7; border: 1px solid color-mix(in srgb, var(--as-t1) 28%, var(--border-soft));
+      box-shadow: 0 6px 18px color-mix(in srgb, var(--as-t2) 20%, transparent);
+    }
+    [data-theme="light"] .as-card__icon { color: var(--as-t2); box-shadow: 0 4px 12px rgba(15,23,42,.07); }
+    .as-card__icon svg { width: 22px; height: 22px; }
+    .as-card__cat { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--as-t1); }
+    .as-card__name { font-size: 14px; font-weight: 800; margin: 0; line-height: 1.25; color: var(--text-primary); }
+    .as-card__desc {
+      font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 10px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .as-card__foot { display: flex; flex-direction: column; gap: 6px; }
+    .as-card__meta { display: flex; align-items: flex-start; gap: 7px; }
+    .as-meta-icon { flex: 0 0 13px; width: 13px; margin-top: 4px; color: var(--text-muted); opacity: .85; }
+    .as-meta-icon svg { width: 13px; height: 13px; display: block; }
+    .as-card__certs, .as-card__tags { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+    .as-cert {
+      font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 5px;
+      background: var(--bg-elevated); border: 1px solid var(--border-soft); color: var(--text-secondary);
+    }
+    .as-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,.32); }
+
+    .cp-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    @media (min-width: 1100px) { .cp-card-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    /* Mock tree */
+    .cp-tree-item {
+      padding: 8px 14px; font-size: 12px; color: var(--text-secondary); cursor: pointer;
+      border-left: 2px solid transparent;
+    }
+    .cp-tree-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .cp-tree-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); }
+    .cp-tree-group {
+      padding: 10px 14px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted);
+    }
+
+    /* ═══ P1 — Editorial Stack (current baseline) ═══ */
+    .cp-p1 .catalog-category-section { border-bottom: 1px solid var(--border-soft); }
+    .cp-p1 .catalog-category-body { padding-bottom: 16px; }
+
+    /* ═══ P2 — Glass Vault (boxed panels) ═══ */
+    .cp-glass-sections { display: flex; flex-direction: column; gap: 16px; }
+    .cp-glass-section {
+      border-radius: var(--radius-lg); overflow: hidden;
+      border: 1px solid var(--border-soft);
+      background: color-mix(in srgb, var(--bg-card) 88%, transparent);
+      box-shadow: 0 8px 28px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    [data-theme="light"] .cp-glass-section { box-shadow: 0 8px 24px rgba(15,23,42,.06); }
+    .cp-glass-section::before {
+      content: ''; display: block; height: 3px;
+      background: linear-gradient(90deg, var(--cp-accent, var(--accent)), transparent 85%);
+    }
+    .cp-glass-section[data-cat="foundational"] { --cp-accent: var(--cat-foundational-accent); }
+    .cp-glass-section[data-cat="core"] { --cp-accent: var(--cat-core-accent); }
+    .cp-glass-section[data-cat="advanced"] { --cp-accent: var(--cat-advanced-accent); }
+    .cp-glass-section[data-cat="ai"] { --cp-accent: var(--cat-ai-accent); }
+    .cp-glass-section__head {
+      display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border-soft);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--cp-accent) 8%, transparent), transparent);
+    }
+    .cp-glass-section__icon { width: 18px; height: 18px; color: var(--cp-accent); }
+    .cp-glass-section__icon svg { width: 18px; height: 18px; }
+    .cp-glass-section__title {
+      margin: 0; flex: 1; font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-primary);
+    }
+    .cp-glass-section__count {
+      font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px;
+      background: color-mix(in srgb, var(--cp-accent) 14%, var(--bg-card-soft));
+      color: var(--cp-accent); border: 1px solid color-mix(in srgb, var(--cp-accent) 22%, transparent);
+    }
+    .cp-glass-section__body { padding: 14px 16px 16px; }
+    .cp-glass-section.collapsed .cp-glass-section__body { display: none; }
+    .cp-glass-section__toggle {
+      border: none; background: transparent; color: var(--text-muted); cursor: pointer;
+      padding: 4px; border-radius: 6px;
+    }
+    .cp-glass-section__toggle svg { width: 14px; height: 14px; transition: transform .2s; }
+    .cp-glass-section.collapsed .cp-glass-section__toggle svg { transform: rotate(-90deg); }
+
+    /* ═══ P3 — Category Rail ═══ */
+    .cp-rail-layout { display: flex; gap: 16px; min-height: 480px; }
+    .cp-rail {
+      width: 152px; flex-shrink: 0; position: sticky; top: 0; align-self: flex-start;
+      padding: 10px 8px; border-radius: var(--radius-lg);
+      background: var(--bg-card-soft); border: 1px solid var(--border-soft);
+    }
+    .cp-rail__label {
+      font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--text-muted); padding: 4px 8px 10px;
+    }
+    .cp-rail__btn {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 8px 10px; margin-bottom: 4px; border: none; border-radius: var(--radius-md);
+      background: transparent; color: var(--text-secondary); cursor: pointer; text-align: left;
+      font-size: 11px; font-weight: 600; border-left: 3px solid transparent;
+    }
+    .cp-rail__btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .cp-rail__btn.active {
+      background: var(--accent-soft); color: var(--accent);
+      border-left-color: var(--accent);
+    }
+    .cp-rail__btn svg { width: 14px; height: 14px; flex-shrink: 0; opacity: .85; }
+    .cp-rail__count {
+      margin-left: auto; font-size: 10px; font-weight: 700; color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .cp-rail__btn.active .cp-rail__count { color: var(--accent); }
+    .cp-rail-content { flex: 1; min-width: 0; }
+    .cp-rail-section { scroll-margin-top: 12px; margin-bottom: 28px; }
+    .cp-rail-section__head {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .cp-rail-section__head h3 {
+      margin: 0; font-size: 15px; font-weight: 800; letter-spacing: -.01em; color: var(--text-primary);
+    }
+    .cp-rail-section__head span {
+      font-size: 11px; color: var(--text-muted); font-weight: 600;
+    }
+
+    /* ═══ P4 — Focus Strip (category tabs filter grid) ═══ */
+    .cp-focus-bar {
+      display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 16px;
+      border-bottom: 1px solid var(--border-soft); margin-bottom: 18px;
+    }
+    .cp-focus-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 999px; cursor: pointer;
+      border: 1px solid var(--border-soft); background: var(--bg-card-soft);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      transition: all .15s;
+    }
+    .cp-focus-chip svg { width: 14px; height: 14px; }
+    .cp-focus-chip:hover { border-color: var(--border-strong); color: var(--text-primary); }
+    .cp-focus-chip.active {
+      background: var(--accent-soft); border-color: var(--accent); color: var(--accent);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+    }
+    .cp-focus-chip__count {
+      font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px;
+      background: rgba(255,255,255,.06); color: inherit; opacity: .9;
+    }
+    .cp-focus-hero {
+      display: none; margin-bottom: 16px; padding: 16px 18px; border-radius: var(--radius-lg);
+      border: 1px solid var(--border-soft);
+      background: linear-gradient(135deg, var(--accent-soft), transparent 70%);
+    }
+    .cp-focus-hero.visible { display: block; }
+    .cp-focus-hero h3 { margin: 0 0 4px; font-size: 18px; font-weight: 800; color: var(--text-primary); }
+    .cp-focus-hero p { margin: 0; font-size: 13px; color: var(--text-secondary); max-width: 520px; }
+    .cp-focus-panel { display: none; }
+    .cp-focus-panel.active { display: block; }
+  </style>
+</head>
+<body>
+  <header class="cp-chrome">
+    <div class="cp-chrome__row">
+      <h1>Catalog Page — Category Layouts</h1>
+      <p>Full Organization tab mockup · Aurora Slate cards · 4 ways to group categories</p>
+      <div class="cp-tabs" id="prop-tabs">
+        <button type="button" class="cp-tab active" data-prop="p1">1 · Editorial Stack</button>
+        <button type="button" class="cp-tab" data-prop="p2">2 · Glass Vault</button>
+        <button type="button" class="cp-tab" data-prop="p3">3 · Category Rail</button>
+        <button type="button" class="cp-tab" data-prop="p4">4 · Focus Strip</button>
+      </div>
+      <button type="button" class="cp-btn" id="theme-toggle">Light theme</button>
+      <a class="cp-link" href="catalog-skill-card-aurora-slate-mockup.html">Card detail →</a>
+    </div>
+  </header>
+
+  <p class="cp-banner" id="prop-banner">
+    <strong>Proposition 1 — Editorial Stack:</strong> Current §7.17 pattern — collapsible uppercase headers, transparent background, border-between sections. Lowest migration cost.
+  </p>
+
+  <div class="cp-prop active cp-p1" id="prop-p1"></div>
+  <div class="cp-prop cp-p2" id="prop-p2"></div>
+  <div class="cp-prop cp-p3" id="prop-p3"></div>
+  <div class="cp-prop cp-p4" id="prop-p4"></div>
+
+  <script>
+    const CAT_ICONS = {
+      foundational: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-7"/><path d="M9 8c0-2 1.5-3 3-3s3 1 3 3-1.5 3-3 3-3-1-3-3Z"/><path d="M6 12c-1.5 1-2 3-2 4h16c0-1-.5-3-2-4"/></svg>',
+      core: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 15 9l7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>',
+      advanced: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="12" rx="9" ry="4"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(120 12 12)"/></svg>',
+      ai: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/><path d="M5 19l1 2M19 19l-1 2M5 5l1-2M19 5l-1-2"/></svg>',
+    };
+    const SKILL_ICONS = {
+      switch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01"/></svg>',
+      vpn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+      route: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M8.5 16.5 15.5 8.5"/></svg>',
+      spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>',
+    };
+    const certMetaSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="5"/><path d="M8.56 14.23 5.45 22l3.83-1.15 2.17 3.62 3.11-7.73"/><path d="M15.44 14.23l3.11 7.73-3.83-1.15-2.17 3.62-3.11-7.73"/><polyline points="10 9 11 11 14 8"/></svg>';
+    const tagMetaSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"/></svg>';
+    const chevSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>';
+
+    const CATEGORIES = [
+      {
+        slug: 'foundational', name: 'Foundational', blurb: 'Cross-cutting basics every engineer needs before deep technology work.',
+        collapsedDefault: true,
+        skills: [
+          { cat: 'foundational', catLabel: 'Foundational', icon: 'switch', name: 'Layer 2 Switching Fundamentals', desc: 'MAC learning, flooding, and broadcast domains.', certs: ['CCNA'], tags: ['l2'] },
+          { cat: 'foundational', catLabel: 'Foundational', icon: 'switch', name: 'VLANs, Trunking & VTP', desc: '802.1Q, native VLAN pitfalls, and VTP modes.', certs: ['CCNA'], tags: ['vlan'] },
+        ],
+      },
+      {
+        slug: 'core', name: 'Core', blurb: 'Day-to-day operational skills for campus switching and enterprise VPN.',
+        collapsedDefault: false,
+        skills: [
+          { cat: 'core', catLabel: 'Core', icon: 'switch', name: 'Catalyst 9000 IOS-XE Operations', desc: 'ISSU, stack management, licensing, show-tech workflows.', certs: ['CCNP ENCOR'], tags: ['ios-xe'] },
+          { cat: 'core', catLabel: 'Core', icon: 'vpn', name: 'AnyConnect Remote-Access VPN', desc: 'Profiles, DAP, split tunneling, and posture.', certs: ['CCNP Security'], tags: ['vpn'] },
+        ],
+      },
+      {
+        slug: 'advanced', name: 'Advanced', blurb: 'Escalation-grade troubleshooting and fabric-level analysis.',
+        collapsedDefault: true,
+        skills: [
+          { cat: 'advanced', catLabel: 'Advanced', icon: 'route', name: 'VXLAN EVPN Campus Fabric', desc: 'Overlay control-plane and BUM analysis.', certs: ['CCIE EI'], tags: ['vxlan'] },
+          { cat: 'advanced', catLabel: 'Advanced', icon: 'route', name: 'EPC, ELAM & FED Capture', desc: 'Forwarding-plane debug and ASIC-level capture.', certs: ['CCIE EI'], tags: ['epc'] },
+        ],
+      },
+      {
+        slug: 'ai', name: 'AI & Future Skills', blurb: 'Automation, telemetry, and AI-assisted workflows.',
+        collapsedDefault: true,
+        skills: [
+          { cat: 'ai', catLabel: 'AI & Future', icon: 'spark', name: 'LLM-Assisted Log Triage', desc: 'Structured prompts and guardrails for log analysis.', certs: [], tags: ['ai-assisted'] },
+          { cat: 'ai', catLabel: 'AI & Future', icon: 'spark', name: 'Python & pyATS Automation', desc: 'Repeatable testbed automation for regression.', certs: ['DevNet Pro'], tags: ['python'] },
+        ],
+      },
+    ];
+
+    const BANNERS = {
+      p1: '<strong>Proposition 1 — Editorial Stack:</strong> Current §7.17 pattern — collapsible uppercase headers, transparent background, border-between sections. Lowest migration cost.',
+      p2: '<strong>Proposition 2 — Glass Vault:</strong> Each category is a rounded glass panel with accent top bar and contained card grid. Stronger visual grouping for Aurora cards.',
+      p3: '<strong>Proposition 3 — Category Rail:</strong> Sticky left navigator (My Plan chip pattern scaled up) + scrollable anchor sections. Best for long catalogs with quick jumps.',
+      p4: '<strong>Proposition 4 — Focus Strip:</strong> Horizontal category pills filter to one group at a time with a hero strip. Reduces vertical scroll; ideal when browsing one tier deeply.',
+    };
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function metaFoot(certs, tags) {
+      const rows = [];
+      if (certs.length) rows.push(`<div class="as-card__meta"><span class="as-meta-icon">${certMetaSvg}</span><div class="as-card__certs">${certs.map(c => `<span class="as-cert">${esc(c)}</span>`).join('')}</div></div>`);
+      if (tags.length) rows.push(`<div class="as-card__meta"><span class="as-meta-icon">${tagMetaSvg}</span><div class="as-card__tags">${tags.map(t => `<span class="triage-chip triage-feedback chip-sm">${esc(t)}</span>`).join('')}</div></div>`);
+      return rows.length ? `<div class="as-card__foot">${rows.join('')}</div>` : '';
+    }
+
+    function cardHtml(s) {
+      return `<article class="as-card" data-cat="${s.cat}">
+        <div class="as-card__inner">
+          <div class="as-card__glow"></div>
+          <div class="as-card__head">
+            <div class="as-card__icon">${SKILL_ICONS[s.icon]}</div>
+            <div><div class="as-card__cat">${esc(s.catLabel)}</div><h4 class="as-card__name">${esc(s.name)}</h4></div>
+          </div>
+          <p class="as-card__desc">${esc(s.desc)}</p>
+          ${metaFoot(s.certs, s.tags)}
+        </div>
+      </article>`;
+    }
+
+    function cardsGrid(skills) {
+      return `<div class="cp-card-grid">${skills.map(cardHtml).join('')}</div>`;
+    }
+
+    function pageShell(skillsPanelHtml) {
+      return `<div class="cat-wrapper">
+        <div class="cat-hero mp-header">
+          <div class="mp-header-text">
+            <h1 class="mp-title">Skill <span class="mp-title-gradient">Catalog</span></h1>
+            <p class="mp-subtitle">Browse, search and manage the skill catalog</p>
+          </div>
+          <div class="stats-row">
+            <div class="stat-block"><div class="stat-block-value">70</div><div class="stat-block-label">Skills</div></div>
+            <div class="stat-block"><div class="stat-block-value">84</div><div class="stat-block-label">Teams</div></div>
+            <div class="stat-block"><div class="stat-block-value">27</div><div class="stat-block-label">Certifications</div></div>
+          </div>
+        </div>
+        <div class="cat-tabs catalog-tab-bar">
+          <button type="button" class="catalog-tab active">Organization</button>
+          <button type="button" class="catalog-tab">Certification</button>
+          <button type="button" class="catalog-tab">Non-Technical</button>
+        </div>
+        <div class="cat-toolbar">
+          <div class="cat-toolbar-left">
+            <div class="cat-shift-filters">
+              <span class="cat-shift-filters__label">Shifts</span>
+              <div class="cat-shift-filters__chips">
+                <button type="button" class="cat-shift-btn active">Shift 1</button>
+                <button type="button" class="cat-shift-btn active">Shift 2</button>
+                <button type="button" class="cat-shift-btn">Shift 3</button>
+                <button type="button" class="cat-shift-btn">Shift 4</button>
+              </div>
+            </div>
+            <div class="catalog-search-wrap">
+              <input type="text" class="search-input" placeholder="Filter by tag..." value="">
+            </div>
+          </div>
+          <div class="cat-toolbar-right">
+            <button type="button" class="cat-sort-btn">Sort · Name A → Z</button>
+          </div>
+        </div>
+        <div class="cat-content">
+          <div class="cat-tree-panel">
+            <div class="cp-tree-group">Enterprise Networking</div>
+            <div class="cp-tree-item active">TAC-ENT-LANSW-SHIFT2</div>
+            <div class="cp-tree-item">TAC-ENT-ROUT-SHIFT1</div>
+            <div class="cp-tree-item">TAC-ENT-WLAN-SHIFT1</div>
+            <div class="cp-tree-group">Data Center</div>
+            <div class="cp-tree-item">TAC-DC-ACI-SHIFT1</div>
+            <div class="cp-tree-group">Security</div>
+            <div class="cp-tree-item">TAC-SEC-FW-SHIFT1</div>
+          </div>
+          <div class="cat-skills-panel">${skillsPanelHtml}</div>
+        </div>
+      </div>`;
+    }
+
+    /* ── P1 Editorial Stack ── */
+    function buildP1() {
+      const sections = CATEGORIES.map(cat => {
+        const collapsed = cat.collapsedDefault;
+        return `<section class="catalog-category-section${collapsed ? ' collapsed' : ''}" data-category-slug="${cat.slug}">
+          <button type="button" class="catalog-category-header" aria-expanded="${!collapsed}">
+            <span class="catalog-category-chevron" aria-hidden="true"></span>
+            <span class="mp-icon catalog-category-icon-svg">${CAT_ICONS[cat.slug]}</span>
+            <h3 class="catalog-category-title">${esc(cat.name)}</h3>
+            <span class="catalog-category-count">${cat.skills.length}</span>
+          </button>
+          <div class="catalog-category-body">${cardsGrid(cat.skills)}</div>
+        </section>`;
+      }).join('');
+      document.getElementById('prop-p1').innerHTML = pageShell(`<div class="catalog-category-sections">${sections}</div>`);
+      document.getElementById('prop-p1').querySelectorAll('.catalog-category-header').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const sec = btn.closest('.catalog-category-section');
+          const c = sec.classList.toggle('collapsed');
+          btn.setAttribute('aria-expanded', c ? 'false' : 'true');
+        });
+      });
+    }
+
+    /* ── P2 Glass Vault ── */
+    function buildP2() {
+      const sections = CATEGORIES.map(cat => {
+        const collapsed = cat.collapsedDefault;
+        return `<section class="cp-glass-section${collapsed ? ' collapsed' : ''}" data-cat="${cat.slug}">
+          <div class="cp-glass-section__head">
+            <span class="cp-glass-section__icon">${CAT_ICONS[cat.slug]}</span>
+            <h3 class="cp-glass-section__title">${esc(cat.name)}</h3>
+            <span class="cp-glass-section__count">${cat.skills.length}</span>
+            <button type="button" class="cp-glass-section__toggle" aria-label="Toggle">${chevSvg}</button>
+          </div>
+          <div class="cp-glass-section__body">${cardsGrid(cat.skills)}</div>
+        </section>`;
+      }).join('');
+      document.getElementById('prop-p2').innerHTML = pageShell(`<div class="cp-glass-sections">${sections}</div>`);
+      document.getElementById('prop-p2').querySelectorAll('.cp-glass-section__toggle').forEach(btn => {
+        btn.addEventListener('click', () => btn.closest('.cp-glass-section').classList.toggle('collapsed'));
+      });
+    }
+
+    /* ── P3 Category Rail ── */
+    function buildP3() {
+      const rail = CATEGORIES.map((cat, i) =>
+        `<button type="button" class="cp-rail__btn${i === 1 ? ' active' : ''}" data-target="rail-${cat.slug}">
+          ${CAT_ICONS[cat.slug]} ${esc(cat.name)}<span class="cp-rail__count">${cat.skills.length}</span>
+        </button>`
+      ).join('');
+      const sections = CATEGORIES.map(cat =>
+        `<section class="cp-rail-section" id="rail-${cat.slug}">
+          <div class="cp-rail-section__head">
+            <span class="mp-icon" style="width:18px;height:18px;color:var(--cat-${cat.slug === 'ai' ? 'ai' : cat.slug}-accent)">${CAT_ICONS[cat.slug]}</span>
+            <h3>${esc(cat.name)}</h3><span>${cat.skills.length} skills</span>
+          </div>
+          ${cardsGrid(cat.skills)}
+        </section>`
+      ).join('');
+      document.getElementById('prop-p3').innerHTML = pageShell(`
+        <div class="cp-rail-layout">
+          <nav class="cp-rail" aria-label="Categories">
+            <div class="cp-rail__label">Jump to</div>${rail}
+          </nav>
+          <div class="cp-rail-content">${sections}</div>
+        </div>`);
+      const root = document.getElementById('prop-p3');
+      root.querySelectorAll('.cp-rail__btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          root.querySelectorAll('.cp-rail__btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById(btn.dataset.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    }
+
+    /* ── P4 Focus Strip ── */
+    function buildP4() {
+      const chips = ['all', ...CATEGORIES.map(c => c.slug)].map(slug => {
+        if (slug === 'all') return `<button type="button" class="cp-focus-chip active" data-focus="all">All categories<span class="cp-focus-chip__count">8</span></button>`;
+        const cat = CATEGORIES.find(c => c.slug === slug);
+        return `<button type="button" class="cp-focus-chip" data-focus="${slug}">${CAT_ICONS[slug]} ${esc(cat.name)}<span class="cp-focus-chip__count">${cat.skills.length}</span></button>`;
+      }).join('');
+      const panels = CATEGORIES.map((cat, i) =>
+        `<div class="cp-focus-panel${i === 1 ? ' active' : ''}" data-panel="${cat.slug}">
+          <div class="cp-focus-hero visible">
+            <h3>${esc(cat.name)}</h3>
+            <p>${esc(cat.blurb)}</p>
+          </div>
+          ${cardsGrid(cat.skills)}
+        </div>`
+      ).join('');
+      const allPanel = `<div class="cp-focus-panel" data-panel="all">
+        <div class="cp-focus-hero"></div>
+        ${CATEGORIES.map(cat => `<section style="margin-bottom:24px">
+          <h4 style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted)">${esc(cat.name)}</h4>
+          ${cardsGrid(cat.skills)}
+        </section>`).join('')}
+      </div>`;
+      document.getElementById('prop-p4').innerHTML = pageShell(`
+        <div class="cp-focus-bar">${chips}</div>
+        ${allPanel}${panels}`);
+
+      const root = document.getElementById('prop-p4');
+      root.querySelectorAll('.cp-focus-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          root.querySelectorAll('.cp-focus-chip').forEach(c => c.classList.remove('active'));
+          root.querySelectorAll('.cp-focus-panel').forEach(p => p.classList.remove('active'));
+          chip.classList.add('active');
+          const panel = root.querySelector(`.cp-focus-panel[data-panel="${chip.dataset.focus}"]`);
+          panel?.classList.add('active');
+        });
+      });
+      /* Default: Core focused like production */
+      root.querySelector('.cp-focus-chip[data-focus="core"]')?.click();
+    }
+
+    buildP1(); buildP2(); buildP3(); buildP4();
+
+    document.querySelectorAll('.cp-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.cp-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.cp-prop').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('prop-' + tab.dataset.prop).classList.add('active');
+        document.getElementById('prop-banner').innerHTML = BANNERS[tab.dataset.prop];
+      });
+    });
+
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      document.getElementById('theme-toggle').textContent = next === 'light' ? 'Dark theme' : 'Light theme';
+    });
+  </script>
+</body>
+</html>

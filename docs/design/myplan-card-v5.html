@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MatrixPro — My Plan Card V5 (Light + Dark)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#1a1d21; color:#e8eef7; padding:32px 32px 64px; }
+  h1 { font-size:21px; margin-bottom:6px; }
+  .intro { color:#9aa4b2; font-size:13px; margin-bottom:22px; max-width:920px; line-height:1.55; }
+  .theme-label { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:26px 0 8px; color:#9fe3b4; }
+
+  /* tier hues (same tokens as catalog V5) */
+  .light .t-core { --tier:#2563eb; --tier-soft:rgba(37,99,235,.08); --tier-bd:rgba(37,99,235,.22); }
+  .light .t-ai   { --tier:#0e7490; --tier-soft:rgba(8,145,178,.09); --tier-bd:rgba(8,145,178,.28); }
+  .dark .t-core  { --tier:#5cb1ff; --tier-soft:rgba(92,177,255,.12); --tier-bd:rgba(92,177,255,.32); }
+  .dark .t-ai    { --tier:#22d3ee; --tier-soft:rgba(34,211,238,.1); --tier-bd:rgba(34,211,238,.3); }
+  .t-personal { --tier:#7c3aed; --tier-soft:rgba(139,92,246,.1); --tier-bd:rgba(139,92,246,.3); }
+  .dark .t-personal { --tier:#a78bfa; --tier-soft:rgba(139,92,246,.16); --tier-bd:rgba(139,92,246,.4); }
+
+  .stage { border-radius:14px; padding:24px; max-width:1040px; border:1px solid rgba(255,255,255,.1); }
+  .light { background:#f8f8f7; color:#1c1917;
+    --txt:#1c1917; --txt2:#52514d; --txt3:#76746e; --card:#ffffff;
+    --bd:rgba(41,37,32,.09); --bd2:rgba(41,37,32,.12); --track:rgba(41,37,32,.08);
+    --shadow:0 1px 3px rgba(41,37,32,.08); --shadow-h:0 4px 14px rgba(41,37,32,.1); }
+  .dark { background:#070b12; color:#e8eef7;
+    --txt:#e8eef7; --txt2:#9fb0c9; --txt3:#6b7f9d; --card:#121824;
+    --bd:rgba(255,255,255,.07); --bd2:rgba(255,255,255,.12); --track:rgba(255,255,255,.08);
+    --shadow:0 2px 8px rgba(0,0,0,.18); --shadow-h:0 6px 20px rgba(0,0,0,.3); }
+
+  /* editorial category group header (same as catalog) */
+  .cat { display:flex; align-items:baseline; gap:12px; margin:0 0 14px; }
+  .cat .num { font-size:22px; font-weight:200; color:var(--tier); font-variant-numeric:tabular-nums; }
+  .cat h3 { font-size:16px; font-weight:800; color:var(--txt); }
+  .cat .rule { flex:1; height:1px; background:var(--bd2); }
+  .cat .count { font-size:11px; color:var(--txt3); }
+
+  .grid { display:grid; grid-template-columns:repeat(3,minmax(220px,1fr)); gap:16px; margin-bottom:26px; }
+  @media (max-width:980px){ .grid{grid-template-columns:1fr;} }
+
+  /* ── My Plan V5 card ── */
+  .card {
+    position:relative; background:var(--card); border:1px solid var(--bd); border-radius:12px;
+    padding:14px 14px 0; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:8px;
+    cursor:grab; overflow:hidden; transition:transform .15s, border-color .15s, box-shadow .15s;
+  }
+  .card:hover { transform:translateY(-1px); border-color:var(--tier-bd); box-shadow:var(--shadow-h); }
+  .head { display:flex; align-items:flex-start; gap:10px; }
+  .head-left { flex:1; min-width:0; }
+  .eyebrow { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--tier); margin-bottom:2px; }
+  .name { font-size:15px; font-weight:700; color:var(--txt); line-height:1.3; }
+  .head-right { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .gauge { width:30px; height:30px; border-radius:99px;
+    background:conic-gradient(var(--tier) calc(var(--p)*1%), var(--track) 0);
+    display:flex; align-items:center; justify-content:center; }
+  .gauge::after { content:attr(data-p); width:22px; height:22px; border-radius:99px; background:var(--card);
+    font-size:8.5px; font-weight:700; color:var(--txt2); display:flex; align-items:center; justify-content:center; }
+  .dots { color:var(--txt3); font-size:15px; line-height:1; padding:2px; opacity:.0; transition:opacity .15s; cursor:pointer; }
+  .card:hover .dots { opacity:1; }
+  .icon { width:30px; height:30px; border-radius:9px; background:var(--tier-soft); color:var(--tier);
+    display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+  .notes { font-size:12.5px; color:var(--txt2); line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .notes.placeholder { color:var(--txt3); font-style:italic; }
+
+  .footer { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:9px 0 11px; border-top:1px solid var(--bd); margin-top:2px; }
+  .prof { font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px;
+    border:1px solid var(--tier-bd); color:var(--tier); background:var(--tier-soft); }
+  .meta { font-size:11px; color:var(--txt3); }
+  .e3 { margin-left:auto; width:18px; height:18px; border-radius:6px; background:var(--tier-soft); color:var(--tier);
+    display:flex; align-items:center; justify-content:center; font-size:10px; }
+  .pbar { height:3px; margin:0 -14px; background:var(--track); }
+  .pbar i { display:block; height:100%; background:var(--tier); }
+
+  .personal-chip { font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--tier); border:1px solid var(--tier-bd); background:var(--tier-soft);
+    padding:1px 6px; border-radius:5px; margin-left:6px; vertical-align:1px; }
+</style>
+</head>
+<body>
+
+<h1>My Plan Card — V5 Editorial (consistent with Catalog)</h1>
+<p class="intro">
+Same visual language as the new catalog card — tier eyebrow, 15px name hero, tier-tinted icon tile top-right,
+divided footer, tier-tinted hover. <b>All My Plan functionality is preserved and restyled:</b>
+the circular content gauge sits beside the icon (now tier-colored), the ⋯ actions menu appears on hover like catalog
+admin actions, the proficiency level becomes a tier chip (L1–L5, label on hover), notes remain the body text,
+date + training logs render as quiet meta, the 3E focus indicator moves to the footer's right edge, and the bottom
+progress bar now fills in the tier color (full-width, flush with card edges). Drag &amp; drop, click-to-edit and the
+personal-skill treatment (violet tier) are unchanged. Category groups get the same numbered editorial headers as the catalog.
+</p>
+
+<div class="theme-label">Light theme</div>
+<div class="stage light">
+  <div class="t-core cat"><span class="num">02</span><h3>Core</h3><span class="rule"></span><span class="count">3 skills</span></div>
+  <div class="grid">
+    <div class="t-core card">
+      <div class="head">
+        <div class="head-left">
+          <div class="eyebrow">Core</div>
+          <div class="name">BGP Troubleshooting</div>
+        </div>
+        <div class="head-right">
+          <span class="dots">⋯</span>
+          <span class="gauge" style="--p:64" data-p="64%"></span>
+          <span class="icon">⇄</span>
+        </div>
+      </div>
+      <div class="notes">Focus on route-reflector scenarios; lab recreate for case 6912842.</div>
+      <div class="footer">
+        <span class="prof" title="Intermediate">L3</span>
+        <span class="meta">📅 May 28 · ✎ 4 logs</span>
+        <span class="e3" title="Exposure">◑</span>
+      </div>
+      <div class="pbar"><i style="width:64%"></i></div>
+    </div>
+
+    <div class="t-core card">
+      <div class="head">
+        <div class="head-left">
+          <div class="eyebrow">Core</div>
+          <div class="name">QoS Design</div>
+        </div>
+        <div class="head-right">
+          <span class="dots">⋯</span>
+          <span class="gauge" style="--p:20" data-p="20%"></span>
+          <span class="icon">☷</span>
+        </div>
+      </div>
+      <div class="notes placeholder">No notes added</div>
+      <div class="footer">
+        <span class="prof" title="Working">L2</span>
+        <span class="meta">📅 Jun 02 · ✎ 1 log</span>
+        <span class="e3" title="Education">◐</span>
+      </div>
+      <div class="pbar"><i style="width:20%"></i></div>
+    </div>
+
+    <div class="t-personal card">
+      <div class="head">
+        <div class="head-left">
+          <div class="eyebrow">Personal</div>
+          <div class="name">Public Speaking<span class="personal-chip">Personal</span></div>
+        </div>
+        <div class="head-right">
+          <span class="dots">⋯</span>
+          <span class="gauge" style="--p:40" data-p="40%"></span>
+          <span class="icon">★</span>
+        </div>
+      </div>
+      <div class="notes">Toastmasters sessions; volunteer for next all-hands demo.</div>
+      <div class="footer">
+        <span class="prof" title="Beginner">L1</span>
+        <span class="meta">📅 May 15 · ✎ 2 logs</span>
+      </div>
+      <div class="pbar"><i style="width:40%"></i></div>
+    </div>
+  </div>
+
+  <div class="t-ai cat"><span class="num">04</span><h3>AI &amp; Future Skills</h3><span class="rule"></span><span class="count">1 skill</span></div>
+  <div class="grid">
+    <div class="t-ai card">
+      <div class="head">
+        <div class="head-left">
+          <div class="eyebrow">AI &amp; Future</div>
+          <div class="name">LLM-Assisted Diagnostics</div>
+        </div>
+        <div class="head-right">
+          <span class="dots">⋯</span>
+          <span class="gauge" style="--p:85" data-p="85%"></span>
+          <span class="icon">✦</span>
+        </div>
+      </div>
+      <div class="notes">Pilot prompt library for log triage rolled out to the team.</div>
+      <div class="footer">
+        <span class="prof" title="Advanced">L4</span>
+        <span class="meta">📅 Jun 08 · ✎ 7 logs</span>
+        <span class="e3" title="Experience">●</span>
+      </div>
+      <div class="pbar"><i style="width:85%"></i></div>
+    </div>
+  </div>
+</div>
+
+<div class="theme-label">Dark theme</div>
+<div class="stage dark">
+  <div class="t-core cat"><span class="num">02</span><h3>Core</h3><span class="rule"></span><span class="count">2 skills</span></div>
+  <div class="grid">
+    <div class="t-core card">
+      <div class="head">
+        <div class="head-left">
+          <div class="eyebrow">Core</div>
+          <div class="name">BGP Troubleshooting</div>
+        </div>
+        <div class="head-right">
+          <span class="dots" style="opacity:1">⋯</span>
+          <span class="gauge" style="--p:64" data-p="64%"></span>
+          <span class="icon">⇄</span>
+        </div>
+      </div>
+      <div class="notes">Focus on route-reflector scenarios; lab recreate for case 6912842.</div>
+      <div class="footer">
+        <span class="prof" title="Intermediate">L3</span>
+        <span class="meta">📅 May 28 · ✎ 4 logs</span>
+        <span class="e3" title="Exposure">◑</span>
+      </div>
+      <div class="pbar"><i style="width:64%"></i></div>
+    </div>
+    <div class="t-personal card">
+      <div class="head">
+        <div class="head-left">
+          <div class="eyebrow">Personal</div>
+          <div class="name">Public Speaking<span class="personal-chip">Personal</span></div>
+        </div>
+        <div class="head-right">
+          <span class="dots">⋯</span>
+          <span class="gauge" style="--p:40" data-p="40%"></span>
+          <span class="icon">★</span>
+        </div>
+      </div>
+      <div class="notes">Toastmasters sessions; volunteer for next all-hands demo.</div>
+      <div class="footer">
+        <span class="prof" title="Beginner">L1</span>
+        <span class="meta">📅 May 15 · ✎ 2 logs</span>
+      </div>
+      <div class="pbar"><i style="width:40%"></i></div>
+    </div>
+  </div>
+</div>
+
+<p class="intro" style="margin-top:28px;">
+<b>Notes:</b> The ⋯ menu is shown on hover (always reachable via keyboard focus); the first card in the dark stage shows it
+visible. The status-gradient icon tiles (blue/gray/gold per section) are retired — the section header already states the
+stage, so the icon adopts the tier color exactly like the catalog. The 3E dot uses real SVG icons in the app (placeholder
+glyphs here). Multi-category skills show the group's tier on the eyebrow when grouped, falling back to primary category.
+</p>
+
+</body>
+</html>

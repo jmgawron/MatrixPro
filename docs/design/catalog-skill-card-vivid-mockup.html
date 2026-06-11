@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Catalog Skill Cards — Vivid Concepts (5–8)</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-vivid">
+  <style>
+    /* ── Vivid palette — deliberately NOT blue-first ── */
+    :root {
+      --vx-found: #34d399;
+      --vx-found-2: #059669;
+      --vx-core: #c084fc;
+      --vx-core-2: #9333ea;
+      --vx-adv: #2dd4bf;
+      --vx-adv-2: #0d9488;
+      --vx-ai: #f472b6;
+      --vx-ai-2: #db2777;
+      --vx-amber: #fbbf24;
+      --vx-coral: #fb7185;
+      --vx-spectrum: linear-gradient(135deg, #34d399 0%, #c084fc 35%, #f472b6 70%, #fbbf24 100%);
+    }
+
+    body { margin: 0; min-height: 100vh; background: var(--bg-page); }
+
+    .vx-chrome {
+      position: sticky; top: 0; z-index: 500;
+      background: color-mix(in srgb, var(--bg-panel) 88%, transparent);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 14px 24px;
+    }
+    .vx-chrome__row {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+    }
+    .vx-chrome h1 { font-size: 15px; font-weight: 800; margin: 0; letter-spacing: -.02em; }
+    .vx-chrome p { font-size: 12px; color: var(--text-muted); margin: 0; flex: 1; min-width: 220px; line-height: 1.45; }
+    .vx-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .vx-tab {
+      border: 1px solid var(--border-soft); background: var(--bg-card-soft);
+      color: var(--text-secondary); font-size: 11px; font-weight: 600;
+      padding: 7px 12px; border-radius: 999px; cursor: pointer;
+      transition: all .2s;
+    }
+    .vx-tab:hover { color: var(--text-primary); border-color: var(--border-strong); }
+    .vx-tab.active {
+      background: linear-gradient(135deg, rgba(192,132,252,.2), rgba(244,114,182,.15));
+      border-color: var(--vx-core);
+      color: #e9d5ff;
+      box-shadow: 0 0 20px rgba(192,132,252,.25);
+    }
+    .vx-btn {
+      border: 1px solid var(--border-soft); background: var(--bg-card);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer;
+    }
+    .vx-link {
+      font-size: 11px; color: var(--text-muted); text-decoration: none;
+      border-bottom: 1px dashed var(--border-soft);
+    }
+    .vx-link:hover { color: var(--vx-core); }
+
+    .vx-concept { display: none; }
+    .vx-concept.active { display: block; }
+
+    .vx-page { position: relative; min-height: calc(100vh - 80px); background: #0a0e14; }
+    [data-theme="light"] .vx-page { background: #f1f5f9; }
+
+    .vx-page__mesh {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 50% 40% at 12% 18%, rgba(52, 211, 153, .14), transparent 55%),
+        radial-gradient(ellipse 45% 35% at 88% 12%, rgba(192, 132, 252, .12), transparent 50%),
+        radial-gradient(ellipse 40% 30% at 72% 88%, rgba(244, 114, 182, .1), transparent 52%),
+        radial-gradient(ellipse 35% 28% at 8% 82%, rgba(251, 191, 36, .08), transparent 48%);
+    }
+    [data-theme="light"] .vx-page__mesh {
+      background:
+        radial-gradient(ellipse 50% 40% at 12% 18%, rgba(52, 211, 153, .08), transparent 55%),
+        radial-gradient(ellipse 45% 35% at 88% 12%, rgba(147, 51, 234, .07), transparent 50%),
+        radial-gradient(ellipse 40% 30% at 72% 88%, rgba(219, 39, 119, .06), transparent 52%);
+    }
+
+    .vx-inner { position: relative; z-index: 1; max-width: 1320px; margin: 0 auto; padding: 28px 24px 64px; }
+
+    .vx-intro { margin-bottom: 22px; max-width: 720px; }
+    .vx-intro h2 {
+      font-size: clamp(26px, 3.2vw, 36px); font-weight: 800; margin: 0 0 8px;
+      letter-spacing: -.03em;
+      background: var(--vx-spectrum);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .vx-intro p { font-size: 14px; color: var(--text-muted); margin: 0; line-height: 1.6; }
+
+    .vx-shell {
+      background: color-mix(in srgb, var(--bg-card) 82%, transparent);
+      backdrop-filter: blur(20px);
+      border: 1px solid color-mix(in srgb, var(--vx-core) 18%, var(--border-soft));
+      border-radius: var(--radius-xl);
+      box-shadow: 0 24px 64px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+      overflow: hidden;
+    }
+    [data-theme="light"] .vx-shell {
+      box-shadow: 0 16px 48px rgba(15,23,42,.08);
+      border-color: rgba(147,51,234,.12);
+    }
+
+    .vx-section-head {
+      display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+      border-bottom: 1px solid var(--border-soft);
+      background: linear-gradient(90deg, rgba(192,132,252,.08), transparent 60%);
+    }
+    .vx-section-title {
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--text-secondary); flex: 1; margin: 0;
+    }
+    .vx-section-count {
+      font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+      background: linear-gradient(135deg, rgba(192,132,252,.25), rgba(244,114,182,.15));
+      color: #e9d5ff; border: 1px solid rgba(192,132,252,.35);
+    }
+
+    .vx-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+      padding: 20px;
+    }
+    @media (max-width: 1100px) { .vx-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    /* ── Shared vivid card base ── */
+    .vx-card {
+      --vx-t1: var(--vx-core);
+      --vx-t2: var(--vx-core-2);
+      --vx-soft: rgba(192,132,252,.14);
+      position: relative; cursor: pointer; border-radius: 16px;
+      transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s;
+    }
+    .vx-card[data-cat="foundational"] { --vx-t1: var(--vx-found); --vx-t2: var(--vx-found-2); --vx-soft: rgba(52,211,153,.14); }
+    .vx-card[data-cat="core"] { --vx-t1: var(--vx-core); --vx-t2: var(--vx-core-2); --vx-soft: rgba(192,132,252,.14); }
+    .vx-card[data-cat="advanced"] { --vx-t1: var(--vx-adv); --vx-t2: var(--vx-adv-2); --vx-soft: rgba(45,212,191,.14); }
+    .vx-card[data-cat="ai"] { --vx-t1: var(--vx-ai); --vx-t2: var(--vx-ai-2); --vx-soft: rgba(244,114,182,.16); }
+
+    .vx-card__certs { display: flex; flex-wrap: wrap; gap: 5px; }
+    .vx-card__tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+    .vx-cert-vivid {
+      font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+      background: linear-gradient(135deg, rgba(251,191,36,.18), rgba(251,113,133,.12));
+      border: 1px solid rgba(251,191,36,.35); color: #fde68a;
+    }
+    [data-theme="light"] .vx-cert-vivid { color: #92400e; background: rgba(251,191,36,.2); }
+
+    .vx-card__actions {
+      position: absolute; top: 12px; right: 12px; z-index: 5;
+      display: flex; gap: 4px; opacity: 0; transition: opacity .2s;
+    }
+    .vx-card:hover .vx-card__actions { opacity: 1; }
+    .vx-card__action {
+      width: 30px; height: 30px; border-radius: 10px;
+      background: rgba(0,0,0,.45); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.12); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .vx-card__action svg { width: 14px; height: 14px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .vx-c5__ring { animation: none !important; }
+      .vx-c7::after { animation: none !important; }
+    }
+
+    /* ═══ C5 — Aurora Frame ═══ */
+    .vx-c5 {
+      padding: 2px; overflow: hidden;
+      background: linear-gradient(135deg, var(--vx-t1), var(--vx-t2), var(--vx-ai), var(--vx-amber));
+      background-size: 300% 300%;
+    }
+    .vx-c5__ring {
+      animation: vx-aurora 8s ease infinite;
+    }
+    @keyframes vx-aurora {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .vx-c5__inner {
+      background: color-mix(in srgb, var(--bg-card) 92%, #0a0e14);
+      border-radius: 14px; padding: 16px 16px 14px;
+      min-height: 168px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    }
+    [data-theme="light"] .vx-c5__inner { background: rgba(255,255,255,.94); }
+    .vx-c5__glow {
+      position: absolute; top: -40px; right: -30px; width: 120px; height: 120px;
+      background: radial-gradient(circle, var(--vx-soft), transparent 70%);
+      pointer-events: none;
+    }
+    .vx-c5__head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 10px; }
+    .vx-c5__icon {
+      width: 50px; height: 50px; border-radius: 14px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(145deg, var(--vx-t1), var(--vx-t2));
+      color: #fff; box-shadow: 0 8px 24px color-mix(in srgb, var(--vx-t2) 45%, transparent);
+    }
+    .vx-c5__icon svg { width: 24px; height: 24px; }
+    .vx-c5__name {
+      font-size: 16px; font-weight: 800; margin: 0 0 4px; line-height: 1.25;
+      background: linear-gradient(90deg, var(--text-primary), color-mix(in srgb, var(--vx-t1) 40%, var(--text-primary)));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .vx-c5__cat {
+      font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em;
+      color: var(--vx-t1);
+    }
+    .vx-c5__desc {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin: 0 0 12px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .vx-c5:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 20px 50px color-mix(in srgb, var(--vx-t2) 30%, transparent); }
+
+    /* ═══ C6 — Sunset Prism ═══ */
+    .vx-c6 {
+      border: 1px solid rgba(255,255,255,.08); overflow: hidden;
+      background: var(--bg-card);
+    }
+    .vx-c6__wash {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        linear-gradient(155deg,
+          color-mix(in srgb, var(--vx-coral) 22%, transparent) 0%,
+          transparent 38%),
+        linear-gradient(320deg,
+          color-mix(in srgb, var(--vx-core) 18%, transparent) 0%,
+          transparent 42%),
+        linear-gradient(40deg,
+          color-mix(in srgb, var(--vx-adv) 14%, transparent) 0%,
+          transparent 50%);
+      opacity: .9;
+    }
+    .vx-c6__shine {
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+    }
+    .vx-c6__body { position: relative; z-index: 1; padding: 18px 16px 16px; }
+    .vx-c6__top {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+      margin-bottom: 12px;
+    }
+    .vx-c6__icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: rgba(0,0,0,.25); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.15);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--vx-t1);
+      box-shadow: 0 0 20px color-mix(in srgb, var(--vx-t1) 35%, transparent);
+    }
+    .vx-c6__icon svg { width: 22px; height: 22px; }
+    .vx-c6__pill {
+      font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em;
+      padding: 4px 10px; border-radius: 999px;
+      background: linear-gradient(90deg, var(--vx-t1), var(--vx-t2));
+      color: #fff; white-space: nowrap;
+    }
+    .vx-c6__name { font-size: 17px; font-weight: 800; margin: 0 0 8px; letter-spacing: -.02em; }
+    .vx-c6__desc {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin: 0;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .vx-c6__foot {
+      margin-top: 14px; padding-top: 12px;
+      border-top: 1px solid color-mix(in srgb, var(--vx-t1) 20%, var(--border-soft));
+    }
+    .vx-c6:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 40px rgba(0,0,0,.4), 0 0 0 1px color-mix(in srgb, var(--vx-t1) 25%, transparent);
+    }
+
+    /* ═══ C7 — Neon Luminous ═══ */
+    .vx-c7 {
+      background: #0d1118; border: 1px solid rgba(255,255,255,.06);
+      overflow: hidden;
+    }
+    [data-theme="light"] .vx-c7 { background: #fff; }
+    .vx-c7::before {
+      content: ''; position: absolute; inset: -1px; border-radius: 16px; z-index: 0;
+      background: linear-gradient(180deg, var(--vx-t1), transparent 55%);
+      opacity: .35; pointer-events: none;
+    }
+    .vx-c7::after {
+      content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+      background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.07) 50%, transparent 60%);
+      animation: vx-sweep 4s ease-in-out infinite; pointer-events: none; z-index: 2;
+    }
+    @keyframes vx-sweep {
+      0% { left: -100%; }
+      50%, 100% { left: 150%; }
+    }
+    .vx-c7__underglow {
+      position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+      width: 80%; height: 40px;
+      background: radial-gradient(ellipse, var(--vx-t1), transparent 70%);
+      opacity: .35; filter: blur(12px); pointer-events: none;
+    }
+    .vx-c7__body { position: relative; z-index: 1; padding: 16px; }
+    .vx-c7__row { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+    .vx-c7__icon {
+      width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+      border: 2px solid var(--vx-t1);
+      box-shadow: 0 0 16px var(--vx-t1), inset 0 0 12px color-mix(in srgb, var(--vx-t1) 30%, transparent);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--vx-t1);
+    }
+    .vx-c7__icon svg { width: 20px; height: 20px; filter: drop-shadow(0 0 4px var(--vx-t1)); }
+    .vx-c7__name {
+      font-size: 15px; font-weight: 700; margin: 0;
+      text-shadow: 0 0 20px color-mix(in srgb, var(--vx-t1) 50%, transparent);
+    }
+    .vx-c7__desc {
+      font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 10px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .vx-c7:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 0 30px color-mix(in srgb, var(--vx-t1) 35%, transparent), 0 20px 40px rgba(0,0,0,.5);
+    }
+
+    /* ═══ C8 — Depth Mesh ═══ */
+    .vx-c8 {
+      border: 1px solid rgba(255,255,255,.1);
+      background: #12161f;
+      overflow: hidden;
+    }
+    [data-theme="light"] .vx-c8 { background: linear-gradient(165deg, #fff, #f8fafc); }
+    .vx-c8__mesh {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(at 20% 30%, color-mix(in srgb, var(--vx-t1) 25%, transparent), transparent 50%),
+        radial-gradient(at 80% 70%, color-mix(in srgb, var(--vx-t2) 20%, transparent), transparent 45%),
+        radial-gradient(at 50% 100%, color-mix(in srgb, var(--vx-amber) 8%, transparent), transparent 40%);
+    }
+    .vx-c8__noise {
+      position: absolute; inset: 0; opacity: .04; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .vx-c8__float {
+      position: absolute; top: 14px; left: 14px; z-index: 2;
+      width: 52px; height: 52px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.02));
+      border: 1px solid rgba(255,255,255,.2);
+      box-shadow:
+        0 12px 32px rgba(0,0,0,.45),
+        0 0 0 1px rgba(255,255,255,.05) inset,
+        0 0 24px color-mix(in srgb, var(--vx-t1) 30%, transparent);
+      color: var(--vx-t1);
+      transform: translateZ(0);
+      transition: transform .25s;
+    }
+    .vx-c8:hover .vx-c8__float { transform: translateY(-4px) rotate(-2deg); }
+    .vx-c8__float svg { width: 26px; height: 26px; }
+    .vx-c8__content { position: relative; z-index: 1; padding: 14px 16px 16px 78px; min-height: 130px; }
+    .vx-c8__name {
+      font-size: 16px; font-weight: 800; margin: 0 0 6px; padding-right: 48px;
+      background: linear-gradient(135deg, #fff 0%, var(--vx-t1) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    [data-theme="light"] .vx-c8__name {
+      background: linear-gradient(135deg, #0f172a 0%, var(--vx-t2) 100%);
+      -webkit-background-clip: text; background-clip: text;
+    }
+    .vx-c8__desc {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin: 0;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .vx-c8__meta {
+      margin-top: 12px; padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,.08);
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    }
+    .vx-c8:hover {
+      transform: translateY(-3px) perspective(800px) rotateX(1deg);
+      box-shadow: 0 24px 48px rgba(0,0,0,.5), 0 0 60px color-mix(in srgb, var(--vx-t1) 15%, transparent);
+    }
+
+    .vx-legend {
+      margin-top: 18px; padding: 14px 16px; border-radius: var(--radius-md);
+      background: rgba(255,255,255,.03); border: 1px solid var(--border-soft);
+      font-size: 12px; color: var(--text-muted); line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+  <header class="vx-chrome">
+    <div class="vx-chrome__row">
+      <h1>Catalog Cards — Vivid Concepts 5–8</h1>
+      <p>Multi-hue gradients, glow, and motion. No team rows — teams stay in modal. Less blue, more spectrum.</p>
+      <div class="vx-tabs">
+        <button type="button" class="vx-tab active" data-c="c5">5 · Aurora Frame</button>
+        <button type="button" class="vx-tab" data-c="c6">6 · Sunset Prism</button>
+        <button type="button" class="vx-tab" data-c="c7">7 · Neon Luminous</button>
+        <button type="button" class="vx-tab" data-c="c8">8 · Depth Mesh</button>
+      </div>
+      <button type="button" class="vx-btn" id="theme-toggle">Light theme</button>
+    </div>
+    <div class="vx-chrome__row" style="margin-top:10px;">
+      <a class="vx-link" href="catalog-skill-card-aurora-slate-mockup.html">Concept 5 muted · Aurora Slate →</a>
+      <a class="vx-link" href="catalog-skill-card-no-teams-mockup.html">← Concepts 1–4 (editorial / minimal)</a>
+    </div>
+  </header>
+
+  <section class="vx-concept active" id="concept-c5">
+    <div class="vx-page"><div class="vx-page__mesh"></div><div class="vx-inner">
+      <div class="vx-intro">
+        <h2>Aurora Frame</h2>
+        <p>Animated gradient border ring per category (emerald · violet · teal · rose). Inner glass panel, gradient title, soft icon glow. Bold without default Cisco-blue wash.</p>
+      </div>
+      <div class="vx-shell">
+        <div class="vx-section-head"><h3 class="vx-section-title">Core · Mixed spectrum</h3><span class="vx-section-count">3 samples</span></div>
+        <div class="vx-grid" id="grid-c5"></div>
+      </div>
+      <p class="vx-legend"><strong>Aurora Frame:</strong> Best “wow” factor. Respect <code>prefers-reduced-motion</code> — disable border animation in production.</p>
+    </div></div>
+  </section>
+
+  <section class="vx-concept" id="concept-c6">
+    <div class="vx-page"><div class="vx-page__mesh"></div><div class="vx-inner">
+      <div class="vx-intro">
+        <h2>Sunset Prism</h2>
+        <p>Layered coral → violet → teal washes across the card face. Gradient category pill, warm gold cert badges. Editorial and rich — still readable at scale.</p>
+      </div>
+      <div class="vx-shell">
+        <div class="vx-section-head"><h3 class="vx-section-title">Advanced</h3><span class="vx-section-count">3 samples</span></div>
+        <div class="vx-grid" id="grid-c6"></div>
+      </div>
+      <p class="vx-legend"><strong>Sunset Prism:</strong> Strongest departure from blue UI. Works well in dark theme; tune wash opacity for light.</p>
+    </div></div>
+  </section>
+
+  <section class="vx-concept" id="concept-c7">
+    <div class="vx-page"><div class="vx-page__mesh"></div><div class="vx-inner">
+      <div class="vx-intro">
+        <h2>Neon Luminous</h2>
+        <p>Dark canvas with category neon underglow, outlined icon halo, subtle light sweep. Cyber/TAC lab aesthetic — high contrast tags and certs.</p>
+      </div>
+      <div class="vx-shell">
+        <div class="vx-section-head"><h3 class="vx-section-title">AI &amp; Future</h3><span class="vx-section-count">3 samples</span></div>
+        <div class="vx-grid" id="grid-c7"></div>
+      </div>
+      <p class="vx-legend"><strong>Neon Luminous:</strong> Most dramatic hover. Reduce glow intensity if deploying to light theme default.</p>
+    </div></div>
+  </section>
+
+  <section class="vx-concept" id="concept-c8">
+    <div class="vx-page"><div class="vx-page__mesh"></div><div class="vx-inner">
+      <div class="vx-intro">
+        <h2>Depth Mesh</h2>
+        <p>Internal mesh gradients + film grain, floating icon with layered shadow, gradient title text, subtle 3D tilt on hover. Premium “card as object” feel.</p>
+      </div>
+      <div class="vx-shell">
+        <div class="vx-section-head"><h3 class="vx-section-title">Foundational + Core mix</h3><span class="vx-section-count">3 samples</span></div>
+        <div class="vx-grid" id="grid-c8"></div>
+      </div>
+      <p class="vx-legend"><strong>Depth Mesh:</strong> Balanced bold + sophistication. Category hue from mesh, not flat blue rails.</p>
+    </div></div>
+  </section>
+
+  <script>
+    const ICONS = {
+      switch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01"/></svg>',
+      vpn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+      route: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M8.5 16.5 15.5 8.5"/></svg>',
+      spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>',
+    };
+    const editSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    const dupSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
+    const SKILLS = {
+      c5: [
+        { cat: 'core', catLabel: 'Core', icon: 'switch', name: 'Catalyst 9000 IOS-XE Operations', desc: 'ISSU, stack management, licensing, and show-tech workflows for campus platforms.', certs: ['CCNP ENCOR'], tags: ['ios-xe', 'campus'] },
+        { cat: 'foundational', catLabel: 'Foundational', icon: 'switch', name: 'Layer 2 Switching Fundamentals', desc: 'MAC learning, flooding, and broadcast domains for new TAC engineers.', certs: ['CCNA'], tags: ['l2', 'basics'] },
+        { cat: 'ai', catLabel: 'AI & Future', icon: 'spark', name: 'LLM-Assisted Log Triage', desc: 'Structured prompts and guardrails for faster log analysis.', certs: [], tags: ['ai-assisted'] },
+      ],
+      c6: [
+        { cat: 'advanced', catLabel: 'Advanced', icon: 'route', name: 'BGP Route-Reflector Design', desc: 'Multi-AS BGP, RR clusters, and confederation troubleshooting at escalation depth.', certs: ['CCIE EI'], tags: ['bgp'] },
+        { cat: 'advanced', catLabel: 'Advanced', icon: 'route', name: 'SD-Access Underlay Troubleshooting', desc: 'Fabric edge, control-plane, and underlay reachability for SDA.', certs: ['CCIE EI'], tags: ['sda'] },
+        { cat: 'advanced', catLabel: 'Advanced', icon: 'switch', name: 'VXLAN EVPN Campus Fabric', desc: 'Overlay control-plane and BUM analysis for modern fabric.', certs: ['CCIE EI'], tags: ['vxlan'] },
+      ],
+      c7: [
+        { cat: 'ai', catLabel: 'AI & Future', icon: 'spark', name: 'Python & pyATS Automation', desc: 'Repeatable testbed automation for regression and repro.', certs: ['DevNet Pro'], tags: ['python', 'pyats'] },
+        { cat: 'ai', catLabel: 'AI & Future', icon: 'spark', name: 'Telemetry & AIOps Pipelines', desc: 'Model-driven telemetry, baselines, and ChatOps hooks.', certs: [], tags: ['telemetry'] },
+        { cat: 'core', catLabel: 'Core', icon: 'vpn', name: 'AnyConnect Remote-Access VPN', desc: 'Profiles, DAP, split tunneling, and posture for enterprise VPN.', certs: ['CCNP Security'], tags: ['vpn'] },
+      ],
+      c8: [
+        { cat: 'foundational', catLabel: 'Foundational', icon: 'switch', name: 'VLANs, Trunking & VTP', desc: '802.1Q, native VLAN pitfalls, and VTP modes in production networks.', certs: ['CCNA'], tags: ['vlan'] },
+        { cat: 'core', catLabel: 'Core', icon: 'switch', name: 'QoS on Campus Switches', desc: 'Marking, queuing, and policing for voice/video congestion cases.', certs: ['CCNP ENCOR'], tags: ['qos'] },
+        { cat: 'advanced', catLabel: 'Advanced', icon: 'route', name: 'EPC, ELAM & FED Capture', desc: 'Forwarding-plane debug and ASIC-level packet capture workflows.', certs: ['CCIE EI'], tags: ['epc', 'debug'] },
+      ],
+    };
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function actions() {
+      return `<div class="vx-card__actions"><span class="vx-card__action">${editSvg}</span><span class="vx-card__action">${dupSvg}</span></div>`;
+    }
+    function certs(c) { return c.map(x => `<span class="vx-cert-vivid">${esc(x)}</span>`).join(''); }
+    function tags(t) { return t.map(x => `<span class="triage-chip triage-feedback chip-sm">${esc(x)}</span>`).join(''); }
+
+    function renderC5(el, list) {
+      el.innerHTML = list.map(s => `
+        <article class="vx-card vx-c5 vx-c5__ring" data-cat="${s.cat}">
+          <div class="vx-c5__inner">
+            <div class="vx-c5__glow"></div>
+            ${actions()}
+            <div class="vx-c5__head">
+              <div class="vx-c5__icon">${ICONS[s.icon]}</div>
+              <div>
+                <div class="vx-c5__cat">${esc(s.catLabel)}</div>
+                <h4 class="vx-c5__name">${esc(s.name)}</h4>
+              </div>
+            </div>
+            <p class="vx-c5__desc">${esc(s.desc)}</p>
+            <div class="vx-card__certs">${certs(s.certs)}</div>
+            <div class="vx-card__tags">${tags(s.tags)}</div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function renderC6(el, list) {
+      el.innerHTML = list.map(s => `
+        <article class="vx-card vx-c6" data-cat="${s.cat}">
+          <div class="vx-c6__wash"></div>
+          <div class="vx-c6__shine"></div>
+          ${actions()}
+          <div class="vx-c6__body">
+            <div class="vx-c6__top">
+              <div class="vx-c6__icon">${ICONS[s.icon]}</div>
+              <span class="vx-c6__pill">${esc(s.catLabel)}</span>
+            </div>
+            <h4 class="vx-c6__name">${esc(s.name)}</h4>
+            <p class="vx-c6__desc">${esc(s.desc)}</p>
+            <div class="vx-c6__foot">
+              <div class="vx-card__certs">${certs(s.certs)}</div>
+              <div class="vx-card__tags">${tags(s.tags)}</div>
+            </div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function renderC7(el, list) {
+      el.innerHTML = list.map(s => `
+        <article class="vx-card vx-c7" data-cat="${s.cat}">
+          <div class="vx-c7__underglow"></div>
+          ${actions()}
+          <div class="vx-c7__body">
+            <div class="vx-c7__row">
+              <div class="vx-c7__icon">${ICONS[s.icon]}</div>
+              <h4 class="vx-c7__name">${esc(s.name)}</h4>
+            </div>
+            <p class="vx-c7__desc">${esc(s.desc)}</p>
+            <div class="vx-card__certs">${certs(s.certs)}</div>
+            <div class="vx-card__tags">${tags(s.tags)}</div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function renderC8(el, list) {
+      el.innerHTML = list.map(s => `
+        <article class="vx-card vx-c8" data-cat="${s.cat}">
+          <div class="vx-c8__mesh"></div>
+          <div class="vx-c8__noise"></div>
+          <div class="vx-c8__float">${ICONS[s.icon]}</div>
+          ${actions()}
+          <div class="vx-c8__content">
+            <h4 class="vx-c8__name">${esc(s.name)}</h4>
+            <p class="vx-c8__desc">${esc(s.desc)}</p>
+            <div class="vx-c8__meta">
+              <span class="vx-c6__pill" style="font-size:8px;padding:3px 8px;">${esc(s.catLabel)}</span>
+              ${certs(s.certs)} ${tags(s.tags)}
+            </div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    renderC5(document.getElementById('grid-c5'), SKILLS.c5);
+    renderC6(document.getElementById('grid-c6'), SKILLS.c6);
+    renderC7(document.getElementById('grid-c7'), SKILLS.c7);
+    renderC8(document.getElementById('grid-c8'), SKILLS.c8);
+
+    document.querySelectorAll('.vx-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.vx-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.vx-concept').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('concept-' + tab.dataset.c).classList.add('active');
+      });
+    });
+
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      document.getElementById('theme-toggle').textContent = next === 'light' ? 'Dark theme' : 'Light theme';
+    });
+  </script>
+</body>
+</html>

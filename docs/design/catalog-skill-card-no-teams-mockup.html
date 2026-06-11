@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Catalog Skill Cards (No Team Rows) — 4 Concepts</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-no-teams">
+  <style>
+    body { margin: 0; min-height: 100vh; background: var(--bg-page); }
+
+    .nt-chrome {
+      position: sticky; top: 0; z-index: 500;
+      background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 14px 24px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+    }
+    .nt-chrome h1 { font-size: 15px; font-weight: 800; margin: 0; letter-spacing: -.02em; }
+    .nt-chrome p { font-size: 12px; color: var(--text-muted); margin: 0; flex: 1; min-width: 240px; line-height: 1.45; }
+    .nt-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .nt-tab {
+      border: 1px solid var(--border-soft); background: var(--bg-card-soft);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 7px 14px; border-radius: 999px; cursor: pointer;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .nt-tab:hover { color: var(--text-primary); border-color: var(--border-strong); }
+    .nt-tab.active {
+      background: var(--accent-soft, rgba(59,130,246,.12));
+      border-color: var(--accent); color: var(--accent);
+    }
+    .nt-btn {
+      border: 1px solid var(--border-soft); background: var(--bg-card);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer;
+    }
+
+    .nt-concept { display: none; }
+    .nt-concept.active { display: block; }
+
+    .nt-page {
+      position: relative; min-height: calc(100vh - 64px);
+      background: var(--home-bg);
+    }
+    .nt-page__mesh {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 65% 40% at 85% 8%, rgba(92, 177, 255, .09), transparent 58%),
+        radial-gradient(ellipse 45% 35% at 5% 92%, rgba(37, 99, 235, .06), transparent 55%);
+    }
+    .nt-inner {
+      position: relative; z-index: 1;
+      max-width: 1320px; margin: 0 auto; padding: 28px 24px 64px;
+    }
+
+    .nt-intro {
+      display: grid; grid-template-columns: 1fr 320px; gap: 24px; margin-bottom: 24px;
+    }
+    @media (max-width: 960px) { .nt-intro { grid-template-columns: 1fr; } }
+
+    .nt-intro__copy h2 {
+      font-size: clamp(24px, 3vw, 32px); font-weight: 800; margin: 0 0 8px; letter-spacing: -.025em;
+    }
+    .nt-intro__copy h2 span {
+      background: var(--brand-gradient); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .nt-intro__copy p { font-size: 14px; color: var(--text-muted); margin: 0 0 12px; line-height: 1.55; }
+    .nt-callout {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 12px 14px; border-radius: var(--radius-md);
+      background: var(--accent-soft, rgba(59,130,246,.1));
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+    }
+    .nt-callout strong { color: var(--accent); }
+
+    .nt-modal-preview {
+      background: var(--bg-card); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg); box-shadow: var(--shadow-panel); overflow: hidden;
+    }
+    .nt-modal-preview__head {
+      padding: 12px 14px; border-bottom: 1px solid var(--border-soft);
+      background: var(--bg-panel); font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted);
+    }
+    .nt-modal-preview__body { padding: 14px; }
+    .nt-modal-preview__title { font-size: 15px; font-weight: 700; margin: 0 0 10px; }
+    .nt-modal-preview__section { margin-bottom: 10px; }
+    .nt-modal-preview__label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted); margin-bottom: 6px;
+    }
+    .nt-modal-preview__chips { display: flex; flex-wrap: wrap; gap: 4px; }
+
+    .nt-shell {
+      background: color-mix(in srgb, var(--bg-card) 94%, transparent);
+      border: 1px solid var(--border-soft); border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-panel); overflow: hidden;
+    }
+    .nt-section-head {
+      display: flex; align-items: center; gap: 10px; padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .nt-section-head::before {
+      content: ''; width: 3px; height: 20px; border-radius: 2px;
+      background: var(--cat-core-accent, #3b82f6);
+    }
+    .nt-section-title {
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-secondary); flex: 1; margin: 0;
+    }
+    .nt-section-count {
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+      background: rgba(59,130,246,.12); color: var(--cat-core-accent);
+    }
+    .nt-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+      padding: 18px 20px 24px;
+    }
+    @media (max-width: 1100px) { .nt-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px) { .nt-grid { grid-template-columns: 1fr; } }
+
+    /* ── Shared card tokens ── */
+    .nt-card {
+      --nt-tint: var(--cat-core-accent, #3b82f6);
+      --nt-tint-soft: rgba(59,130,246,.12);
+      position: relative; cursor: pointer;
+      background: var(--bg-card-gradient);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+    }
+    .nt-card:hover {
+      transform: translateY(-2px);
+      border-color: color-mix(in srgb, var(--nt-tint) 45%, transparent);
+      box-shadow: 0 8px 28px color-mix(in srgb, var(--nt-tint) 18%, transparent);
+    }
+    .nt-card[data-cat="foundational"] { --nt-tint: var(--cat-foundational-accent); --nt-tint-soft: rgba(34,197,94,.12); }
+    .nt-card[data-cat="advanced"] { --nt-tint: var(--cat-advanced-accent, #06b6d4); --nt-tint-soft: rgba(6,182,212,.12); }
+    .nt-card[data-cat="ai"] { --nt-tint: var(--cat-ai-accent, #a855f7); --nt-tint-soft: rgba(168,85,247,.12); }
+
+    .nt-card__actions {
+      position: absolute; top: 10px; right: 10px; display: flex; gap: 4px;
+      opacity: 0; transition: opacity .15s;
+    }
+    .nt-card:hover .nt-card__actions { opacity: 1; }
+    .nt-card__action {
+      width: 28px; height: 28px; border-radius: 8px;
+      border: 1px solid var(--border-soft); background: color-mix(in srgb, var(--bg-card) 85%, transparent);
+      backdrop-filter: blur(8px); color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .nt-card__action svg { width: 14px; height: 14px; }
+
+    .nt-card__certs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .nt-card__tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .nt-card__foot-hint {
+      margin-top: 10px; font-size: 11px; font-weight: 600; color: var(--accent);
+      opacity: 0; transition: opacity .15s; text-align: right;
+    }
+    .nt-card:hover .nt-card__foot-hint { opacity: 1; }
+
+    /* Concept 1 — Editorial Atlas */
+    .nt-c1 { padding: 0 0 14px 0; overflow: hidden; }
+    .nt-c1::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--nt-tint);
+    }
+    .nt-c1__inner { padding: 14px 14px 0 18px; }
+    .nt-c1__head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; padding-right: 72px; }
+    .nt-c1__icon {
+      width: 44px; height: 44px; border-radius: 11px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--nt-tint-soft); color: var(--nt-tint);
+      border: 1px solid color-mix(in srgb, var(--nt-tint) 22%, transparent);
+    }
+    .nt-c1__icon svg { width: 22px; height: 22px; }
+    .nt-c1__name { font-size: 15px; font-weight: 700; line-height: 1.3; margin: 0 0 6px; color: var(--text-primary); }
+    .nt-c1__pill {
+      display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; padding: 2px 8px; border-radius: 999px;
+      background: var(--nt-tint-soft); color: var(--nt-tint);
+    }
+    .nt-c1__desc {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin: 0 0 12px;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .nt-c1__footer {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 12px 14px 0 18px; margin-top: 4px;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    /* Concept 2 — Glass Monument */
+    .nt-c2 { padding: 0; overflow: hidden; }
+    .nt-c2__hero {
+      padding: 18px 16px 14px; position: relative;
+      background: linear-gradient(
+        165deg,
+        color-mix(in srgb, var(--nt-tint) 22%, transparent) 0%,
+        color-mix(in srgb, var(--nt-tint) 6%, transparent) 55%,
+        transparent 100%
+      );
+      border-bottom: 1px solid color-mix(in srgb, var(--nt-tint) 15%, var(--border-soft));
+    }
+    .nt-c2__hero::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(circle at 80% 20%, rgba(255,255,255,.08), transparent 45%);
+    }
+    .nt-c2__icon {
+      width: 56px; height: 56px; border-radius: 14px; margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--nt-tint); color: #fff;
+      box-shadow: 0 8px 24px color-mix(in srgb, var(--nt-tint) 40%, transparent);
+    }
+    .nt-c2__icon svg { width: 28px; height: 28px; }
+    .nt-c2__name { font-size: 17px; font-weight: 800; letter-spacing: -.02em; margin: 0; color: var(--text-primary); }
+    .nt-c2__body { padding: 14px 16px 16px; }
+    .nt-c2__desc {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin: 0 0 12px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    /* Concept 3 — Horizon Strip */
+    .nt-c3 { padding: 0; overflow: hidden; }
+    .nt-c3__cap { height: 5px; background: linear-gradient(90deg, var(--nt-tint), color-mix(in srgb, var(--nt-tint) 40%, transparent)); }
+    .nt-c3__inner { padding: 12px 14px 14px; display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: start; }
+    .nt-c3__icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--nt-tint-soft); color: var(--nt-tint);
+    }
+    .nt-c3__icon svg { width: 20px; height: 20px; }
+    .nt-c3__name { font-size: 14px; font-weight: 700; margin: 0 0 4px; line-height: 1.25; }
+    .nt-c3__desc {
+      font-size: 12px; color: var(--text-secondary); line-height: 1.45; margin: 0;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .nt-c3__cert-col { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; padding-top: 2px; }
+    .nt-c3__tags { grid-column: 2 / -1; }
+
+    /* Concept 4 — Split Ledger */
+    .nt-c4 { display: flex; padding: 0; overflow: hidden; min-height: 148px; }
+    .nt-c4__rail {
+      width: 76px; flex-shrink: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 10px; padding: 12px 8px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--nt-tint) 18%, transparent), color-mix(in srgb, var(--nt-tint) 6%, transparent));
+      border-right: 1px solid color-mix(in srgb, var(--nt-tint) 20%, var(--border-soft));
+    }
+    .nt-c4__rail-label {
+      writing-mode: vertical-rl; transform: rotate(180deg);
+      font-size: 9px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .14em; color: var(--nt-tint);
+    }
+    .nt-c4__rail-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      background: color-mix(in srgb, var(--bg-card) 70%, transparent);
+      border: 1px solid color-mix(in srgb, var(--nt-tint) 30%, transparent);
+      color: var(--nt-tint);
+    }
+    .nt-c4__rail-icon svg { width: 18px; height: 18px; }
+    .nt-c4__main { flex: 1; padding: 14px 14px 14px 12px; min-width: 0; }
+    .nt-c4__name { font-size: 15px; font-weight: 700; margin: 0 0 8px; padding-right: 64px; line-height: 1.3; }
+    .nt-c4__desc {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 10px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    .nt-legend {
+      margin-top: 20px; padding: 14px 18px;
+      background: var(--bg-card-soft); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md); font-size: 12px; color: var(--text-muted); line-height: 1.55;
+    }
+    .nt-legend strong { color: var(--text-primary); }
+  </style>
+</head>
+<body>
+  <header class="nt-chrome">
+    <h1>Catalog Skill Cards — No Team Rows</h1>
+    <p>Four bold layout options. Owner/consumer teams appear only in the skill modal — not on grid cards.</p>
+    <div class="nt-tabs" role="tablist">
+      <button type="button" class="nt-tab active" data-concept="c1">1 · Editorial Atlas</button>
+      <button type="button" class="nt-tab" data-concept="c2">2 · Glass Monument</button>
+      <button type="button" class="nt-tab" data-concept="c3">3 · Horizon Strip</button>
+      <button type="button" class="nt-tab" data-concept="c4">4 · Split Ledger</button>
+    </div>
+    <button type="button" class="nt-btn" id="theme-toggle">Light theme</button>
+    <a href="catalog-skill-card-aurora-slate-mockup.html" style="font-size:11px;color:var(--text-muted);text-decoration:none;border-bottom:1px dashed var(--border-soft);">Aurora Slate (muted 5) →</a>
+    <a href="catalog-skill-card-vivid-mockup.html" style="font-size:11px;color:var(--text-muted);text-decoration:none;border-bottom:1px dashed var(--border-soft);">Concepts 5–8 (vivid) →</a>
+  </header>
+
+  <!-- ═══ CONCEPT 1 ═══ -->
+  <section class="nt-concept active" id="concept-c1" data-name="Editorial Atlas">
+    <div class="nt-page"><div class="nt-page__mesh"></div><div class="nt-inner">
+      <div class="nt-intro">
+        <div class="nt-intro__copy">
+          <h2><span>Concept 1</span> — Editorial Atlas</h2>
+          <p>Content-first refinement of today’s card. Team rows removed; description expands to three lines. Safest fit for production tokens.</p>
+          <div class="nt-callout"><span>✓</span><div><strong>Teams live in modal only.</strong> Cards show icon, category, description, certs, and tags. Manager actions stay in the top-right hover strip.</div></div>
+        </div>
+        <aside class="nt-modal-preview" aria-label="Modal preview — teams shown here only">
+          <div class="nt-modal-preview__head">Skill detail modal (unchanged)</div>
+          <div class="nt-modal-preview__body">
+            <div class="nt-modal-preview__title">AnyConnect Remote-Access VPN</div>
+            <div class="nt-modal-preview__section">
+              <div class="nt-modal-preview__label">Owner teams</div>
+              <div class="nt-modal-preview__chips">
+                <span class="triage-chip triage-signal chip-sm">TAC-SEC-FW-SHIFT2</span>
+              </div>
+            </div>
+            <div class="nt-modal-preview__section">
+              <div class="nt-modal-preview__label">Consumer teams</div>
+              <div class="nt-modal-preview__chips">
+                <span class="triage-chip triage-consumer chip-sm">TAC-ENT-LANSW-SHIFT2</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <div class="nt-shell">
+        <div class="nt-section-head">
+          <h3 class="nt-section-title">Core</h3>
+          <span class="nt-section-count">18</span>
+        </div>
+        <div class="nt-grid" id="grid-c1"></div>
+      </div>
+      <p class="nt-legend"><strong>Editorial Atlas:</strong> Lowest implementation risk — drop team rows, add category pill + taller description, unify certs/tags in one footer band.</p>
+    </div></div>
+  </section>
+
+  <!-- ═══ CONCEPT 2 ═══ -->
+  <section class="nt-concept" id="concept-c2" data-name="Glass Monument">
+    <div class="nt-page"><div class="nt-page__mesh"></div><div class="nt-inner">
+      <div class="nt-intro">
+        <div class="nt-intro__copy">
+          <h2><span>Concept 2</span> — Glass Monument</h2>
+          <p>Hero-aligned glass band per category. Inverted icon well, bold title, accent hover glow. Strongest visual punch for demos.</p>
+          <div class="nt-callout"><span>✓</span><div>Same information density as Concept 1 — no teams on card. Click opens modal with full ownership panel.</div></div>
+        </div>
+        <aside class="nt-modal-preview">
+          <div class="nt-modal-preview__head">Skill detail modal (unchanged)</div>
+          <div class="nt-modal-preview__body">
+            <div class="nt-modal-preview__title">Catalyst 9000 IOS-XE Operations</div>
+            <div class="nt-modal-preview__section">
+              <div class="nt-modal-preview__label">Owner teams</div>
+              <div class="nt-modal-preview__chips">
+                <span class="triage-chip triage-signal chip-sm">TAC-ENT-LANSW-SHIFT1</span>
+                <span class="triage-chip triage-signal chip-sm">…+3</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <div class="nt-shell">
+        <div class="nt-section-head"><h3 class="nt-section-title">Core</h3><span class="nt-section-count">18</span></div>
+        <div class="nt-grid" id="grid-c2"></div>
+      </div>
+      <p class="nt-legend"><strong>Glass Monument:</strong> Best for hero/catalog marketing shots. Watch light-theme contrast on saturated washes.</p>
+    </div></div>
+  </section>
+
+  <!-- ═══ CONCEPT 3 ═══ -->
+  <section class="nt-concept" id="concept-c3" data-name="Horizon Strip">
+    <div class="nt-page"><div class="nt-page__mesh"></div><div class="nt-inner">
+      <div class="nt-intro">
+        <div class="nt-intro__copy">
+          <h2><span>Concept 3</span> — Horizon Strip</h2>
+          <p>Horizontal scan layout — shortest cards, cert pill docked right. Ideal when browsing 70+ skills in LANSW-style sections.</p>
+          <div class="nt-callout"><span>✓</span><div>Category cap bar replaces left rail. Teams removed entirely from card surface.</div></div>
+        </div>
+        <aside class="nt-modal-preview">
+          <div class="nt-modal-preview__head">Skill detail modal (unchanged)</div>
+          <div class="nt-modal-preview__body">
+            <div class="nt-modal-preview__title">BGP Route-Reflector Design</div>
+            <div class="nt-modal-preview__section">
+              <div class="nt-modal-preview__label">Owner teams</div>
+              <div class="nt-modal-preview__chips">
+                <span class="triage-chip triage-signal chip-sm">TAC-ENT-ROUT-SHIFT1</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <div class="nt-shell">
+        <div class="nt-section-head"><h3 class="nt-section-title">Advanced</h3><span class="nt-section-count">15</span></div>
+        <div class="nt-grid" id="grid-c3"></div>
+      </div>
+      <p class="nt-legend"><strong>Horizon Strip:</strong> Maximum grid density. Cert badges align top-right; tags span full width below.</p>
+    </div></div>
+  </section>
+
+  <!-- ═══ CONCEPT 4 ═══ -->
+  <section class="nt-concept" id="concept-c4" data-name="Split Ledger">
+    <div class="nt-page"><div class="nt-page__mesh"></div><div class="nt-inner">
+      <div class="nt-intro">
+        <div class="nt-intro__copy">
+          <h2><span>Concept 4</span> — Split Ledger</h2>
+          <p>Bento split — category color as a vertical ledger column. Strong grouping when scrolling mixed category sections.</p>
+          <div class="nt-callout"><span>✓</span><div>Vertical category label + icon in left rail. All association metadata reserved for modal.</div></div>
+        </div>
+        <aside class="nt-modal-preview">
+          <div class="nt-modal-preview__head">Skill detail modal (unchanged)</div>
+          <div class="nt-modal-preview__body">
+            <div class="nt-modal-preview__title">LLM-Assisted Log Triage</div>
+            <div class="nt-modal-preview__section">
+              <div class="nt-modal-preview__label">Consumer teams</div>
+              <div class="nt-modal-preview__chips">
+                <span class="triage-chip triage-consumer chip-sm">TAC-NTECH-GEN-SHIFT1</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <div class="nt-shell">
+        <div class="nt-section-head"><h3 class="nt-section-title">AI &amp; Future Skills</h3><span class="nt-section-count">5</span></div>
+        <div class="nt-grid" id="grid-c4"></div>
+      </div>
+      <p class="nt-legend"><strong>Split Ledger:</strong> Most distinctive layout. Slightly wider minimum card width — still fits 3-column grid at 1280px.</p>
+    </div></div>
+  </section>
+
+  <script>
+    const ICONS = {
+      switch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01"/></svg>',
+      vpn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+      route: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M8.5 16.5 15.5 8.5"/></svg>',
+      spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>',
+    };
+
+    const SKILLS = {
+      c1: [
+        { cat: 'core', catLabel: 'Core', icon: 'switch', name: 'Catalyst 9000 IOS-XE Operations', desc: 'Day-two operations on Catalyst 9000 platforms: ISSU, stack management, licensing, and common show-tech workflows for campus TAC cases.', certs: ['CCNP ENCOR', 'CCNA'], tags: ['troubleshooting', 'campus', 'ios-xe'] },
+        { cat: 'core', catLabel: 'Core', icon: 'vpn', name: 'AnyConnect Remote-Access VPN', desc: 'Configure and troubleshoot AnyConnect profiles, split tunneling, DAP, and posture flows — frequently escalated from enterprise security teams.', certs: ['CCNP Security'], tags: ['vpn', 'remote-access'] },
+        { cat: 'core', catLabel: 'Core', icon: 'switch', name: 'QoS on Campus Switches', desc: 'Marking, queuing, and policing policies on Catalyst platforms with practical SR triage patterns for voice and video congestion.', certs: ['CCNP ENCOR'], tags: ['qos', 'campus'] },
+      ],
+      c2: [
+        { cat: 'core', catLabel: 'Core', icon: 'switch', name: 'Catalyst 9000 IOS-XE Operations', desc: 'Day-two operations on Catalyst 9000 platforms including stack-wise virtual and licensing triage.', certs: ['CCNP ENCOR'], tags: ['troubleshooting', 'ios-xe'] },
+        { cat: 'core', catLabel: 'Core', icon: 'vpn', name: 'AnyConnect Remote-Access VPN', desc: 'Remote-access VPN posture, DAP, and split-tunnel design for enterprise customers.', certs: ['CCNP Security'], tags: ['vpn'] },
+        { cat: 'foundational', catLabel: 'Foundational', icon: 'switch', name: 'Layer 2 Switching Fundamentals', desc: 'MAC learning, flooding, and broadcast domains — foundational campus switching concepts.', certs: ['CCNA'], tags: ['foundational', 'l2'] },
+      ],
+      c3: [
+        { cat: 'advanced', catLabel: 'Advanced', icon: 'route', name: 'BGP Route-Reflector Design', desc: 'Multi-AS BGP, route reflector clusters, and confederation troubleshooting at escalation grade.', certs: ['CCIE EI'], tags: ['bgp', 'escalation'] },
+        { cat: 'advanced', catLabel: 'Advanced', icon: 'route', name: 'SD-Access Underlay Troubleshooting', desc: 'Fabric edge, control-plane, and underlay reachability for SDA campus deployments.', certs: ['CCIE EI'], tags: ['sda', 'fabric'] },
+        { cat: 'advanced', catLabel: 'Advanced', icon: 'switch', name: 'VXLAN EVPN Campus Fabric', desc: 'Overlay control-plane and BUM traffic analysis for modern campus fabric designs.', certs: ['CCIE EI'], tags: ['vxlan', 'evpn'] },
+      ],
+      c4: [
+        { cat: 'ai', catLabel: 'AI & Future', icon: 'spark', name: 'LLM-Assisted Log Triage', desc: 'Use structured prompts and guardrails to accelerate log analysis without replacing engineer judgment.', certs: [], tags: ['ai-assisted', 'automation'] },
+        { cat: 'ai', catLabel: 'AI & Future', icon: 'spark', name: 'Python & pyATS Network Automation', desc: 'Build repeatable testbed automation for regression and repro collection in TAC workflows.', certs: ['DevNet Pro'], tags: ['python', 'pyats'] },
+        { cat: 'ai', catLabel: 'AI & Future', icon: 'spark', name: 'Telemetry & AIOps Pipelines', desc: 'Model-driven telemetry ingestion, anomaly baselines, and ChatOps integration patterns.', certs: [], tags: ['telemetry', 'aiops'] },
+      ],
+    };
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function adminActions() {
+      return `<div class="nt-card__actions" aria-hidden="true">
+        <span class="nt-card__action" title="Edit">${editSvg}</span>
+        <span class="nt-card__action" title="Duplicate">${dupSvg}</span>
+      </div>`;
+    }
+
+    const editSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    const dupSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
+    function certHtml(certs) {
+      return certs.map(c => `<span class="meta-badge meta-badge--cert">${esc(c)}</span>`).join('');
+    }
+    function tagHtml(tags) {
+      return tags.map(t => `<span class="triage-chip triage-feedback chip-sm">${esc(t)}</span>`).join('');
+    }
+
+    function renderC1(container, skills) {
+      container.innerHTML = skills.map(s => `
+        <article class="nt-card nt-c1" data-cat="${s.cat}">
+          ${adminActions()}
+          <div class="nt-c1__inner">
+            <div class="nt-c1__head">
+              <div class="nt-c1__icon">${ICONS[s.icon]}</div>
+              <div>
+                <h4 class="nt-c1__name">${esc(s.name)}</h4>
+                <span class="nt-c1__pill">${esc(s.catLabel)}</span>
+              </div>
+            </div>
+            <p class="nt-c1__desc">${esc(s.desc)}</p>
+          </div>
+          <div class="nt-c1__footer">
+            <div class="nt-card__certs">${certHtml(s.certs)}</div>
+            <div class="nt-card__tags" style="margin:0">${tagHtml(s.tags)}</div>
+          </div>
+          <div class="nt-card__foot-hint">View details →</div>
+        </article>
+      `).join('');
+    }
+
+    function renderC2(container, skills) {
+      container.innerHTML = skills.map(s => `
+        <article class="nt-card nt-c2" data-cat="${s.cat}">
+          ${adminActions()}
+          <div class="nt-c2__hero">
+            <div class="nt-c2__icon">${ICONS[s.icon]}</div>
+            <h4 class="nt-c2__name">${esc(s.name)}</h4>
+          </div>
+          <div class="nt-c2__body">
+            <p class="nt-c2__desc">${esc(s.desc)}</p>
+            <div class="nt-card__certs">${certHtml(s.certs)}</div>
+            <div class="nt-card__tags">${tagHtml(s.tags)}</div>
+            <div class="nt-card__foot-hint">View details →</div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function renderC3(container, skills) {
+      container.innerHTML = skills.map(s => `
+        <article class="nt-card nt-c3" data-cat="${s.cat}">
+          ${adminActions()}
+          <div class="nt-c3__cap"></div>
+          <div class="nt-c3__inner">
+            <div class="nt-c3__icon">${ICONS[s.icon]}</div>
+            <div>
+              <h4 class="nt-c3__name">${esc(s.name)}</h4>
+              <p class="nt-c3__desc">${esc(s.desc)}</p>
+            </div>
+            <div class="nt-c3__cert-col">${certHtml(s.certs)}</div>
+            <div class="nt-c3__tags">${tagHtml(s.tags)}</div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function renderC4(container, skills) {
+      container.innerHTML = skills.map(s => `
+        <article class="nt-card nt-c4" data-cat="${s.cat}">
+          ${adminActions()}
+          <div class="nt-c4__rail">
+            <span class="nt-c4__rail-label">${esc(s.catLabel)}</span>
+            <div class="nt-c4__rail-icon">${ICONS[s.icon]}</div>
+          </div>
+          <div class="nt-c4__main">
+            <h4 class="nt-c4__name">${esc(s.name)}</h4>
+            <p class="nt-c4__desc">${esc(s.desc)}</p>
+            <div class="nt-card__certs">${certHtml(s.certs)}</div>
+            <div class="nt-card__tags">${tagHtml(s.tags)}</div>
+            <div class="nt-card__foot-hint">View details →</div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    renderC1(document.getElementById('grid-c1'), SKILLS.c1);
+    renderC2(document.getElementById('grid-c2'), SKILLS.c2);
+    renderC3(document.getElementById('grid-c3'), SKILLS.c3);
+    renderC4(document.getElementById('grid-c4'), SKILLS.c4);
+
+    document.querySelectorAll('.nt-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.nt-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nt-concept').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('concept-' + tab.dataset.concept).classList.add('active');
+      });
+    });
+
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      document.getElementById('theme-toggle').textContent = next === 'light' ? 'Dark theme' : 'Light theme';
+    });
+  </script>
+</body>
+</html>

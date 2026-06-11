@@ -6,7 +6,7 @@ and detect/repair any index corruption.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from sqlalchemy import text
 from app.database import engine
 

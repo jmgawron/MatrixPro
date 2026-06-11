@@ -746,9 +746,9 @@ def _personal_items_for(
                  None),
                 (SkillLevelContentType.action,
                  f"Replay a closed {short_skill} SR in the lab and validate the RCA",
-                 f"Daniela picks a recently-closed escalation, rebuilds the topology, "
-                 f"and verifies the documented RCA against live forwarding-plane "
-                 f"evidence.",
+                 "Daniela picks a recently-closed escalation, rebuilds the topology, "
+                 "and verifies the documented RCA against live forwarding-plane "
+                 "evidence.",
                  None),
             ]
         elif tone == "writer":

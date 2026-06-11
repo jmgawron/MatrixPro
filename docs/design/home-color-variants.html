@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MatrixPro — Home Page: 4 Color Propositions</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#1a1d21; color:#e8eef7; padding:32px 32px 64px; }
+  h1 { font-size:21px; margin-bottom:6px; }
+  .intro { color:#9aa4b2; font-size:13px; margin-bottom:18px; max-width:940px; line-height:1.55; }
+  .v-title { font-size:15px; font-weight:800; margin:32px 0 4px; }
+  .v-title .tag { font-size:11px; font-weight:700; background:#2563eb; color:#fff; border-radius:5px; padding:2px 8px; margin-right:8px; vertical-align:1px; }
+  .v-sub { font-size:12px; color:#9aa4b2; margin-bottom:10px; max-width:920px; line-height:1.5; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:1480px; }
+  @media (max-width:1280px){ .pair{grid-template-columns:1fr;} }
+
+  .stage { border-radius:12px; border:1px solid rgba(255,255,255,.1); overflow:hidden; position:relative; }
+  .light { background:#f8f8f7; color:#1c1917;
+    --txt:#1c1917; --txt2:#52514d; --txt3:#76746e; --card:#fff; --bd:rgba(41,37,32,.1); }
+  .dark { background:#070b12; color:#e8eef7;
+    --txt:#e8eef7; --txt2:#9fb0c9; --txt3:#6b7f9d; --card:#121824; --bd:rgba(255,255,255,.08); }
+
+  .mesh { position:absolute; inset:0; pointer-events:none; }
+  .inner { position:relative; padding:30px 28px 26px; }
+  .eyeb { font-size:9.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--txt3); margin-bottom:8px; }
+  .hl { font-size:26px; font-weight:800; letter-spacing:-.01em; line-height:1.18; }
+  .grad { -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .sub { font-size:12.5px; color:var(--txt2); margin:10px 0 14px; max-width:46ch; }
+  .btns { display:flex; gap:8px; margin-bottom:18px; }
+  .b1 { font-size:12px; font-weight:700; color:#fff; border-radius:999px; padding:8px 18px; }
+  .b2 { font-size:12px; font-weight:600; color:var(--txt2); border:1px solid var(--bd); border-radius:999px; padding:8px 18px; background:var(--card); }
+  .cta { border-radius:12px; padding:16px 20px; display:flex; align-items:center; gap:14px; }
+  .cta b { font-size:14px; }
+  .cta span { font-size:11.5px; opacity:.85; flex:1; }
+  .cta .go { font-size:11.5px; font-weight:700; border-radius:999px; padding:7px 16px; white-space:nowrap; }
+
+  /* ── V1 Warm neutral canvas ── */
+  .v1.light .mesh { background:radial-gradient(ellipse 70% 45% at 75% 12%, rgba(59,130,246,.05), transparent 70%), radial-gradient(ellipse 55% 40% at 8% 95%, rgba(180,160,120,.06), transparent 60%); }
+  .v1.dark .mesh { background:radial-gradient(ellipse 70% 45% at 75% 12%, rgba(92,177,255,.08), transparent 70%); }
+  .v1 .grad { background-image:linear-gradient(90deg,#00C6FF,#0072FF); }
+  .v1 .b1 { background:#2563eb; }
+  .v1.dark .b1 { background:#3b82f6; }
+  .v1 .cta { background:#0d1b36; color:#e8eef7; border:1px solid rgba(92,177,255,.25); }
+  .v1 .cta .go { background:#fff; color:#0d1b36; }
+
+  /* ── V2 Tier spectrum ── */
+  .v2.light .mesh { background:
+    radial-gradient(ellipse 40% 35% at 8% 6%, rgba(4,120,87,.05), transparent 70%),
+    radial-gradient(ellipse 45% 35% at 70% 4%, rgba(37,99,235,.05), transparent 70%),
+    radial-gradient(ellipse 40% 35% at 100% 60%, rgba(190,18,60,.04), transparent 70%),
+    radial-gradient(ellipse 45% 35% at 20% 100%, rgba(8,145,178,.05), transparent 70%); }
+  .v2.dark .mesh { background:
+    radial-gradient(ellipse 40% 35% at 8% 6%, rgba(52,211,153,.07), transparent 70%),
+    radial-gradient(ellipse 45% 35% at 70% 4%, rgba(92,177,255,.08), transparent 70%),
+    radial-gradient(ellipse 40% 35% at 100% 60%, rgba(251,113,133,.06), transparent 70%),
+    radial-gradient(ellipse 45% 35% at 20% 100%, rgba(34,211,238,.07), transparent 70%); }
+  .v2 .grad { background-image:linear-gradient(90deg,#047857,#2563eb 45%,#0e7490); }
+  .v2.dark .grad { background-image:linear-gradient(90deg,#34d399,#5cb1ff 45%,#22d3ee); }
+  .v2 .b1 { background:#2563eb; }
+  .v2 .cta { background:linear-gradient(135deg, rgba(37,99,235,.08), rgba(8,145,178,.08)); color:var(--txt); border:1px solid var(--bd); }
+  .v2 .cta .go { background:#2563eb; color:#fff; }
+
+  /* ── V3 Monochrome editorial ── */
+  .v3 .mesh { background:none; }
+  .v3 .grad { background-image:none; -webkit-text-fill-color:currentColor; color:#2563eb; }
+  .v3.dark .grad { color:#5cb1ff; }
+  .v3 .b1 { background:#2563eb; }
+  .v3 .cta { background:transparent; border:1px solid var(--bd); color:var(--txt); position:relative; }
+  .v3 .cta::before { content:''; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:3px; background:#2563eb; }
+  .v3.dark .cta::before { background:#5cb1ff; }
+  .v3 .cta .go { background:#2563eb; color:#fff; }
+
+  /* ── V4 Subtle brand dusk ── */
+  .v4.light .mesh { background:radial-gradient(ellipse 80% 50% at 72% 18%, rgba(59,130,246,.07), transparent 70%), radial-gradient(ellipse 60% 40% at 10% 90%, rgba(8,145,178,.05), transparent 55%); }
+  .v4.dark .mesh { background:radial-gradient(ellipse 80% 50% at 72% 18%, rgba(92,177,255,.1), transparent 70%), radial-gradient(ellipse 60% 40% at 10% 90%, rgba(34,211,238,.07), transparent 55%); }
+  .v4 .grad { background-image:linear-gradient(90deg,#00C6FF,#0072FF); }
+  .v4 .b1 { background:linear-gradient(135deg,#3b82f6,#2563eb); }
+  .v4 .cta { background:linear-gradient(135deg,#0284c7,#2563eb); color:#fff; }
+  .v4.dark .cta { background:linear-gradient(135deg,#00C6FF22,#0072FF55); border:1px solid rgba(92,177,255,.3); color:#e8eef7; }
+  .v4 .cta .go { background:#fff; color:#1d4ed8; }
+</style>
+</head>
+<body>
+
+<h1>Home Page — 4 Color Propositions (gradients de-blued, width aligned)</h1>
+<p class="intro">
+<b>Common to all four:</b> the home container widens from 1200px to <b>1400px</b> to match every other module, and the
+heavy blue washes (10–35% opacity meshes, glows and the cyan→indigo CTA band) are replaced per the variant below.
+Layout, sections, role cards, 3E explainer and all interactions stay identical — colors only.
+</p>
+
+<div class="v-title"><span class="tag">V1</span>Warm neutral canvas</div>
+<p class="v-sub">Page mesh matches the rest of the app (5% blue + faint warm tint in light; gentle blue in dark). Headline keeps the brand gradient as the single color moment. CTA becomes a deep-navy band — solid, confident, no rainbow.</p>
+<div class="pair">
+  <div class="stage light v1"><div class="mesh"></div><div class="inner">
+    <div class="eyeb">MatrixPro</div>
+    <div class="hl">Your skills. <span class="grad">Your plan. Your growth.</span></div>
+    <p class="sub">Build, track and manage your development plan with your manager — one shared view of every skill.</p>
+    <div class="btns"><span class="b1">Open My Plan</span><span class="b2">Browse Catalog</span></div>
+    <div class="cta"><b>Skills Matrix</b><span>See your whole team's capabilities at a glance.</span><span class="go">View My Team →</span></div>
+  </div></div>
+  <div class="stage dark v1"><div class="mesh"></div><div class="inner">
+    <div class="eyeb">MatrixPro</div>
+    <div class="hl">Your skills. <span class="grad">Your plan. Your growth.</span></div>
+    <p class="sub">Build, track and manage your development plan with your manager — one shared view of every skill.</p>
+    <div class="btns"><span class="b1">Open My Plan</span><span class="b2">Browse Catalog</span></div>
+    <div class="cta"><b>Skills Matrix</b><span>See your whole team's capabilities at a glance.</span><span class="go">View My Team →</span></div>
+  </div></div>
+</div>
+
+<div class="v-title"><span class="tag">V2</span>Tier spectrum</div>
+<p class="v-sub">The four tier hues (emerald · blue · rose · cyan) appear as whisper-quiet corner glows and in the headline gradient — the home page literally wears the app's category system. CTA is a soft dual-tint panel.</p>
+<div class="pair">
+  <div class="stage light v2"><div class="mesh"></div><div class="inner">
+    <div class="eyeb">MatrixPro</div>
+    <div class="hl">Your skills. <span class="grad">Your plan. Your growth.</span></div>
+    <p class="sub">Build, track and manage your development plan with your manager — one shared view of every skill.</p>
+    <div class="btns"><span class="b1">Open My Plan</span><span class="b2">Browse Catalog</span></div>
+    <div class="cta"><b>Skills Matrix</b><span>See your whole team's capabilities at a glance.</span><span class="go">View My Team →</span></div>
+  </div></div>
+  <div class="stage dark v2"><div class="mesh"></div><div class="inner">
+    <div class="eyeb">MatrixPro</div>
+    <div class="hl">Your skills. <span class="grad">Your plan. Your growth.</span></div>
+    <p class="sub">Build, track and manage your development plan with your manager — one shared view of every skill.</p>
+    <div class="btns"><span class="b1">Open My Plan</span><span class="b2">Browse Catalog</span></div>
+    <div class="cta"><b>Skills Matrix</b><span>See your whole team's capabilities at a glance.</span><span class="go">View My Team →</span></div>
+  </div></div>
+</div>
+
+<div class="v-title"><span class="tag">V3</span>Monochrome editorial</div>
+<p class="v-sub">No meshes, no gradients at all — flat warm canvas, solid accent-blue for the headline emphasis, CTA as a quiet bordered panel with the 3px accent bar used across the app. The most radical and the cleanest.</p>
+<div class="pair">
+  <div class="stage light v3"><div class="mesh"></div><div class="inner">
+    <div class="eyeb">MatrixPro</div>
+    <div class="hl">Your skills. <span class="grad">Your plan. Your growth.</span></div>
+    <p class="sub">Build, track and manage your development plan with your manager — one shared view of every skill.</p>
+    <div class="btns"><span class="b1">Open My Plan</span><span class="b2">Browse Catalog</span></div>
+    <div class="cta"><b>Skills Matrix</b><span>See your whole team's capabilities at a glance.</span><span class="go">View My Team →</span></div>
+  </div></div>
+  <div class="stage dark v3"><div class="mesh"></div><div class="inner">
+    <div class="eyeb">MatrixPro</div>
+    <div class="hl">Your skills. <span class="grad">Your plan. Your growth.</span></div>
+    <p class="sub">Build, track and manage your development plan with your manager — one shared view of every skill.</p>
+    <div class="btns"><span class="b1">Open My Plan</span><span class="b2">Browse Catalog</span></div>
+    <div class="cta"><b>Skills Matrix</b><span>See your whole team's capabilities at a glance.</span><span class="go">View My Team →</span></div>
+  </div></div>
+</div>
+
+<div class="v-title"><span class="tag">V4</span>Subtle brand dusk</div>
+<p class="v-sub">Keeps today's character but at half volume: blue meshes drop to 5–10% with the indigo endpoint swapped for brand cyan; the CTA keeps a gradient but stays inside the cyan→blue brand range (no violet drift). The least change.</p>
+<div class="pair">
+  <div class="stage light v4"><div class="mesh"></div><div class="inner">
+    <div class="eyeb">MatrixPro</div>
+    <div class="hl">Your skills. <span class="grad">Your plan. Your growth.</span></div>
+    <p class="sub">Build, track and manage your development plan with your manager — one shared view of every skill.</p>
+    <div class="btns"><span class="b1">Open My Plan</span><span class="b2">Browse Catalog</span></div>
+    <div class="cta"><b>Skills Matrix</b><span>See your whole team's capabilities at a glance.</span><span class="go">View My Team →</span></div>
+  </div></div>
+  <div class="stage dark v4"><div class="mesh"></div><div class="inner">
+    <div class="eyeb">MatrixPro</div>
+    <div class="hl">Your skills. <span class="grad">Your plan. Your growth.</span></div>
+    <p class="sub">Build, track and manage your development plan with your manager — one shared view of every skill.</p>
+    <div class="btns"><span class="b1">Open My Plan</span><span class="b2">Browse Catalog</span></div>
+    <div class="cta"><b>Skills Matrix</b><span>See your whole team's capabilities at a glance.</span><span class="go">View My Team →</span></div>
+  </div></div>
+</div>
+
+<p class="intro" style="margin-top:26px;">
+In implementation, the same treatment extends to every glow on the page (role-card halos, 3E section top-glows, art
+shadows) — they all follow the chosen variant's intensity and hue logic, in both themes.
+</p>
+
+</body>
+</html>

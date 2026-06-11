@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MatrixPro — Module Fixes Mockup (Light Theme)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#1a1d21; color:#e8eef7; padding:32px;
+  }
+  h1 { font-size:20px; margin-bottom:6px; }
+  .intro { color:#9aa4b2; font-size:13px; margin-bottom:24px; max-width:880px; line-height:1.5; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:1100px; }
+  @media (max-width:900px){ .grid{grid-template-columns:1fr;} }
+  .pane-label { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
+  .cur .pane-label { color:#f0a8a8; } .fix .pane-label { color:#9fe3b4; }
+  .section-title { font-size:14px; font-weight:700; margin:26px 0 10px; color:#e8eef7; max-width:1100px; }
+  .section-title:first-of-type { margin-top:0; }
+
+  /* light theme canvas (approved warm palette) */
+  .demo {
+    background:#f8f8f7; border-radius:12px; border:1px solid rgba(255,255,255,.1);
+    padding:18px; color:#1c1917;
+  }
+  .skill-card {
+    background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(252,252,251,.98));
+    border:1px solid rgba(41,37,32,.09); border-radius:12px; padding:12px 14px;
+    box-shadow:0 1px 3px rgba(41,37,32,.08); font-size:13.5px; font-weight:600;
+    max-width:300px;
+  }
+  .cur .skill-card { background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(244,248,253,.98)); }
+  .muted { font-size:11px; color:#76746e; font-weight:500; margin-top:2px; }
+
+  /* progress track — CURRENT (white alpha, invisible) vs FIXED */
+  .track { height:4px; border-radius:99px; overflow:hidden; margin-top:12px; }
+  .cur .track { background:rgba(255,255,255,0.06); }
+  .fix .track { background:rgba(41,37,32,0.08); }
+  .track .fill { height:100%; width:55%; border-radius:99px; background:linear-gradient(90deg,#3b82f6,#2563eb); }
+
+  /* explorer thick track */
+  .track2 { height:10px; border-radius:999px; overflow:hidden; border:1px solid rgba(41,37,32,.09); margin-top:12px; }
+  .cur .track2 { background:rgba(255,255,255,0.08); }
+  .fix .track2 { background:rgba(41,37,32,0.07); }
+  .track2 .fill { height:100%; width:35%; background:linear-gradient(90deg,#3b82f6,#2563eb); }
+
+  /* combobox chip */
+  .chip {
+    display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;
+    background:rgba(59,130,246,.09); color:#2563eb; border:1px solid rgba(59,130,246,.25);
+    border-radius:999px; padding:4px 10px; margin-top:12px;
+  }
+  .chip .count { font-size:10px; font-weight:700; padding:1px 5px; border-radius:3px; }
+  .cur .chip .count { background:rgba(255,255,255,0.1); }
+  .fix .chip .count { background:rgba(37,99,235,0.12); }
+
+  /* card hover */
+  .hovercard {
+    background:#fff; border-radius:12px; padding:14px; font-size:13px; font-weight:600;
+    max-width:300px; margin-top:12px; transform:translateY(-3px);
+  }
+  .cur .hovercard { border:1px solid rgba(96,165,250,.55); box-shadow:0 5px 16px rgba(41,37,32,.09); }
+  .fix .hovercard { border:1px solid rgba(59,130,246,.3); transform:translateY(-1px); box-shadow:0 4px 14px rgba(41,37,32,.08), 0 0 0 1px rgba(59,130,246,.08); }
+
+  .note { font-size:11.5px; color:#9aa4b2; margin-top:8px; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<h1>Module Fixes — Light Theme (current vs fixed)</h1>
+<p class="intro">All fixes are light-theme-only overrides; dark theme is untouched. Elements below are rendered
+exactly with the CSS values from the app.</p>
+
+<div class="section-title">1 · My Plan — kanban card progress track (also Skill Explorer track)</div>
+<div class="grid">
+  <div class="cur">
+    <div class="pane-label">Current — track invisible</div>
+    <div class="demo">
+      <div class="skill-card">BGP Troubleshooting
+        <div class="muted">Exposure · 55%</div>
+        <div class="track"><div class="fill"></div></div>
+      </div>
+      <div class="track2"><div class="fill"></div></div>
+      <p class="note">White-alpha track on white card → the bar floats with no visible remainder; users can't read "how much is left".</p>
+    </div>
+  </div>
+  <div class="fix">
+    <div class="pane-label">Fixed — neutral track</div>
+    <div class="demo">
+      <div class="skill-card">BGP Troubleshooting
+        <div class="muted">Exposure · 55%</div>
+        <div class="track"><div class="fill"></div></div>
+      </div>
+      <div class="track2"><div class="fill"></div></div>
+      <p class="note">Warm-gray track (8% ink) shows full extent of the bar in light mode.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section-title">2 · Catalog editor — multi-select chip count badge</div>
+<div class="grid">
+  <div class="cur">
+    <div class="pane-label">Current — badge invisible</div>
+    <div class="demo">
+      <span class="chip">Core <span class="count">3</span></span>
+      <p class="note">White-alpha badge disappears on the light chip background.</p>
+    </div>
+  </div>
+  <div class="fix">
+    <div class="pane-label">Fixed — tinted badge</div>
+    <div class="demo">
+      <span class="chip">Core <span class="count">3</span></span>
+      <p class="note">Accent-tinted badge stays visible in both themes.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section-title">3 · Global — card hover in light theme</div>
+<div class="grid">
+  <div class="cur">
+    <div class="pane-label">Current — loud hover</div>
+    <div class="demo">
+      <div class="hovercard">Skill Card (hovered)</div>
+      <p class="note">3px lift + 55%-opacity blue border: heavy and bluish against the new warm canvas.</p>
+    </div>
+  </div>
+  <div class="fix">
+    <div class="pane-label">Fixed — calm hover</div>
+    <div class="demo">
+      <div class="hovercard">Skill Card (hovered)</div>
+      <p class="note">1px lift, 30% accent border + faint ring: noticeable, but professional.</p>
+    </div>
+  </div>
+</div>
+
+<p class="note" style="max-width:880px; margin-top:24px;">
+Not shown (trivial state fixes, same treatment as above): My Plan modal log-toggle hover, catalog chip close-button hover,
+non-technical picker selected icon, the residual bluish card gradient (visible in panel 1 — current card is faintly cooler),
+and the catalog category header gradient switching to a theme token. Dead CSS removal has no visual effect.
+</p>
+
+</body>
+</html>

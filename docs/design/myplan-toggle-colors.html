@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MatrixPro — Switch-pill Toggles: 4 Color Variants for Foundational & Advanced</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#1a1d21; color:#e8eef7; padding:32px 32px 64px; }
+  h1 { font-size:21px; margin-bottom:6px; }
+  .intro { color:#9aa4b2; font-size:13px; margin-bottom:18px; max-width:920px; line-height:1.55; }
+  .v-title { font-size:15px; font-weight:800; margin:28px 0 4px; }
+  .v-title .tag { font-size:11px; font-weight:700; background:#2563eb; color:#fff; border-radius:5px; padding:2px 8px; margin-right:8px; vertical-align:1px; }
+  .v-sub { font-size:12px; color:#9aa4b2; margin-bottom:10px; max-width:900px; line-height:1.5; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:1100px; }
+  @media (max-width:1020px){ .pair{grid-template-columns:1fr;} }
+
+  .stage { border-radius:12px; padding:18px; border:1px solid rgba(255,255,255,.1); }
+  .light { background:#f8f8f7; color:#1c1917;
+    --txt3:#76746e; --bd2:rgba(41,37,32,.15); --off-track:rgba(41,37,32,.18); --off-knob:#fff; }
+  .dark { background:#070b12; color:#e8eef7;
+    --txt3:#6b7f9d; --bd2:rgba(255,255,255,.15); --off-track:rgba(255,255,255,.14); --off-knob:#9fb0c9; }
+
+  /* fixed colors */
+  .light .t-core { --tier:#2563eb; --tier-soft:rgba(37,99,235,.08); --tier-bd:rgba(37,99,235,.3); }
+  .light .t-ai   { --tier:#0e7490; --tier-soft:rgba(8,145,178,.09); --tier-bd:rgba(8,145,178,.32); }
+  .dark .t-core  { --tier:#5cb1ff; --tier-soft:rgba(92,177,255,.12); --tier-bd:rgba(92,177,255,.38); }
+  .dark .t-ai    { --tier:#22d3ee; --tier-soft:rgba(34,211,238,.1); --tier-bd:rgba(34,211,238,.35); }
+
+  /* A — Bronze & Violet */
+  .light .a-f { --tier:#a16207; --tier-soft:rgba(161,98,7,.09); --tier-bd:rgba(161,98,7,.3); }
+  .light .a-a { --tier:#7c3aed; --tier-soft:rgba(124,58,237,.08); --tier-bd:rgba(124,58,237,.3); }
+  .dark  .a-f { --tier:#d4a253; --tier-soft:rgba(212,162,83,.12); --tier-bd:rgba(212,162,83,.35); }
+  .dark  .a-a { --tier:#b39df9; --tier-soft:rgba(179,157,249,.12); --tier-bd:rgba(179,157,249,.35); }
+
+  /* B — Emerald & Rose */
+  .light .b-f { --tier:#047857; --tier-soft:rgba(4,120,87,.08); --tier-bd:rgba(4,120,87,.3); }
+  .light .b-a { --tier:#be123c; --tier-soft:rgba(190,18,60,.07); --tier-bd:rgba(190,18,60,.28); }
+  .dark  .b-f { --tier:#34d399; --tier-soft:rgba(52,211,153,.1); --tier-bd:rgba(52,211,153,.32); }
+  .dark  .b-a { --tier:#fb7185; --tier-soft:rgba(251,113,133,.1); --tier-bd:rgba(251,113,133,.32); }
+
+  /* C — Terracotta & Plum */
+  .light .c-f { --tier:#c2410c; --tier-soft:rgba(194,65,12,.08); --tier-bd:rgba(194,65,12,.28); }
+  .light .c-a { --tier:#86198f; --tier-soft:rgba(134,25,143,.07); --tier-bd:rgba(134,25,143,.28); }
+  .dark  .c-f { --tier:#fb923c; --tier-soft:rgba(251,146,60,.1); --tier-bd:rgba(251,146,60,.32); }
+  .dark  .c-a { --tier:#e879f9; --tier-soft:rgba(232,121,249,.1); --tier-bd:rgba(232,121,249,.32); }
+
+  /* D — Moss & Purple */
+  .light .d-f { --tier:#4d7c0f; --tier-soft:rgba(77,124,15,.08); --tier-bd:rgba(77,124,15,.28); }
+  .light .d-a { --tier:#9333ea; --tier-soft:rgba(147,51,234,.07); --tier-bd:rgba(147,51,234,.28); }
+  .dark  .d-f { --tier:#a3cc5e; --tier-soft:rgba(163,204,94,.1); --tier-bd:rgba(163,204,94,.32); }
+  .dark  .d-a { --tier:#c084fc; --tier-soft:rgba(192,132,252,.1); --tier-bd:rgba(192,132,252,.32); }
+
+  /* switch-pill — uniform width */
+  .row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .tg { display:inline-flex; align-items:center; gap:9px; width:168px; padding:7px 12px 7px 10px;
+    border-radius:999px; border:1px solid var(--tier-bd); background:var(--tier-soft); color:var(--tier);
+    font-size:12.5px; font-weight:600; cursor:pointer; transition:all .18s; }
+  .tg .sw { width:26px; height:15px; border-radius:999px; background:var(--tier); position:relative; flex-shrink:0; }
+  .tg .sw::after { content:''; position:absolute; top:2px; left:13px; width:11px; height:11px; border-radius:99px;
+    background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25); transition:left .18s; }
+  .tg .lbl { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tg .n { font-size:10.5px; font-weight:700; opacity:.75; }
+  .tg.off { background:transparent; border-color:var(--bd2); color:var(--txt3); font-weight:500; }
+  .tg.off .sw { background:var(--off-track); }
+  .tg.off .sw::after { left:2px; background:var(--off-knob); }
+</style>
+</head>
+<body>
+
+<h1>Switch-pill Toggles — Color Variants (Foundational &amp; Advanced)</h1>
+<p class="intro">
+All toggles are now the <b>same fixed size</b> (long labels truncate gracefully). Core keeps brand blue, AI &amp; Future keeps cyan.
+Four color pairings for Foundational + Advanced below, each in light and dark. "Advanced" is shown OFF in every sample
+so you can judge both states. These colors would update the <code>--cat-*</code> tokens, so card eyebrows, icons,
+section numbers, and My Team KPI accents follow automatically.
+</p>
+
+<div class="v-title"><span class="tag">A</span>Bronze &amp; Violet</div>
+<p class="v-sub">Foundational warm bronze ("bedrock"), Advanced royal violet. Note: violet sits close to the Personal-skill accent — they would read as related.</p>
+<div class="pair">
+  <div class="stage light"><div class="row">
+    <span class="a-f tg"><span class="sw"></span><span class="lbl">Foundational</span><span class="n">2</span></span>
+    <span class="t-core tg"><span class="sw"></span><span class="lbl">Core</span><span class="n">3</span></span>
+    <span class="a-a tg off"><span class="sw"></span><span class="lbl">Advanced</span><span class="n">1</span></span>
+    <span class="t-ai tg"><span class="sw"></span><span class="lbl">AI &amp; Future Skills</span><span class="n">1</span></span>
+  </div></div>
+  <div class="stage dark"><div class="row">
+    <span class="a-f tg"><span class="sw"></span><span class="lbl">Foundational</span><span class="n">2</span></span>
+    <span class="t-core tg"><span class="sw"></span><span class="lbl">Core</span><span class="n">3</span></span>
+    <span class="a-a tg off"><span class="sw"></span><span class="lbl">Advanced</span><span class="n">1</span></span>
+    <span class="t-ai tg"><span class="sw"></span><span class="lbl">AI &amp; Future Skills</span><span class="n">1</span></span>
+  </div></div>
+</div>
+
+<div class="v-title"><span class="tag">B</span>Emerald &amp; Rose</div>
+<p class="v-sub">Foundational growth-green, Advanced deep rose. Highest mutual contrast of the four — every tier instantly distinguishable, colorblind-friendly pairing.</p>
+<div class="pair">
+  <div class="stage light"><div class="row">
+    <span class="b-f tg"><span class="sw"></span><span class="lbl">Foundational</span><span class="n">2</span></span>
+    <span class="t-core tg"><span class="sw"></span><span class="lbl">Core</span><span class="n">3</span></span>
+    <span class="b-a tg off"><span class="sw"></span><span class="lbl">Advanced</span><span class="n">1</span></span>
+    <span class="t-ai tg"><span class="sw"></span><span class="lbl">AI &amp; Future Skills</span><span class="n">1</span></span>
+  </div></div>
+  <div class="stage dark"><div class="row">
+    <span class="b-f tg"><span class="sw"></span><span class="lbl">Foundational</span><span class="n">2</span></span>
+    <span class="t-core tg"><span class="sw"></span><span class="lbl">Core</span><span class="n">3</span></span>
+    <span class="b-a tg off"><span class="sw"></span><span class="lbl">Advanced</span><span class="n">1</span></span>
+    <span class="t-ai tg"><span class="sw"></span><span class="lbl">AI &amp; Future Skills</span><span class="n">1</span></span>
+  </div></div>
+</div>
+
+<div class="v-title"><span class="tag">C</span>Terracotta &amp; Plum</div>
+<p class="v-sub">Foundational earthy terracotta, Advanced rich plum. Warmest set — pairs nicely with the warm light theme.</p>
+<div class="pair">
+  <div class="stage light"><div class="row">
+    <span class="c-f tg"><span class="sw"></span><span class="lbl">Foundational</span><span class="n">2</span></span>
+    <span class="t-core tg"><span class="sw"></span><span class="lbl">Core</span><span class="n">3</span></span>
+    <span class="c-a tg off"><span class="sw"></span><span class="lbl">Advanced</span><span class="n">1</span></span>
+    <span class="t-ai tg"><span class="sw"></span><span class="lbl">AI &amp; Future Skills</span><span class="n">1</span></span>
+  </div></div>
+  <div class="stage dark"><div class="row">
+    <span class="c-f tg"><span class="sw"></span><span class="lbl">Foundational</span><span class="n">2</span></span>
+    <span class="t-core tg"><span class="sw"></span><span class="lbl">Core</span><span class="n">3</span></span>
+    <span class="c-a tg off"><span class="sw"></span><span class="lbl">Advanced</span><span class="n">1</span></span>
+    <span class="t-ai tg"><span class="sw"></span><span class="lbl">AI &amp; Future Skills</span><span class="n">1</span></span>
+  </div></div>
+</div>
+
+<div class="v-title"><span class="tag">D</span>Moss &amp; Purple</div>
+<p class="v-sub">Foundational organic moss-green ("roots"), Advanced vivid purple ("mastery"). A natural progression metaphor: green → blue → purple → cyan.</p>
+<div class="pair">
+  <div class="stage light"><div class="row">
+    <span class="d-f tg"><span class="sw"></span><span class="lbl">Foundational</span><span class="n">2</span></span>
+    <span class="t-core tg"><span class="sw"></span><span class="lbl">Core</span><span class="n">3</span></span>
+    <span class="d-a tg off"><span class="sw"></span><span class="lbl">Advanced</span><span class="n">1</span></span>
+    <span class="t-ai tg"><span class="sw"></span><span class="lbl">AI &amp; Future Skills</span><span class="n">1</span></span>
+  </div></div>
+  <div class="stage dark"><div class="row">
+    <span class="d-f tg"><span class="sw"></span><span class="lbl">Foundational</span><span class="n">2</span></span>
+    <span class="t-core tg"><span class="sw"></span><span class="lbl">Core</span><span class="n">3</span></span>
+    <span class="d-a tg off"><span class="sw"></span><span class="lbl">Advanced</span><span class="n">1</span></span>
+    <span class="t-ai tg"><span class="sw"></span><span class="lbl">AI &amp; Future Skills</span><span class="n">1</span></span>
+  </div></div>
+</div>
+
+</body>
+</html>

@@ -19,6 +19,7 @@ htmlcov/
 .sisyphus/
 .pids/
 .logs/
+logs/
 .DS_Store
 
 # Tool/temp artifacts

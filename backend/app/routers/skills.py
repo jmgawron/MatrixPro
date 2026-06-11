@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.dependencies import get_current_user, require_role
-from app.models.catalog import Certificate, SkillCertificate
+from app.models.catalog import SkillCertificate
 from app.models.org import Domain, Team
 from app.models.plan import (
     DevelopmentPlan,
@@ -36,6 +36,7 @@ from app.schemas.skill import (
     CompareResponse,
     CompareSkillInfo,
     CompareTeamResult,
+    DuplicateWarningResponse,
     ExplorerContentMatch,
     ExplorerContentOption,
     ExplorerContentOptionsResponse,
@@ -52,6 +53,28 @@ from app.schemas.skill import (
     SkillUpdate,
     TagResponse,
     TeamInfo,
+)
+from app.services.notifications import notify_skill_event
+from app.services.skill_lifecycle import (
+    convert_catalog_content_to_personal,
+    delete_catalog_skill_with_forks,
+    delete_preview,
+    duplicate_skill,
+)
+from app.services.skill_ownership import (
+    ROLE_CONSUMER,
+    ROLE_OWNER,
+    active_catalog_skill_name_exists,
+    check_manager_owner_team_access,
+    fuzzy_duplicate_warnings,
+    manager_skill_access,
+    manager_accessible_team_ids,
+    require_owner_or_admin,
+    resolve_manager_consumer_team_ids,
+    resolve_manager_owner_team_ids,
+    skill_consumer_team_ids,
+    skill_owner_team_ids,
+    sync_skill_team_roles,
 )
 
 router = APIRouter(prefix="/api/skills", tags=["skills"])
@@ -79,7 +102,18 @@ def _eager_load_skill(db: Session, skill_id: int) -> Optional[Skill]:
     )
 
 
-def _to_skill_response(skill: Skill) -> SkillResponse:
+def _to_skill_response(skill: Skill, duplicate_warnings: list[str] | None = None) -> SkillResponse:
+    owner_teams = [
+        TeamInfo(id=st.team.id, name=st.team.name, shift=st.team.shift)
+        for st in skill.skill_teams
+        if getattr(st, "role", ROLE_OWNER) == ROLE_OWNER
+    ]
+    consumer_teams = [
+        TeamInfo(id=st.team.id, name=st.team.name, shift=st.team.shift)
+        for st in skill.skill_teams
+        if getattr(st, "role", ROLE_OWNER) == ROLE_CONSUMER
+    ]
+    all_teams = owner_teams + consumer_teams
     return SkillResponse(
         id=skill.id,
         name=skill.name,
@@ -87,14 +121,14 @@ def _to_skill_response(skill: Skill) -> SkillResponse:
         icon=skill.icon,
         is_archived=skill.is_archived,
         is_orphaned=getattr(skill, "is_orphaned", False),
+        is_custom=bool(skill.is_custom),
         catalog_version=skill.catalog_version,
         created_at=skill.created_at,
         updated_at=skill.updated_at,
         tags=[TagResponse.model_validate(st.tag) for st in skill.skill_tags],
-        teams=[
-            TeamInfo(id=st.team.id, name=st.team.name, shift=st.team.shift)
-            for st in skill.skill_teams
-        ],
+        teams=all_teams,
+        owner_teams=owner_teams,
+        consumer_teams=consumer_teams,
         certificates=[
             CertificateInfo(
                 id=sc.certificate.id, name=sc.certificate.name, icon=sc.certificate.icon
@@ -110,6 +144,7 @@ def _to_skill_response(skill: Skill) -> SkillResponse:
             )
             for sca in skill.skill_categories
         ],
+        duplicate_warnings=duplicate_warnings or [],
     )
 
 
@@ -131,81 +166,32 @@ def _sync_category_m2m(db: Session, skill_id: int, category_ids: list[int]):
         db.add(SkillCategoryAssignment(skill_id=skill_id, category_id=cat_id))
 
 
-def _manager_accessible_team_ids(current_user: User, db: Session) -> set[int]:
-    """Teams a manager may attach skills to: own team + teams of direct reports."""
-    allowed: set[int] = set()
-    if current_user.team_id is not None:
-        allowed.add(current_user.team_id)
-    report_team_ids = (
-        db.query(User.team_id)
-        .filter(User.manager_id == current_user.id, User.team_id.isnot(None))
-        .distinct()
-        .all()
-    )
-    allowed.update(row[0] for row in report_team_ids)
-    return allowed
-
-
-def _existing_skill_team_ids(db: Session, skill_id: int) -> set[int]:
-    rows = (
-        db.query(SkillTeam.team_id)
-        .filter(SkillTeam.skill_id == skill_id)
-        .all()
-    )
-    return {row[0] for row in rows}
+def _check_manager_skill_edit_access(current_user: User, skill_id: int, db: Session):
+    """Managers may edit skills where they have owner-team access (owner wins over consumer)."""
+    access = manager_skill_access(db, current_user, skill_id)
+    if access in ("admin", "owner"):
+        return
+    if access == "consumer":
+        raise HTTPException(
+            status_code=403,
+            detail="Consumer managers may only manage consumer team associations",
+        )
+    raise HTTPException(status_code=403, detail="Not authorized to edit this skill")
 
 
 def _check_manager_team_access(current_user: User, team_ids: list[int], db: Session):
-    """Strict check for create / net-new team assignments."""
-    if current_user.role == UserRole.admin:
-        return
-    if current_user.role != UserRole.manager:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
-    if not team_ids:
-        return
-    allowed = _manager_accessible_team_ids(current_user, db)
-    invalid = [tid for tid in team_ids if tid not in allowed]
-    if invalid:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Not authorized to assign skills to team(s): {invalid}",
-        )
+    check_manager_owner_team_access(current_user, team_ids, db)
 
 
-def _check_manager_skill_edit_access(current_user: User, skill_id: int, db: Session):
-    """Managers may edit skills assigned to at least one team they manage."""
-    if current_user.role == UserRole.admin:
-        return
-    if current_user.role != UserRole.manager:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
-    allowed = _manager_accessible_team_ids(current_user, db)
-    existing = _existing_skill_team_ids(db, skill_id)
-    if existing and not existing.intersection(allowed):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to edit this skill",
-        )
-
-
-def _resolve_manager_team_ids(
-    current_user: User,
-    skill_id: int,
-    requested: list[int],
-    db: Session,
+def _resolve_owner_ids_from_payload(
+    data_owner: list[int] | None,
+    data_team_ids: list[int] | None,
 ) -> list[int]:
-    """Merge team assignments: managers control only their teams; other shifts stay."""
-    allowed = _manager_accessible_team_ids(current_user, db)
-    existing = _existing_skill_team_ids(db, skill_id)
-    requested_set = set(requested)
-    forbidden_new = requested_set - allowed - existing
-    if forbidden_new:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Not authorized to assign skills to team(s): {sorted(forbidden_new)}",
-        )
-    preserved = existing - allowed
-    final = preserved | (requested_set & allowed)
-    return sorted(final)
+    if data_owner is not None:
+        return list(data_owner)
+    if data_team_ids is not None:
+        return list(data_team_ids)
+    return []
 
 
 @router.get("/", response_model=list[SkillResponse])
@@ -228,8 +214,11 @@ def list_skills(
         query = query.filter(Skill.is_archived == False)  # noqa: E712
 
     if team_id is not None:
-        query = query.join(SkillTeam, Skill.id == SkillTeam.skill_id).filter(
-            SkillTeam.team_id == team_id
+        # Match owner or consumer association — engineers browse consumer skills too.
+        query = (
+            query.join(SkillTeam, Skill.id == SkillTeam.skill_id)
+            .filter(SkillTeam.team_id == team_id)
+            .distinct()
         )
 
     if domain_id is not None:
@@ -282,7 +271,8 @@ def create_skill(
     db: Session = Depends(get_db),
     current_user: User = require_role(UserRole.admin, UserRole.manager),
 ):
-    team_ids = list(data.team_ids)
+    owner_ids = _resolve_owner_ids_from_payload(data.owner_team_ids, data.team_ids)
+    consumer_ids = list(data.consumer_team_ids or [])
 
     if data.is_non_technical:
         ntech_team_ids = [
@@ -294,8 +284,8 @@ def create_skill(
                 status_code=400,
                 detail="Non-Technical team (NTECH-GEN) not found in catalog",
             )
-        if team_ids:
-            invalid = [tid for tid in team_ids if tid not in ntech_team_ids]
+        if owner_ids:
+            invalid = [tid for tid in owner_ids if tid not in ntech_team_ids]
             if invalid:
                 raise HTTPException(
                     status_code=400,
@@ -305,22 +295,29 @@ def create_skill(
                     ),
                 )
         else:
-            team_ids = ntech_team_ids
+            owner_ids = ntech_team_ids
 
-    _check_manager_team_access(current_user, team_ids, db)
+    if not owner_ids:
+        raise HTTPException(status_code=400, detail="At least one owner team is required")
 
-    if team_ids:
+    _check_manager_team_access(current_user, owner_ids, db)
+
+    all_team_ids = set(owner_ids) | set(consumer_ids)
+    if all_team_ids:
         found_ids = {
-            t.id for t in db.query(Team).filter(Team.id.in_(team_ids)).all()
+            t.id for t in db.query(Team).filter(Team.id.in_(all_team_ids)).all()
         }
-        missing = [tid for tid in team_ids if tid not in found_ids]
+        missing = [tid for tid in all_team_ids if tid not in found_ids]
         if missing:
             raise HTTPException(
                 status_code=400, detail=f"Team(s) not found: {missing}"
             )
 
+    if active_catalog_skill_name_exists(db, data.name.strip()):
+        raise HTTPException(status_code=400, detail="Skill name must be unique in catalog")
+
     skill = Skill(
-        name=data.name,
+        name=data.name.strip(),
         description=data.description,
         icon=data.icon,
         is_archived=False,
@@ -330,8 +327,7 @@ def create_skill(
     db.add(skill)
     db.flush()
 
-    for tid in team_ids:
-        db.add(SkillTeam(skill_id=skill.id, team_id=tid))
+    sync_skill_team_roles(db, skill.id, owner_ids, consumer_ids)
 
     for tag_name in data.tag_names:
         tag = db.query(Tag).filter(Tag.name == tag_name).first()
@@ -345,10 +341,19 @@ def create_skill(
     category_ids = [] if data.is_non_technical else data.category_ids
     _sync_category_m2m(db, skill.id, category_ids)
 
+    notify_skill_event(
+        db,
+        skill,
+        "skill_created",
+        f'New catalog skill: "{skill.name}"',
+        exclude_user_id=current_user.id,
+    )
+
     db.commit()
 
     loaded = _eager_load_skill(db, skill.id)
-    return _to_skill_response(loaded)
+    warnings = fuzzy_duplicate_warnings(db, skill.name, exclude_skill_id=skill.id)
+    return _to_skill_response(loaded, duplicate_warnings=warnings)
 
 
 @router.get("/categories", response_model=list[CategoryResponse])
@@ -771,6 +776,18 @@ def compare_teams(
     )
 
 
+@router.get("/duplicate-check", response_model=DuplicateWarningResponse)
+def duplicate_check(
+    name: str = Query(..., min_length=1),
+    exclude_skill_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
+):
+    return DuplicateWarningResponse(
+        warnings=fuzzy_duplicate_warnings(db, name, exclude_skill_id=exclude_skill_id)
+    )
+
+
 @router.get("/{skill_id}", response_model=SkillResponse)
 def get_skill(
     skill_id: int,
@@ -793,13 +810,50 @@ def update_skill(
     skill = db.query(Skill).filter(Skill.id == skill_id).first()
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
+    if skill.is_custom:
+        raise HTTPException(status_code=400, detail="Cannot edit personal skills via catalog API")
 
-    _check_manager_skill_edit_access(current_user, skill_id, db)
+    access = manager_skill_access(db, current_user, skill_id)
+    if access == "none":
+        raise HTTPException(status_code=403, detail="Not authorized to edit this skill")
+
+    if access == "consumer":
+        restricted = [
+            data.name,
+            data.description,
+            data.icon,
+            data.tag_names,
+            data.certificate_ids,
+            data.category_ids,
+            data.is_non_technical,
+            data.owner_team_ids,
+            data.team_ids,
+        ]
+        if any(v is not None for v in restricted):
+            raise HTTPException(
+                status_code=403,
+                detail="Consumer managers may only update consumer team associations",
+            )
+        if data.consumer_team_ids is not None:
+            consumers = resolve_manager_consumer_team_ids(
+                current_user, skill_id, data.consumer_team_ids, db
+            )
+            owners = sorted(skill_owner_team_ids(db, skill_id))
+            sync_skill_team_roles(db, skill_id, owners, consumers)
+            notify_skill_event(
+                db,
+                skill,
+                "ownership_changed",
+                f'Consumer teams updated for "{skill.name}"',
+                exclude_user_id=current_user.id,
+            )
+            db.commit()
+        loaded = _eager_load_skill(db, skill_id)
+        return _to_skill_response(loaded)
 
     updated = False
 
-    # Handle is_non_technical reclassification BEFORE team_ids processing so the
-    # NTECH-aware team list flows through the same SkillTeam replace path below.
+    # Handle is_non_technical reclassification BEFORE ownership processing
     if data.is_non_technical is not None:
         ntech_team_ids = [
             t.id
@@ -817,10 +871,9 @@ def update_skill(
         current_is_ntech = any(tid in ntech_team_ids for tid in current_team_ids)
 
         if data.is_non_technical and not current_is_ntech:
-            # Flip Technical -> Non-Technical: replace with all NTECH-GEN teams
-            # unless caller supplied an explicit subset.
-            if data.team_ids:
-                invalid = [tid for tid in data.team_ids if tid not in ntech_team_ids]
+            if data.owner_team_ids or data.team_ids:
+                check_ids = data.owner_team_ids or data.team_ids or []
+                invalid = [tid for tid in check_ids if tid not in ntech_team_ids]
                 if invalid:
                     raise HTTPException(
                         status_code=400,
@@ -830,18 +883,18 @@ def update_skill(
                         ),
                     )
             else:
-                data.team_ids = ntech_team_ids
+                data.owner_team_ids = ntech_team_ids
         elif (not data.is_non_technical) and current_is_ntech:
-            # Flip Non-Technical -> Technical: caller MUST provide regular team_ids
-            if not data.team_ids:
+            if not (data.owner_team_ids or data.team_ids):
                 raise HTTPException(
                     status_code=400,
                     detail=(
-                        "Reclassifying to Technical requires team_ids for the new "
-                        "regular team assignments"
+                        "Reclassifying to Technical requires owner_team_ids for the "
+                        "new regular team assignments"
                     ),
                 )
-            invalid = [tid for tid in data.team_ids if tid in ntech_team_ids]
+            check_ids = data.owner_team_ids or data.team_ids or []
+            invalid = [tid for tid in check_ids if tid in ntech_team_ids]
             if invalid:
                 raise HTTPException(
                     status_code=400,
@@ -850,9 +903,9 @@ def update_skill(
                         f"invalid team_ids: {invalid}"
                     ),
                 )
-        elif data.is_non_technical and current_is_ntech and data.team_ids:
-            # Already Non-Technical, validate any new team_ids stay within NTECH.
-            invalid = [tid for tid in data.team_ids if tid not in ntech_team_ids]
+        elif data.is_non_technical and current_is_ntech and (data.owner_team_ids or data.team_ids):
+            check_ids = data.owner_team_ids or data.team_ids or []
+            invalid = [tid for tid in check_ids if tid not in ntech_team_ids]
             if invalid:
                 raise HTTPException(
                     status_code=400,
@@ -863,11 +916,13 @@ def update_skill(
                 )
 
         if data.is_non_technical:
-            # Non-technical skills are not grouped by proficiency categories.
             data.category_ids = []
 
     if data.name is not None:
-        skill.name = data.name
+        new_name = data.name.strip()
+        if active_catalog_skill_name_exists(db, new_name, exclude_skill_id=skill_id):
+            raise HTTPException(status_code=400, detail="Skill name must be unique in catalog")
+        skill.name = new_name
         updated = True
 
     if data.description is not None:
@@ -878,22 +933,43 @@ def update_skill(
         skill.icon = data.icon
         updated = True
 
-    if data.is_archived is not None:
-        skill.is_archived = data.is_archived
-        updated = True
-
-    if data.team_ids is not None:
-        team_ids = data.team_ids
-        if current_user.role == UserRole.manager:
-            team_ids = _resolve_manager_team_ids(
-                current_user, skill_id, team_ids, db
+    ownership_changed = False
+    if (
+        data.owner_team_ids is not None
+        or data.team_ids is not None
+        or data.consumer_team_ids is not None
+    ):
+        owner_ids = sorted(skill_owner_team_ids(db, skill_id))
+        consumer_ids = sorted(skill_consumer_team_ids(db, skill_id))
+        if data.owner_team_ids is not None or data.team_ids is not None:
+            requested = _resolve_owner_ids_from_payload(
+                data.owner_team_ids, data.team_ids
             )
-        for tid in team_ids:
+            if current_user.role == UserRole.admin or access == "owner":
+                owner_ids = sorted(set(requested))
+                if not owner_ids:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Skill must have at least one owner team",
+                    )
+            else:
+                owner_ids = resolve_manager_owner_team_ids(
+                    current_user, skill_id, requested, db
+                )
+        if data.consumer_team_ids is not None:
+            if current_user.role == UserRole.admin or access == "owner":
+                consumer_ids = sorted(
+                    set(data.consumer_team_ids) - set(owner_ids)
+                )
+            else:
+                consumer_ids = resolve_manager_consumer_team_ids(
+                    current_user, skill_id, data.consumer_team_ids, db
+                )
+        for tid in set(owner_ids) | set(consumer_ids):
             if not db.query(Team).filter(Team.id == tid).first():
                 raise HTTPException(status_code=400, detail=f"Team {tid} not found")
-        db.query(SkillTeam).filter(SkillTeam.skill_id == skill_id).delete()
-        for tid in team_ids:
-            db.add(SkillTeam(skill_id=skill_id, team_id=tid))
+        sync_skill_team_roles(db, skill_id, owner_ids, consumer_ids)
+        ownership_changed = True
         updated = True
 
     if data.tag_names is not None:
@@ -929,92 +1005,185 @@ def update_skill(
         updated = True
 
     if updated:
-        skill.catalog_version += 1
         skill.updated_at = datetime.utcnow()
+        event = "ownership_changed" if ownership_changed else "skill_updated"
+        notify_skill_event(
+            db,
+            skill,
+            event,
+            f'Catalog skill updated: "{skill.name}"',
+            exclude_user_id=current_user.id,
+        )
 
     db.commit()
 
     loaded = _eager_load_skill(db, skill_id)
-    return _to_skill_response(loaded)
+    warnings = (
+        fuzzy_duplicate_warnings(db, skill.name, exclude_skill_id=skill_id)
+        if data.name is not None
+        else []
+    )
+    return _to_skill_response(loaded, duplicate_warnings=warnings)
 
 
 @router.delete("/{skill_id}")
 def delete_skill(
     skill_id: int,
     db: Session = Depends(get_db),
-    current_user: User = require_role(UserRole.admin),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
 ):
     skill = db.query(Skill).filter(Skill.id == skill_id).first()
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    in_plan = db.query(PlanSkill).filter(PlanSkill.skill_id == skill_id).first()
+    require_owner_or_admin(db, current_user, skill_id)
+    result = delete_catalog_skill_with_forks(db, skill, current_user.id)
+    db.commit()
+    return result
 
-    if in_plan:
-        skill.is_archived = True
-        skill.catalog_version += 1
-        skill.updated_at = datetime.utcnow()
-        db.commit()
-        return {"detail": "Skill archived"}
+
+@router.post("/{skill_id}/duplicate", response_model=SkillResponse)
+def duplicate_skill_endpoint(
+    skill_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
+):
+    skill = _eager_load_skill(db, skill_id)
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    if skill.is_custom:
+        raise HTTPException(status_code=400, detail="Cannot duplicate personal skills")
+
+    if current_user.role == UserRole.manager and current_user.team_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Manager must belong to a team to duplicate skills",
+        )
+    clone = duplicate_skill(db, skill, current_user)
+    db.commit()
+    loaded = _eager_load_skill(db, clone.id)
+    warnings = fuzzy_duplicate_warnings(db, clone.name, exclude_skill_id=clone.id)
+    return _to_skill_response(loaded, duplicate_warnings=warnings)
+
+
+@router.post("/{skill_id}/join-consumer", response_model=SkillResponse)
+def join_consumer_team(
+    skill_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.manager),
+):
+    """Attach the manager's team as a consumer on a skill they do not own."""
+    if current_user.team_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Manager must belong to a team",
+        )
+    skill = _eager_load_skill(db, skill_id)
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    if skill.is_custom:
+        raise HTTPException(status_code=400, detail="Cannot join personal skills")
+
+    access = manager_skill_access(db, current_user, skill_id)
+    if access in ("admin", "owner"):
+        raise HTTPException(
+            status_code=400,
+            detail="Your team already owns this skill",
+        )
+    if access == "consumer":
+        raise HTTPException(
+            status_code=400,
+            detail="Your team is already a consumer",
+        )
+
+    owners = sorted(skill_owner_team_ids(db, skill_id))
+    consumers = sorted(
+        skill_consumer_team_ids(db, skill_id) | {current_user.team_id}
+    )
+    sync_skill_team_roles(db, skill_id, owners, consumers)
+    notify_skill_event(
+        db,
+        skill,
+        "ownership_changed",
+        f'Consumer team joined for "{skill.name}"',
+        exclude_user_id=current_user.id,
+    )
+    db.commit()
+    loaded = _eager_load_skill(db, skill_id)
+    return _to_skill_response(loaded)
+
+
+@router.delete("/{skill_id}/consumer-teams/{team_id}", response_model=SkillResponse)
+def remove_consumer_team(
+    skill_id: int,
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
+):
+    """Remove a team from consumer associations on a skill."""
+    skill = _eager_load_skill(db, skill_id)
+    if skill is None:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    if skill.is_custom:
+        raise HTTPException(status_code=400, detail="Cannot update personal skills")
+
+    access = manager_skill_access(db, current_user, skill_id)
+    if access == "none":
+        raise HTTPException(status_code=403, detail="Not authorized to update this skill")
+
+    existing_consumers = skill_consumer_team_ids(db, skill_id)
+    if team_id not in existing_consumers:
+        raise HTTPException(
+            status_code=400,
+            detail="Team is not a consumer on this skill",
+        )
+
+    if current_user.role == UserRole.admin or access == "owner":
+        pass
+    elif access == "consumer":
+        allowed = manager_accessible_team_ids(current_user, db)
+        if team_id not in allowed:
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to remove this consumer team",
+            )
     else:
-        db.query(SkillTag).filter(SkillTag.skill_id == skill_id).delete()
-        db.query(SkillTeam).filter(SkillTeam.skill_id == skill_id).delete()
-        db.query(SkillCertificate).filter(
-            SkillCertificate.skill_id == skill_id
-        ).delete()
-        db.query(SkillCategoryAssignment).filter(
-            SkillCategoryAssignment.skill_id == skill_id
-        ).delete()
-        db.query(SkillLevelContent).filter(
-            SkillLevelContent.skill_id == skill_id
-        ).delete()
-        db.delete(skill)
-        db.commit()
-        return {"detail": "Skill deleted"}
+        raise HTTPException(status_code=403, detail="Not authorized to remove consumer teams")
+
+    owners = sorted(skill_owner_team_ids(db, skill_id))
+    consumers = sorted(existing_consumers - {team_id})
+    sync_skill_team_roles(db, skill_id, owners, consumers)
+    notify_skill_event(
+        db,
+        skill,
+        "ownership_changed",
+        f'Consumer team removed from "{skill.name}"',
+        exclude_user_id=current_user.id,
+    )
+    db.commit()
+    loaded = _eager_load_skill(db, skill_id)
+    return _to_skill_response(loaded)
+
+
+@router.get("/{skill_id}/delete-preview")
+def skill_delete_preview(
+    skill_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
+):
+    require_owner_or_admin(db, current_user, skill_id)
+    return delete_preview(db, skill_id)
 
 
 @router.get("/{skill_id}/cascade-preview")
 def cascade_preview(
     skill_id: int,
     db: Session = Depends(get_db),
-    current_user: User = require_role(UserRole.admin),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
 ):
-    from app.models.plan import PlanSkillTrainingLog
-
-    skill = db.query(Skill).filter(Skill.id == skill_id).first()
-    if skill is None:
-        raise HTTPException(status_code=404, detail="Skill not found")
-
-    plan_skill_ids = [
-        ps.id
-        for ps in db.query(PlanSkill.id)
-        .filter(PlanSkill.skill_id == skill_id)
-        .all()
-    ]
-
-    engineer_ids = (
-        db.query(PlanSkill.plan_id)
-        .filter(PlanSkill.skill_id == skill_id)
-        .distinct()
-        .count()
-    )
-
-    training_log_count = 0
-    if plan_skill_ids:
-        training_log_count = (
-            db.query(PlanSkillTrainingLog)
-            .filter(PlanSkillTrainingLog.plan_skill_id.in_(plan_skill_ids))
-            .count()
-        )
-
-    return {
-        "skill_id": skill_id,
-        "skill_name": skill.name,
-        "engineers_affected": engineer_ids,
-        "plan_skills_affected": len(plan_skill_ids),
-        "training_logs_preserved": training_log_count,
-        "already_orphaned": bool(getattr(skill, "is_orphaned", False)),
-    }
+    """Legacy alias for delete-preview."""
+    require_owner_or_admin(db, current_user, skill_id)
+    return delete_preview(db, skill_id)
 
 
 @router.get("/{skill_id}/reclassify-preview")
@@ -1057,47 +1226,10 @@ def reclassify_preview(
 def cascade_delete_skill(
     skill_id: int,
     db: Session = Depends(get_db),
-    current_user: User = require_role(UserRole.admin),
+    current_user: User = require_role(UserRole.admin, UserRole.manager),
 ):
-    skill = db.query(Skill).filter(Skill.id == skill_id).first()
-    if skill is None:
-        raise HTTPException(status_code=404, detail="Skill not found")
-
-    plan_skill_count = (
-        db.query(PlanSkill).filter(PlanSkill.skill_id == skill_id).count()
-    )
-
-    db.query(SkillTag).filter(SkillTag.skill_id == skill_id).delete()
-    db.query(SkillTeam).filter(SkillTeam.skill_id == skill_id).delete()
-    db.query(SkillCertificate).filter(
-        SkillCertificate.skill_id == skill_id
-    ).delete()
-    db.query(SkillCategoryAssignment).filter(
-        SkillCategoryAssignment.skill_id == skill_id
-    ).delete()
-    db.query(SkillLevelContent).filter(
-        SkillLevelContent.skill_id == skill_id
-    ).delete()
-
-    if plan_skill_count > 0:
-        skill.is_archived = True
-        skill.is_orphaned = True
-        skill.catalog_version += 1
-        skill.updated_at = datetime.utcnow()
-        db.commit()
-        return {
-            "detail": "Skill cascade-deleted, kept as tombstone for active plans",
-            "plan_skills_affected": plan_skill_count,
-            "tombstone": True,
-        }
-    else:
-        db.delete(skill)
-        db.commit()
-        return {
-            "detail": "Skill cascade-deleted (hard delete, no active plans)",
-            "plan_skills_affected": 0,
-            "tombstone": False,
-        }
+    """Legacy alias — forks personal copies then removes catalog skill."""
+    return delete_skill(skill_id, db, current_user)
 
 
 @router.post("/{skill_id}/assignments")
@@ -1111,9 +1243,7 @@ def update_skill_assignments(
     if skill is None:
         raise HTTPException(status_code=404, detail="Skill not found")
 
-    db.query(SkillTeam).filter(SkillTeam.skill_id == skill_id).delete()
-    for tid in data.team_ids:
-        db.add(SkillTeam(skill_id=skill_id, team_id=tid))
+    sync_skill_team_roles(db, skill_id, data.team_ids, [])
 
     db.query(SkillCertificate).filter(SkillCertificate.skill_id == skill_id).delete()
     for cid in data.certificate_ids:
@@ -1310,9 +1440,9 @@ def delete_skill_content(
     if content is None:
         raise HTTPException(status_code=404, detail="Content item not found")
 
-    _check_manager_skill_edit_access(current_user, skill_id, db)
+    require_owner_or_admin(db, current_user, skill_id)
 
-    _purge_catalog_content_plan_refs(db, content_id)
+    convert_catalog_content_to_personal(db, content, current_user.id)
     db.delete(content)
     db.commit()
-    return {"detail": "Content item deleted"}
+    return {"detail": "Content item deleted and converted for affected engineers"}

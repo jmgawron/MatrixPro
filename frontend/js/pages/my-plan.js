@@ -76,6 +76,7 @@ const SVG_ICONS = {
   trash: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
   grip: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>',
   calendar: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  clock: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
   refresh: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
   circle: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
   circleCheck: '<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
@@ -146,6 +147,18 @@ export function mountMyPlan(container, params) {
   _categoriesCache = null;
   _categoriesInitialized = false;
   _activeCategoryFilters.clear();
+  const hashParts = window.location.hash.split('?');
+  const urlParams = new URLSearchParams(hashParts[1] || '');
+  const sectionParam = urlParams.get('section');
+  if (sectionParam && SECTIONS.some(s => s.status === sectionParam)) {
+    _currentSection = sectionParam;
+  } else {
+    const pendingSection = sessionStorage.getItem('matrixpro_open_plan_section');
+    if (pendingSection && SECTIONS.some(s => s.status === pendingSection)) {
+      _currentSection = pendingSection;
+    }
+    sessionStorage.removeItem('matrixpro_open_plan_section');
+  }
   const user = Store.get('user');
   _engineerId = params?.id ? Number(params.id) : user?.id;
 
@@ -434,10 +447,52 @@ function _applyFilters(skills) {
   }
 
   if (_activeProficiencyFilters.size > 0) {
-    filtered = filtered.filter(s => _activeProficiencyFilters.has(s.proficiency_level));
+    filtered = filtered.filter(s => {
+      // Newly added / planned skills often have no proficiency yet — keep them visible.
+      if (s.proficiency_level == null) return true;
+      return _activeProficiencyFilters.has(s.proficiency_level);
+    });
   }
 
   return filtered;
+}
+
+// (_ensureCategoryFiltersForSkills removed — category toggles are user-controlled;
+// defaults are set once at load via _categoriesInitialized.)
+
+function _skillsMatchingCategoryFilters(sectionSkills) {
+  const visible = [];
+  const seen = new Set();
+  (Array.isArray(sectionSkills) ? sectionSkills : []).forEach(planSkill => {
+    const cats = planSkill.categories || planSkill.skill?.categories || [];
+    if (cats.length === 0) {
+      if (!seen.has(planSkill.id)) {
+        seen.add(planSkill.id);
+        visible.push(planSkill);
+      }
+      return;
+    }
+    if (cats.some(cat => _activeCategoryFilters.has(cat.id)) && !seen.has(planSkill.id)) {
+      seen.add(planSkill.id);
+      visible.push(planSkill);
+    }
+  });
+  return visible;
+}
+
+function _skillsVisibleInSection(status, skills) {
+  const filtered = _applyFilters(skills);
+  const sectionSkills = filtered.filter(s => s.status === status);
+  return _skillsMatchingCategoryFilters(sectionSkills);
+}
+
+function _updateSectionNavCounts() {
+  if (!_planData) return;
+  const skills = Array.isArray(_planData.skills) ? _planData.skills : [];
+  SECTIONS.forEach(({ status }) => {
+    const navCount = document.getElementById(`mp-nav-count-${status}`);
+    if (navCount) navCount.textContent = String(_skillsVisibleInSection(status, skills).length);
+  });
 }
 
 function renderActiveSection() {
@@ -445,13 +500,16 @@ function renderActiveSection() {
 
   const skills = Array.isArray(_planData.skills) ? _planData.skills : [];
   const filtered = _applyFilters(skills);
+  const sectionSkills = filtered.filter(s => s.status === _currentSection);
+  // Note: toggles are user-controlled — all categories are enabled once at load
+  // (_categoriesInitialized); we deliberately do NOT re-enable them per render.
+  const activeSkills = _skillsMatchingCategoryFilters(sectionSkills);
 
   const contentTitle = document.getElementById('mp-content-title');
   const contentCount = document.getElementById('mp-content-count');
   const activeDef = SECTIONS.find(s => s.status === _currentSection);
   if (contentTitle) contentTitle.textContent = activeDef?.title || _currentSection;
 
-  const activeSkills = filtered.filter(s => s.status === _currentSection);
   if (contentCount) contentCount.textContent = String(activeSkills.length);
 
   const sectionEl = document.getElementById('mp-active-section');
@@ -468,29 +526,43 @@ function renderActiveSection() {
   if (toolbar) {
     toolbar.innerHTML = '';
     if (_categoriesCache && _categoriesCache.length > 0) {
-      const iconMap = {
-        foundational: 'seedling',
-        core: 'diamond',
-        advanced: 'atom',
-        ai_future: 'sparkles',
-        'ai-future': 'sparkles',
-      };
+      const SHORT_LABELS = { 'AI & Future Skills': 'AI & Future' };
       _categoriesCache.forEach(cat => {
-        const isActive = _activeCategoryFilters.has(cat.id);
-        const chip = el('button', { className: 'mp-filter-chip' });
-        chip.dataset.category = cat.slug || '';
-        if (isActive) chip.classList.add('active');
-        const iconName = iconMap[cat.slug] || 'layers';
-        chip.appendChild(svgIcon(iconName, '14px'));
-        const label = el('span', { className: 'mp-filter-chip__label' });
-        label.textContent = cat.name;
-        chip.appendChild(label);
-        chip.addEventListener('click', () => {
-          if (isActive) _activeCategoryFilters.delete(cat.id);
-          else _activeCategoryFilters.add(cat.id);
-          renderActiveSection();
+        const isOn = _activeCategoryFilters.has(cat.id);
+        const skillCount = sectionSkills.filter(s => {
+          const cats = s.categories || s.skill?.categories || [];
+          return cats.some(c => c.id === cat.id);
+        }).length;
+
+        const toggle = el('button', {
+          className: 'mp-cat-toggle' + (isOn ? '' : ' off'),
+          type: 'button',
+          title: `${isOn ? 'Hide' : 'Show'} the ${cat.name} section`,
         });
-        toolbar.appendChild(chip);
+        toggle.dataset.category = cat.slug || '';
+        toggle.dataset.categoryId = String(cat.id);
+        toggle.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+
+        const sw = el('span', { className: 'mp-cat-toggle__sw' });
+        sw.setAttribute('aria-hidden', 'true');
+        toggle.appendChild(sw);
+
+        const label = el('span', { className: 'mp-cat-toggle__label' });
+        label.textContent = SHORT_LABELS[cat.name] || cat.name;
+        toggle.appendChild(label);
+
+        const count = el('span', { className: 'mp-cat-toggle__count' });
+        count.textContent = String(skillCount);
+        toggle.appendChild(count);
+
+        toggle.addEventListener('click', () => {
+          const catId = Number(cat.id);
+          if (_activeCategoryFilters.has(catId)) _activeCategoryFilters.delete(catId);
+          else _activeCategoryFilters.add(catId);
+          renderActiveSection();
+          _updateSectionNavCounts();
+        });
+        toolbar.appendChild(toggle);
       });
     }
   }
@@ -518,14 +590,15 @@ function renderActiveSection() {
     const cats = planSkill.categories || planSkill.skill?.categories || [];
     if (cats.length === 0) {
       uncategorized.push(planSkill);
-    } else {
-      cats.forEach(cat => {
-        if (_activeCategoryFilters.has(cat.id)) {
-          if (!groups.has(cat.id)) groups.set(cat.id, { cat, skills: [] });
-          groups.get(cat.id).skills.push(planSkill);
-        }
-      });
+      return;
     }
+    cats.forEach(cat => {
+      if (!_activeCategoryFilters.has(cat.id)) return;
+      if (!groups.has(cat.id)) groups.set(cat.id, { cat, skills: [] });
+      if (!groups.get(cat.id).skills.some(s => s.id === planSkill.id)) {
+        groups.get(cat.id).skills.push(planSkill);
+      }
+    });
   });
 
   const sortedGroups = Array.from(groups.values()).sort((a, b) => a.cat.sort_order - b.cat.sort_order);
@@ -542,33 +615,37 @@ function renderActiveSection() {
     return;
   }
 
-  const groupIconMap = {
-    foundational: 'seedling',
-    core: 'diamond',
-    advanced: 'atom',
-    ai_future: 'sparkles',
-    'ai-future': 'sparkles',
-  };
-
-  allGroups.forEach(g => {
+  allGroups.forEach((g, idx) => {
     const groupEl = el('div', { className: 'mp-category-group' });
+    if (g.slug && g.slug !== 'uncategorized') {
+      groupEl.dataset.categorySlug = g.slug;
+    }
 
     const header = el('div', { className: 'mp-category-group__header' });
-    const iconName = groupIconMap[g.slug] || 'layers';
-    const iconEl = svgIcon(iconName, '14px');
-    iconEl.classList.add('mp-category-group__icon');
-    header.appendChild(iconEl);
+
+    if (g.slug !== 'uncategorized') {
+      const numSpan = el('span', { className: 'mp-category-group__num' });
+      numSpan.setAttribute('aria-hidden', 'true');
+      numSpan.textContent = String(idx + 1).padStart(2, '0');
+      header.appendChild(numSpan);
+    }
+
     const nameSpan = el('span', { className: 'mp-category-group__name' });
     nameSpan.textContent = g.name;
-    const countSpan = el('span', { className: 'mp-category-group__count' });
-    countSpan.textContent = String(g.skills.length);
     header.appendChild(nameSpan);
+
+    const ruleSpan = el('span', { className: 'mp-category-group__rule' });
+    ruleSpan.setAttribute('aria-hidden', 'true');
+    header.appendChild(ruleSpan);
+
+    const countSpan = el('span', { className: 'mp-category-group__count' });
+    countSpan.textContent = `${g.skills.length} skill${g.skills.length === 1 ? '' : 's'}`;
     header.appendChild(countSpan);
     groupEl.appendChild(header);
 
     const cardsEl = el('div', { className: 'mp-category-group__cards mp-section-grid' });
     g.skills.forEach(planSkill => {
-      const card = buildCard(planSkill, _currentSection, sectionDef?.iconClass || 'mp-card-icon--dev');
+      const card = buildCard(planSkill, _currentSection, g);
       cardsEl.appendChild(card);
     });
     groupEl.appendChild(cardsEl);
@@ -714,20 +791,16 @@ function renderSections() {
   renderQuickFilters();
 
   const skills = Array.isArray(_planData.skills) ? _planData.skills : [];
-  const filtered = _applyFilters(skills);
 
   const groups = {
-    developing: filtered.filter(s => s.status === 'developing'),
-    planned: filtered.filter(s => s.status === 'planned'),
-    mastered: filtered.filter(s => s.status === 'mastered'),
+    developing: _skillsVisibleInSection('developing', skills),
+    planned: _skillsVisibleInSection('planned', skills),
+    mastered: _skillsVisibleInSection('mastered', skills),
   };
 
   updateStatsRow(skills, groups);
 
-  SECTIONS.forEach(({ status }) => {
-    const navCount = document.getElementById(`mp-nav-count-${status}`);
-    if (navCount) navCount.textContent = String(groups[status].length);
-  });
+  _updateSectionNavCounts();
 
   renderActiveSection();
 }
@@ -759,8 +832,8 @@ function updateStatsRow(allSkills, groups) {
     { value: allSkills.length, label: 'Total Skills', icon: 'bookOpen' },
     { value: groups.developing.length, label: 'Developing', icon: 'wrench' },
     { value: groups.mastered.length, label: 'Mastered', icon: 'checkCircle' },
-    { value: logsThisQ, label: 'Logs This Quarter', icon: 'pencil' },
-    { value: logsThisYear, label: 'Logs This Year', icon: 'calendar' },
+    { value: logsThisQ, label: 'Logs · Qtr', icon: 'pencil' },
+    { value: logsThisYear, label: 'Logs · Year', icon: 'clock' },
   ];
 
   stats.forEach(({ value, label, icon }) => {
@@ -775,21 +848,59 @@ function updateStatsRow(allSkills, groups) {
   });
 }
 
-function buildCard(planSkill, status, iconClass) {
+function buildCard(planSkill, status, group) {
   const card = el('div', { className: 'mp-card' });
   card.dataset.planSkillId = planSkill.id;
   card.dataset.status = status;
   card.setAttribute('draggable', 'true');
 
+  // Tier scoping: group slug when grouped, else primary category slug
+  const primaryCat = (planSkill.categories || planSkill.skill?.categories || [])[0];
+  const tierSlug = (group && group.slug !== 'uncategorized' ? group.slug : primaryCat?.slug) || '';
+  if (tierSlug && !planSkill.is_custom) card.dataset.categorySlug = tierSlug;
+
   const top = el('div', { className: 'mp-card-top' });
 
-  const icon = el('div', { className: `mp-card-icon ${iconClass}` });
+  const headLeft = el('div', { className: 'mp-card-info' });
+
   const skillName = planSkill.skill_name || 'Unknown Skill';
+  const eyebrowText = planSkill.is_custom
+    ? 'Personal'
+    : (group && group.slug !== 'uncategorized' ? group.name : primaryCat?.name) || '';
+  if (eyebrowText) {
+    const eyebrow = el('div', { className: 'mp-card-eyebrow' });
+    eyebrow.textContent = eyebrowText;
+    headLeft.appendChild(eyebrow);
+  }
+
+  const nameEl = el('div', { className: 'mp-card-name' });
+  nameEl.textContent = skillName;
+  headLeft.appendChild(nameEl);
+
+  if (planSkill.is_custom) {
+    headLeft.appendChild(buildPersonalSkillBadge());
+  }
+  top.appendChild(headLeft);
+
+  const headRight = el('div', { className: 'mp-card-head-right' });
+
+  const actionsBtn = el('button', { className: 'mp-card-actions', title: 'Actions' });
+  actionsBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>';
+  actionsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showCardActionsMenu(e, planSkill, status);
+  });
+  headRight.appendChild(actionsBtn);
+
+  const gaugeWrap = buildProgressGauge(null);
+  headRight.appendChild(gaugeWrap);
+
+  const icon = el('div', { className: 'mp-card-icon' });
   if (planSkill.is_custom) {
     applyPersonalSkillIcon(icon);
     card.classList.add('mp-card--personal');
   } else if (planSkill.skill_icon) {
-    const svg = getSkillIconSVG(planSkill.skill_icon, 20);
+    const svg = getSkillIconSVG(planSkill.skill_icon, 16);
     if (svg) {
       icon.innerHTML = svg;
     } else {
@@ -798,41 +909,9 @@ function buildCard(planSkill, status, iconClass) {
   } else {
     icon.textContent = skillName.charAt(0);
   }
-  top.appendChild(icon);
+  headRight.appendChild(icon);
 
-  const info = el('div', { className: 'mp-card-info' });
-  const nameEl = el('div', { className: 'mp-card-name' });
-  nameEl.textContent = skillName;
-  info.appendChild(nameEl);
-
-  if (planSkill.is_custom) {
-    info.appendChild(buildPersonalSkillBadge());
-  }
-
-  if (planSkill.is_orphaned) {
-    const orphanBadge = el('div', { className: 'mp-card__orphan-badge', title: 'This skill was removed from the catalog. Your progress and training logs are preserved.' });
-    orphanBadge.textContent = 'Personal — removed from catalog';
-    info.appendChild(orphanBadge);
-  }
-
-  const badgeWrap = el('div', { className: 'mp-card-badge' });
-  const profLabel = el('span', { className: 'mp-card-prof-label' });
-  profLabel.textContent = 'Proficiency';
-  badgeWrap.appendChild(profLabel);
-  badgeWrap.appendChild(buildProficiencyBadge(planSkill.proficiency_level));
-  info.appendChild(badgeWrap);
-  top.appendChild(info);
-
-  const gaugeWrap = buildProgressGauge(null);
-  top.appendChild(gaugeWrap);
-
-  const actionsBtn = el('button', { className: 'mp-card-actions', title: 'Actions' });
-  actionsBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>';
-  actionsBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    showCardActionsMenu(e, planSkill, status);
-  });
-  top.appendChild(actionsBtn);
+  top.appendChild(headRight);
   card.appendChild(top);
 
   const body = el('div', { className: 'mp-card-body' });
@@ -842,10 +921,13 @@ function buildCard(planSkill, status, iconClass) {
   card._gaugeEl = gaugeWrap;
 
   const footer = el('div', { className: 'mp-card-footer' });
+
+  footer.appendChild(buildProficiencyBadge(planSkill.proficiency_level));
+
   const dateStr = formatDate(planSkill.updated_at || planSkill.added_at);
   if (dateStr) {
     const dateItem = el('span', { className: 'mp-card-footer-item' });
-    dateItem.appendChild(svgIcon('calendar', '12px'));
+    dateItem.appendChild(svgIcon('clock', '12px'));
     dateItem.appendChild(document.createTextNode(` ${dateStr}`));
     footer.appendChild(dateItem);
   }
@@ -907,17 +989,15 @@ function buildCard(planSkill, status, iconClass) {
 
 function buildProficiencyBadge(level) {
   if (!level || level < 1 || level > 5) {
-    const badge = el('span', { className: 'triage-chip chip-pipeline' });
-    badge.textContent = '—';
-    badge.style.fontSize = '11px';
-    badge.style.padding = '2px 8px';
+    const badge = el('span', { className: 'mp-card-prof-chip mp-card-prof-chip--none', title: 'No proficiency level set' });
+    badge.textContent = 'L—';
     return badge;
   }
 
   const labels = { 1: 'Beginner', 2: 'Working', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert' };
-  const badge = el('span', { className: `triage-chip mp-prof-badge mp-prof-badge--${level}` });
-  badge.textContent = `${level}`;
-  badge.title = labels[level];
+  const badge = el('span', { className: 'mp-card-prof-chip' });
+  badge.textContent = `L${level}`;
+  badge.title = `Proficiency: ${labels[level]}`;
   return badge;
 }
 
@@ -940,7 +1020,7 @@ function buildProgressGauge(percent) {
   bgCircle.setAttribute('cy', '16');
   bgCircle.setAttribute('r', radius);
   bgCircle.setAttribute('fill', 'none');
-  bgCircle.setAttribute('stroke', 'rgba(255,255,255,0.08)');
+  bgCircle.setAttribute('stroke', 'var(--gauge-track, rgba(255,255,255,0.08))');
   bgCircle.setAttribute('stroke-width', '2.5');
   
   const progressCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -1115,8 +1195,26 @@ function openEditSkillModal(planSkill) {
   /* ── Header ─────────────────────────────────────────────────────────── */
   const headerBlock = el('header', { className: 'sdm-header' });
   const headerTop = el('div', { className: 'sdm-header__top' });
+
+  // Tier scoping + editorial eyebrow (same language as the cards)
+  const modalCats = Array.isArray(planSkill.categories) ? planSkill.categories : [];
+  const modalPrimaryCat = modalCats[0];
+  if (planSkill.is_custom) {
+    modal.classList.add('sdm-plan-modal--personal');
+  } else if (modalPrimaryCat?.slug) {
+    modal.dataset.categorySlug = modalPrimaryCat.slug;
+  }
+
+  const titleWrap = el('div', { className: 'sdm-header__title-wrap' });
+  const eyebrowText = planSkill.is_custom ? 'Personal' : (modalPrimaryCat?.name || '');
+  if (eyebrowText) {
+    const eyebrowEl = el('div', { className: 'sdm-eyebrow' });
+    eyebrowEl.textContent = eyebrowText;
+    titleWrap.appendChild(eyebrowEl);
+  }
   const titleEl = el('h1', { className: 'sdm-header__title' });
   titleEl.textContent = planSkill.skill_name || 'Skill Details';
+  titleWrap.appendChild(titleEl);
 
   const headerActions = el('div', { className: 'sdm-header__actions' });
 
@@ -1144,18 +1242,11 @@ function openEditSkillModal(planSkill) {
 
   headerActions.appendChild(restoreBtn);
   headerActions.appendChild(windowControls);
-  headerTop.appendChild(titleEl);
+  headerTop.appendChild(titleWrap);
   headerTop.appendChild(headerActions);
   headerBlock.appendChild(headerTop);
 
-  if (planSkill.is_orphaned) {
-    const orphanBadge = el('div', {
-      className: 'mp-card__orphan-badge sdm-orphan-badge',
-      title: 'This skill was removed from the catalog. Your progress and training logs are preserved.',
-    });
-    orphanBadge.textContent = 'Personal — removed from catalog';
-    headerBlock.appendChild(orphanBadge);
-  } else if (planSkill.is_custom) {
+  if (planSkill.is_custom) {
     headerBlock.appendChild(buildPersonalSkillBadge());
   }
 
@@ -1206,6 +1297,7 @@ function openEditSkillModal(planSkill) {
     };
     categories.forEach(cat => {
       const chip = el('span', { className: 'mp-modal-category-chip' });
+      if (cat.slug) chip.dataset.category = cat.slug;
       const ic = svgIcon(editIconMap[cat.slug] || 'layers', '14px');
       ic.classList.add('mp-modal-category-chip__icon');
       chip.appendChild(ic);

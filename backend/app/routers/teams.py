@@ -15,7 +15,7 @@ from app.models.plan import (
     PlanSkillStatus,
     PlanSkillTrainingLog,
 )
-from app.models.skill import Skill, SkillCategoryAssignment, SkillTeam
+from app.models.skill import Skill, SkillCategoryAssignment
 from app.models.user import User, UserRole
 from app.schemas.org import (
     ActivityItem,
@@ -32,6 +32,7 @@ from app.schemas.org import (
     TeamStatsResponse,
 )
 from app.schemas.skill import CategoryInfo
+from app.services.skill_ownership import team_associated_skills
 
 router = APIRouter(prefix="/api/teams", tags=["teams"])
 
@@ -138,14 +139,9 @@ def get_team_matrix(
 ):
     team, engineers = _resolve_team_and_engineers(current_user, db, team_id)
 
-    skill_rows = (
-        db.query(Skill)
-        .join(SkillTeam, SkillTeam.skill_id == Skill.id)
-        .options(_category_eager_option())
-        .filter(SkillTeam.team_id == team.id, Skill.is_archived == False)  # noqa: E712
-        .order_by(Skill.id)
-        .all()
-    )
+    associated = team_associated_skills(db, team.id)
+    skill_rows = [skill for skill, _role in associated]
+    role_by_skill_id = {skill.id: role for skill, role in associated}
 
     engineer_ids = [e.id for e in engineers]
     plan_skill_ids_in_plans: set[int] = set()
@@ -162,19 +158,21 @@ def get_team_matrix(
     extra_skill_ids = plan_skill_ids_in_plans - team_skill_ids
     extra_skills: list[Skill] = []
     if extra_skill_ids:
-        extra_skills = (
-            db.query(Skill)
-            .join(SkillTeam, SkillTeam.skill_id == Skill.id)
-            .options(_category_eager_option())
-            .filter(
-                SkillTeam.team_id == team.id,
-                Skill.id.in_(extra_skill_ids),
-            )
-            .order_by(Skill.id)
-            .all()
-        )
+        extra_associated = [
+            (skill, role)
+            for skill, role in associated
+            if skill.id in extra_skill_ids
+        ]
+        extra_skills = [skill for skill, _role in extra_associated]
+        for skill, role in extra_associated:
+            role_by_skill_id.setdefault(skill.id, role)
 
-    all_skills = skill_rows + extra_skills
+    seen_skill_ids = {s.id for s in skill_rows}
+    all_skills = list(skill_rows)
+    for skill in extra_skills:
+        if skill.id not in seen_skill_ids:
+            all_skills.append(skill)
+            seen_skill_ids.add(skill.id)
 
     plan_skill_map: dict[int, dict[int, PlanSkill]] = {e.id: {} for e in engineers}
     if engineer_ids:
@@ -221,6 +219,7 @@ def get_team_matrix(
             name=s.name,
             icon=s.icon,
             categories=_skill_categories(s),
+            association_role=role_by_skill_id.get(s.id, "owner"),
         )
         for s in all_skills
     ]
@@ -261,14 +260,9 @@ def get_team_stats(
     engineer_ids = [e.id for e in engineers]
     engineer_names = {e.id: e.name for e in engineers}
 
-    team_skills = (
-        db.query(Skill)
-        .join(SkillTeam, SkillTeam.skill_id == Skill.id)
-        .options(_category_eager_option())
-        .filter(SkillTeam.team_id == team.id, Skill.is_archived == False)  # noqa: E712
-        .order_by(Skill.id)
-        .all()
-    )
+    associated = team_associated_skills(db, team.id)
+    team_skills = [skill for skill, _role in associated]
+    role_by_skill_id = {skill.id: role for skill, role in associated}
     total_skills = len(team_skills)
     total_engineers = len(engineers)
 
@@ -376,6 +370,7 @@ def get_team_stats(
                 status_counts=status_counts,
                 last_activity_at=last_activity,
                 categories=_skill_categories(skill),
+                association_role=role_by_skill_id.get(skill.id, "owner"),
             )
         )
 

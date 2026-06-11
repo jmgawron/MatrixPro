@@ -6,7 +6,7 @@ import { showModal, showConfirm } from '../components/modal.js';
 import { createElement } from '../utils/dom.js';
 import { getSkillIconSVG, SKILL_ICONS, ICON_CATEGORIES } from '../components/icons.js';
 import { createComboboxMulti } from '../components/combobox-multi.js';
-import { openCatalogSkillEditor } from '../components/catalog-skill-editor.js?v=11';
+import { openCatalogSkillEditor } from '../components/catalog-skill-editor.js?v=13';
 
 // ─── Category icon catalog (mirrors my-plan.js SVG_ICONS for chip parity) ───
 const CATEGORY_SVG_ICONS = {
@@ -24,6 +24,30 @@ const CATEGORY_ICON_MAP = {
   ai_future: 'sparkles',
   'ai-future': 'sparkles',
 };
+
+const CARD_ACTION_ICON_SIZE = 16;
+
+const CARD_ACTION_SVGS = {
+  edit: `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_ACTION_ICON_SIZE}" height="${CARD_ACTION_ICON_SIZE}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>`,
+  delete: `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_ACTION_ICON_SIZE}" height="${CARD_ACTION_ICON_SIZE}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`,
+  duplicate: `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_ACTION_ICON_SIZE}" height="${CARD_ACTION_ICON_SIZE}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
+  leaveConsumer: `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_ACTION_ICON_SIZE}" height="${CARD_ACTION_ICON_SIZE}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
+  chipRemove: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
+};
+
+function createCardIconBtn({ label, iconHtml, className = '', onClick }) {
+  const btn = createElement('button', {
+    className: `btn btn-sm btn-ghost card-action-btn card-action-btn--icon ${className}`.trim(),
+    title: label,
+    'aria-label': label,
+  });
+  btn.innerHTML = iconHtml;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onClick();
+  });
+  return btn;
+}
 
 function categoryIconSpan(slug, size) {
   const span = createElement('span', { className: 'mp-icon catalog-category-icon-svg' });
@@ -56,7 +80,6 @@ const _treeCache = {};
 let _selectedFilter = { type: 'all', id: null, label: 'All Skills' };
 let _searchQuery = '';
 let _tagQuery = '';
-let _showArchived = false;
 let _activeShifts = new Set([1, 2, 3, 4]);
 
 let _sortMode = 'name-asc';
@@ -89,7 +112,6 @@ export function mountCatalog(container, params) {
 
   _searchQuery = '';
   _tagQuery = '';
-  _showArchived = false;
   _activeShifts = new Set([1, 2, 3, 4]);
   _sortMode = 'name-asc';
   _formDataCache = null;
@@ -284,13 +306,9 @@ function buildPageShell(container) {
   hero.appendChild(statsRow);
   wrapper.appendChild(hero);
 
-  // Tabs
+  // Tabs + toolbar (placed inside the skills column of the integrated panel)
   const tabsEl = buildTabBar();
-  wrapper.appendChild(tabsEl);
-
-  // Toolbar
   const toolbar = buildToolbar();
-  wrapper.appendChild(toolbar.el);
   const shiftFiltersEl = toolbar.shiftFiltersEl;
 
   // Two-panel content area
@@ -300,6 +318,8 @@ function buildPageShell(container) {
   contentEl.appendChild(treePanel);
 
   const skillsPanel = createElement('div', { className: 'cat-skills-panel' });
+  skillsPanel.appendChild(tabsEl);
+  skillsPanel.appendChild(toolbar.el);
   const gridEl = createElement('div');
   skillsPanel.appendChild(gridEl);
   contentEl.appendChild(skillsPanel);
@@ -490,19 +510,6 @@ function buildToolbar() {
   tagWrap.appendChild(tagInput);
   leftGroup.appendChild(tagWrap);
   leftGroup.appendChild(sortWrap);
-
-  // Archived toggle (admin and manager only)
-  if (canEditCatalog) {
-    const archivedLabel = createElement('label', { className: 'catalog-checkbox-label' });
-    const archivedCheck = createElement('input', { type: 'checkbox', id: 'cat-archived-check' });
-    archivedCheck.addEventListener('change', () => {
-      _showArchived = archivedCheck.checked;
-      fetchAndRenderSkills();
-    });
-    archivedLabel.appendChild(archivedCheck);
-    archivedLabel.appendChild(document.createTextNode(' Show Archived'));
-    leftGroup.appendChild(archivedLabel);
-  }
 
   toolbar.appendChild(leftGroup);
 
@@ -781,8 +788,13 @@ async function fetchAndRenderSkills() {
 
 function buildQueryString() {
   const params = new URLSearchParams();
+  const user = Store.get('user');
 
-  if (_selectedFilter.type === 'team_id' && _selectedFilter.id != null) {
+  // Plan add-mode "My Team's Skills" must always scope to the engineer's team,
+  // including consumer (not just owner) associations.
+  if (_addMode === 'team' && user?.team_id != null) {
+    params.set('team_id', String(user.team_id));
+  } else if (_selectedFilter.type === 'team_id' && _selectedFilter.id != null) {
     params.set('team_id', String(_selectedFilter.id));
   } else if (_selectedFilter.type === 'cert_id' && _selectedFilter.id != null) {
     params.set('cert_id', String(_selectedFilter.id));
@@ -791,7 +803,6 @@ function buildQueryString() {
   }
 
   if (_searchQuery) params.set('search', _searchQuery);
-  if (_showArchived) params.set('include_archived', 'true');
 
   const qs = params.toString();
   return qs ? `?${qs}` : '';
@@ -799,6 +810,14 @@ function buildQueryString() {
 
 function applyClientFilters(skills) {
   let result = skills;
+
+  // Plan add-mode: only skills linked to the engineer's team (owner or consumer).
+  if (_addMode === 'team') {
+    const teamId = Number(Store.get('user')?.team_id);
+    if (Number.isFinite(teamId)) {
+      result = result.filter(skill => skillIsAssociatedWithTeam(skill, teamId));
+    }
+  }
 
   // Tag filter (client-side substring match)
   if (_tagQuery) {
@@ -808,10 +827,10 @@ function applyClientFilters(skills) {
     });
   }
 
-  // For org tab: filter by active shifts — skills must have at least one team with an active shift
+  // For org tab: filter by active shifts — owner or consumer team shift
   if (_activeTab === 'org' && _activeShifts.size < 4) {
     result = result.filter(skill => {
-      const teams = Array.isArray(skill.teams) ? skill.teams : [];
+      const teams = getSkillTeamsUnion(skill);
       return teams.some(t => _activeShifts.has(t.shift));
     });
   }
@@ -821,7 +840,7 @@ function applyClientFilters(skills) {
     const nonTechTeamIds = getNonTechnicalTeamIds();
     if (nonTechTeamIds) {
       result = result.filter(skill => {
-        const teams = Array.isArray(skill.teams) ? skill.teams : [];
+        const teams = getSkillTeamsUnion(skill);
         return teams.length === 0 || teams.some(t => nonTechTeamIds.has(t.id));
       });
     }
@@ -832,7 +851,7 @@ function applyClientFilters(skills) {
     const techTeamIds = getTechnicalTeamIds();
     if (techTeamIds) {
       result = result.filter(skill => {
-        const teams = Array.isArray(skill.teams) ? skill.teams : [];
+        const teams = getSkillTeamsUnion(skill);
         return teams.some(t => techTeamIds.has(t.id));
       });
     }
@@ -949,13 +968,15 @@ function renderGroupedSkillGrid(container, skills) {
   const wrap = createElement('div', { className: 'catalog-category-sections' });
   let renderedAny = false;
 
+  let sectionIndex = 0;
   categories.forEach(cat => {
     const matching = skills.filter(s =>
       Array.isArray(s.categories) && s.categories.some(c => c.slug === cat.slug)
     );
     if (!matching.length) return;
     renderedAny = true;
-    wrap.appendChild(buildCategorySection(cat, matching));
+    sectionIndex += 1;
+    wrap.appendChild(buildCategorySection(cat, matching, sectionIndex));
   });
 
   const uncategorised = skills.filter(s => !Array.isArray(s.categories) || s.categories.length === 0);
@@ -977,7 +998,7 @@ function renderGroupedSkillGrid(container, skills) {
   container.appendChild(wrap);
 }
 
-function buildCategorySection(category, skills) {
+function buildCategorySection(category, skills, sectionIndex) {
   const collapsed = _collapsedCategorySlugs.has(category.slug);
   const section = createElement('section', {
     className: 'catalog-category-section' + (collapsed ? ' collapsed' : ''),
@@ -989,21 +1010,29 @@ function buildCategorySection(category, skills) {
     type: 'button',
     'aria-expanded': collapsed ? 'false' : 'true',
   });
-  const chevron = createElement('span', { className: 'catalog-category-chevron' });
-  chevron.setAttribute('aria-hidden', 'true');
-  header.appendChild(chevron);
 
-  if (category.slug !== '__uncategorised') {
-    header.appendChild(categoryIconSpan(category.slug, '16px'));
+  if (category.slug !== '__uncategorised' && sectionIndex) {
+    const num = createElement('span', { className: 'catalog-category-num' });
+    num.setAttribute('aria-hidden', 'true');
+    num.textContent = String(sectionIndex).padStart(2, '0');
+    header.appendChild(num);
   }
 
   const title = createElement('h3', { className: 'catalog-category-title' });
   title.textContent = category.name;
   header.appendChild(title);
 
+  const rule = createElement('span', { className: 'catalog-category-rule' });
+  rule.setAttribute('aria-hidden', 'true');
+  header.appendChild(rule);
+
   const count = createElement('span', { className: 'catalog-category-count' });
-  count.textContent = String(skills.length);
+  count.textContent = `${skills.length} skill${skills.length === 1 ? '' : 's'}`;
   header.appendChild(count);
+
+  const chevron = createElement('span', { className: 'catalog-category-chevron' });
+  chevron.setAttribute('aria-hidden', 'true');
+  header.appendChild(chevron);
 
   const body = createElement('div', { className: 'catalog-category-body' });
   const grid = createElement('div', { className: 'grid-3' });
@@ -1029,12 +1058,14 @@ function buildCategorySection(category, skills) {
 
 function buildSkillCard(skill) {
   const user = Store.get('user');
-  const isAdmin = user?.role === 'admin';
-  const isManager = user?.role === 'manager';
-  const canEdit = canEditCatalogSkill(skill, user);
+  const access = getSkillAccessLevel(skill, user);
+  const canEditFull = access === 'admin' || access === 'owner';
+  const canLeaveConsumer = access === 'consumer' && user?.team_id && !skill.is_custom;
+  const canDuplicate = (user?.role === 'admin' || user?.role === 'manager') && !skill.is_custom;
+  const canJoinConsumer = user?.role === 'manager' && access === 'none' && user.team_id && !skill.is_custom;
 
   const card = createElement('div', {
-    className: skill.is_archived ? 'tool-card tool-card--archived' : 'tool-card',
+    className: 'tool-card',
   });
   card.dataset.skillId = skill.id;
   const primaryCategory = skill.categories?.[0];
@@ -1042,15 +1073,15 @@ function buildSkillCard(skill) {
     card.dataset.categorySlug = primaryCategory.slug;
   }
 
-  // Header row with name and admin/manager actions
+  // Header row: eyebrow + name (left) · admin actions + tier icon (right)
   const headerRow = createElement('div', { className: 'tool-card-header' });
 
-  const headerLeft = createElement('div', { className: 'tool-card-header-left' });
+  const headerLeft = createElement('div', { className: 'tool-card-header-left tool-card-header-left--stacked' });
 
-  if (skill.icon && SKILL_ICONS[skill.icon]) {
-    const iconWrap = createElement('div', { className: 'tool-card-icon' });
-    iconWrap.innerHTML = getSkillIconSVG(skill.icon, 22);
-    headerLeft.appendChild(iconWrap);
+  if (primaryCategory?.name) {
+    const eyebrow = createElement('div', { className: 'tool-card-eyebrow' });
+    eyebrow.textContent = primaryCategory.name;
+    headerLeft.appendChild(eyebrow);
   }
 
   const nameEl = createElement('div', { className: 'tool-card-name' });
@@ -1058,87 +1089,73 @@ function buildSkillCard(skill) {
   headerLeft.appendChild(nameEl);
   headerRow.appendChild(headerLeft);
 
-  if (canEdit) {
+  const headRight = createElement('div', { className: 'tool-card-head-right' });
+
+  const hasCardActions = canEditFull || canLeaveConsumer || canDuplicate || canJoinConsumer;
+  if (hasCardActions) {
     const actions = createElement('div', { className: 'card-admin-actions' });
 
-    const editBtn = createElement('button', { className: 'btn btn-sm btn-secondary card-action-btn' });
-    editBtn.textContent = 'Edit';
-    editBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openSkillModal(skill);
-    });
-
-    const archiveBtn = createElement('button', {
-      className: skill.is_archived
-        ? 'btn btn-sm btn-primary card-action-btn'
-        : 'btn btn-sm btn-secondary card-action-btn',
-    });
-    archiveBtn.textContent = skill.is_archived ? 'Restore' : 'Archive';
-    archiveBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      handleArchiveSkill(skill);
-    });
-
-    const deleteBtn = createElement('button', {
-      className: 'btn btn-sm btn-danger card-action-btn'
-    });
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      handleCascadeDeleteSkill(skill.id, skill.name);
-    });
-
-    actions.appendChild(editBtn);
-    actions.appendChild(archiveBtn);
-    actions.appendChild(deleteBtn);
-    headerRow.appendChild(actions);
-  }
-  card.appendChild(headerRow);
-
-  // Archived badge
-  if (skill.is_archived) {
-    const badgeRow = createElement('div', { className: 'tool-card-badges' });
-    const b = createElement('span', { className: 'triage-chip triage-blocking chip-sm' });
-    b.textContent = 'Archived';
-    badgeRow.appendChild(b);
-    card.appendChild(badgeRow);
-  }
-
-  const teams = Array.isArray(skill.teams) ? skill.teams : [];
-  if (teams.length) {
-    const teamsRow = createElement('div', { className: 'tool-card-badges' });
-    const VISIBLE_LIMIT = 2;
-    const visibleTeams = teams.slice(0, VISIBLE_LIMIT);
-    const hiddenTeams = teams.slice(VISIBLE_LIMIT);
-
-    visibleTeams.forEach(team => {
-      const chip = createElement('span', { className: 'triage-chip triage-signal chip-sm' });
-      chip.textContent = team.name;
-      teamsRow.appendChild(chip);
-    });
-
-    if (hiddenTeams.length) {
-      const overflow = createElement('span', {
-        className: 'triage-chip triage-signal chip-sm team-chip-overflow',
-        tabindex: '0',
-        'aria-label': `${hiddenTeams.length} more team${hiddenTeams.length === 1 ? '' : 's'}: ${hiddenTeams.map(t => t.name).join(', ')}`,
-      });
-      overflow.textContent = `+${hiddenTeams.length} …`;
-
-      const popover = createElement('span', { className: 'team-chip-overflow__popover', role: 'tooltip' });
-      hiddenTeams.forEach(team => {
-        const line = createElement('span', { className: 'team-chip-overflow__item' });
-        line.textContent = team.name;
-        popover.appendChild(line);
-      });
-      overflow.appendChild(popover);
-      teamsRow.appendChild(overflow);
+    if (canJoinConsumer) {
+      actions.appendChild(createCardIconBtn({
+        label: 'Join as consumer team',
+        iconHtml: getSkillIconSVG('link', CARD_ACTION_ICON_SIZE),
+        onClick: () => handleJoinAsConsumer(skill),
+      }));
     }
 
-    card.appendChild(teamsRow);
+    if (canLeaveConsumer) {
+      actions.appendChild(createCardIconBtn({
+        label: 'Leave as consumer team',
+        iconHtml: CARD_ACTION_SVGS.leaveConsumer,
+        className: 'card-action-btn--danger',
+        onClick: () => handleLeaveAsConsumer(skill),
+      }));
+    }
+
+    if (canEditFull) {
+      actions.appendChild(createCardIconBtn({
+        label: 'Edit skill',
+        iconHtml: CARD_ACTION_SVGS.edit,
+        onClick: () => openSkillModal(skill),
+      }));
+      actions.appendChild(createCardIconBtn({
+        label: 'Delete skill',
+        iconHtml: CARD_ACTION_SVGS.delete,
+        className: 'card-action-btn--danger',
+        onClick: () => handleDeleteCatalogSkill(skill.id, skill.name, skill),
+      }));
+    }
+
+    if (canDuplicate) {
+      actions.appendChild(createCardIconBtn({
+        label: 'Duplicate skill',
+        iconHtml: CARD_ACTION_SVGS.duplicate,
+        onClick: () => handleDuplicateSkill(skill),
+      }));
+    }
+
+    headRight.appendChild(actions);
   }
 
-  // Certificate badges
+  if (skill.icon && SKILL_ICONS[skill.icon]) {
+    const iconWrap = createElement('div', { className: 'tool-card-icon' });
+    iconWrap.innerHTML = getSkillIconSVG(skill.icon, 17);
+    headRight.appendChild(iconWrap);
+  }
+
+  if (headRight.childNodes.length) headerRow.appendChild(headRight);
+  card.appendChild(headerRow);
+
+  // (Owners/Consumers rows intentionally omitted — available in the detail modal)
+
+  // Description
+  const desc = createElement('div', { className: 'tool-card-desc' });
+  desc.textContent = truncate(skill.description || 'No description available.', 120);
+  card.appendChild(desc);
+
+  // Footer: certificate badges (tier-tinted, clickable) + quiet tag line
+  const footer = createElement('div', { className: 'tool-card-footer' });
+
   const certs = Array.isArray(skill.certificates) ? skill.certificates : [];
   if (certs.length) {
     const certsRow = createElement('div', { className: 'tool-card-badges' });
@@ -1181,32 +1198,24 @@ function buildSkillCard(skill) {
       certsRow.appendChild(overflow);
     }
 
-    card.appendChild(certsRow);
+    footer.appendChild(certsRow);
   }
 
-  // Description
-  const desc = createElement('div', { className: 'tool-card-desc' });
-  desc.textContent = truncate(skill.description || 'No description available.', 120);
-  card.appendChild(desc);
-
-  // Tags
+  // Tags as quiet text: "routing · tac · +2"
   const tags = Array.isArray(skill.tags) ? skill.tags : [];
   if (tags.length) {
-    const tagsRow = createElement('div', { className: 'tool-card-tags' });
-    tags.slice(0, 4).forEach(tag => {
-      const chip = createElement('span', { className: 'triage-chip triage-feedback chip-sm' });
-      chip.textContent = tag.name || tag;
-      tagsRow.appendChild(chip);
-    });
-    if (tags.length > 4) {
-      const more = createElement('span', { className: 'text-muted text-sm' });
-      more.textContent = `+${tags.length - 4} more`;
-      tagsRow.appendChild(more);
-    }
-    card.appendChild(tagsRow);
+    const tagline = createElement('span', { className: 'tool-card-tagline' });
+    const names = tags.map(t => t.name || t);
+    const visible = names.slice(0, 4);
+    const hiddenCount = names.length - visible.length;
+    tagline.textContent = visible.join(' · ') + (hiddenCount > 0 ? ` · +${hiddenCount}` : '');
+    if (hiddenCount > 0) tagline.title = names.join(', ');
+    footer.appendChild(tagline);
   }
 
-  if (_addMode && !skill.is_archived) {
+  if (footer.childNodes.length) card.appendChild(footer);
+
+  if (_addMode && !skill.is_custom) {
     const addRow = createElement('div', { className: 'tool-card-add-row' });
     addRow.style.cssText = 'margin-top:10px;padding-top:10px;border-top:1px solid var(--border-soft);';
     const addBtn = createElement('button', { className: 'btn btn-primary btn-sm' });
@@ -1224,6 +1233,8 @@ function buildSkillCard(skill) {
         addBtn.textContent = 'Added ✓';
         addBtn.style.opacity = '0.6';
         addBtn.style.cursor = 'default';
+        sessionStorage.setItem('matrixpro_open_plan_section', 'planned');
+        window.location.hash = '#/my-plan?section=planned';
       } catch (err) {
         showToast(err.message || 'Failed to add skill', 'error');
         addBtn.disabled = false;
@@ -1271,18 +1282,177 @@ function switchTabAndFilter(tabId, filterType, filterId, filterLabel) {
 
 // ─── Editor helpers (unified skill editor) ───────────────────────────────────
 
-/** Managers may edit only skills assigned to their own team (admins: all). */
+/** Managers may edit skills owned by their team (admins: all). */
 function canEditCatalogSkill(skill, user = Store.get('user')) {
-  if (!user) return false;
-  if (user.role === 'admin') return true;
-  if (user.role !== 'manager') return false;
-  if (!skill?.id) return true; // create flow
+  const access = getSkillAccessLevel(skill, user);
+  return access === 'admin' || access === 'owner';
+}
+
+/** Owner or consumer team association level for RBAC UI. */
+function getSkillAccessLevel(skill, user = Store.get('user')) {
+  if (!user) return 'none';
+  if (!skill?.id) {
+    if (user.role === 'admin') return 'admin';
+    if (user.role === 'manager') return 'owner';
+    return 'none';
+  }
+  if (user.role === 'admin') return 'admin';
+  if (user.role !== 'manager') return 'none';
   const allowed = new Set();
   if (user.team_id != null) allowed.add(Number(user.team_id));
-  const skillTeamIds = Array.isArray(skill.teams)
-    ? skill.teams.map(t => Number(t.id)).filter(Number.isFinite)
-    : (Array.isArray(skill.team_ids) ? skill.team_ids.map(Number).filter(Number.isFinite) : []);
-  return skillTeamIds.some(id => allowed.has(id));
+  const ownerTeams = (skill.owner_teams?.length ? skill.owner_teams : null) || skill.teams || [];
+  const ownerIds = ownerTeams.map(t => Number(t.id)).filter(Number.isFinite);
+  if (ownerIds.some(id => allowed.has(id))) return 'owner';
+  const consumerTeams = skill.consumer_teams || [];
+  const consumerIds = consumerTeams.map(t => Number(t.id)).filter(Number.isFinite);
+  if (consumerIds.some(id => allowed.has(id))) return 'consumer';
+  return 'none';
+}
+
+function getSkillTeamsUnion(skill) {
+  const byId = new Map();
+  const addTeams = (list) => {
+    (Array.isArray(list) ? list : []).forEach(t => {
+      if (t?.id != null) byId.set(Number(t.id), t);
+    });
+  };
+  addTeams(skill?.teams);
+  addTeams(skill?.owner_teams);
+  addTeams(skill?.consumer_teams);
+  return Array.from(byId.values());
+}
+
+function skillIsAssociatedWithTeam(skill, teamId) {
+  return getSkillTeamsUnion(skill).some(t => Number(t.id) === Number(teamId));
+}
+
+function renderTeamChipRowEmpty(labelPrefix, emptyText) {
+  const row = createElement('div', { className: 'tool-card-badges' });
+  if (labelPrefix) {
+    const lbl = createElement('span', { className: 'catalog-team-row-label' });
+    lbl.textContent = labelPrefix;
+    row.appendChild(lbl);
+  }
+  const empty = createElement('span', { className: 'catalog-skill-meta__empty', style: 'font-size:11px' });
+  empty.textContent = emptyText;
+  row.appendChild(empty);
+  return row;
+}
+
+function canRemoveConsumerTeam(skill, user, teamId) {
+  if (!user || !teamId || skill?.is_custom) return false;
+  const access = getSkillAccessLevel(skill, user);
+  return access === 'admin' || access === 'owner';
+}
+
+function renderConsumerChipRow(skill, user, teams) {
+  if (!teams?.length) return null;
+  const row = createElement('div', { className: 'tool-card-badges' });
+  const lbl = createElement('span', { className: 'catalog-team-row-label' });
+  lbl.textContent = 'Consumers:';
+  row.appendChild(lbl);
+
+  const VISIBLE_LIMIT = 2;
+  const visible = teams.slice(0, VISIBLE_LIMIT);
+  const hidden = teams.slice(VISIBLE_LIMIT);
+
+  const appendConsumerChip = (team) => {
+    const removable = canRemoveConsumerTeam(skill, user, team.id);
+    if (!removable) {
+      const chip = createElement('span', { className: 'triage-chip triage-consumer chip-sm' });
+      chip.textContent = team.name;
+      row.appendChild(chip);
+      return;
+    }
+    const chip = createElement('span', { className: 'triage-chip triage-consumer chip-sm catalog-consumer-chip' });
+    const name = createElement('span', { className: 'catalog-consumer-chip__name' });
+    name.textContent = team.name;
+    chip.appendChild(name);
+    const removeBtn = createElement('button', {
+      type: 'button',
+      className: 'catalog-consumer-chip__remove',
+      title: `Remove ${team.name} as consumer`,
+      'aria-label': `Remove ${team.name} as consumer`,
+    });
+    removeBtn.innerHTML = CARD_ACTION_SVGS.chipRemove;
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleRemoveConsumerTeam(skill, team);
+    });
+    chip.appendChild(removeBtn);
+    row.appendChild(chip);
+  };
+
+  visible.forEach(appendConsumerChip);
+
+  if (hidden.length) {
+    const overflow = createElement('span', {
+      className: 'triage-chip triage-consumer chip-sm team-chip-overflow',
+      tabindex: '0',
+      'aria-label': `${hidden.length} more: ${hidden.map(t => t.name).join(', ')}`,
+    });
+    overflow.textContent = `+${hidden.length} …`;
+    const popover = createElement('span', { className: 'team-chip-overflow__popover', role: 'tooltip' });
+    hidden.forEach(team => {
+      const line = createElement('span', { className: 'team-chip-overflow__item catalog-consumer-overflow-item' });
+      const name = createElement('span', { className: 'catalog-consumer-overflow-item__name' });
+      name.textContent = team.name;
+      line.appendChild(name);
+      if (canRemoveConsumerTeam(skill, user, team.id)) {
+        const removeBtn = createElement('button', {
+          type: 'button',
+          className: 'catalog-consumer-chip__remove',
+          title: `Remove ${team.name} as consumer`,
+          'aria-label': `Remove ${team.name} as consumer`,
+        });
+        removeBtn.innerHTML = CARD_ACTION_SVGS.chipRemove;
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          handleRemoveConsumerTeam(skill, team);
+        });
+        line.appendChild(removeBtn);
+      }
+      popover.appendChild(line);
+    });
+    overflow.appendChild(popover);
+    row.appendChild(overflow);
+  }
+  return row;
+}
+
+function renderTeamChipRow(teams, { labelPrefix = '', chipClass = 'signal' } = {}) {
+  if (!teams?.length) return null;
+  const row = createElement('div', { className: 'tool-card-badges' });
+  if (labelPrefix) {
+    const lbl = createElement('span', { className: 'catalog-team-row-label' });
+    lbl.textContent = labelPrefix;
+    row.appendChild(lbl);
+  }
+  const VISIBLE_LIMIT = 2;
+  const visible = teams.slice(0, VISIBLE_LIMIT);
+  const hidden = teams.slice(VISIBLE_LIMIT);
+  visible.forEach(team => {
+    const chip = createElement('span', { className: `triage-chip triage-${chipClass} chip-sm` });
+    chip.textContent = team.name;
+    row.appendChild(chip);
+  });
+  if (hidden.length) {
+    const overflow = createElement('span', {
+      className: `triage-chip triage-${chipClass} chip-sm team-chip-overflow`,
+      tabindex: '0',
+      'aria-label': `${hidden.length} more: ${hidden.map(t => t.name).join(', ')}`,
+    });
+    overflow.textContent = `+${hidden.length} …`;
+    const popover = createElement('span', { className: 'team-chip-overflow__popover', role: 'tooltip' });
+    hidden.forEach(team => {
+      const line = createElement('span', { className: 'team-chip-overflow__item' });
+      line.textContent = team.name;
+      popover.appendChild(line);
+    });
+    overflow.appendChild(popover);
+    row.appendChild(overflow);
+  }
+  return row;
 }
 
 function getEditorHelpers() {
@@ -1292,6 +1462,10 @@ function getEditorHelpers() {
     validateSkillForm,
     loadFormData,
     canEditCatalogSkill,
+    getSkillAccessLevel,
+    getSkillTeamsUnion,
+    renderTeamChipRow,
+    renderTeamChipRowEmpty,
     refreshCatalog: () => {
       _formDataCache = null;
       delete _treeCache[_activeTab];
@@ -1333,7 +1507,10 @@ async function loadFormData() {
 
 // ─── Skill Detail Modal (delegates to unified editor) ─────────────────────────
 function showSkillDetailModal(skill) {
-  openCatalogSkillEditor(skill, { initialTab: 'content' }, getEditorHelpers());
+  const user = Store.get('user');
+  const access = getSkillAccessLevel(skill, user);
+  const initialTab = access === 'consumer' ? 'details' : 'content';
+  openCatalogSkillEditor(skill, { initialTab }, getEditorHelpers());
 }
 
 // ─── Content Edit Modal ───────────────────────────────────────────────────────
@@ -1545,13 +1722,31 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
   const notifyChange = () => formHooks.notifyChange?.();
   const beginAsync = () => formHooks.beginAsync?.();
   const endAsync = () => formHooks.endAsync?.();
+  const accessLevel = formHooks.accessLevel || 'owner';
+  const consumerOnly = accessLevel === 'consumer';
   const trackAsync = (promise) => {
     beginAsync();
     Promise.resolve(promise).finally(endAsync);
   };
 
   const form = createElement('div', { className: 'catalog-form skill-edit-form' });
+  if (consumerOnly) form.classList.add('skill-edit-form--consumer-only');
   const isCreateMode = !skill;
+
+  if (isCreateMode && isManager && user?.team_id) {
+    const teamName = (formData.teams || []).find(t => Number(t.id) === Number(user.team_id))?.name
+      || 'your team';
+    const banner = createElement('div', { className: 'catalog-skill-create-banner' });
+    const strong = createElement('strong');
+    strong.textContent = 'Your team will be the owner.';
+    banner.appendChild(strong);
+    banner.appendChild(document.createTextNode(` New skills are created with `));
+    const em = createElement('em');
+    em.textContent = teamName;
+    banner.appendChild(em);
+    banner.appendChild(document.createTextNode(' as the sole owner team. Add consumer teams below to share catalog visibility.'));
+    form.appendChild(banner);
+  }
 
   // -- Section 1: Identity
   const identitySection = createElement('div', { className: 'skill-edit-section' });
@@ -1591,6 +1786,7 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
   identityBody.appendChild(tagsGroup);
   identitySection.appendChild(identityBody);
   form.appendChild(identitySection);
+  if (consumerOnly) identitySection.classList.add('skill-edit-section--readonly');
 
   // -- Section 2: Classification
   const classSection = createElement('div', { className: 'skill-edit-section' });
@@ -1645,21 +1841,29 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
   
   const assocBody = createElement('div', { className: 'skill-edit-row skill-edit-row--assoc' });
 
-  // Teams (Technical) Panel
-  const existingTeamIds = new Set(
-    Array.isArray(skill?.teams)
-      ? skill.teams.map(t => Number(t.id))
-      : (Array.isArray(skill?.team_ids) ? skill.team_ids.map(Number) : [])
+  // Owner Teams (Technical) Panel
+  const existingOwnerIds = new Set(
+    Array.isArray(skill?.owner_teams)
+      ? skill.owner_teams.map(t => Number(t.id))
+      : (Array.isArray(skill?.teams)
+        ? skill.teams.map(t => Number(t.id))
+        : (Array.isArray(skill?.team_ids) ? skill.team_ids.map(Number) : []))
+  );
+  const existingConsumerIds = new Set(
+    Array.isArray(skill?.consumer_teams) ? skill.consumer_teams.map(t => Number(t.id)) : []
   );
   
-  const teamsPanel = createElement('div', { className: 'skill-assoc-section' });
+  const teamsPanel = createElement('div', { className: 'skill-assoc-section skill-assoc-section--owners' });
   const teamsPanelHeader = createElement('div', { className: 'skill-assoc-section__header' });
   const teamsLabel = createElement('div', { className: 'skill-assoc-section__label' });
-  teamsLabel.textContent = 'Teams';
+  teamsLabel.textContent = 'Owner Teams';
   const teamsBadge = createElement('span', { className: 'skill-assoc-section__badge' });
   teamsPanelHeader.appendChild(teamsLabel);
   teamsPanelHeader.appendChild(teamsBadge);
   teamsPanel.appendChild(teamsPanelHeader);
+  const ownerHint = createElement('p', { className: 'skill-assoc-hint' });
+  ownerHint.textContent = 'Teams that own and maintain this skill in the catalog. At least one required.';
+  teamsPanel.appendChild(ownerHint);
 
   const teamOptionsAll = buildTeamOptions(formData.orgTree || []);
   const shiftToggleGroup = createElement('div', { className: 'skill-shift-filter', role: 'group', 'aria-label': 'Filter by shift' });
@@ -1687,7 +1891,7 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
   teamsPanel.appendChild(shiftToggleGroup);
 
   function rebuildTeamCombo() {
-    const currentSelected = form._teamCombo ? form._teamCombo.getSelected() : Array.from(existingTeamIds);
+    const currentSelected = form._teamCombo ? form._teamCombo.getSelected() : Array.from(existingOwnerIds);
     const selectedSet = new Set(currentSelected);
     const filteredOptions = teamOptionsAll.filter(o => 
       o._shift === 0 || activeShifts.has(o._shift) || selectedSet.has(o.id)
@@ -1713,6 +1917,44 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
     teamsBadge.textContent = String(newCombo.getSelected().length);
   }
   rebuildTeamCombo();
+
+  const consumersPanel = createElement('div', { className: 'skill-assoc-section skill-assoc-section--consumers' });
+  const consumersHeader = createElement('div', { className: 'skill-assoc-section__header' });
+  const consumersLabel = createElement('div', { className: 'skill-assoc-section__label' });
+  consumersLabel.textContent = 'Consumer Teams';
+  const consumersBadge = createElement('span', { className: 'skill-assoc-section__badge' });
+  consumersHeader.appendChild(consumersLabel);
+  consumersHeader.appendChild(consumersBadge);
+  consumersPanel.appendChild(consumersHeader);
+  const consumerHint = createElement('p', { className: 'skill-assoc-hint' });
+  if (consumerOnly && user?.team_id) {
+    const mgrTeam = (formData.teams || []).find(t => Number(t.id) === Number(user.team_id));
+    consumerHint.appendChild(document.createTextNode('You can attach or detach '));
+    const strong = createElement('strong');
+    strong.textContent = mgrTeam?.name || 'your team';
+    consumerHint.appendChild(strong);
+    consumerHint.appendChild(document.createTextNode(' as a consumer.'));
+  } else {
+    consumerHint.textContent = 'Teams that can browse and assign this skill. Consumer managers may attach their own team only.';
+  }
+  consumersPanel.appendChild(consumerHint);
+  const consumerOptionSource = consumerOnly && user?.team_id
+    ? teamOptionsAll.filter(o => o.id === Number(user.team_id) || existingConsumerIds.has(o.id))
+    : teamOptionsAll;
+  const consumerCombo = createComboboxMulti({
+    options: consumerOptionSource.map(({ id, label, group }) => ({ id, label, group })),
+    selectedValues: Array.from(existingConsumerIds),
+    placeholder: 'Attach consumer teams…',
+    emptyText: 'No teams match',
+    onChange: (vals) => {
+      consumersBadge.textContent = String(vals.length);
+      notifyChange();
+    },
+    onOpen: () => scrollAssocIntoView(consumersPanel),
+  });
+  consumersPanel.appendChild(consumerCombo.element);
+  form._consumerCombo = consumerCombo;
+  consumersBadge.textContent = String(consumerCombo.getSelected().length);
 
   // NTECH-GEN (Non-Technical) Panel
   const ntechTeamsPanel = createElement('div', { className: 'skill-assoc-section skill-form__ntech-teams' });
@@ -1749,7 +1991,7 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
       const ntechTeams = await api.get('/api/skills/ntech-teams');
       ntechChecksContainer.innerHTML = '';
       ntechTeams.forEach(t => {
-        const isChecked = isCreateMode ? true : (initialIsNonTechnical ? existingTeamIds.has(Number(t.id)) : true);
+        const isChecked = isCreateMode ? true : (initialIsNonTechnical ? existingOwnerIds.has(Number(t.id)) : true);
         const card = buildNtechSelectCard({
           value: t.id,
           label: t.name,
@@ -1786,6 +2028,7 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
     const isNtech = toggleInput.checked;
     setPanelVisible(categoryGroupTechnical, !isNtech);
     setPanelVisible(teamsPanel, !isNtech);
+    setPanelVisible(consumersPanel, !isNtech);
     setPanelVisible(ntechTeamsPanel, isNtech);
     setPanelVisible(certsPanel, !isNtech);
     assocBody.classList.toggle('skill-edit-row--assoc--ntech', isNtech);
@@ -1795,6 +2038,7 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
   }
 
   assocBody.appendChild(teamsPanel);
+  assocBody.appendChild(consumersPanel);
   assocBody.appendChild(ntechTeamsPanel);
 
   // Certificates Panel
@@ -1853,6 +2097,16 @@ function buildSkillForm(skill, formData, isAdmin, isManager, user, initialIsNonT
   visualBody.appendChild(buildIconPicker(skill?.icon || null, { notifyChange }));
   visualSection.appendChild(visualBody);
   form.appendChild(visualSection);
+
+  if (consumerOnly) {
+    classSection.classList.add('skill-edit-section--readonly');
+    visualSection.classList.add('skill-edit-section--readonly');
+    certsPanel.classList.add('skill-assoc-section--locked');
+    teamsPanel.classList.add('skill-assoc-section--locked');
+    consumersPanel.classList.add('skill-assoc-section--editable-consumer');
+    if (toggleInput) toggleInput.disabled = true;
+  }
+  form.dataset.accessLevel = accessLevel;
 
   return form;
 }
@@ -2115,21 +2369,25 @@ function readSkillForm(formEl) {
   const iconInput = formEl.querySelector('.skill-icon-value');
   const icon = iconInput && iconInput.value ? iconInput.value : null;
 
-  let team_ids = [];
+  let owner_team_ids = [];
+  let consumer_team_ids = [];
   let is_non_technical = false;
   let category_ids = [];
   let certificate_ids = [];
 
   if (formEl._ntechCheckbox && formEl._ntechCheckbox.checked) {
     is_non_technical = true;
-    team_ids = Array.from(formEl.querySelectorAll('.ntech-team-cb:checked'))
+    owner_team_ids = Array.from(formEl.querySelectorAll('.ntech-team-cb:checked'))
       .map(cb => Number(cb.value))
       .filter(Number.isFinite);
     category_ids = [];
     certificate_ids = [];
   } else {
-    team_ids = formEl._teamCombo
+    owner_team_ids = formEl._teamCombo
       ? formEl._teamCombo.getSelected().map(Number).filter(Number.isFinite)
+      : [];
+    consumer_team_ids = formEl._consumerCombo
+      ? formEl._consumerCombo.getSelected().map(Number).filter(Number.isFinite)
       : [];
     category_ids = Array.from(formEl.querySelectorAll('.skill-category-item__cb:checked'))
       .map(cb => Number(cb.dataset.categoryId))
@@ -2142,57 +2400,105 @@ function readSkillForm(formEl) {
   const tagsRaw = formEl.querySelector('#skill-tags')?.value.trim() || '';
   const tag_names = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-  return { name, description, icon, team_ids, certificate_ids, tag_names, category_ids, is_non_technical };
+  return {
+    name,
+    description,
+    icon,
+    team_ids: owner_team_ids,
+    owner_team_ids,
+    consumer_team_ids,
+    certificate_ids,
+    tag_names,
+    category_ids,
+    is_non_technical,
+  };
 }
 
-function validateSkillForm(data) {
+function validateSkillForm(data, accessLevel = 'owner') {
   const errors = [];
+  if (accessLevel === 'consumer') return errors;
   if (!data.name) errors.push('Skill name is required.');
+  const owners = data.owner_team_ids || data.team_ids || [];
+  if (!data.is_non_technical && !owners.length) {
+    errors.push('At least one owner team is required.');
+  }
   return errors;
 }
 
-// ─── Archive / Restore ────────────────────────────────────────────────────────
-
-async function handleArchiveSkill(skill) {
-  const action = skill.is_archived ? 'restore' : 'archive';
-  const confirmed = await showConfirm(
-    `Are you sure you want to ${action} "${skill.name}"? ${action === 'archive' ? 'It will no longer appear in the active catalog.' : 'It will become visible in the active catalog again.'}`,
-    action === 'archive'
-  );
-
-  if (!confirmed) return;
-
+async function handleDuplicateSkill(skill) {
   try {
-    if (action === 'archive') {
-      await api.del(`/api/skills/${skill.id}`);
-    } else {
-      await api.put(`/api/skills/${skill.id}`, { is_archived: false });
+    const duplicated = await api.post(`/api/skills/${skill.id}/duplicate`);
+    if (duplicated.duplicate_warnings?.length) {
+      showToast(duplicated.duplicate_warnings.join(' '), 'warning');
     }
-    showToast(`Skill ${action === 'archive' ? 'archived' : 'restored'} successfully`, 'success');
+    showToast(`Skill duplicated: ${duplicated.name}. Consumer teams were not copied.`, 'success');
     fetchAndRenderSkills();
   } catch (err) {
-    showToast(err.message || `Failed to ${action} skill`, 'error');
+    showToast(err.message || 'Failed to duplicate skill', 'error');
   }
 }
 
-async function handleCascadeDeleteSkill(skillId, skillName) {
+async function handleJoinAsConsumer(skill) {
+  const user = Store.get('user');
+  const teamName = user?.team_name || 'your team';
   try {
-    const preview = await api.get(`/api/skills/${skillId}/cascade-preview`);
-    
+    const updated = await api.post(`/api/skills/${skill.id}/join-consumer`);
+    showToast(`${teamName} joined as consumer on "${updated.name}"`, 'success');
+    fetchAndRenderSkills();
+  } catch (err) {
+    showToast(err.message || 'Failed to join as consumer', 'error');
+  }
+}
+
+async function handleLeaveAsConsumer(skill) {
+  const user = Store.get('user');
+  const teamName = user?.team_name || 'your team';
+  const confirmed = await showConfirm({
+    title: 'Leave as consumer',
+    body: `Remove ${teamName} as a consumer on "${skill.name}"? Your team will no longer see this skill in the catalog.`,
+  });
+  if (!confirmed) return;
+  await handleRemoveConsumerTeam(skill, { id: user.team_id, name: teamName }, { skipConfirm: true });
+}
+
+async function handleRemoveConsumerTeam(skill, team, { skipConfirm = false } = {}) {
+  const teamName = team?.name || 'team';
+  if (!skipConfirm) {
+    const confirmed = await showConfirm({
+      title: 'Remove consumer team',
+      body: `Remove ${teamName} as a consumer on "${skill.name}"?`,
+    });
+    if (!confirmed) return;
+  }
+  try {
+    await api.del(`/api/skills/${skill.id}/consumer-teams/${team.id}`);
+    showToast(`${teamName} removed as consumer`, 'success');
+    fetchAndRenderSkills();
+  } catch (err) {
+    showToast(err.message || 'Failed to remove consumer team', 'error');
+  }
+}
+
+async function handleDeleteCatalogSkill(skillId, skillName, skill = null) {
+  try {
+    const preview = await api.get(`/api/skills/${skillId}/delete-preview`);
+    const ownerCount = skill?.owner_teams?.length ?? skill?.teams?.length ?? 0;
+    const consumerCount = skill?.consumer_teams?.length ?? 0;
     const body = createElement('div', { className: 'cascade-delete-modal__body' });
     
     const warningHeader = createElement('div', { className: 'cascade-delete-modal__warning' });
     const warningIcon = createElement('span');
     warningIcon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
     const warningText = createElement('span');
-    warningText.textContent = 'This will permanently remove the skill from the catalog.';
+    warningText.textContent = 'Removes the skill from the global catalog. Owner and consumer teams lose catalog visibility. Engineers keep personal copies in their plans.';
     warningHeader.appendChild(warningIcon);
     warningHeader.appendChild(warningText);
     body.appendChild(warningHeader);
 
     const impactCard = createElement('div', { className: 'cascade-delete-modal__impact' });
     impactCard.innerHTML = `<p><strong>${preview.engineers_affected}</strong> engineers currently have this skill in their plan.</p>
-                            <p>Their training logs (<strong>${preview.training_logs_preserved}</strong>) and content completions will be preserved as personal skill.</p>`;
+                            <p>Each receives an independent personal skill fork; training logs (<strong>${preview.training_logs_preserved}</strong>) and progress are preserved.</p>
+                            <p style="margin:8px 0 0;font-size:11px;color:var(--text-muted)">Owners: ${ownerCount} team${ownerCount === 1 ? '' : 's'} · Consumers: ${consumerCount} team${consumerCount === 1 ? '' : 's'}</p>`;
     body.appendChild(impactCard);
 
     const confirmRow = createElement('div', { className: 'cascade-delete-modal__confirm-row' });
@@ -2229,9 +2535,10 @@ async function handleCascadeDeleteSkill(skillId, skillName) {
 
     if (result) {
       try {
-        const res = await api.del(`/api/skills/${skillId}/cascade`);
-        if (res.tombstone) {
-          showToast(`Skill deleted from catalog. Kept as personal skill for ${res.plan_skills_affected} engineers.`, 'success');
+        const res = await api.del(`/api/skills/${skillId}`);
+        const affected = res.engineers_affected ?? res.plan_skills_affected ?? 0;
+        if (affected > 0) {
+          showToast(`Skill removed from catalog. ${affected} personal fork${affected === 1 ? '' : 's'} created in engineer plans.`, 'success');
         } else {
           showToast('Skill permanently deleted.', 'success');
         }

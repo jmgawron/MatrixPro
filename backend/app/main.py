@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import Base, engine
+from app.logging_config import configure_from_env, get_logger
+from app.middleware.request_logging import RequestLoggingMiddleware
 from app.routers import (
     auth,
     users,
@@ -18,12 +20,17 @@ from app.routers import (
     reports,
     search,
     library,
+    notifications,
 )
+
+configure_from_env()
+logger = get_logger("main")
 
 app = FastAPI(title="MatrixPro API", version="0.1.0")
 
 settings.validate()
 
+app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -46,6 +53,7 @@ app.include_router(reporting.router)
 app.include_router(reports.router)
 app.include_router(search.router)
 app.include_router(library.router)
+app.include_router(notifications.router)
 
 
 @app.on_event("startup")
@@ -53,8 +61,20 @@ def create_tables():
     import app.models  # noqa: F401
     from app.migrations import run_migrations
 
+    logger.info(
+        "Application startup | env=%s log_level=%s log_file=%s",
+        settings.ENV,
+        settings.LOG_LEVEL,
+        settings.LOG_TO_FILE,
+    )
     Base.metadata.create_all(bind=engine)
     run_migrations()
+    logger.info("Application ready | service=MatrixPro API")
+
+
+@app.on_event("shutdown")
+def on_shutdown():
+    logger.info("Application shutdown")
 
 
 @app.get("/api/health")
@@ -64,7 +84,6 @@ def health():
 
 @app.get("/api/stats")
 def get_stats(shifts: str | None = None):
-    from sqlalchemy.orm import Session
     from app.database import SessionLocal
     from app.models.user import User, UserRole
     from app.models.org import Team

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Skill Grid Card Design Concepts</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-skill-cards">
+  <style>
+    body.mockup-page { margin: 0; min-height: 100vh; background: var(--bg-page); }
+
+    .sgc-chrome {
+      position: sticky; top: 0; z-index: 300;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 14px 24px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+    }
+    .sgc-chrome__title { font-size: 15px; font-weight: 700; margin: 0; }
+    .sgc-chrome__sub { font-size: 12px; color: var(--text-muted); margin: 0; flex: 1; min-width: 220px; }
+    .sgc-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .sgc-tab {
+      border: 1px solid var(--border-soft); background: var(--bg-card-soft);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 7px 14px; border-radius: 999px; cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .sgc-tab:hover { color: var(--text-primary); border-color: var(--border-strong); }
+    .sgc-tab.active {
+      background: var(--accent-soft, rgba(59,130,246,.12));
+      border-color: var(--accent); color: var(--accent);
+    }
+    .sgc-theme-btn {
+      border: 1px solid var(--border-soft); background: var(--bg-card);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer;
+    }
+
+    .sgc-panel { display: none; max-width: 1280px; margin: 0 auto; padding: 28px 24px 56px; }
+    .sgc-panel.active { display: block; }
+
+    .sgc-intro { margin-bottom: 28px; max-width: 72ch; }
+    .sgc-intro h2 { font-size: 22px; font-weight: 800; margin: 0 0 8px; letter-spacing: -.02em; }
+    .sgc-intro p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin: 0 0 10px; }
+    .sgc-intro ul { margin: 0; padding-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.7; }
+
+    .sgc-compare {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 900px) { .sgc-compare { grid-template-columns: 1fr; } }
+
+    .sgc-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--text-muted); margin-bottom: 10px;
+    }
+    .sgc-label--concept { color: var(--accent); }
+
+    .sgc-rationale {
+      background: var(--bg-card); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg); padding: 18px 20px; margin-top: 24px;
+    }
+    .sgc-rationale h3 { font-size: 14px; font-weight: 700; margin: 0 0 10px; }
+    .sgc-rationale dl { margin: 0; display: grid; gap: 10px; }
+    .sgc-rationale dt { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+    .sgc-rationale dd { margin: 4px 0 0; font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
+
+    .sgc-grid-3 {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px;
+      margin-top: 20px;
+    }
+    @media (max-width: 1100px) { .sgc-grid-3 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px) { .sgc-grid-3 { grid-template-columns: 1fr; } }
+
+    /* Sample icon */
+    .sgc-icon {
+      width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+      background: rgba(59,130,246,.15); color: #3b82f6;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sgc-icon svg { width: 22px; height: 22px; }
+    .sgc-icon--sm { width: 36px; height: 36px; border-radius: 10px; }
+    .sgc-icon--sm svg { width: 18px; height: 18px; }
+    .sgc-icon--lg { width: 48px; height: 48px; }
+    .sgc-icon--lg svg { width: 24px; height: 24px; }
+
+    /* ── CURRENT (baseline) ── */
+    .sgc-current.tool-card { max-width: 340px; }
+
+    /* ── CONCEPT A: Sectioned Atlas ── */
+    .sgc-a {
+      position: relative; max-width: 340px;
+      background: var(--bg-card-gradient); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg); overflow: hidden; cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+    }
+    .sgc-a::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--cat-core-accent, #3b82f6);
+    }
+    .sgc-a:hover {
+      transform: translateY(-2px); border-color: rgba(59,130,246,.55);
+      box-shadow: var(--card-hover-glow);
+    }
+    .sgc-a__zone { padding: 14px 14px 14px 18px; }
+    .sgc-a__zone--header {
+      display: flex; gap: 12px; align-items: flex-start;
+      border-bottom: 1px solid var(--border-soft);
+      background: var(--bg-card-soft);
+    }
+    .sgc-a__title { font-size: 15px; font-weight: 700; color: var(--text-primary); line-height: 1.3; margin: 0; }
+    .sgc-a__zone--meta {
+      display: grid; gap: 8px; padding-top: 12px; padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .sgc-a__meta-group { display: flex; flex-direction: column; gap: 5px; }
+    .sgc-a__meta-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--text-muted);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .sgc-a__meta-label svg { width: 12px; height: 12px; opacity: .7; }
+    .sgc-a__meta-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .sgc-a__zone--body { padding-top: 12px; }
+    .sgc-a__desc {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .sgc-a__zone--footer {
+      padding-top: 10px; margin-top: 2px;
+      border-top: 1px dashed var(--border-soft);
+    }
+    .sgc-a__tags { display: flex; flex-wrap: wrap; gap: 4px; }
+
+    /* ── CONCEPT B: Hero Header ── */
+    .sgc-b {
+      max-width: 340px; background: var(--bg-card-gradient);
+      border: 1px solid var(--border-soft); border-radius: var(--radius-lg);
+      overflow: hidden; cursor: pointer; box-shadow: var(--shadow-sm);
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+    }
+    .sgc-b:hover {
+      transform: translateY(-2px); border-color: rgba(59,130,246,.55);
+      box-shadow: var(--card-hover-glow);
+    }
+    .sgc-b__hero {
+      padding: 16px 16px 14px;
+      background: linear-gradient(135deg, rgba(59,130,246,.08) 0%, transparent 65%);
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .sgc-b__hero-top { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+    .sgc-b__hero-icon {
+      width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+      background: rgba(59,130,246,.18); color: #3b82f6;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .sgc-b__hero-icon svg { width: 24px; height: 24px; }
+    .sgc-b__title { font-size: 16px; font-weight: 800; color: var(--text-primary); line-height: 1.25; margin: 0; letter-spacing: -.01em; }
+    .sgc-b__assoc-line {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      font-size: 11px; color: var(--text-muted);
+    }
+    .sgc-b__assoc-line .chip-sm { font-size: 10px; padding: 3px 8px; }
+    .sgc-b__dot { opacity: .35; font-weight: 700; }
+    .sgc-b__body { padding: 14px 16px 16px; }
+    .sgc-b__desc {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin: 0 0 12px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .sgc-b__tag-tray {
+      display: flex; flex-wrap: wrap; gap: 4px;
+      padding: 8px 10px; border-radius: var(--radius-md);
+      background: var(--bg-card-soft); border: 1px solid var(--border-soft);
+    }
+    .sgc-b__tag-tray .chip-sm { font-size: 10px; opacity: .9; }
+
+    /* ── CONCEPT C: Badge-Centric Compact ── */
+    .sgc-c {
+      max-width: 340px; background: var(--bg-card);
+      border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+      padding: 14px; cursor: pointer; box-shadow: var(--shadow-sm);
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .sgc-c:hover {
+      transform: translateY(-2px); border-color: rgba(59,130,246,.45);
+      box-shadow: var(--card-hover-glow);
+    }
+    .sgc-c__head { display: flex; align-items: center; gap: 10px; }
+    .sgc-c__title {
+      font-size: 14px; font-weight: 700; color: var(--text-primary);
+      line-height: 1.3; margin: 0; flex: 1;
+    }
+    .sgc-c__desc {
+      font-size: 12px; color: var(--text-secondary); line-height: 1.45; margin: 0;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .sgc-c__cloud {
+      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    }
+    .sgc-c__cloud-label {
+      width: 100%; font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--text-muted); margin-bottom: 2px;
+    }
+    .sgc-c__cloud .chip-sm { font-size: 10px; padding: 3px 8px; }
+    .sgc-c__cloud .meta-badge { font-size: 10px; padding: 3px 8px; }
+    .sgc-c__divider {
+      width: 100%; height: 1px; background: var(--border-soft); margin: 2px 0;
+    }
+
+    /* ── CONCEPT D: Split Ledger ── */
+    .sgc-d {
+      max-width: 340px; background: var(--bg-card-gradient);
+      border: 1px solid var(--border-soft); border-radius: var(--radius-lg);
+      padding: 0; overflow: hidden; cursor: pointer; box-shadow: var(--shadow-sm);
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+      display: grid; grid-template-columns: 56px 1fr;
+    }
+    .sgc-d:hover {
+      transform: translateY(-2px); border-color: rgba(59,130,246,.55);
+      box-shadow: var(--card-hover-glow);
+    }
+    .sgc-d__rail {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 14px 0; gap: 10px;
+      background: var(--bg-card-soft);
+      border-right: 1px solid var(--border-soft);
+    }
+    .sgc-d__rail-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: rgba(59,130,246,.15); color: #3b82f6;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sgc-d__rail-icon svg { width: 20px; height: 20px; }
+    .sgc-d__rail-teams {
+      display: flex; flex-direction: column; gap: 4px; align-items: center;
+      width: 100%; padding: 0 4px;
+    }
+    .sgc-d__team-pip {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); opacity: .6;
+    }
+    .sgc-d__team-pip:nth-child(2) { opacity: .4; }
+    .sgc-d__team-count {
+      font-size: 9px; font-weight: 700; color: var(--text-muted);
+      writing-mode: vertical-rl; text-orientation: mixed;
+      letter-spacing: .04em; margin-top: 4px;
+    }
+    .sgc-d__main { padding: 14px 14px 14px 12px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+    .sgc-d__title { font-size: 15px; font-weight: 700; color: var(--text-primary); line-height: 1.3; margin: 0; }
+    .sgc-d__certs { display: flex; flex-wrap: wrap; gap: 4px; }
+    .sgc-d__teams-row { display: flex; flex-wrap: wrap; gap: 4px; }
+    .sgc-d__teams-row .chip-sm { font-size: 10px; }
+    .sgc-d__desc {
+      font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .sgc-d__tags {
+      display: flex; flex-wrap: wrap; gap: 4px;
+      padding-top: 8px; border-top: 1px solid var(--border-soft); margin-top: auto;
+    }
+    .sgc-d__tags .chip-sm { font-size: 10px; }
+
+    /* Wireframe overlay mode */
+    .sgc-wireframe .sgc-a, .sgc-wireframe .sgc-b,
+    .sgc-wireframe .sgc-c, .sgc-wireframe .sgc-d,
+    .sgc-wireframe .sgc-current {
+      background: transparent !important;
+      border: 2px dashed var(--border-strong) !important;
+      box-shadow: none !important;
+    }
+    .sgc-wireframe .sgc-a__zone--header,
+    .sgc-wireframe .sgc-b__hero,
+    .sgc-wireframe .sgc-d__rail {
+      background: transparent !important;
+    }
+    .sgc-wireframe * { color: var(--text-muted) !important; }
+    .sgc-wireframe .triage-chip,
+    .sgc-wireframe .meta-badge {
+      background: transparent !important;
+      border: 1px dashed var(--border-soft) !important;
+      color: var(--text-muted) !important;
+    }
+  </style>
+</head>
+<body class="mockup-page">
+  <header class="sgc-chrome">
+    <div>
+      <h1 class="sgc-chrome__title">Skill Grid Card — Design Concepts</h1>
+      <p class="sgc-chrome__sub">Visual-only exploration · all fields preserved · MatrixPro design tokens</p>
+    </div>
+    <nav class="sgc-tabs" aria-label="Concept tabs">
+      <button class="sgc-tab active" data-panel="overview">Overview</button>
+      <button class="sgc-tab" data-panel="current">Current</button>
+      <button class="sgc-tab" data-panel="a">A · Sectioned</button>
+      <button class="sgc-tab" data-panel="b">B · Hero Header</button>
+      <button class="sgc-tab" data-panel="c">C · Badge Cloud</button>
+      <button class="sgc-tab" data-panel="d">D · Split Ledger</button>
+    </nav>
+    <button class="sgc-theme-btn" id="themeToggle" type="button">Toggle theme</button>
+    <button class="sgc-theme-btn" id="wireToggle" type="button">Wireframe</button>
+  </header>
+
+  <!-- OVERVIEW -->
+  <section class="sgc-panel active" id="panel-overview">
+    <div class="sgc-intro">
+      <h2>Four evolution paths for the catalog skill card</h2>
+      <p>Each concept keeps the same five information fields — title, teams, certificate, description, and tags — while restructuring layout, spacing, and visual weight. No workflow or interaction changes are proposed.</p>
+      <ul>
+        <li><strong>A · Sectioned Atlas</strong> — labeled zones with category accent rail</li>
+        <li><strong>B · Hero Header</strong> — prominent title band, associations inline, tag tray</li>
+        <li><strong>C · Badge Cloud</strong> — compact, chip-forward scanning</li>
+        <li><strong>D · Split Ledger</strong> — icon rail + structured content column</li>
+      </ul>
+    </div>
+    <div class="sgc-grid-3" id="overviewGrid"></div>
+  </section>
+
+  <!-- CURRENT -->
+  <section class="sgc-panel" id="panel-current">
+    <div class="sgc-intro">
+      <h2>Current baseline</h2>
+      <p>Production <code>.tool-card</code> from <code>catalog.js</code> — icon and title in one row, then sequential chip rows (teams → certs), description, and tags. Functional but visually flat: all metadata rows compete at equal weight.</p>
+    </div>
+    <div class="sgc-compare">
+      <div>
+        <div class="sgc-label">Current production card</div>
+        <div id="currentCard"></div>
+      </div>
+      <div class="sgc-rationale">
+        <h3>Current hierarchy analysis</h3>
+        <dl>
+          <dt>Strengths</dt>
+          <dd>Familiar pattern; admin actions on hover; existing chip vocabulary (<code>triage-chip</code>, <code>meta-badge</code>); category left-rail already applied via <code>data-category-slug</code>.</dd>
+          <dt>Weaknesses</dt>
+          <dd>Teams and certs appear as visually identical rows; description sits between two chip groups; variable card height; icon competes with title in the same flex row; tags feel disconnected at the bottom.</dd>
+          <dt>Scan path</dt>
+          <dd>Title → team chips → cert chips → description → tags (5 stops, similar visual weight on rows 2–3).</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONCEPT A -->
+  <section class="sgc-panel" id="panel-a">
+    <div class="sgc-intro">
+      <h2>Concept A — Sectioned Atlas</h2>
+      <p>Explicit horizontal zones separate identity, associations, narrative, and taxonomy. A category accent rail ties cards to their section header.</p>
+    </div>
+    <div class="sgc-compare">
+      <div>
+        <div class="sgc-label sgc-label--concept">Concept A mockup</div>
+        <div id="conceptACard"></div>
+      </div>
+      <div class="sgc-rationale">
+        <h3>Design rationale</h3>
+        <dl>
+          <dt>Hierarchy</dt>
+          <dd>Zone 1 (header): icon + title. Zone 2 (meta): labeled "Teams" and "Certs" groups. Zone 3 (body): description. Zone 4 (footer): tags with dashed separator.</dd>
+          <dt>Advantages</dt>
+          <dd>Fastest to parse associations; labels reduce cognitive load when scanning 18+ cards; consistent card rhythm; category rail echoes section headers.</dd>
+          <dt>Trade-offs</dt>
+          <dd>Slightly taller cards (~12px); labels add visual noise on cards with only one association type; requires new CSS zones (no JS logic change).</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="sgc-label" style="margin-top:28px">Grid context (3-up)</div>
+    <div class="sgc-grid-3" id="gridA"></div>
+  </section>
+
+  <!-- CONCEPT B -->
+  <section class="sgc-panel" id="panel-b">
+    <div class="sgc-intro">
+      <h2>Concept B — Hero Header</h2>
+      <p>Title and icon dominate a tinted header band. Teams and certs collapse into a single association line directly under the title. Tags live in a contained tray at the bottom.</p>
+    </div>
+    <div class="sgc-compare">
+      <div>
+        <div class="sgc-label sgc-label--concept">Concept B mockup</div>
+        <div id="conceptBCard"></div>
+      </div>
+      <div class="sgc-rationale">
+        <h3>Design rationale</h3>
+        <dl>
+          <dt>Hierarchy</dt>
+          <dd>Title is the anchor (16px/800). Associations are secondary inline metadata. Description is the narrative middle. Tags are tertiary, boxed in a soft tray.</dd>
+          <dt>Advantages</dt>
+          <dd>Strongest title prominence; feels like a natural evolution of current cards; tag tray creates clear taxonomy boundary; hero gradient adds depth without breaking glassmorphism.</dd>
+          <dt>Trade-offs</dt>
+          <dd>Inline association line can wrap awkwardly with many teams/certs; header tint may clash with archived/orphan states; slightly less vertical compactness than C.</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="sgc-label" style="margin-top:28px">Grid context (3-up)</div>
+    <div class="sgc-grid-3" id="gridB"></div>
+  </section>
+
+  <!-- CONCEPT C -->
+  <section class="sgc-panel" id="panel-c">
+    <div class="sgc-intro">
+      <h2>Concept C — Badge-Centric Compact</h2>
+      <p>Minimizes chrome; pushes teams, certs, and tags into a unified chip cloud below a tight title + description block. Optimized for high-density catalog browsing.</p>
+    </div>
+    <div class="sgc-compare">
+      <div>
+        <div class="sgc-label sgc-label--concept">Concept C mockup</div>
+        <div id="conceptCCard"></div>
+      </div>
+      <div class="sgc-rationale">
+        <h3>Design rationale</h3>
+        <dl>
+          <dt>Hierarchy</dt>
+          <dd>Title → description (read first) → chip cloud (scan second). Semantic color distinguishes team (signal), cert (meta-badge), tag (feedback) chips within one region.</dd>
+          <dt>Advantages</dt>
+          <dd>Most compact; best for 3-column grids with 50+ skills; reduces card height variance; chip-forward matches filter/toolbar vocabulary elsewhere in the app.</dd>
+          <dt>Trade-offs</dt>
+          <dd>Icon demoted to small header element; associations less structurally separated; dense chip rows can feel busy on skills with 4+ teams and 3+ tags.</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="sgc-label" style="margin-top:28px">Grid context (3-up)</div>
+    <div class="sgc-grid-3" id="gridC"></div>
+  </section>
+
+  <!-- CONCEPT D -->
+  <section class="sgc-panel" id="panel-d">
+    <div class="sgc-intro">
+      <h2>Concept D — Split Ledger</h2>
+      <p>Dashboard-style two-column layout: a narrow icon rail on the left, structured content on the right. Teams appear both as visual pips on the rail and as chips in the main column.</p>
+    </div>
+    <div class="sgc-compare">
+      <div>
+        <div class="sgc-label sgc-label--concept">Concept D mockup</div>
+        <div id="conceptDCard"></div>
+      </div>
+      <div class="sgc-rationale">
+        <h3>Design rationale</h3>
+        <dl>
+          <dt>Hierarchy</dt>
+          <dd>Left rail = visual identity + team density signal. Right column = title → certs → teams (explicit) → description → tags (footer rule).</dd>
+          <dt>Advantages</dt>
+          <dd>Distinctive without breaking design system; rail creates consistent left edge alignment in grids; certs elevated above teams in content column; good for comparing skills side-by-side.</dd>
+          <dt>Trade-offs</dt>
+          <dd>56px rail reduces description width; team pips are decorative (need chips for accessibility); most structural DOM change of the four concepts.</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="sgc-label" style="margin-top:28px">Grid context (3-up)</div>
+    <div class="sgc-grid-3" id="gridD"></div>
+  </section>
+
+  <script>
+    const SWITCH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`;
+    const USERS_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+    const AWARD_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>`;
+
+    const SAMPLE = {
+      title: 'Catalyst 9000 IOS-XE Operations',
+      teams: ['TAC-ENT-LANSW-SHIFT1', 'TAC-ENT-LANSW-SHIFT2'],
+      teamOverflow: 2,
+      cert: 'CCNP Enterprise Core',
+      desc: 'Day-to-day Catalyst 9000 platform operations including IOS-XE image management, licensing, stack troubleshooting, and ISSU coordination.',
+      tags: ['troubleshooting', 'escalation', 'protocol-analysis', 'automation'],
+    };
+
+    const VARIANTS = [
+      { title: 'Layer 3 Switching & Inter-VLAN Routing', teams: ['TAC-ENT-LANSW-SHIFT1'], cert: 'CCNA', tags: ['routing', 'vlan'] },
+      { title: 'VXLAN EVPN Campus Fabric', teams: ['TAC-ENT-LANSW-SHIFT3', 'TAC-ENT-SDA-SHIFT1'], cert: 'CCIE Enterprise Infrastructure', tags: ['fabric', 'vxlan', 'escalation'] },
+      { title: 'Spanning Tree: STP, RSTP & MST', teams: ['TAC-ENT-LANSW-SHIFT2'], cert: 'CCNP Enterprise Core', tags: ['stp', 'troubleshooting'] },
+    ];
+
+    function chip(cls, text) {
+      return `<span class="triage-chip ${cls} chip-sm">${text}</span>`;
+    }
+
+    function certBadge(text) {
+      return `<span class="meta-badge meta-badge--cert">${text}</span>`;
+    }
+
+    function buildCurrent(d = SAMPLE) {
+      const teamChips = d.teams.map(t => chip('triage-signal', t)).join('');
+      const overflow = d.teamOverflow ? chip('triage-signal team-chip-overflow', `+${d.teamOverflow} …`) : '';
+      const tagChips = d.tags.slice(0, 4).map(t => chip('triage-feedback', t)).join('');
+      const moreTags = d.tags.length > 4 ? `<span class="text-muted text-sm">+${d.tags.length - 4} more</span>` : '';
+      return `
+        <div class="tool-card sgc-current" data-category-slug="core">
+          <div class="tool-card-header">
+            <div class="tool-card-header-left">
+              <div class="tool-card-icon">${SWITCH_ICON}</div>
+              <div class="tool-card-name">${d.title}</div>
+            </div>
+          </div>
+          <div class="tool-card-badges">${teamChips}${overflow}</div>
+          <div class="tool-card-badges">${certBadge(d.cert)}</div>
+          <div class="tool-card-desc">${d.desc}</div>
+          <div class="tool-card-tags">${tagChips}${moreTags}</div>
+        </div>`;
+    }
+
+    function buildA(d = SAMPLE) {
+      const teamChips = d.teams.map(t => chip('triage-signal', t)).join('');
+      const overflow = d.teamOverflow ? chip('triage-signal', `+${d.teamOverflow}`) : '';
+      const tagChips = d.tags.slice(0, 4).map(t => chip('triage-feedback', t)).join('');
+      return `
+        <article class="sgc-a">
+          <div class="sgc-a__zone sgc-a__zone--header">
+            <div class="sgc-icon sgc-icon--lg">${SWITCH_ICON}</div>
+            <h3 class="sgc-a__title">${d.title}</h3>
+          </div>
+          <div class="sgc-a__zone sgc-a__zone--meta">
+            <div class="sgc-a__meta-group">
+              <span class="sgc-a__meta-label">${USERS_ICON} Teams</span>
+              <div class="sgc-a__meta-chips">${teamChips}${overflow}</div>
+            </div>
+            <div class="sgc-a__meta-group">
+              <span class="sgc-a__meta-label">${AWARD_ICON} Certification</span>
+              <div class="sgc-a__meta-chips">${certBadge(d.cert)}</div>
+            </div>
+          </div>
+          <div class="sgc-a__zone sgc-a__zone--body">
+            <p class="sgc-a__desc">${d.desc}</p>
+          </div>
+          <div class="sgc-a__zone sgc-a__zone--footer">
+            <div class="sgc-a__tags">${tagChips}</div>
+          </div>
+        </article>`;
+    }
+
+    function buildB(d = SAMPLE) {
+      const teamChips = d.teams.map(t => chip('triage-signal', t)).join('');
+      const overflow = d.teamOverflow ? chip('triage-signal', `+${d.teamOverflow}`) : '';
+      const tagChips = d.tags.slice(0, 4).map(t => chip('triage-feedback', t)).join('');
+      return `
+        <article class="sgc-b">
+          <header class="sgc-b__hero">
+            <div class="sgc-b__hero-top">
+              <div class="sgc-b__hero-icon">${SWITCH_ICON}</div>
+              <h3 class="sgc-b__title">${d.title}</h3>
+            </div>
+            <div class="sgc-b__assoc-line">
+              ${teamChips}${overflow}
+              <span class="sgc-b__dot">·</span>
+              ${certBadge(d.cert)}
+            </div>
+          </header>
+          <div class="sgc-b__body">
+            <p class="sgc-b__desc">${d.desc}</p>
+            <div class="sgc-b__tag-tray">${tagChips}</div>
+          </div>
+        </article>`;
+    }
+
+    function buildC(d = SAMPLE) {
+      const teamChips = d.teams.map(t => chip('triage-signal', t)).join('');
+      const overflow = d.teamOverflow ? chip('triage-signal', `+${d.teamOverflow}`) : '';
+      const tagChips = d.tags.slice(0, 4).map(t => chip('triage-feedback', t)).join('');
+      return `
+        <article class="sgc-c">
+          <div class="sgc-c__head">
+            <div class="sgc-icon sgc-icon--sm">${SWITCH_ICON}</div>
+            <h3 class="sgc-c__title">${d.title}</h3>
+          </div>
+          <p class="sgc-c__desc">${d.desc}</p>
+          <div class="sgc-c__cloud">
+            <span class="sgc-c__cloud-label">Associations &amp; tags</span>
+            ${teamChips}${overflow}
+            ${certBadge(d.cert)}
+            <span class="sgc-c__divider"></span>
+            ${tagChips}
+          </div>
+        </article>`;
+    }
+
+    function buildD(d = SAMPLE) {
+      const teamChips = d.teams.map(t => chip('triage-signal', t)).join('');
+      const overflow = d.teamOverflow ? chip('triage-signal', `+${d.teamOverflow}`) : '';
+      const tagChips = d.tags.slice(0, 4).map(t => chip('triage-feedback', t)).join('');
+      const pips = d.teams.length + (d.teamOverflow || 0);
+      return `
+        <article class="sgc-d">
+          <aside class="sgc-d__rail" aria-hidden="true">
+            <div class="sgc-d__rail-icon">${SWITCH_ICON}</div>
+            <div class="sgc-d__rail-teams">
+              <span class="sgc-d__team-pip"></span>
+              <span class="sgc-d__team-pip"></span>
+              ${d.teamOverflow ? '<span class="sgc-d__team-pip"></span>' : ''}
+            </div>
+            <span class="sgc-d__team-count">${pips} teams</span>
+          </aside>
+          <div class="sgc-d__main">
+            <h3 class="sgc-d__title">${d.title}</h3>
+            <div class="sgc-d__certs">${certBadge(d.cert)}</div>
+            <div class="sgc-d__teams-row">${teamChips}${overflow}</div>
+            <p class="sgc-d__desc">${d.desc}</p>
+            <div class="sgc-d__tags">${tagChips}</div>
+          </div>
+        </article>`;
+    }
+
+    const builders = { current: buildCurrent, a: buildA, b: buildB, c: buildC, d: buildD };
+
+    document.getElementById('currentCard').innerHTML = buildCurrent();
+    document.getElementById('conceptACard').innerHTML = buildA();
+    document.getElementById('conceptBCard').innerHTML = buildB();
+    document.getElementById('conceptCCard').innerHTML = buildC();
+    document.getElementById('conceptDCard').innerHTML = buildD();
+
+    document.getElementById('overviewGrid').innerHTML =
+      buildCurrent() + buildA() + buildB() + buildC();
+
+    ['gridA', 'gridB', 'gridC', 'gridD'].forEach((id, i) => {
+      const key = ['a', 'b', 'c', 'd'][i];
+      const el = document.getElementById(id);
+      el.innerHTML = buildA(VARIANTS[0]) + builders[key](SAMPLE) + builders[key](VARIANTS[1]);
+    });
+
+    document.querySelectorAll('.sgc-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.sgc-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.sgc-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+      });
+    });
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      html.dataset.theme = html.dataset.theme === 'light' ? 'dark' : 'light';
+    });
+
+    document.getElementById('wireToggle').addEventListener('click', () => {
+      document.body.classList.toggle('sgc-wireframe');
+    });
+  </script>
+</body>
+</html>

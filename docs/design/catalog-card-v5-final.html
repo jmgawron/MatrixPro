@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MatrixPro — Catalog Card V5 Final (Light + Dark)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#1a1d21; color:#e8eef7; padding:32px 32px 64px;
+  }
+  h1 { font-size:21px; margin-bottom:6px; }
+  .intro { color:#9aa4b2; font-size:13px; margin-bottom:22px; max-width:920px; line-height:1.55; }
+  .theme-label { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:26px 0 8px; color:#9fe3b4; }
+
+  /* ── tier hues: anchored to the brand cyan→blue gradient ──
+     light:  foundational stone · core brand-blue · advanced indigo · ai cyan
+     dark:   brighter variants of the same hues                       */
+  .light .t-found { --tier:#78716c; --tier-soft:rgba(120,113,108,.1);  --tier-bd:rgba(120,113,108,.25); }
+  .light .t-core  { --tier:#2563eb; --tier-soft:rgba(37,99,235,.08);   --tier-bd:rgba(37,99,235,.22); }
+  .light .t-adv   { --tier:#4f46e5; --tier-soft:rgba(79,70,229,.08);   --tier-bd:rgba(79,70,229,.22); }
+  .light .t-ai    { --tier:#0891b2; --tier-soft:rgba(8,145,178,.09);   --tier-bd:rgba(8,145,178,.25); }
+  .dark .t-found  { --tier:#a8a29e; --tier-soft:rgba(168,162,158,.12); --tier-bd:rgba(168,162,158,.3); }
+  .dark .t-core   { --tier:#5cb1ff; --tier-soft:rgba(92,177,255,.12);  --tier-bd:rgba(92,177,255,.32); }
+  .dark .t-adv    { --tier:#818cf8; --tier-soft:rgba(129,140,248,.12); --tier-bd:rgba(129,140,248,.32); }
+  .dark .t-ai     { --tier:#22d3ee; --tier-soft:rgba(34,211,238,.1);   --tier-bd:rgba(34,211,238,.3); }
+
+  /* ── stages ── */
+  .stage { border-radius:14px; padding:24px; max-width:1040px; border:1px solid rgba(255,255,255,.1); }
+  .light { background:#f8f8f7; color:#1c1917;
+    --txt:#1c1917; --txt2:#52514d; --txt3:#76746e;
+    --card:#ffffff; --bd:rgba(41,37,32,.09); --bd2:rgba(41,37,32,.12);
+    --shadow:0 1px 3px rgba(41,37,32,.08); --shadow-h:0 4px 14px rgba(41,37,32,.1);
+  }
+  .dark { background:#070b12; color:#e8eef7;
+    --txt:#e8eef7; --txt2:#9fb0c9; --txt3:#6b7f9d;
+    --card:#121824; --bd:rgba(255,255,255,.07); --bd2:rgba(255,255,255,.12);
+    --shadow:0 2px 8px rgba(0,0,0,.18); --shadow-h:0 6px 20px rgba(0,0,0,.3);
+  }
+
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width:980px){ .grid3{grid-template-columns:1fr;} }
+
+  /* ── category header: numbered editorial ── */
+  .cat { display:flex; align-items:baseline; gap:12px; margin:0 0 14px; }
+  .cat + .grid3 { margin-bottom:26px; }
+  .cat .num { font-size:22px; font-weight:200; color:var(--tier); font-variant-numeric:tabular-nums; }
+  .cat h3 { font-size:16px; font-weight:800; color:var(--txt); }
+  .cat .rule { flex:1; height:1px; background:var(--bd2); }
+  .cat .count { font-size:11px; color:var(--txt3); }
+
+  /* ── V5 final card: editorial + icon ── */
+  .card {
+    position:relative; background:var(--card); border:1px solid var(--bd); border-radius:12px;
+    padding:16px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:8px; cursor:pointer;
+    transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .card:hover { transform:translateY(-1px); border-color:var(--tier-bd); box-shadow:var(--shadow-h); }
+  .card .icon {
+    position:absolute; top:14px; right:14px; width:32px; height:32px; border-radius:9px;
+    background:var(--tier-soft); color:var(--tier); display:flex; align-items:center; justify-content:center;
+    font-size:15px;
+  }
+  .eyebrow { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--tier); }
+  .name { font-size:16px; font-weight:700; color:var(--txt); padding-right:40px; }
+  .desc { font-size:13px; color:var(--txt2); line-height:1.5; }
+  .footer-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding-top:10px; border-top:1px solid var(--bd); margin-top:2px; }
+  .chip { font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px; border:1px solid var(--tier-bd); color:var(--tier); background:var(--tier-soft); }
+  .meta-quiet { font-size:11px; color:var(--txt3); }
+</style>
+</head>
+<body>
+
+<h1>Catalog Card — V5 Final: Editorial + Icons</h1>
+<p class="intro">
+Editorial typography-first card with the skill icon restored as a quiet, tier-tinted tile in the top-right corner —
+the name stays the hero. Tier colors are anchored to the brand's cyan→blue gradient: <b>Foundational</b> warm stone
+(matches the new text palette), <b>Core</b> brand blue, <b>Advanced</b> indigo (blue's deeper neighbor),
+<b>AI&nbsp;&amp;&nbsp;Future</b> cyan (the bright end of the brand gradient). Both themes shown below with all four tiers;
+certification chips pick up the tier hue, tags stay quiet text. Hover = 1px lift + tier-tinted border.
+</p>
+
+<div class="theme-label">Light theme</div>
+<div class="stage light">
+
+  <div class="t-found cat"><span class="num">01</span><h3>Foundational</h3><span class="rule"></span><span class="count">12 skills</span></div>
+  <div class="grid3">
+    <div class="t-found card">
+      <span class="icon">⌘</span>
+      <span class="eyebrow">Foundational</span>
+      <span class="name">Linux Fundamentals</span>
+      <p class="desc">Navigate, script and troubleshoot confidently on Linux-based platforms and appliances.</p>
+      <div class="footer-meta"><span class="chip">LFCS</span><span class="meta-quiet">os · scripting</span></div>
+    </div>
+    <div class="t-found card">
+      <span class="icon">⎙</span>
+      <span class="eyebrow">Foundational</span>
+      <span class="name">Case Documentation</span>
+      <p class="desc">Write clear, complete case notes and RCAs that customers and peers can act on.</p>
+      <div class="footer-meta"><span class="meta-quiet">process · writing</span></div>
+    </div>
+  </div>
+
+  <div class="t-core cat"><span class="num">02</span><h3>Core</h3><span class="rule"></span><span class="count">24 skills</span></div>
+  <div class="grid3">
+    <div class="t-core card">
+      <span class="icon">⇄</span>
+      <span class="eyebrow">Core</span>
+      <span class="name">BGP Troubleshooting</span>
+      <p class="desc">Diagnose and resolve BGP session, route propagation and policy issues in production networks.</p>
+      <div class="footer-meta"><span class="chip">CCNP</span><span class="meta-quiet">routing · tac</span></div>
+    </div>
+    <div class="t-core card">
+      <span class="icon">☷</span>
+      <span class="eyebrow">Core</span>
+      <span class="name">QoS Design</span>
+      <p class="desc">Plan and validate end-to-end quality-of-service policies across campus and WAN.</p>
+      <div class="footer-meta"><span class="meta-quiet">qos · voice</span></div>
+    </div>
+    <div class="t-core card">
+      <span class="icon">⌗</span>
+      <span class="eyebrow">Core</span>
+      <span class="name">Packet Capture Analysis</span>
+      <p class="desc">Capture and interpret traffic with Wireshark and embedded capture tooling.</p>
+      <div class="footer-meta"><span class="chip">WCNA</span><span class="meta-quiet">tooling</span></div>
+    </div>
+  </div>
+
+  <div class="t-adv cat"><span class="num">03</span><h3>Advanced</h3><span class="rule"></span><span class="count">15 skills</span></div>
+  <div class="grid3">
+    <div class="t-adv card">
+      <span class="icon">🛡</span>
+      <span class="eyebrow">Advanced</span>
+      <span class="name">Network Security Architecture</span>
+      <p class="desc">Design segmentation, zero-trust and threat-mitigation architectures at enterprise scale.</p>
+      <div class="footer-meta"><span class="chip">CCIE Sec</span><span class="meta-quiet">security · design</span></div>
+    </div>
+  </div>
+
+  <div class="t-ai cat"><span class="num">04</span><h3>AI &amp; Future Skills</h3><span class="rule"></span><span class="count">7 skills</span></div>
+  <div class="grid3">
+    <div class="t-ai card">
+      <span class="icon">✦</span>
+      <span class="eyebrow">AI &amp; Future</span>
+      <span class="name">LLM-Assisted Diagnostics</span>
+      <p class="desc">Use AI assistants to accelerate log triage, config review and case summarization.</p>
+      <div class="footer-meta"><span class="meta-quiet">ai · productivity</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="theme-label">Dark theme</div>
+<div class="stage dark">
+
+  <div class="t-found cat"><span class="num">01</span><h3>Foundational</h3><span class="rule"></span><span class="count">12 skills</span></div>
+  <div class="grid3">
+    <div class="t-found card">
+      <span class="icon">⌘</span>
+      <span class="eyebrow">Foundational</span>
+      <span class="name">Linux Fundamentals</span>
+      <p class="desc">Navigate, script and troubleshoot confidently on Linux-based platforms and appliances.</p>
+      <div class="footer-meta"><span class="chip">LFCS</span><span class="meta-quiet">os · scripting</span></div>
+    </div>
+  </div>
+
+  <div class="t-core cat"><span class="num">02</span><h3>Core</h3><span class="rule"></span><span class="count">24 skills</span></div>
+  <div class="grid3">
+    <div class="t-core card">
+      <span class="icon">⇄</span>
+      <span class="eyebrow">Core</span>
+      <span class="name">BGP Troubleshooting</span>
+      <p class="desc">Diagnose and resolve BGP session, route propagation and policy issues in production networks.</p>
+      <div class="footer-meta"><span class="chip">CCNP</span><span class="meta-quiet">routing · tac</span></div>
+    </div>
+    <div class="t-core card">
+      <span class="icon">☷</span>
+      <span class="eyebrow">Core</span>
+      <span class="name">QoS Design</span>
+      <p class="desc">Plan and validate end-to-end quality-of-service policies across campus and WAN.</p>
+      <div class="footer-meta"><span class="meta-quiet">qos · voice</span></div>
+    </div>
+    <div class="t-core card">
+      <span class="icon">⌗</span>
+      <span class="eyebrow">Core</span>
+      <span class="name">Packet Capture Analysis</span>
+      <p class="desc">Capture and interpret traffic with Wireshark and embedded capture tooling.</p>
+      <div class="footer-meta"><span class="chip">WCNA</span><span class="meta-quiet">tooling</span></div>
+    </div>
+  </div>
+
+  <div class="t-adv cat"><span class="num">03</span><h3>Advanced</h3><span class="rule"></span><span class="count">15 skills</span></div>
+  <div class="grid3">
+    <div class="t-adv card">
+      <span class="icon">🛡</span>
+      <span class="eyebrow">Advanced</span>
+      <span class="name">Network Security Architecture</span>
+      <p class="desc">Design segmentation, zero-trust and threat-mitigation architectures at enterprise scale.</p>
+      <div class="footer-meta"><span class="chip">CCIE Sec</span><span class="meta-quiet">security · design</span></div>
+    </div>
+  </div>
+
+  <div class="t-ai cat"><span class="num">04</span><h3>AI &amp; Future Skills</h3><span class="rule"></span><span class="count">7 skills</span></div>
+  <div class="grid3">
+    <div class="t-ai card">
+      <span class="icon">✦</span>
+      <span class="eyebrow">AI &amp; Future</span>
+      <span class="name">LLM-Assisted Diagnostics</span>
+      <p class="desc">Use AI assistants to accelerate log triage, config review and case summarization.</p>
+      <div class="footer-meta"><span class="meta-quiet">ai · productivity</span></div>
+    </div>
+  </div>
+</div>
+
+<p class="intro" style="margin-top:28px;">
+<b>Implementation notes:</b> Owners/Consumers rows removed from the card (remain in the detail modal). Admin actions stay as
+hover-revealed icon buttons in the corner (they'll sit left of the icon tile). Eyebrow shows the skill's primary tier; multi-tier
+skills repeat under each section as today. The four <code>--cat-*-accent</code> tokens are extended to
+<code>--cat-*-soft/border</code> pairs in both theme blocks; collapsible behavior of sections is preserved — the numbered
+header simply replaces the current chevron-row styling (chevron stays, right-aligned).
+</p>
+
+</body>
+</html>

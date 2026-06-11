@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MatrixPro — Catalog Skill Card: 5 Propositions</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#1a1d21; color:#e8eef7; padding:32px 32px 64px;
+  }
+  h1 { font-size:21px; margin-bottom:6px; }
+  .intro { color:#9aa4b2; font-size:13px; margin-bottom:8px; max-width:900px; line-height:1.5; }
+  .v-title { font-size:16px; font-weight:800; margin:40px 0 4px; color:#fff; }
+  .v-sub { font-size:12.5px; color:#9aa4b2; margin-bottom:12px; max-width:900px; line-height:1.5; }
+  .v-title .tag { font-size:11px; font-weight:700; background:#2563eb; color:#fff; border-radius:5px; padding:2px 8px; vertical-align:2px; margin-right:8px; }
+
+  /* warm light canvas */
+  .stage {
+    background:#f8f8f7; border-radius:14px; border:1px solid rgba(255,255,255,.1);
+    padding:24px; color:#1c1917; max-width:1040px;
+  }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width:980px){ .grid3{grid-template-columns:1fr;} }
+
+  /* shared bits */
+  .desc { font-size:13px; color:#52514d; line-height:1.5; }
+  .footer-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .chip { font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px; border:1px solid rgba(59,130,246,.2); color:#2563eb; background:rgba(59,130,246,.06); }
+  .meta-quiet { font-size:11px; color:#76746e; display:inline-flex; align-items:center; gap:4px; }
+  .icon-tile { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:17px; }
+  .name { font-size:14.5px; font-weight:700; color:#1c1917; }
+
+  /* tier hues */
+  .t-found { --tier:#78716c; --tier-soft:rgba(120,113,108,.1); }
+  .t-core { --tier:#2563eb; --tier-soft:rgba(37,99,235,.08); }
+  .t-adv  { --tier:#7c3aed; --tier-soft:rgba(124,58,237,.08); }
+  .t-ai   { --tier:#0d9488; --tier-soft:rgba(13,148,136,.09); }
+  .hint { font-size:11px; color:#9aa4b2; margin-top:10px; }
+
+  /* ───────── V1 · Tier Rail ───────── */
+  .v1-cat { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .v1-cat .icon-tile { width:30px; height:30px; border-radius:8px; background:var(--tier-soft); color:var(--tier); font-size:14px; }
+  .v1-cat h3 { font-size:13px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#1c1917; }
+  .v1-cat .count { font-size:11px; font-weight:600; color:var(--tier); background:var(--tier-soft); padding:2px 9px; border-radius:999px; }
+  .v1-cat .rule { flex:1; height:2px; border-radius:2px; background:linear-gradient(90deg, var(--tier-soft), transparent); }
+  .v1-card {
+    background:#fff; border:1px solid rgba(41,37,32,.09); border-left:3px solid var(--tier);
+    border-radius:12px; padding:14px; box-shadow:0 1px 3px rgba(41,37,32,.08);
+    display:flex; flex-direction:column; gap:9px; cursor:pointer;
+  }
+  .v1-card .head { display:flex; align-items:center; gap:10px; }
+  .v1-card .icon-tile { background:var(--tier-soft); color:var(--tier); }
+  .v1-card .footer-meta { margin-top:auto; padding-top:9px; border-top:1px dashed rgba(41,37,32,.1); }
+
+  /* ───────── V2 · Tier Tabs + Icon-forward ───────── */
+  .v2-tabs { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+  .v2-tab {
+    display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600;
+    padding:7px 14px; border-radius:999px; border:1px solid rgba(41,37,32,.12);
+    color:#52514d; background:#fff; cursor:pointer;
+  }
+  .v2-tab .dot { width:8px; height:8px; border-radius:99px; background:var(--tier); }
+  .v2-tab .n { font-size:10.5px; color:#76746e; }
+  .v2-tab.active { border-color:var(--tier); color:var(--tier); background:var(--tier-soft); }
+  .v2-card {
+    background:#fff; border:1px solid rgba(41,37,32,.09); border-radius:14px; padding:16px;
+    box-shadow:0 1px 3px rgba(41,37,32,.08); display:flex; flex-direction:column; gap:10px; cursor:pointer;
+  }
+  .v2-card .icon-tile { width:44px; height:44px; border-radius:12px; background:var(--tier-soft); color:var(--tier); font-size:20px; }
+  .v2-card .tierlabel { font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--tier); }
+
+  /* ───────── V3 · Compact Rows ───────── */
+  .v3-cat {
+    position:sticky; top:0; display:flex; align-items:center; gap:8px;
+    font-size:11.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--tier); padding:8px 4px; background:#f8f8f7;
+  }
+  .v3-cat .count { font-weight:600; color:#76746e; text-transform:none; letter-spacing:0; }
+  .v3-row {
+    display:flex; align-items:center; gap:12px; background:#fff;
+    border:1px solid rgba(41,37,32,.09); border-radius:10px; padding:10px 14px; margin-bottom:8px;
+    box-shadow:0 1px 2px rgba(41,37,32,.05); cursor:pointer;
+  }
+  .v3-row .icon-tile { width:34px; height:34px; border-radius:9px; background:var(--tier-soft); color:var(--tier); font-size:15px; }
+  .v3-row .mid { flex:1; min-width:0; }
+  .v3-row .desc { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12.5px; }
+  .v3-row .right { display:flex; gap:10px; flex-shrink:0; }
+
+  /* ───────── V4 · Tier Panels ───────── */
+  .v4-panel {
+    border-radius:16px; padding:18px; margin-bottom:16px;
+    background:linear-gradient(180deg, var(--tier-soft), rgba(255,255,255,0) 70%);
+    border:1px solid rgba(41,37,32,.07);
+  }
+  .v4-panel-head { display:flex; align-items:baseline; gap:10px; margin-bottom:4px; }
+  .v4-panel-head h3 { font-size:15px; font-weight:800; color:#1c1917; }
+  .v4-panel-head .count { font-size:11px; font-weight:600; color:var(--tier); }
+  .v4-panel-desc { font-size:12px; color:#76746e; margin-bottom:14px; }
+  .v4-card {
+    background:#fff; border:1px solid rgba(41,37,32,.09); border-radius:12px; padding:14px;
+    box-shadow:0 1px 3px rgba(41,37,32,.07); display:flex; flex-direction:column; gap:9px; cursor:pointer;
+  }
+  .v4-card .head { display:flex; align-items:center; gap:10px; }
+  .v4-card .icon-tile { background:var(--tier-soft); color:var(--tier); }
+
+  /* ───────── V5 · Editorial ───────── */
+  .v5-cat { display:flex; align-items:baseline; gap:12px; margin:0 0 14px; }
+  .v5-cat .num { font-size:22px; font-weight:200; color:var(--tier); font-variant-numeric:tabular-nums; }
+  .v5-cat h3 { font-size:16px; font-weight:800; color:#1c1917; }
+  .v5-cat .rule { flex:1; height:1px; background:rgba(41,37,32,.12); }
+  .v5-cat .count { font-size:11px; color:#76746e; }
+  .v5-card {
+    background:#fff; border:1px solid rgba(41,37,32,.09); border-radius:12px; padding:16px;
+    box-shadow:0 1px 3px rgba(41,37,32,.07); display:flex; flex-direction:column; gap:8px; cursor:pointer;
+  }
+  .v5-card .eyebrow { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--tier); }
+  .v5-card .name { font-size:16px; }
+  .v5-card .footer-meta { padding-top:10px; border-top:1px solid rgba(41,37,32,.08); margin-top:2px; }
+</style>
+</head>
+<body>
+
+<h1>Catalog Skill Card — 5 Propositions</h1>
+<p class="intro">All variants drop the Owners/Consumers rows (still available in the detail modal), keep
+certifications + tags as quiet footer metadata, and pair the card redesign with a redesigned presentation of the
+four tiers (Foundational / Core / Advanced / AI &amp; Future). Tier hues are differentiated — stone, blue, violet, teal —
+instead of today's four near-identical blues. Shown in the approved warm light theme; dark adapts via tokens.</p>
+
+<!-- ════════ V1 ════════ -->
+<div class="v-title"><span class="tag">V1</span>Tier Rail — refined current</div>
+<p class="v-sub">Evolution, not revolution. Keeps the familiar left-border card but ties it to a stronger section header:
+tier icon chip, count pill, and a fading color rule. Card keeps icon + name head, description, and gains a dashed-divider
+footer for certs/tags. Lowest implementation risk.</p>
+<div class="stage">
+  <div class="t-core v1-cat">
+    <span class="icon-tile">◆</span><h3>Core</h3><span class="count">24 skills</span><span class="rule"></span>
+  </div>
+  <div class="grid3">
+    <div class="t-core v1-card">
+      <div class="head"><span class="icon-tile">⇄</span><span class="name">BGP Troubleshooting</span></div>
+      <p class="desc">Diagnose and resolve BGP session, route propagation and policy issues in production networks.</p>
+      <div class="footer-meta"><span class="chip">CCNP</span><span class="meta-quiet">⛉ routing · tac</span></div>
+    </div>
+    <div class="t-core v1-card">
+      <div class="head"><span class="icon-tile">☷</span><span class="name">QoS Design</span></div>
+      <p class="desc">Plan and validate end-to-end quality-of-service policies across campus and WAN.</p>
+      <div class="footer-meta"><span class="meta-quiet">⛉ qos · voice</span></div>
+    </div>
+    <div class="t-core v1-card">
+      <div class="head"><span class="icon-tile">⌗</span><span class="name">Packet Capture Analysis</span></div>
+      <p class="desc">Capture and interpret traffic with Wireshark and embedded capture tooling.</p>
+      <div class="footer-meta"><span class="chip">WCNA</span><span class="meta-quiet">⛉ tooling</span></div>
+    </div>
+  </div>
+  <div class="t-ai v1-cat" style="margin-top:22px;">
+    <span class="icon-tile">✦</span><h3>AI &amp; Future Skills</h3><span class="count">7 skills</span><span class="rule"></span>
+  </div>
+  <div class="grid3">
+    <div class="t-ai v1-card">
+      <div class="head"><span class="icon-tile">✦</span><span class="name">LLM-Assisted Diagnostics</span></div>
+      <p class="desc">Use AI assistants to accelerate log triage, config review and case summarization.</p>
+      <div class="footer-meta"><span class="meta-quiet">⛉ ai · productivity</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ V2 ════════ -->
+<div class="v-title"><span class="tag">V2</span>Tier Tabs — filter instead of scroll</div>
+<p class="v-sub">Replaces collapsible sections with a segmented tier filter bar (color-dotted pills with counts). One tier
+visible at a time → shorter page, clearer focus. Card is icon-forward with a small tier label over the name; no left border needed.</p>
+<div class="stage">
+  <div class="v2-tabs">
+    <span class="t-found v2-tab"><span class="dot"></span>Foundational <span class="n">12</span></span>
+    <span class="t-core v2-tab active"><span class="dot"></span>Core <span class="n">24</span></span>
+    <span class="t-adv v2-tab"><span class="dot"></span>Advanced <span class="n">15</span></span>
+    <span class="t-ai v2-tab"><span class="dot"></span>AI &amp; Future <span class="n">7</span></span>
+  </div>
+  <div class="grid3">
+    <div class="t-core v2-card">
+      <span class="icon-tile">⇄</span>
+      <div><div class="tierlabel">Core</div><div class="name">BGP Troubleshooting</div></div>
+      <p class="desc">Diagnose and resolve BGP session, route propagation and policy issues in production networks.</p>
+      <div class="footer-meta"><span class="chip">CCNP</span><span class="meta-quiet">⛉ routing · tac</span></div>
+    </div>
+    <div class="t-core v2-card">
+      <span class="icon-tile">☷</span>
+      <div><div class="tierlabel">Core</div><div class="name">QoS Design</div></div>
+      <p class="desc">Plan and validate end-to-end quality-of-service policies across campus and WAN.</p>
+      <div class="footer-meta"><span class="meta-quiet">⛉ qos · voice</span></div>
+    </div>
+    <div class="t-core v2-card">
+      <span class="icon-tile">⌗</span>
+      <div><div class="tierlabel">Core</div><div class="name">Packet Capture Analysis</div></div>
+      <p class="desc">Capture and interpret traffic with Wireshark and embedded capture tooling.</p>
+      <div class="footer-meta"><span class="chip">WCNA</span><span class="meta-quiet">⛉ tooling</span></div>
+    </div>
+  </div>
+  <p class="hint">Multi-tier skills appear under each of their tiers; an "All" pill can restore today's full view.</p>
+</div>
+
+<!-- ════════ V3 ════════ -->
+<div class="v-title"><span class="tag">V3</span>Compact Rows — maximum scanability</div>
+<p class="v-sub">Cards become horizontal rows: icon, name + one-line description, quiet meta on the right. Sticky tier
+subheaders while scrolling. Fits 3× more skills per screen — best for big catalogs and admin work, least "showcase" feel.</p>
+<div class="stage">
+  <div class="t-core v3-cat">Core <span class="count">· 24 skills</span></div>
+  <div class="t-core v3-row">
+    <span class="icon-tile">⇄</span>
+    <div class="mid"><div class="name">BGP Troubleshooting</div><div class="desc">Diagnose and resolve BGP session, route propagation and policy issues in production networks.</div></div>
+    <div class="right"><span class="chip">CCNP</span><span class="meta-quiet">3 tags</span></div>
+  </div>
+  <div class="t-core v3-row">
+    <span class="icon-tile">☷</span>
+    <div class="mid"><div class="name">QoS Design</div><div class="desc">Plan and validate end-to-end quality-of-service policies across campus and WAN.</div></div>
+    <div class="right"><span class="meta-quiet">2 tags</span></div>
+  </div>
+  <div class="t-ai v3-cat" style="margin-top:14px;">AI &amp; Future Skills <span class="count">· 7 skills</span></div>
+  <div class="t-ai v3-row">
+    <span class="icon-tile">✦</span>
+    <div class="mid"><div class="name">LLM-Assisted Diagnostics</div><div class="desc">Use AI assistants to accelerate log triage, config review and case summarization.</div></div>
+    <div class="right"><span class="meta-quiet">2 tags</span></div>
+  </div>
+</div>
+
+<!-- ════════ V4 ════════ -->
+<div class="v-title"><span class="tag">V4</span>Tier Panels — the tier owns the canvas</div>
+<p class="v-sub">Each tier becomes a softly tinted panel with its own headline and one-line purpose statement; cards inside are
+plain and calm (no left border — the panel carries tier identity). Most "designed" look, strongest tier storytelling.</p>
+<div class="stage">
+  <div class="t-core v4-panel">
+    <div class="v4-panel-head"><h3>Core</h3><span class="count">24 skills</span></div>
+    <p class="v4-panel-desc">The day-to-day technologies every TAC engineer is expected to master.</p>
+    <div class="grid3">
+      <div class="t-core v4-card">
+        <div class="head"><span class="icon-tile">⇄</span><span class="name">BGP Troubleshooting</span></div>
+        <p class="desc">Diagnose and resolve BGP session, route propagation and policy issues.</p>
+        <div class="footer-meta"><span class="chip">CCNP</span><span class="meta-quiet">⛉ routing · tac</span></div>
+      </div>
+      <div class="t-core v4-card">
+        <div class="head"><span class="icon-tile">☷</span><span class="name">QoS Design</span></div>
+        <p class="desc">Plan and validate end-to-end QoS policies across campus and WAN.</p>
+        <div class="footer-meta"><span class="meta-quiet">⛉ qos · voice</span></div>
+      </div>
+      <div class="t-core v4-card">
+        <div class="head"><span class="icon-tile">⌗</span><span class="name">Packet Capture Analysis</span></div>
+        <p class="desc">Capture and interpret traffic with Wireshark and embedded tooling.</p>
+        <div class="footer-meta"><span class="chip">WCNA</span><span class="meta-quiet">⛉ tooling</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="t-ai v4-panel">
+    <div class="v4-panel-head"><h3>AI &amp; Future Skills</h3><span class="count">7 skills</span></div>
+    <p class="v4-panel-desc">Emerging capabilities that multiply engineering effectiveness.</p>
+    <div class="grid3">
+      <div class="t-ai v4-card">
+        <div class="head"><span class="icon-tile">✦</span><span class="name">LLM-Assisted Diagnostics</span></div>
+        <p class="desc">Use AI assistants to accelerate log triage and case summarization.</p>
+        <div class="footer-meta"><span class="meta-quiet">⛉ ai · productivity</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ V5 ════════ -->
+<div class="v-title"><span class="tag">V5</span>Editorial — typography first</div>
+<p class="v-sub">No icon tiles. The tier appears as a colored micro-eyebrow on each card; the skill name is the hero at 16px.
+Category headers are numbered with a thin rule — a quiet, premium "course catalog" aesthetic. Cleanest reading, least colorful.</p>
+<div class="stage">
+  <div class="t-core v5-cat"><span class="num">02</span><h3>Core</h3><span class="rule"></span><span class="count">24 skills</span></div>
+  <div class="grid3">
+    <div class="t-core v5-card">
+      <span class="eyebrow">Core</span>
+      <span class="name">BGP Troubleshooting</span>
+      <p class="desc">Diagnose and resolve BGP session, route propagation and policy issues in production networks.</p>
+      <div class="footer-meta"><span class="chip">CCNP</span><span class="meta-quiet">routing · tac</span></div>
+    </div>
+    <div class="t-core v5-card">
+      <span class="eyebrow">Core</span>
+      <span class="name">QoS Design</span>
+      <p class="desc">Plan and validate end-to-end quality-of-service policies across campus and WAN.</p>
+      <div class="footer-meta"><span class="meta-quiet">qos · voice</span></div>
+    </div>
+    <div class="t-core v5-card">
+      <span class="eyebrow">Core</span>
+      <span class="name">Packet Capture Analysis</span>
+      <p class="desc">Capture and interpret traffic with Wireshark and embedded capture tooling.</p>
+      <div class="footer-meta"><span class="chip">WCNA</span><span class="meta-quiet">tooling</span></div>
+    </div>
+  </div>
+  <div class="t-ai v5-cat" style="margin-top:24px;"><span class="num">04</span><h3>AI &amp; Future Skills</h3><span class="rule"></span><span class="count">7 skills</span></div>
+  <div class="grid3">
+    <div class="t-ai v5-card">
+      <span class="eyebrow">AI &amp; Future</span>
+      <span class="name">LLM-Assisted Diagnostics</span>
+      <p class="desc">Use AI assistants to accelerate log triage, config review and case summarization.</p>
+      <div class="footer-meta"><span class="meta-quiet">ai · productivity</span></div>
+    </div>
+  </div>
+</div>
+
+<p class="intro" style="margin-top:36px;">
+<strong>Common to all variants:</strong> Owners/Consumers move to the skill detail modal only; admin actions stay as
+hover-revealed icons in the card corner; "Add to My Plan" button keeps its current placement; multi-category skills show
+under each tier they belong to. Tier hue differentiation (stone / blue / violet / teal) would update
+<code>--cat-*-accent</code> tokens in both themes — purely additive, dark theme gets matching brighter variants.
+</p>
+
+</body>
+</html>

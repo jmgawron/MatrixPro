@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MatrixPro — My Plan Category Toggles</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#1a1d21; color:#e8eef7; padding:32px 32px 64px; }
+  h1 { font-size:21px; margin-bottom:6px; }
+  .intro { color:#9aa4b2; font-size:13px; margin-bottom:20px; max-width:920px; line-height:1.55; }
+  .theme-label { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:24px 0 8px; color:#9fe3b4; }
+
+  .stage { border-radius:14px; padding:22px 26px; max-width:1040px; border:1px solid rgba(255,255,255,.1); }
+  .light { background:#f8f8f7; color:#1c1917;
+    --txt:#1c1917; --txt2:#52514d; --txt3:#76746e; --card:#fff;
+    --bd:rgba(41,37,32,.09); --bd2:rgba(41,37,32,.13); --off-knob:#fff; --off-track:rgba(41,37,32,.18); }
+  .dark { background:#070b12; color:#e8eef7;
+    --txt:#e8eef7; --txt2:#9fb0c9; --txt3:#6b7f9d; --card:#121824;
+    --bd:rgba(255,255,255,.07); --bd2:rgba(255,255,255,.13); --off-knob:#9fb0c9; --off-track:rgba(255,255,255,.14); }
+
+  .light .t-found { --tier:#78716c; --tier-soft:rgba(120,113,108,.1); --tier-bd:rgba(120,113,108,.25); }
+  .light .t-core  { --tier:#2563eb; --tier-soft:rgba(37,99,235,.08); --tier-bd:rgba(37,99,235,.22); }
+  .light .t-adv   { --tier:#4f46e5; --tier-soft:rgba(79,70,229,.08); --tier-bd:rgba(79,70,229,.22); }
+  .light .t-ai    { --tier:#0e7490; --tier-soft:rgba(8,145,178,.09); --tier-bd:rgba(8,145,178,.28); }
+  .dark .t-found  { --tier:#a8a29e; --tier-soft:rgba(168,162,158,.12); --tier-bd:rgba(168,162,158,.3); }
+  .dark .t-core   { --tier:#5cb1ff; --tier-soft:rgba(92,177,255,.12); --tier-bd:rgba(92,177,255,.32); }
+  .dark .t-adv    { --tier:#818cf8; --tier-soft:rgba(129,140,248,.12); --tier-bd:rgba(129,140,248,.32); }
+  .dark .t-ai     { --tier:#22d3ee; --tier-soft:rgba(34,211,238,.1); --tier-bd:rgba(34,211,238,.3); }
+
+  .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+
+  /* ── the toggle ── */
+  .tg {
+    display:inline-flex; align-items:center; gap:9px;
+    padding:7px 14px 7px 10px; border-radius:999px; cursor:pointer; user-select:none;
+    border:1px solid var(--tier-bd); background:var(--tier-soft); color:var(--tier);
+    font-size:12.5px; font-weight:600;
+    transition:background .18s, border-color .18s, color .18s, opacity .18s;
+  }
+  .tg .sw {
+    width:26px; height:15px; border-radius:999px; background:var(--tier); position:relative; flex-shrink:0;
+    transition:background .18s;
+  }
+  .tg .sw::after {
+    content:''; position:absolute; top:2px; left:13px; width:11px; height:11px; border-radius:99px;
+    background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25); transition:left .18s;
+  }
+  .tg .ic { font-size:13px; line-height:1; }
+  .tg .n { font-size:10.5px; font-weight:700; opacity:.75; }
+
+  .tg.off {
+    background:transparent; border-color:var(--bd2); color:var(--txt3); font-weight:500;
+  }
+  .tg.off .sw { background:var(--off-track); }
+  .tg.off .sw::after { left:2px; background:var(--off-knob); }
+  .tg.off .ic, .tg.off .n { opacity:.6; }
+
+  /* section ghosts */
+  .g-head { display:flex; align-items:baseline; gap:10px; margin:14px 0 10px; }
+  .g-head .num { font-size:20px; font-weight:200; color:var(--tier); }
+  .g-head b { font-size:15px; font-weight:800; color:var(--txt); }
+  .g-head .rl { flex:1; height:1px; background:var(--bd2); }
+  .g-head .cn { font-size:11px; color:var(--txt3); }
+  .ghost { border:1px dashed var(--bd2); border-radius:12px; padding:16px; font-size:12px; color:var(--txt3); text-align:center; }
+  .gone { opacity:.35; }
+  .gone .ghost { border-style:dotted; }
+  .gone-note { font-size:11px; color:var(--txt3); font-style:italic; text-align:center; padding:6px 0 2px; }
+</style>
+</head>
+<body>
+
+<h1>My Plan — Category Section Toggles</h1>
+<p class="intro">
+Each tier becomes an explicit <b>switch-pill</b>: a miniature switch (knob slides, track fills with the tier color),
+the monochrome tier icon, the name, and a count of skills in the current section. <b>ON</b> = tier-tinted pill, knob right —
+the whole section (numbered header + its skill cards) is shown. <b>OFF</b> = outlined neutral pill, knob left, muted —
+the section disappears entirely. This also fixes a logic bug found during review: the page currently re-enables all
+filters on every render, which silently undoes your toggle — that auto-enable will run only on first load.
+</p>
+
+<div class="theme-label">Light — "Advanced" toggled off</div>
+<div class="stage light">
+  <div class="row">
+    <span class="t-found tg"><span class="sw"></span><span class="ic">⏃</span>Foundational <span class="n">2</span></span>
+    <span class="t-core tg"><span class="sw"></span><span class="ic">◇</span>Core <span class="n">3</span></span>
+    <span class="t-adv tg off"><span class="sw"></span><span class="ic">⚛</span>Advanced <span class="n">1</span></span>
+    <span class="t-ai tg"><span class="sw"></span><span class="ic">✦</span>AI &amp; Future Skills <span class="n">1</span></span>
+  </div>
+
+  <div class="t-found"><div class="g-head"><span class="num">01</span><b>Foundational</b><span class="rl"></span><span class="cn">2 skills</span></div><div class="ghost">skill cards…</div></div>
+  <div class="t-core"><div class="g-head"><span class="num">02</span><b>Core</b><span class="rl"></span><span class="cn">3 skills</span></div><div class="ghost">skill cards…</div></div>
+  <div class="gone-note">— Advanced section hidden —</div>
+  <div class="t-ai"><div class="g-head"><span class="num">03</span><b>AI &amp; Future Skills</b><span class="rl"></span><span class="cn">1 skill</span></div><div class="ghost">skill cards…</div></div>
+</div>
+
+<div class="theme-label">Dark — all on</div>
+<div class="stage dark">
+  <div class="row">
+    <span class="t-found tg"><span class="sw"></span><span class="ic">⏃</span>Foundational <span class="n">2</span></span>
+    <span class="t-core tg"><span class="sw"></span><span class="ic">◇</span>Core <span class="n">3</span></span>
+    <span class="t-adv tg"><span class="sw"></span><span class="ic">⚛</span>Advanced <span class="n">1</span></span>
+    <span class="t-ai tg"><span class="sw"></span><span class="ic">✦</span>AI &amp; Future Skills <span class="n">1</span></span>
+  </div>
+  <div class="t-core"><div class="g-head"><span class="num">02</span><b>Core</b><span class="rl"></span><span class="cn">3 skills</span></div><div class="ghost">skill cards…</div></div>
+</div>
+
+<p class="intro" style="margin-top:24px;">
+<b>Details:</b> icons here are placeholders — the app keeps its monochrome SVG set (seedling / diamond / atom / sparkles).
+The count shows skills of that tier in the active section and updates as you switch sections. Numbering of visible section
+headers stays sequential. Multi-tier skills appear in every ON section; uncategorized skills are always shown.
+Toggles are buttons with <code>aria-pressed</code> for accessibility. Keyboard and screen-reader behavior unchanged.
+</p>
+
+</body>
+</html>

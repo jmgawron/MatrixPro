@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MatrixPro — My Plan Page Chrome Refinement</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#1a1d21; color:#e8eef7; padding:32px 32px 64px; }
+  h1 { font-size:21px; margin-bottom:6px; }
+  .intro { color:#9aa4b2; font-size:13px; margin-bottom:20px; max-width:920px; line-height:1.55; }
+  .pane-label { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:24px 0 8px; }
+  .pane-label.cur { color:#f0a8a8; } .pane-label.prop { color:#9fe3b4; }
+
+  .stage { background:#f8f8f7; color:#1c1917; border-radius:14px; border:1px solid rgba(255,255,255,.1);
+    padding:22px 26px; max-width:1060px;
+    --txt:#1c1917; --txt2:#52514d; --txt3:#76746e; --card:#fff;
+    --bd:rgba(41,37,32,.09); --bd2:rgba(41,37,32,.13);
+    --acc:#2563eb; --acc-soft:rgba(37,99,235,.08); --acc-bd:rgba(37,99,235,.25);
+    --grad:linear-gradient(90deg,#00C6FF,#0072FF); }
+  .stage.dark { background:#070b12; color:#e8eef7;
+    --txt:#e8eef7; --txt2:#9fb0c9; --txt3:#6b7f9d; --card:#121824;
+    --bd:rgba(255,255,255,.07); --bd2:rgba(255,255,255,.13);
+    --acc:#5cb1ff; --acc-soft:rgba(92,177,255,.12); --acc-bd:rgba(92,177,255,.35); }
+
+  /* ── header ── */
+  .hd { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; }
+  .cur-h1 { font-size:48px; font-weight:800; letter-spacing:-.02em; line-height:1.1; color:var(--txt); }
+  .prop-h1 { font-size:30px; font-weight:800; letter-spacing:-.01em; line-height:1.15; color:var(--txt); }
+  .grad { background:var(--grad); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .cur-sub { font-size:15px; color:var(--txt3); margin-top:6px; }
+  .prop-sub { font-size:13px; color:var(--txt3); margin-top:4px; }
+
+  /* stats — current: centered floats */
+  .cur-stats { display:flex; gap:48px; justify-content:center; padding:8px 0; }
+  .cur-stat { text-align:center; }
+  .cur-stat b { display:block; font-size:28px; font-weight:700; color:var(--txt); line-height:1; }
+  .cur-stat i { display:block; font-style:normal; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--txt3); margin-top:5px; }
+  /* stats — proposed: editorial strip with hairlines */
+  .prop-stats { display:flex; align-items:stretch; }
+  .prop-stat { padding:2px 22px; border-left:1px solid var(--bd2); }
+  .prop-stat:first-child { padding-left:0; border-left:none; }
+  .prop-stat b { display:block; font-size:22px; font-weight:700; color:var(--txt); line-height:1.1; font-variant-numeric:tabular-nums; }
+  .prop-stat i { display:block; font-style:normal; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:var(--txt3); margin-top:3px; }
+
+  /* ── layout: sidebar + content ── */
+  .panel { display:grid; grid-template-columns:210px 1fr; gap:0; margin-top:18px;
+    background:var(--card); border:1px solid var(--bd); border-radius:16px; overflow:hidden; }
+  .sb { padding:14px 12px; border-right:1px solid var(--bd); }
+  .nav-btn { display:flex; align-items:center; gap:9px; padding:9px 12px; border-radius:9px;
+    font-size:13.5px; color:var(--txt2); margin-bottom:2px; }
+  .nav-btn.active { background:var(--acc-soft); color:var(--acc); font-weight:600; box-shadow:inset 3px 0 0 var(--acc); }
+  .cur .count { margin-left:auto; font-size:11px; font-weight:700; min-width:20px; text-align:center; padding:2px 6px;
+    border-radius:99px; background:linear-gradient(135deg,rgba(0,0,0,.05),rgba(0,0,0,.02)); border:1px solid var(--bd); color:var(--txt3); }
+  .prop .count { margin-left:auto; font-size:11px; font-weight:700; min-width:20px; text-align:center; padding:2px 6px;
+    border-radius:99px; background:rgba(0,0,0,.04); color:var(--txt3); }
+  .stage.dark .prop .count { background:rgba(255,255,255,.07); }
+  .sb hr { border:none; border-top:1px solid var(--bd); margin:10px 0; }
+  .cur .sb-label { font-size:11px; text-transform:uppercase; letter-spacing:.5px; font-weight:600; color:var(--txt3); margin:10px 0 8px; }
+  .prop .sb-label { font-size:10px; text-transform:uppercase; letter-spacing:.09em; font-weight:700; color:var(--txt3); margin:12px 0 8px; }
+  .cur .f-label { font-size:12px; font-weight:500; color:var(--txt2); margin:8px 0 6px; }
+  .prop .f-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:var(--txt3); margin:10px 0 6px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .cur .chip { font-size:11px; font-weight:500; padding:5px 10px; border-radius:14px; border:1px solid var(--bd); background:var(--card); color:var(--txt2); }
+  .cur .chip.active { background:var(--acc-soft); border-color:var(--acc); color:var(--acc); font-weight:600; box-shadow:0 0 0 1px var(--acc) inset; }
+  .cur .chip.active::after { content:" ✓"; font-weight:700; }
+  .prop .chip { font-size:11.5px; font-weight:500; padding:5px 11px; border-radius:999px; border:1px solid var(--bd); background:var(--card); color:var(--txt2); }
+  .prop .chip.active { background:var(--acc-soft); border-color:var(--acc-bd); color:var(--acc); font-weight:600; }
+
+  /* content header */
+  .ct { padding:16px 18px; }
+  .ct-head { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .cur .ct-title { font-size:18px; font-weight:600; color:var(--txt); }
+  .prop .ct-title { font-size:20px; font-weight:700; letter-spacing:-.01em; color:var(--txt); }
+  .cur .search { margin-left:auto; font-size:12.5px; color:var(--txt3); border:1px solid var(--bd2); border-radius:9px; padding:7px 12px; width:190px; background:var(--card); }
+  .prop .search { margin-left:auto; font-size:12.5px; color:var(--txt3); border:1px solid var(--bd); border-radius:999px; padding:7px 14px; width:190px; background:rgba(0,0,0,.025); }
+  .stage.dark .prop .search { background:rgba(255,255,255,.05); }
+
+  /* group header + card ghost (V5, unchanged) */
+  .g-head { display:flex; align-items:baseline; gap:10px; margin:4px 0 10px; }
+  .g-head .num { font-size:20px; font-weight:200; color:var(--acc); }
+  .g-head b { font-size:15px; font-weight:800; color:var(--txt); }
+  .g-head .rl { flex:1; height:1px; background:var(--bd2); }
+  .g-head .cn { font-size:11px; color:var(--txt3); }
+  .ghost { border:1px dashed var(--bd2); border-radius:12px; padding:18px; font-size:12px; color:var(--txt3); text-align:center; }
+
+  .note { font-size:11.5px; color:#9aa4b2; margin-top:10px; max-width:920px; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<h1>My Plan — Page Chrome Refinement (visual only, zero functional change)</h1>
+<p class="intro">
+The V5 cards and group headers stay exactly as approved. This proposal tunes the chrome around them so the whole
+page reads as one system: a calmer header scale, an editorial stat strip, quieter sidebar typography, unified pill
+chips, and a consistent content header. Because the header/title styles are shared (<code>.mp-title</code>,
+<code>.mp-header</code>), Catalog, My Team, Explorer, Admin and Settings inherit the same calmer scale automatically.
+</p>
+
+<div class="pane-label cur">Current</div>
+<div class="stage cur">
+  <div class="hd">
+    <div>
+      <div class="cur-h1">My Development <span class="grad">Plan</span></div>
+      <div class="cur-sub">Track and manage your skill development journey</div>
+    </div>
+  </div>
+  <div class="cur-stats">
+    <span class="cur-stat"><b>14</b><i>Total Skills</i></span>
+    <span class="cur-stat"><b>5</b><i>Developing</i></span>
+    <span class="cur-stat"><b>3</b><i>Mastered</i></span>
+    <span class="cur-stat"><b>9</b><i>Logs This Quarter</i></span>
+    <span class="cur-stat"><b>27</b><i>Logs This Year</i></span>
+  </div>
+  <div class="panel">
+    <div class="sb">
+      <div class="nav-btn active">🛠 Developing <span class="count">5</span></div>
+      <div class="nav-btn">≣ Planned <span class="count">6</span></div>
+      <div class="nav-btn">🛡 Mastered <span class="count">3</span></div>
+      <hr>
+      <div class="sb-label">Quick Filters</div>
+      <div class="f-label">Domains</div>
+      <div class="chips"><span class="chip active">Routing</span><span class="chip">Security</span><span class="chip">Wireless</span></div>
+      <div class="f-label">Proficiency</div>
+      <div class="chips"><span class="chip">L1–2</span><span class="chip active">L3+</span></div>
+    </div>
+    <div class="ct">
+      <div class="ct-head">
+        <span class="ct-title">Developing</span>
+        <span class="count" style="margin-left:0">5</span>
+        <input class="search" value="Search skills…" readonly>
+      </div>
+      <div class="g-head"><span class="num">02</span><b>Core</b><span class="rl"></span><span class="cn">3 skills</span></div>
+      <div class="ghost">V5 skill cards (unchanged)</div>
+    </div>
+  </div>
+</div>
+
+<div class="pane-label prop">Proposed — light</div>
+<div class="stage prop">
+  <div class="hd">
+    <div>
+      <div class="prop-h1">My Development <span class="grad">Plan</span></div>
+      <div class="prop-sub">Track and manage your skill development journey</div>
+    </div>
+    <div class="prop-stats">
+      <span class="prop-stat"><b>14</b><i>Total Skills</i></span>
+      <span class="prop-stat"><b>5</b><i>Developing</i></span>
+      <span class="prop-stat"><b>3</b><i>Mastered</i></span>
+      <span class="prop-stat"><b>9</b><i>Logs · Qtr</i></span>
+      <span class="prop-stat"><b>27</b><i>Logs · Year</i></span>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="sb">
+      <div class="nav-btn active">🛠 Developing <span class="count">5</span></div>
+      <div class="nav-btn">≣ Planned <span class="count">6</span></div>
+      <div class="nav-btn">🛡 Mastered <span class="count">3</span></div>
+      <hr>
+      <div class="sb-label">Quick Filters</div>
+      <div class="f-label">Domains</div>
+      <div class="chips"><span class="chip active">Routing</span><span class="chip">Security</span><span class="chip">Wireless</span></div>
+      <div class="f-label">Proficiency</div>
+      <div class="chips"><span class="chip">L1–2</span><span class="chip active">L3+</span></div>
+    </div>
+    <div class="ct">
+      <div class="ct-head">
+        <span class="ct-title">Developing</span>
+        <span class="count" style="margin-left:0">5</span>
+        <input class="search" value="Search skills…" readonly>
+      </div>
+      <div class="g-head"><span class="num">02</span><b>Core</b><span class="rl"></span><span class="cn">3 skills</span></div>
+      <div class="ghost">V5 skill cards (unchanged)</div>
+    </div>
+  </div>
+</div>
+
+<div class="pane-label prop">Proposed — dark</div>
+<div class="stage dark prop">
+  <div class="hd">
+    <div>
+      <div class="prop-h1">My Development <span class="grad">Plan</span></div>
+      <div class="prop-sub">Track and manage your skill development journey</div>
+    </div>
+    <div class="prop-stats">
+      <span class="prop-stat"><b>14</b><i>Total Skills</i></span>
+      <span class="prop-stat"><b>5</b><i>Developing</i></span>
+      <span class="prop-stat"><b>3</b><i>Mastered</i></span>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="sb">
+      <div class="nav-btn active">🛠 Developing <span class="count">5</span></div>
+      <div class="nav-btn">≣ Planned <span class="count">6</span></div>
+      <hr>
+      <div class="sb-label">Quick Filters</div>
+      <div class="f-label">Domains</div>
+      <div class="chips"><span class="chip active">Routing</span><span class="chip">Security</span></div>
+    </div>
+    <div class="ct">
+      <div class="ct-head">
+        <span class="ct-title">Developing</span>
+        <span class="count" style="margin-left:0">5</span>
+        <input class="search" value="Search skills…" readonly>
+      </div>
+      <div class="g-head"><span class="num">02</span><b>Core</b><span class="rl"></span><span class="cn">3 skills</span></div>
+      <div class="ghost">V5 skill cards (unchanged)</div>
+    </div>
+  </div>
+</div>
+
+<p class="note"><b>The seven changes, summarized:</b>
+1) Page title 36–56px → 26–34px with tighter spacing; subtitle 15→13px (applies app-wide via shared .mp-title — every module gets the same calmer header).
+2) Stats become a right-aligned editorial strip with hairline dividers, 22px tabular values, eyebrow-style labels — same data, same markup.
+3) Sidebar count pills flattened (no gradient).
+4) "Quick Filters" + filter group labels unified to the 10px/700 uppercase eyebrow style used on cards.
+5) All filter chips unified to full-pill radius; active = tint + colored border, the "✓" suffix dropped (border+fill already signal state).
+6) Content section title 18/600 → 20/700, clear hierarchy above the 16/800 group headers.
+7) Search input rounds to a full pill, matching the catalog toolbar.
+Status-colored active states for Developing/Planned/Mastered navigation stay exactly as they are. Icons in the mockup are placeholders — the app keeps its SVG set.
+</p>
+
+</body>
+</html>

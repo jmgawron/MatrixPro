@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MatrixPro — Skill Catalog Chrome → My Plan Style</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#1a1d21; color:#e8eef7; padding:32px 32px 64px; }
+  h1 { font-size:21px; margin-bottom:6px; }
+  .intro { color:#9aa4b2; font-size:13px; margin-bottom:18px; max-width:930px; line-height:1.55; }
+  .pane-label { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin:24px 0 8px; }
+  .pane-label.cur { color:#f0a8a8; } .pane-label.prop { color:#9fe3b4; }
+
+  .stage { border-radius:14px; padding:22px 26px; max-width:1080px; border:1px solid rgba(255,255,255,.1); }
+  .light { background:#f8f8f7; color:#1c1917;
+    --txt:#1c1917; --txt2:#52514d; --txt3:#76746e; --card:#fff; --soft:#f4f4f2;
+    --bd:rgba(41,37,32,.09); --bd2:rgba(41,37,32,.13);
+    --acc:#2563eb; --acc-soft:rgba(37,99,235,.08); --acc-bd:rgba(37,99,235,.25); }
+  .dark { background:#070b12; color:#e8eef7;
+    --txt:#e8eef7; --txt2:#9fb0c9; --txt3:#6b7f9d; --card:#121824; --soft:#161f2e;
+    --bd:rgba(255,255,255,.07); --bd2:rgba(255,255,255,.13);
+    --acc:#5cb1ff; --acc-soft:rgba(92,177,255,.12); --acc-bd:rgba(92,177,255,.35); }
+  .light .t-core { --tier:#2563eb; }
+
+  .hd { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:14px; }
+  .h1 { font-size:28px; font-weight:800; letter-spacing:-.01em; color:var(--txt); }
+  .grad { background:linear-gradient(90deg,#00C6FF,#0072FF); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .sub { font-size:13px; color:var(--txt3); margin-top:4px; }
+  .pstats { display:flex; }
+  .pstat { padding:2px 18px; border-left:1px solid var(--bd2); }
+  .pstat:first-child { border-left:none; padding-left:0; }
+  .pstat b { display:block; font-size:20px; font-weight:700; color:var(--txt); }
+  .pstat i { display:block; font-style:normal; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:var(--txt3); margin-top:2px; }
+
+  /* ===== CURRENT chrome ===== */
+  .cur-tabs { display:inline-flex; gap:6px; padding:6px; background:var(--soft); border-radius:999px; margin-bottom:14px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04); }
+  .cur-tab { padding:9px 18px; border-radius:999px; font-size:13px; font-weight:600; color:var(--txt3); }
+  .cur-tab.active { color:#5cb1ff; background:rgba(92,177,255,.12); box-shadow:0 0 0 1px rgba(92,177,255,.12); font-weight:700; }
+  .cur-layout { display:grid; grid-template-columns:230px 1fr; gap:20px; }
+  .cur-tree { background:linear-gradient(180deg,var(--card),var(--soft)); border:1px solid var(--bd); border-radius:18px; padding:8px 0; }
+  .cur-titem { padding:8px 16px; font-size:13px; color:var(--txt2); border-left:3px solid transparent; }
+  .cur-titem.active { background:var(--acc-soft); color:var(--acc); border-left-color:var(--acc); font-weight:600; }
+  .cur-main { min-width:0; }
+  .cur-toolbar { display:flex; gap:10px; align-items:center; margin-bottom:12px; }
+  .cur-search { font-size:12.5px; color:var(--txt3); border:1px solid var(--bd); border-radius:999px; padding:7px 14px; flex:1; background:var(--soft); }
+  .cur-sort { font-size:12.5px; color:var(--txt2); border:1px solid var(--bd); border-radius:9px; padding:7px 12px; }
+
+  /* ===== PROPOSED chrome ===== */
+  .p-panel { background:var(--card); border:1px solid var(--bd); border-radius:16px; overflow:hidden;
+    display:grid; grid-template-columns:230px 1fr; }
+  .p-tree { padding:14px 8px; border-right:1px solid var(--bd); }
+  .p-titem { display:flex; align-items:center; padding:8px 12px; font-size:13px; color:var(--txt2); border-radius:9px; margin-bottom:1px; }
+  .p-titem.active { background:var(--acc-soft); color:var(--acc); font-weight:600; box-shadow:inset 3px 0 0 var(--acc); }
+  .p-titem:hover { background:rgba(0,0,0,.03); }
+  .p-main { padding:16px 18px; min-width:0; }
+  .p-tabs { display:flex; gap:8px; margin-bottom:12px; }
+  .p-tab { padding:7px 16px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--txt2); border:1px solid var(--bd); background:var(--card); }
+  .p-tab.active { color:var(--acc); background:var(--acc-soft); border-color:var(--acc-bd); }
+  .p-toolbar { display:flex; gap:10px; align-items:center; margin-bottom:14px; }
+  .p-search { font-size:12.5px; color:var(--txt3); border:1px solid var(--bd); border-radius:999px; padding:7px 14px; flex:1; background:rgba(0,0,0,.025); }
+  .dark .p-search { background:rgba(255,255,255,.05); }
+  .p-sort { font-size:12.5px; color:var(--txt2); border:1px solid var(--bd); border-radius:999px; padding:7px 14px; }
+
+  .g-head { display:flex; align-items:baseline; gap:10px; margin:6px 0 10px; }
+  .g-head .num { font-size:20px; font-weight:200; color:var(--tier,#2563eb); }
+  .g-head b { font-size:15px; font-weight:800; color:var(--txt); }
+  .g-head .rl { flex:1; height:1px; background:var(--bd2); }
+  .g-head .cn { font-size:11px; color:var(--txt3); }
+  .ghost { border:1px dashed var(--bd2); border-radius:12px; padding:16px; font-size:12px; color:var(--txt3); text-align:center; }
+  .note { font-size:11.5px; color:#9aa4b2; margin-top:10px; max-width:930px; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<h1>Skill Catalog — chrome aligned to My Plan (zero functional change)</h1>
+<p class="intro">
+The V5 cards, numbered tier sections and collapsible behavior stay exactly as they are. This aligns the page chrome with
+My Plan's: one integrated panel instead of a floating tree-card, flat pill tabs instead of the recessed tab track,
+pill-shaped sort control, and tokenized accent colors (the current active tab uses a hard-coded dark-theme blue even in
+light mode). Tree navigation, tabs, search, sort, shift filters, admin buttons — all keep their exact behavior.
+</p>
+
+<div class="pane-label cur">Current — light</div>
+<div class="stage light">
+  <div class="hd">
+    <div><div class="h1">Skill <span class="grad">Catalog</span></div><div class="sub">Browse, search and manage the skill catalog</div></div>
+    <div class="pstats"><span class="pstat"><b>58</b><i>Skills</i></span><span class="pstat"><b>9</b><i>Teams</i></span><span class="pstat"><b>4</b><i>Domains</i></span></div>
+  </div>
+  <div class="cur-tabs">
+    <span class="cur-tab active">Organization</span><span class="cur-tab">Domain</span><span class="cur-tab">Team</span><span class="cur-tab">Certification</span>
+  </div>
+  <div class="cur-layout">
+    <div class="cur-tree">
+      <div class="cur-titem active">All Skills</div>
+      <div class="cur-titem">Enterprise Networking</div>
+      <div class="cur-titem">Security</div>
+      <div class="cur-titem">Collaboration</div>
+    </div>
+    <div class="cur-main">
+      <div class="cur-toolbar"><span class="cur-search">Search skills…</span><span class="cur-sort">Sort: A→Z ▾</span></div>
+      <div class="g-head"><span class="num">02</span><b>Core</b><span class="rl"></span><span class="cn">24 skills</span></div>
+      <div class="ghost">V5 skill cards (unchanged)</div>
+    </div>
+  </div>
+</div>
+
+<div class="pane-label prop">Proposed — light</div>
+<div class="stage light">
+  <div class="hd">
+    <div><div class="h1">Skill <span class="grad">Catalog</span></div><div class="sub">Browse, search and manage the skill catalog</div></div>
+    <div class="pstats"><span class="pstat"><b>58</b><i>Skills</i></span><span class="pstat"><b>9</b><i>Teams</i></span><span class="pstat"><b>4</b><i>Domains</i></span></div>
+  </div>
+  <div class="p-panel">
+    <div class="p-tree">
+      <div class="p-titem active">All Skills</div>
+      <div class="p-titem">Enterprise Networking</div>
+      <div class="p-titem">Security</div>
+      <div class="p-titem">Collaboration</div>
+    </div>
+    <div class="p-main">
+      <div class="p-tabs">
+        <span class="p-tab active">Organization</span><span class="p-tab">Domain</span><span class="p-tab">Team</span><span class="p-tab">Certification</span>
+      </div>
+      <div class="p-toolbar"><span class="p-search">Search skills…</span><span class="p-sort">Sort: A→Z ▾</span></div>
+      <div class="g-head"><span class="num">02</span><b>Core</b><span class="rl"></span><span class="cn">24 skills</span></div>
+      <div class="ghost">V5 skill cards (unchanged)</div>
+    </div>
+  </div>
+</div>
+
+<div class="pane-label prop">Proposed — dark</div>
+<div class="stage dark">
+  <div class="hd">
+    <div><div class="h1">Skill <span class="grad">Catalog</span></div><div class="sub">Browse, search and manage the skill catalog</div></div>
+    <div class="pstats"><span class="pstat"><b>58</b><i>Skills</i></span><span class="pstat"><b>9</b><i>Teams</i></span><span class="pstat"><b>4</b><i>Domains</i></span></div>
+  </div>
+  <div class="p-panel">
+    <div class="p-tree">
+      <div class="p-titem active">All Skills</div>
+      <div class="p-titem">Enterprise Networking</div>
+      <div class="p-titem">Security</div>
+    </div>
+    <div class="p-main">
+      <div class="p-tabs">
+        <span class="p-tab active">Organization</span><span class="p-tab">Domain</span><span class="p-tab">Team</span>
+      </div>
+      <div class="p-toolbar"><span class="p-search">Search skills…</span><span class="p-sort">Sort: A→Z ▾</span></div>
+      <div class="g-head" style="--tier:#5cb1ff"><span class="num">02</span><b>Core</b><span class="rl"></span><span class="cn">24 skills</span></div>
+      <div class="ghost">V5 skill cards (unchanged)</div>
+    </div>
+  </div>
+</div>
+
+<p class="note"><b>Change list (CSS-only):</b>
+1) <code>.cat-content</code> becomes the single integrated panel — 16px radius, same border/shadow as My Plan's; the tree
+panel loses its nested-card gradient/border and gets a full-height hairline divider; tree rows get rounded hover and the
+inset 3px accent bar when active (same as My Plan sidebar nav).
+2) Tab bar: recessed track removed; tabs become outlined pills, active = accent tint + token border (fixes the hard-coded
+dark-blue in light theme).
+3) Sort button becomes a pill; shift-filter labels already match the eyebrow style.
+4) Add-mode banner picks up the 3px accent left border like My Plan's manager banner.
+5) Dead <code>.catalog-tab-wrapper</code> glass rule (unused by the page) is removed.
+Tree expand/collapse, tab switching, sorting, searching, shift filters, and admin actions are untouched.
+</p>
+
+</body>
+</html>

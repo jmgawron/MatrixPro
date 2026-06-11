@@ -39,6 +39,30 @@ function categoryChipIcon(slug, size) {
   return span;
 }
 
+function _isConsumerTeamSkill(skillOrStat) {
+  return skillOrStat?.association_role === 'consumer';
+}
+
+function _countConsumerSkills(items) {
+  if (!Array.isArray(items)) return 0;
+  return items.filter(_isConsumerTeamSkill).length;
+}
+
+function _skillOptionLabel(skill) {
+  if (!skill?.name) return 'Unknown';
+  return _isConsumerTeamSkill(skill) ? `${skill.name} (consumer)` : skill.name;
+}
+
+function _appendConsumerSkillBadge(parent, { compact = true } = {}) {
+  const chip = el('span', {
+    className: 'triage-chip triage-consumer chip-sm mt-skill-consumer-chip',
+    title: 'Consumer team skill — owned by another team',
+  });
+  chip.textContent = compact ? 'Consumer' : 'Consumer team skill';
+  parent.appendChild(chip);
+  return chip;
+}
+
 // ─── Skill Category helpers (Phase 1: Overview/Matrix/Reporting integration) ──
 
 const CATEGORY_ORDER = ['foundational', 'core', 'advanced', 'ai_future'];
@@ -599,6 +623,10 @@ function renderOverviewTab() {
   const completions30d = _statsData?.completions_30d ?? 0;
   const totalEngineers = _statsData?.total_engineers ?? (_matrixData?.engineers?.length ?? 0);
   const totalSkills = _statsData?.total_skills ?? (_matrixData?.skills?.length ?? 0);
+  const consumerSkillCount = _countConsumerSkills(_matrixData?.skills || _statsData?.per_skill_stats);
+  const skillsSubSuffix = consumerSkillCount > 0
+    ? ` · ${consumerSkillCount} consumer`
+    : '';
 
   const aiReadiness = _computeAIReadiness(perSkillStats);
   const coverageSummary = _categoryCoverageSummary(perSkillStats);
@@ -607,7 +635,7 @@ function renderOverviewTab() {
 
   const kpiGrid = el('div', { className: 'mt-kpi-grid' });
   const kpiDefs = [
-    { label: 'Team Coverage', value: coveragePct, suffix: '%', sub: `${totalEngineers} engineers \u00b7 ${totalSkills} skills`, variant: 'accent' },
+    { label: 'Team Coverage', value: coveragePct, suffix: '%', sub: `${totalEngineers} engineers \u00b7 ${totalSkills} skills${skillsSubSuffix}`, variant: 'accent' },
     { label: 'Critical Gaps', value: criticalGaps, suffix: '', sub: 'Skills below 30% coverage', variant: 'danger' },
     { label: 'Active Developments', value: activeDev, suffix: '', sub: 'Skills in progress', variant: 'warning' },
     { label: '30-day Completions', value: completions30d, suffix: '', sub: 'Achieved proficiency', variant: 'success' },
@@ -764,6 +792,7 @@ function buildFallbackPerSkillStats() {
       coverage_pct: pct,
       avg_proficiency: avgProf,
       categories: Array.isArray(skill.categories) ? skill.categories : [],
+      association_role: skill.association_role || 'owner',
     };
   });
 }
@@ -866,7 +895,10 @@ function renderCategoryCoverageSections(container, perSkillStats) {
       const color = pct < 30 ? 'var(--danger)' : pct < 60 ? 'var(--warning)' : 'var(--success)';
       const row = el('div', { className: 'mt-gap-row' });
       const nameEl = el('div', { className: 'mt-gap-name' });
-      nameEl.textContent = s.skill_name;
+      const nameText = el('span', { className: 'mt-gap-name__text' });
+      nameText.textContent = s.skill_name;
+      nameEl.appendChild(nameText);
+      if (_isConsumerTeamSkill(s)) _appendConsumerSkillBadge(nameEl);
       nameEl.title = s.skill_name;
       const barWrap = el('div', { className: 'mt-gap-bar-wrap' });
       const barFill = el('div', { className: 'mt-gap-bar-fill', style: `width:${pct}%;background:${color};` });
@@ -1282,7 +1314,7 @@ function populateSkillFilter() {
   const skills = Array.isArray(_matrixData.skills) ? _matrixData.skills : [];
   skills.forEach(skill => {
     const opt = el('option', { value: String(skill.id) });
-    opt.textContent = skill.name;
+    opt.textContent = _skillOptionLabel(skill);
     filterSelect.appendChild(opt);
   });
 }
@@ -1411,10 +1443,12 @@ function buildMatrixSectionTable(engineers, skills) {
   }
 
   skills.forEach(skill => {
-    const th = el('th', { className: 'matrix-th-skill' });
+    const th = el('th', { className: 'matrix-th-skill' + (_isConsumerTeamSkill(skill) ? ' matrix-th-skill--consumer' : '') });
     const nameWrap = el('div', { className: 'matrix-th-name' });
 
-    th.title = skill.name;
+    th.title = _isConsumerTeamSkill(skill)
+      ? `${skill.name} — consumer team skill (owned by another team)`
+      : skill.name;
 
     if (skill.icon) {
       const iconSvg = getSkillIconSVG(skill.icon, 14);
@@ -1424,7 +1458,10 @@ function buildMatrixSectionTable(engineers, skills) {
         nameWrap.appendChild(iconSpan);
       }
     }
-    nameWrap.appendChild(document.createTextNode(skill.name));
+    const nameSpan = el('span', { className: 'matrix-th-name__text' });
+    nameSpan.textContent = skill.name;
+    nameWrap.appendChild(nameSpan);
+    if (_isConsumerTeamSkill(skill)) _appendConsumerSkillBadge(nameWrap);
     th.appendChild(nameWrap);
     headerRow.appendChild(th);
   });
@@ -1555,6 +1592,12 @@ function buildLegend() {
     chip.appendChild(document.createTextNode(label));
     legend.appendChild(chip);
   });
+  const consumerChip = el('div', { className: 'matrix-legend-chip matrix-legend-chip--consumer-skill' });
+  const consumerSwatch = el('span', { className: 'triage-chip triage-consumer chip-sm mt-skill-consumer-chip' });
+  consumerSwatch.textContent = 'Consumer';
+  consumerChip.appendChild(consumerSwatch);
+  consumerChip.appendChild(document.createTextNode('Consumer team skill'));
+  legend.appendChild(consumerChip);
   return legend;
 }
 
@@ -1579,10 +1622,11 @@ function buildSummaryRow(engineers, skills) {
 
   const totalCells = engineers.length * skills.length;
   const coverage = totalCells > 0 ? Math.round((covered / totalCells) * 100) : 0;
+  const consumerCount = _countConsumerSkills(skills);
 
   const stats = [
     { label: 'Engineers', value: String(engineers.length) },
-    { label: 'Skills', value: String(skills.length) },
+    { label: 'Skills', value: String(skills.length) + (consumerCount > 0 ? ` (${consumerCount} consumer)` : '') },
     { label: 'Coverage', value: `${coverage}%` },
     { label: 'Developing', value: String(inDev) },
     { label: 'Mastered', value: String(proficient) },
@@ -2442,29 +2486,37 @@ async function openBulkAssignModal() {
 
   let catalogSkills = [];
   try {
-    catalogSkills = await api.get('/api/skills/');
+    const teamId = _teamId || _matrixData?.team_id;
+    const skillsUrl = teamId ? `/api/skills/?team_id=${teamId}` : '/api/skills/';
+    catalogSkills = await api.get(skillsUrl);
   } catch (_e) {
-    showToast('Failed to load skill catalog', 'error');
+    showToast('Failed to load team skills', 'error');
     return;
   }
 
-  const activeSkills = Array.isArray(catalogSkills) ? catalogSkills.filter(s => !s.is_archived) : [];
+  const activeSkills = Array.isArray(catalogSkills)
+    ? catalogSkills.filter(s => !s.is_archived && !s.is_custom)
+    : [];
+  activeSkills.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
   const bodyEl = el('div');
 
   const skillGroup = el('div', { className: 'form-group' });
   const skillLabel = el('label', { className: 'form-label' });
-  skillLabel.textContent = 'Skill to assign';
+  skillLabel.textContent = 'Team skill to assign';
+  const skillHint = el('p', { className: 'mp-form-hint' });
+  skillHint.textContent = 'Includes skills your team owns and skills linked as a consumer team.';
   const skillSelect = el('select', { className: 'form-select' });
   const skillPlaceholder = el('option', { value: '' });
   skillPlaceholder.textContent = '\u2014 Select a skill \u2014';
   skillSelect.appendChild(skillPlaceholder);
   activeSkills.forEach(s => {
     const opt = el('option', { value: String(s.id) });
-    opt.textContent = s.name;
+    opt.textContent = _skillOptionLabel(s);
     skillSelect.appendChild(opt);
   });
   skillGroup.appendChild(skillLabel);
+  skillGroup.appendChild(skillHint);
   skillGroup.appendChild(skillSelect);
 
   const statusGroup = el('div', { className: 'form-group' });

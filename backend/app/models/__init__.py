@@ -30,3 +30,4 @@ from app.models.plan import (  # noqa: F401
 )
 from app.models.audit import AuditLog  # noqa: F401
 from app.models.feedback import Feedback, FeedbackType  # noqa: F401
+from app.models.notification import Notification  # noqa: F401

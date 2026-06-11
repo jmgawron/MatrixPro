@@ -6,11 +6,11 @@ import { initNav } from './components/nav.js?v=9';
 import { initThemeToggle } from './components/theme.js';
 import { initFeedbackButton } from './components/feedback.js';
 
-import { mountHome } from './pages/home.js?v=27';
+import { mountHome } from './pages/home.js?v=30';
 import { mountLogin } from './pages/login.js?v=3';
-import { mountMyPlan } from './pages/my-plan.js?v=58';
-import { mountMyTeam } from './pages/my-team.js?v=25';
-import { mountCatalog } from './pages/catalog.js?v=38';
+import { mountMyPlan } from './pages/my-plan.js?v=60';
+import { mountMyTeam } from './pages/my-team.js?v=27';
+import { mountCatalog } from './pages/catalog.js?v=45';
 import { mountSkillExplorer } from './pages/skill-explorer.js?v=19';
 import { mountSettings } from './pages/settings.js';
 import { mountAdmin } from './pages/admin.js?v=7';

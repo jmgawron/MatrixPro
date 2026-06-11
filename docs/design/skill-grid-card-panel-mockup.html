@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Catalog Skill Cards (Panel Context)</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-panel">
+  <style>
+    body { margin: 0; min-height: 100vh; background: var(--bg-page); }
+
+    /* ── Mock chrome ── */
+    .mp-chrome {
+      position: sticky; top: 0; z-index: 400;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 12px 24px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+    }
+    .mp-chrome h1 { font-size: 14px; font-weight: 700; margin: 0; }
+    .mp-chrome p { font-size: 12px; color: var(--text-muted); margin: 0; flex: 1; min-width: 200px; }
+    .mp-chrome__group { display: flex; gap: 6px; align-items: center; }
+    .mp-chrome__label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); }
+    .mp-pill {
+      border: 1px solid var(--border-soft); background: var(--bg-card-soft);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 6px 13px; border-radius: 999px; cursor: pointer;
+    }
+    .mp-pill.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+    .mp-btn {
+      border: 1px solid var(--border-soft); background: var(--bg-card);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 6px 11px; border-radius: var(--radius-sm); cursor: pointer;
+    }
+
+    /* ── Page atmosphere (hero-aligned) ── */
+    .cat-page {
+      position: relative;
+      min-height: calc(100vh - 52px);
+      background: var(--home-bg);
+    }
+    .cat-page__mesh {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 45% at 78% 12%, rgba(92, 177, 255, 0.1), transparent 62%),
+        radial-gradient(ellipse 50% 35% at 8% 88%, rgba(37, 99, 235, 0.07), transparent 55%);
+    }
+    .cat-page__inner {
+      position: relative; z-index: 1;
+      max-width: 1400px; margin: 0 auto; padding: 28px 24px 56px;
+    }
+
+    /* ── Compact catalog hero ── */
+    .cat-hero { margin-bottom: 20px; }
+    .cat-hero__eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em;
+      color: var(--accent); margin-bottom: 10px;
+      padding: 4px 11px; border-radius: 999px;
+      background: var(--home-pill-bg); border: 1px solid var(--home-pill-border);
+    }
+    .cat-hero h2 {
+      font-size: clamp(26px, 3.2vw, 36px); font-weight: 800;
+      margin: 0 0 6px; letter-spacing: -.025em;
+    }
+    .cat-hero h2 span { background: var(--brand-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .cat-hero p { font-size: 14px; color: var(--text-muted); margin: 0; }
+
+    /* ── Shell (catalog-tab-wrapper pattern) ── */
+    .cat-shell {
+      margin-top: 20px;
+      background: color-mix(in srgb, var(--bg-card) 94%, transparent);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-panel);
+      overflow: hidden;
+    }
+    .cat-tabs {
+      display: flex; gap: 0; padding: 0 16px;
+      border-bottom: 1px solid var(--border-soft);
+      background: var(--bg-panel);
+    }
+    .cat-tab {
+      padding: 12px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);
+      border: none; background: none; cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+    }
+    .cat-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .cat-tab__count { font-size: 11px; opacity: .65; margin-left: 3px; }
+
+    .cat-toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+      padding: 14px 16px; border-bottom: 1px solid var(--border-soft);
+      background: color-mix(in srgb, var(--bg-card-soft) 85%, transparent);
+    }
+    .cat-toolbar .search-input {
+      flex: 1; min-width: 180px; max-width: 300px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--bg-card-soft) 90%, transparent);
+    }
+
+    .cat-body { display: flex; min-height: 640px; }
+    .cat-tree {
+      width: 268px; flex-shrink: 0;
+      border-right: 1px solid var(--border-soft);
+      background: var(--sidebar-gradient);
+      padding: 8px 0; font-size: 13px;
+    }
+    .cat-tree__head {
+      padding: 10px 16px 6px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted);
+    }
+    .cat-tree__item {
+      padding: 8px 16px; color: var(--text-secondary); cursor: pointer;
+      border-left: 3px solid transparent;
+    }
+    .cat-tree__item.active {
+      background: var(--accent-soft); color: var(--accent);
+      border-left-color: var(--accent); font-weight: 600;
+    }
+    .cat-tree__item--child { padding-left: 28px; font-size: 12px; }
+    .cat-tree__domain {
+      padding: 10px 16px 4px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted);
+    }
+
+    .cat-main {
+      flex: 1; min-width: 0; overflow-y: auto;
+      padding: 8px 20px 28px;
+    }
+    .cat-main .grid-3 { gap: 14px; }
+
+    /* ── Hero-aligned skill card (light) ── */
+    .hc-card {
+      --hc-tint: var(--accent);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 15px 15px 15px 17px;
+      background: var(--bg-card-gradient);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+    }
+    .hc-card[data-category-slug="foundational"] { --hc-tint: var(--cat-foundational-accent); border-left: 3px solid var(--cat-foundational-accent); }
+    .hc-card[data-category-slug="core"]         { --hc-tint: var(--cat-core-accent);         border-left: 3px solid var(--cat-core-accent); }
+    .hc-card[data-category-slug="advanced"]     { --hc-tint: var(--cat-advanced-accent);     border-left: 3px solid var(--cat-advanced-accent); }
+    .hc-card[data-category-slug="ai-future"]    { --hc-tint: var(--cat-ai-accent);           border-left: 3px solid var(--cat-ai-accent); }
+
+    .hc-card:hover {
+      transform: translateY(-2px);
+      border-color: color-mix(in srgb, var(--hc-tint) 22%, var(--border-soft));
+      box-shadow: var(--card-hover-glow);
+    }
+
+    /* Manager-only action icons */
+    .hc-card__mgr {
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      display: flex; gap: 1px;
+      opacity: 0; pointer-events: none;
+      transition: opacity .15s ease;
+    }
+    body[data-viewer="manager"] .hc-card:hover .hc-card__mgr,
+    body[data-viewer="manager"] .hc-card:focus-within .hc-card__mgr {
+      opacity: 1; pointer-events: auto;
+    }
+    body[data-viewer="engineer"] .hc-card__mgr { display: none; }
+
+    .hc-card__mgr-btn {
+      width: 26px; height: 26px; border: none; border-radius: var(--radius-sm);
+      background: transparent; color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: color .15s, background .15s;
+    }
+    .hc-card__mgr-btn svg { width: 14px; height: 14px; }
+    .hc-card__mgr-btn:hover { color: var(--text-primary); background: var(--bg-elevated); }
+    .hc-card__mgr-btn--danger:hover { color: #f87171; background: rgba(239,68,68,.08); }
+
+    .hc-card__head {
+      display: flex; gap: 11px; align-items: flex-start;
+    }
+    body[data-viewer="manager"] .hc-card__head { padding-right: 44px; }
+
+    .hc-card__icon {
+      width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+      background: color-mix(in srgb, var(--hc-tint) 11%, var(--bg-card-soft));
+      color: var(--hc-tint);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .hc-card__icon svg { width: 21px; height: 21px; }
+
+    .hc-card__title {
+      font-size: 15px; font-weight: 700; color: var(--text-primary);
+      line-height: 1.32; margin: 0;
+      letter-spacing: -.01em;
+    }
+
+    .hc-card__meta {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+    }
+    .hc-card__meta-dot {
+      color: var(--text-muted); opacity: .35; font-size: 10px;
+    }
+
+    .hc-card__desc {
+      font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    .hc-card__tags {
+      display: flex; flex-wrap: wrap; gap: 4px;
+      margin-top: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hc-card, .hc-card__mgr { transition: none; }
+      .hc-card:hover { transform: none; }
+    }
+
+    .mp-callout {
+      margin-top: 20px; padding: 12px 16px; border-radius: var(--radius-md);
+      background: var(--accent-soft); border: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent);
+      font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+    }
+    .mp-callout strong { color: var(--accent); }
+  </style>
+</head>
+<body data-viewer="manager">
+  <header class="mp-chrome">
+    <div>
+      <h1>Catalog Skill Cards — Right Panel Context</h1>
+      <p>Hero-aligned cards · app-toned accents · manager action icons · full category sections</p>
+    </div>
+    <div class="mp-chrome__group">
+      <span class="mp-chrome__label">View as</span>
+      <button type="button" class="mp-pill active" data-viewer="manager">Manager</button>
+      <button type="button" class="mp-pill" data-viewer="engineer">Engineer</button>
+    </div>
+    <button type="button" class="mp-btn" id="themeToggle">Light / dark</button>
+  </header>
+
+  <div class="cat-page">
+    <div class="cat-page__mesh" aria-hidden="true"></div>
+    <div class="cat-page__inner">
+      <div class="cat-hero">
+        <div class="cat-hero__eyebrow">TAC Skill Development</div>
+        <h2>Skill <span>Catalog</span></h2>
+        <p>Browse technical skills curated for your team. Select a skill card to view details or add to your plan.</p>
+      </div>
+
+      <div class="cat-shell catalog-tab-wrapper">
+        <div class="cat-tabs">
+          <button class="cat-tab active" type="button">Organization<span class="cat-tab__count">· 18</span></button>
+          <button class="cat-tab" type="button">Certification<span class="cat-tab__count">· 27</span></button>
+          <button class="cat-tab" type="button">Non-Technical<span class="cat-tab__count">· 12</span></button>
+        </div>
+
+        <div class="cat-toolbar">
+          <input class="search-input form-input" type="text" placeholder="Search skills…" aria-label="Search skills">
+          <span class="mp-chrome__label">Shifts</span>
+          <button class="mp-pill active" type="button">S1</button>
+          <button class="mp-pill active" type="button">S2</button>
+          <button class="mp-pill active" type="button">S3</button>
+          <button class="mp-pill active" type="button">S4</button>
+          <button class="mp-btn" type="button">⇅ Sort</button>
+          <button class="btn btn-primary btn-sm" type="button">+ Create Skill</button>
+        </div>
+
+        <div class="cat-body catalog-body">
+          <aside class="cat-tree" aria-label="Organization tree">
+            <div class="cat-tree__head">Browse</div>
+            <div class="cat-tree__item active">All Skills</div>
+            <div class="cat-tree__domain">Enterprise · ENT</div>
+            <div class="cat-tree__item">Enterprise Networking</div>
+            <div class="cat-tree__item cat-tree__item--child">TAC-ENT-LANSW-SHIFT1</div>
+            <div class="cat-tree__item cat-tree__item--child">TAC-ENT-LANSW-SHIFT2</div>
+            <div class="cat-tree__item cat-tree__item--child">TAC-ENT-WLAN-SHIFT1</div>
+            <div class="cat-tree__domain">Data Center · DC</div>
+            <div class="cat-tree__item cat-tree__item--child">TAC-DC-ACI-SHIFT1</div>
+          </aside>
+
+          <main class="cat-main catalog-main">
+            <div class="catalog-category-sections" id="categorySections"></div>
+          </main>
+        </div>
+      </div>
+
+      <div class="mp-callout" id="roleCallout">
+        <strong>Manager view:</strong> Hover a card to reveal Edit, Duplicate, and Delete icon actions (top-right).
+        Engineers see the same cards without admin controls — toggle <strong>View as → Engineer</strong> to compare.
+      </div>
+    </div>
+  </div>
+
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="ico-switch" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></symbol>
+    <symbol id="ico-seed" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M12 20V12"/><path d="M12 12C12 8 9 5 4 5c0 5 3 7 8 7z"/></symbol>
+    <symbol id="ico-diamond" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z"/></symbol>
+    <symbol id="ico-atom" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></symbol>
+    <symbol id="ico-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></symbol>
+    <symbol id="ico-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+    <symbol id="ico-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="ico-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></symbol>
+    <symbol id="ico-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></symbol>
+    <symbol id="ico-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+    <symbol id="ico-layers" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></symbol>
+    <symbol id="ico-spark" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+  </svg>
+
+  <script>
+    const ICON = {
+      foundational: 'ico-seed',
+      core: 'ico-diamond',
+      advanced: 'ico-atom',
+      'ai-future': 'ico-sparkles',
+    };
+
+    const SECTIONS = [
+      {
+        slug: 'foundational', name: 'Foundational', count: 5, collapsed: true,
+        skills: [
+          { title: 'Layer 2 Switching Fundamentals', teams: ['TAC-ENT-LANSW-SHIFT1'], cert: 'CCNA', desc: 'Ethernet fundamentals, switching concepts, and campus L2 troubleshooting baselines.', tags: ['foundational', 'switching'] },
+        ],
+      },
+      {
+        slug: 'core', name: 'Core', count: 6, collapsed: false,
+        skills: [
+          { title: 'Catalyst 9000 IOS-XE Operations', icon: 'ico-switch', teams: ['TAC-ENT-LANSW-SHIFT1', 'TAC-ENT-LANSW-SHIFT2'], teamOverflow: 2, cert: 'CCNP Enterprise Core', desc: 'Day-to-day Catalyst 9000 platform operations including IOS-XE image management, licensing, and stack troubleshooting.', tags: ['troubleshooting', 'operations', 'ios-xe'] },
+          { title: 'Layer 3 Switching & Inter-VLAN Routing', icon: 'ico-layers', teams: ['TAC-ENT-LANSW-SHIFT1'], cert: 'CCNP Enterprise Core', desc: 'SVIs, routed ports, and inter-VLAN routing design on campus switching platforms.', tags: ['routing', 'vlan'] },
+          { title: '802.1X, MAB & MACsec Switchport Security', icon: 'ico-shield', teams: ['TAC-ENT-LANSW-SHIFT2'], cert: 'CCNP Enterprise Core', desc: 'Port-based access control, fallback authentication, and MACsec deployment on access switches.', tags: ['security', '802.1x'] },
+          { title: 'QoS on Campus Switches', icon: 'ico-switch', teams: ['TAC-ENT-LANSW-SHIFT1', 'TAC-ENT-LANSW-SHIFT3'], cert: 'CCNP Enterprise Core', desc: 'Classification, marking, queuing, and policing for latency-sensitive campus traffic.', tags: ['qos', 'campus'] },
+          { title: 'Stacking & StackWise Virtual', icon: 'ico-layers', teams: ['TAC-ENT-LANSW-SHIFT2'], cert: 'CCNP Enterprise Core', desc: 'Stack topology, dual-active detection, and StackWise Virtual control-plane redundancy.', tags: ['stacking', 'redundancy'] },
+          { title: 'Multicast on Campus (IGMP/PIM-SM)', icon: 'ico-switch', teams: ['TAC-ENT-LANSW-SHIFT1'], cert: 'CCNP Enterprise Core', desc: 'IGMP snooping, PIM-SM rendezvous points, and multicast RPF troubleshooting on campus networks.', tags: ['multicast', 'igmp'] },
+        ],
+      },
+      {
+        slug: 'advanced', name: 'Advanced', count: 5, collapsed: true,
+        skills: [
+          { title: 'VXLAN EVPN Campus Fabric', icon: 'ico-atom', teams: ['TAC-ENT-LANSW-SHIFT3'], cert: 'CCIE Enterprise Infrastructure', desc: 'BGP EVPN control plane, VXLAN data plane, and multi-site fabric troubleshooting.', tags: ['vxlan', 'fabric', 'escalation'] },
+        ],
+      },
+      {
+        slug: 'ai-future', name: 'AI & Future Skills', count: 3, collapsed: true,
+        skills: [
+          { title: 'LLM-Assisted Log Triage', icon: 'ico-spark', teams: ['TAC-ENT-LANSW-SHIFT2'], cert: null, desc: 'Structured prompts and guardrails for accelerating log analysis without skipping validation steps.', tags: ['ai-assisted', 'automation'] },
+        ],
+      },
+    ];
+
+    function svgUse(id) {
+      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#${id}"/></svg>`;
+    }
+
+    function teamChip(text) {
+      return `<span class="triage-chip triage-signal chip-sm">${text}</span>`;
+    }
+    function tagChip(text) {
+      return `<span class="triage-chip triage-feedback chip-sm">${text}</span>`;
+    }
+    function certBadge(text) {
+      return `<span class="meta-badge meta-badge--cert">${text}</span>`;
+    }
+
+    function buildCard(skill, slug) {
+      const teams = (skill.teams || []).map(teamChip).join('');
+      const overflow = skill.teamOverflow ? teamChip(`+${skill.teamOverflow} …`) : '';
+      const cert = skill.cert ? certBadge(skill.cert) : '';
+      const certSep = skill.cert && (teams || overflow) ? '<span class="hc-card__meta-dot">·</span>' : '';
+      const tags = (skill.tags || []).slice(0, 4).map(tagChip).join('');
+      const skillIcon = skill.icon || 'ico-switch';
+
+      return `
+        <article class="hc-card tool-card" data-category-slug="${slug}" tabindex="0">
+          <div class="hc-card__mgr" aria-label="Skill admin actions">
+            <button type="button" class="hc-card__mgr-btn" title="Edit skill" aria-label="Edit skill">${svgUse('ico-edit')}</button>
+            <button type="button" class="hc-card__mgr-btn" title="Duplicate skill" aria-label="Duplicate skill">${svgUse('ico-copy')}</button>
+            <button type="button" class="hc-card__mgr-btn hc-card__mgr-btn--danger" title="Delete skill" aria-label="Delete skill">${svgUse('ico-trash')}</button>
+          </div>
+          <div class="hc-card__head">
+            <div class="hc-card__icon">${svgUse(skillIcon)}</div>
+            <h3 class="hc-card__title">${skill.title}</h3>
+          </div>
+          <div class="hc-card__meta">${teams}${overflow}${certSep}${cert}</div>
+          <p class="hc-card__desc">${skill.desc}</p>
+          <div class="hc-card__tags">${tags}</div>
+        </article>`;
+    }
+
+    function buildSection(section) {
+      const collapsed = section.collapsed ? ' collapsed' : '';
+      const cards = section.collapsed
+        ? ''
+        : `<div class="catalog-category-body"><div class="grid-3">${section.skills.map(s => buildCard(s, section.slug)).join('')}</div></div>`;
+
+      return `
+        <section class="catalog-category-section${collapsed}" data-category="${section.slug}">
+          <button type="button" class="catalog-category-header" aria-expanded="${!section.collapsed}">
+            <span class="catalog-category-chevron" aria-hidden="true"></span>
+            <span class="catalog-category-icon-svg">${svgUse(ICON[section.slug])}</span>
+            <h3 class="catalog-category-title">${section.name}</h3>
+            <span class="catalog-category-count">${section.count}</span>
+          </button>
+          ${cards}
+        </section>`;
+    }
+
+    document.getElementById('categorySections').innerHTML = SECTIONS.map(buildSection).join('');
+
+    document.querySelectorAll('[data-viewer]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-viewer]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const role = btn.dataset.viewer;
+        document.body.dataset.viewer = role;
+        document.getElementById('roleCallout').innerHTML = role === 'manager'
+          ? '<strong>Manager view:</strong> Hover a card to reveal Edit, Duplicate, and Delete icon actions (top-right). Engineers see the same cards without admin controls — toggle <strong>View as → Engineer</strong> to compare.'
+          : '<strong>Engineer view:</strong> No admin icons visible. Card layout, associations, description, and tags are identical — only manager controls are hidden.';
+      });
+    });
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      html.dataset.theme = html.dataset.theme === 'light' ? 'dark' : 'light';
+    });
+
+    document.querySelectorAll('.catalog-category-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const section = header.closest('.catalog-category-section');
+        section.classList.toggle('collapsed');
+        header.setAttribute('aria-expanded', !section.classList.contains('collapsed'));
+      });
+    });
+
+    document.querySelectorAll('.hc-card__mgr-btn').forEach(btn => {
+      btn.addEventListener('click', e => e.stopPropagation());
+    });
+  </script>
+</body>
+</html>

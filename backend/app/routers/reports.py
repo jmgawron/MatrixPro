@@ -7,13 +7,12 @@ from typing import Literal, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models.org import Team
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.routers.plans import _check_plan_access
 from app.services.activity_normalizer import collect_activity
 from app.services.report_aggregator import (

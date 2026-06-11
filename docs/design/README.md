@@ -12,6 +12,39 @@ Welcome! This directory contains complete design analysis and implementation gui
 | **skill-card-demo.html** | Visual preview (open in browser) | 2 min |
 | **ICON_DESIGN_ANALYSIS.md** | Deep dive: visual specs + code examples | 10 min |
 | **IMPLEMENTATION_CHECKLIST.md** | Step-by-step guide to build it | 15 min |
+| **catalog-skill-card-no-teams-mockup.html** | **NEW** — 4 card layouts without team rows (pick one) | 5 min |
+| **catalog-skill-card-no-teams-design.md** | Rationale + recommendation matrix for no-team cards | 3 min |
+| **catalog-skill-card-vivid-mockup.html** | **NEW** — Concepts 5–8: gradients, glow, spectrum palette | 5 min |
+| **catalog-skill-card-aurora-slate-mockup.html** | **NEW** — Muted Concept 5: gray/black/blue Aurora Frame | 3 min |
+| **catalog-page-category-layouts-mockup.html** | **NEW** — Full catalog page, 4 category layout propositions | 8 min |
+| **catalog-page-category-layouts-design.md** | Wireframes + recommendation matrix for category layouts | 4 min |
+| **catalog-category-section-skins-mockup.html** | **NEW** — 7 clean/light section skins (same layout) | 5 min |
+| **catalog-category-section-skins-design.md** | Section skin comparison + pick guide | 2 min |
+
+---
+
+## Catalog cards — no team rows (June 2026)
+
+**Open:** `catalog-skill-card-no-teams-mockup.html` in a browser (uses live `style.css` tokens).
+
+Four concepts — owner/consumer chips removed from grid cards; teams stay in the skill modal only:
+
+| # | Name | Best for |
+|---|------|----------|
+| 1 | **Editorial Atlas** | Safest rollout, expanded description |
+| 2 | **Glass Monument** | Bold hero/glass, demo impact |
+| 3 | **Horizon Strip** | Dense grids (70+ skills) |
+| 4 | **Split Ledger** | Category-forward bento layout |
+
+See `catalog-skill-card-no-teams-design.md` for wireframes and implementation notes.
+
+**Vivid set (5–8):** `catalog-skill-card-vivid-mockup.html` — multi-hue gradients (emerald/violet/teal/rose), glow, motion. Less blue-heavy.
+
+**Aurora Slate (5 muted):** `catalog-skill-card-aurora-slate-mockup.html` — same Aurora Frame structure, gray/black/blue app tokens only. **Recommended if you liked Concept 5.**
+
+**Catalog page layouts:** `catalog-page-category-layouts-mockup.html` — full Organization tab, 4 category grouping propositions + Aurora Slate cards.
+
+**Section skins (clean & light):** `catalog-category-section-skins-mockup.html` — 7 visual treatments, same Editorial Stack layout, no new functionality.
 
 ---
 

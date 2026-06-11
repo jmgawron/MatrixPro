@@ -1,6 +1,6 @@
 import { Store } from '../state.js';
 import { api } from '../api.js';
-import { initBrandLogo3D } from '../components/brand-logo-3d.js?v=6';
+import { createBrandLogoBeacon, mountBrandLogoBeacon } from '../components/brand-logo-beacon.js?v=1';
 import { threeEIcon } from '../components/three-e-icons.js?v=1';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -60,8 +60,6 @@ function ctaButton(href, label, variant = 'primary') {
   btn.appendChild(arrow);
   return btn;
 }
-
-const BRAND_TILE_HTML = '<svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--dark"><use href="#mp-icon-dark"/></svg><svg viewBox="0 0 256 256" class="brand-tile__art brand-tile__art--light"><use href="#mp-icon-light"/></svg>';
 
 /** @type {(() => void) | null} */
 let _brandLogoCleanup = null;
@@ -148,6 +146,21 @@ async function buildNewsFeed(user) {
   });
 
   const fetches = [];
+
+  fetches.push(
+    api.get('/api/notifications/?limit=12').then((data) => {
+      for (const n of (data?.items || [])) {
+        const body = n.body ? ` — ${escHtml(n.body)}` : '';
+        items.push({
+          type: 'updated',
+          meta: 'Catalog update',
+          html: `<strong>${escHtml(n.title)}</strong>${body}`,
+          time: formatDateTime(n.created_at),
+          sortKey: Date.parse(n.created_at) || 0,
+        });
+      }
+    }).catch(() => {}),
+  );
 
   if (!isManager) {
     fetches.push(
@@ -356,9 +369,9 @@ function buildHeroColumn(user) {
   col.appendChild(eyebrow);
 
   const headline = h('div', { className: 'hm-a__headline' });
-  const brandTile = h('span', { className: 'brand-tile hm-a__headline-icon', 'aria-hidden': 'true' });
-  brandTile.innerHTML = BRAND_TILE_HTML;
-  headline.appendChild(brandTile);
+  const brandLogo = createBrandLogoBeacon('headline');
+  brandLogo.classList.add('hm-a__headline-icon');
+  headline.appendChild(brandLogo);
   const copy = h('div', { className: 'hm-a__headline-copy' });
   const title = h('h1', { className: 'hm-a__title' });
   if (isManager) {
@@ -456,11 +469,7 @@ export function mountHome(container) {
     heroGrid.appendChild(buildGuestHeroColumn());
     const showcase = buildBrandShowcase();
     heroGrid.appendChild(showcase.aside);
-    try {
-      _brandLogoCleanup = initBrandLogo3D(showcase.viewport);
-    } catch (err) {
-      console.warn('Brand logo 3D init failed:', err);
-    }
+    _brandLogoCleanup = mountBrandLogoBeacon(showcase.viewport, { size: 'showcase' });
   }
 
   inner.appendChild(heroGrid);

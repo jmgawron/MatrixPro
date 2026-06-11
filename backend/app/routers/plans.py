@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.audit import AuditLog
+from app.logging_config import get_logger
 from app.models.plan import (
     DevelopmentPlan,
     HiddenCatalogContent,
@@ -46,6 +47,7 @@ from app.schemas.plan import (
 )
 
 router = APIRouter(prefix="/api/plans", tags=["plans"])
+audit_logger = get_logger("audit.plan")
 
 
 def _audit_log(
@@ -67,6 +69,15 @@ def _audit_log(
         changed_at=datetime.utcnow(),
     )
     db.add(entry)
+    audit_logger.info(
+        "plan_change | entity=%s/%s | field=%s | old=%s | new=%s | by=%s",
+        entity_type,
+        entity_id,
+        field,
+        old_value,
+        new_value,
+        changed_by,
+    )
 
 
 def _append_training_log(
@@ -274,6 +285,11 @@ def bulk_assign_skill(
         raise HTTPException(status_code=404, detail="Skill not found")
     if skill.is_archived:
         raise HTTPException(status_code=400, detail="Skill is archived")
+    if skill.is_custom:
+        raise HTTPException(
+            status_code=400,
+            detail="Personal skills cannot be assigned from the catalog",
+        )
 
     results: list[BulkAssignResultItem] = []
     assigned_count = 0
@@ -553,6 +569,11 @@ def add_skill_to_plan(
         raise HTTPException(status_code=404, detail="Skill not found")
     if skill.is_archived:
         raise HTTPException(status_code=400, detail="Skill is archived")
+    if skill.is_custom:
+        raise HTTPException(
+            status_code=400,
+            detail="Personal skills cannot be assigned from the catalog",
+        )
 
     plan = _get_or_create_plan(db, engineer_id)
 

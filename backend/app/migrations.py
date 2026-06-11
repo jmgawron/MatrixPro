@@ -65,6 +65,54 @@ def _ensure_skills_columns(conn):
         ))
 
 
+def _ensure_skill_team_roles(conn):
+    """Add role column to skill_teams; backfill existing rows as owner."""
+    cols = _table_columns(conn, "skill_teams")
+    if not cols:
+        return
+    if "role" not in cols:
+        logger.info("ALTER skill_teams ADD role (default owner)")
+        conn.execute(text(
+            "ALTER TABLE skill_teams "
+            "ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'owner'"
+        ))
+
+
+def _ensure_notifications_table(conn):
+    tables = {
+        r[0]
+        for r in conn.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table'")
+        ).fetchall()
+    }
+    if "notifications" in tables:
+        return
+    logger.info("CREATE TABLE notifications")
+    conn.execute(text("""
+        CREATE TABLE notifications (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            type VARCHAR(64) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            body TEXT,
+            payload_json TEXT,
+            created_at DATETIME NOT NULL DEFAULT (datetime('now'))
+        )
+    """))
+    conn.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_notifications_user_created "
+        "ON notifications(user_id, created_at DESC)"
+    ))
+
+
+def purge_old_notifications(conn, days: int = 60):
+    """Remove notifications older than ``days`` (default 60)."""
+    conn.execute(text(
+        "DELETE FROM notifications "
+        "WHERE created_at < datetime('now', :offset)"
+    ), {"offset": f"-{days} days"})
+
+
 _FTS_TRIGGERS = (
     "user_content_fts_insert",
     "user_content_fts_update",
@@ -207,6 +255,8 @@ def run_migrations():
     with engine.connect() as conn:
         _ensure_user_level_content_columns(conn)
         _ensure_skills_columns(conn)
+        _ensure_skill_team_roles(conn)
+        _ensure_notifications_table(conn)
         _ensure_user_catalog_display_order_table(conn)
         _ensure_user_content_override_columns(conn)
 
@@ -269,6 +319,8 @@ def run_migrations():
             logger.warning("user_content_fts index is corrupt — auto-rebuilding...")
             rebuild_user_content_fts(conn)
 
+        purge_old_notifications(conn, days=60)
+
         logger.info("Creating core table indexes...")
         for idx_sql in (
             "CREATE INDEX IF NOT EXISTS idx_plan_skills_plan_id ON plan_skills(plan_id);",
@@ -277,6 +329,7 @@ def run_migrations():
             "CREATE INDEX IF NOT EXISTS idx_users_manager_id ON users(manager_id);",
             "CREATE INDEX IF NOT EXISTS idx_skill_level_content_skill_id ON skill_level_content(skill_id);",
             "CREATE INDEX IF NOT EXISTS idx_skill_teams_team_id ON skill_teams(team_id);",
+            "CREATE INDEX IF NOT EXISTS idx_skill_teams_role ON skill_teams(skill_id, role);",
             "CREATE INDEX IF NOT EXISTS idx_skills_is_archived ON skills(is_archived);",
             "CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_type, entity_id, changed_at DESC);",
         ):

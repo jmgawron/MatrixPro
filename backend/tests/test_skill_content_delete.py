@@ -1,4 +1,4 @@
-"""DELETE /api/skills/{id}/content/{id} cascades plan-side FK rows."""
+"""DELETE /api/skills/{id}/content/{id} converts progress to UserLevelContent."""
 
 from __future__ import annotations
 
@@ -15,13 +15,15 @@ from app.database import Base, get_db
 from app.dependencies import get_current_user
 from app.main import app
 from app.migrations import run_migrations
+from app.models.org import Domain, Team
 from app.models.plan import (
     DevelopmentPlan,
     PlanSkill,
     PlanSkillStatus,
     UserContentCompletion,
+    UserLevelContent,
 )
-from app.models.skill import Skill, SkillLevelContent, SkillLevelContentType
+from app.models.skill import Skill, SkillLevelContent, SkillLevelContentType, SkillTeam
 from app.models.user import User, UserRole
 
 
@@ -46,13 +48,20 @@ def db() -> Generator[Session, None, None]:
     SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     session = SessionLocal()
 
-    def _override_get_db():
-        try:
-            yield session
-        finally:
-            pass
+    domain = Domain(name="Enterprise", is_technical=True)
+    session.add(domain)
+    session.flush()
+    team = Team(name="TAC-ENT-TEST-SHIFT1", domain_id=domain.id, shift=1)
+    session.add(team)
+    session.flush()
 
-    mgr = User(email="mgr@test.com", name="Mgr", role=UserRole.manager, password_hash="x")
+    mgr = User(
+        email="mgr@test.com",
+        name="Mgr",
+        role=UserRole.manager,
+        password_hash="x",
+        team_id=team.id,
+    )
     eng = User(email="eng@test.com", name="Eng", role=UserRole.engineer, password_hash="x")
     session.add_all([mgr, eng])
     session.flush()
@@ -60,6 +69,7 @@ def db() -> Generator[Session, None, None]:
     skill = Skill(name="Test Skill", description="d", catalog_version=1)
     session.add(skill)
     session.flush()
+    session.add(SkillTeam(skill_id=skill.id, team_id=team.id, role="owner"))
 
     content = SkillLevelContent(
         skill_id=skill.id,
@@ -95,6 +105,12 @@ def db() -> Generator[Session, None, None]:
     )
     session.commit()
 
+    def _override_get_db():
+        try:
+            yield session
+        finally:
+            pass
+
     app.dependency_overrides[get_db] = _override_get_db
     app.dependency_overrides[get_current_user] = lambda: mgr
 
@@ -109,7 +125,7 @@ def db() -> Generator[Session, None, None]:
         pass
 
 
-def test_delete_skill_content_cascades_plan_completions(db: Session):
+def test_delete_skill_content_converts_to_user_level_content(db: Session):
     client = TestClient(app)
     skill_id = db.query(Skill).first().id
     content_id = db.query(SkillLevelContent).first().id
@@ -124,3 +140,6 @@ def test_delete_skill_content_cascades_plan_completions(db: Session):
         .count()
         == 0
     )
+    ulc = db.query(UserLevelContent).filter(UserLevelContent.title == "Course A").first()
+    assert ulc is not None
+    assert ulc.completed is True

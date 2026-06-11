@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException
@@ -42,7 +42,6 @@ from app.models.plan import (
 from app.models.skill import (
     Skill,
     SkillCategoryAssignment,
-    SkillLevelContent,
 )
 from app.models.user import User, UserRole
 from app.services.llm_circuit import LLMError, chat_completion

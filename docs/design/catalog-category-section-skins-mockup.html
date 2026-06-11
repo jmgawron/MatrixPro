@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Catalog Category Section Skins (clean & light)</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-cat-skins">
+  <style>
+    .sk-chrome {
+      position: sticky; top: 0; z-index: 900;
+      background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
+      backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-soft);
+      padding: 12px 20px;
+    }
+    .sk-chrome__row {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+      max-width: 1400px; margin: 0 auto;
+    }
+    .sk-chrome h1 { font-size: 14px; font-weight: 800; margin: 0; }
+    .sk-chrome p { font-size: 11px; color: var(--text-muted); margin: 0; flex: 1; min-width: 220px; line-height: 1.45; }
+    .sk-tabs { display: flex; gap: 5px; flex-wrap: wrap; }
+    .sk-tab {
+      border: 1px solid var(--border-soft); background: var(--bg-card-soft);
+      color: var(--text-secondary); font-size: 10px; font-weight: 600;
+      padding: 5px 10px; border-radius: 999px; cursor: pointer;
+    }
+    .sk-tab.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+    .sk-btn {
+      border: 1px solid var(--border-soft); background: var(--bg-card);
+      color: var(--text-secondary); font-size: 11px; font-weight: 600;
+      padding: 6px 10px; border-radius: var(--radius-sm); cursor: pointer;
+    }
+    .sk-link { font-size: 11px; color: var(--text-muted); text-decoration: none; border-bottom: 1px dashed var(--border-soft); }
+    .sk-banner {
+      max-width: 1400px; margin: 0 auto; padding: 10px 24px 0;
+      font-size: 12px; color: var(--text-secondary); line-height: 1.55;
+    }
+    .sk-note {
+      max-width: 1400px; margin: 0 auto; padding: 8px 24px 16px;
+      font-size: 11px; color: var(--text-muted);
+    }
+
+    /* Aurora Slate cards — unchanged from card mockup */
+    .as-card {
+      --as-t1: var(--cat-core-accent); --as-t2: var(--accent-strong); --as-soft: var(--accent-soft);
+      --as-ring-a: rgba(107,127,157,.38); --as-ring-b: rgba(92,177,255,.45); --as-ring-c: rgba(59,130,246,.35);
+      position: relative; border-radius: 16px; padding: 2px; overflow: hidden; cursor: pointer;
+      background: linear-gradient(135deg, var(--as-ring-a), var(--as-ring-b), var(--as-ring-c), var(--as-ring-a));
+      background-size: 280% 280%; animation: as-aurora 14s ease infinite;
+      transition: transform .22s, box-shadow .22s;
+    }
+    .as-card[data-cat="foundational"] {
+      --as-t1: var(--cat-foundational-accent); --as-soft: rgba(100,116,139,.1);
+      --as-ring-a: rgba(71,85,105,.28); --as-ring-b: rgba(148,163,184,.32); --as-ring-c: rgba(107,127,157,.28);
+    }
+    .as-card[data-cat="core"] { --as-t1: var(--cat-core-accent); --as-soft: var(--accent-soft); }
+    .as-card[data-cat="advanced"] {
+      --as-t1: var(--cat-advanced-accent); --as-soft: rgba(59,130,246,.08);
+      --as-ring-a: rgba(71,85,105,.32); --as-ring-b: rgba(59,130,246,.38); --as-ring-c: rgba(37,99,235,.28);
+    }
+    .as-card[data-cat="ai"] { --as-t1: var(--cat-ai-accent); --as-soft: rgba(37,99,235,.1); }
+    @keyframes as-aurora { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+    @media (prefers-reduced-motion: reduce) { .as-card { animation: none !important; } }
+    .as-card__inner {
+      background: color-mix(in srgb, var(--bg-card) 94%, var(--bg-page));
+      border-radius: 14px; padding: 14px; min-height: 148px; position: relative;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    [data-theme="light"] .as-card__inner { background: #fff; }
+    .as-card__glow {
+      position: absolute; top: -30px; right: -20px; width: 90px; height: 90px;
+      background: radial-gradient(circle, var(--as-soft), transparent 70%); pointer-events: none;
+    }
+    .as-card__head { display: flex; gap: 11px; margin-bottom: 8px; }
+    .as-card__icon {
+      width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(145deg, color-mix(in srgb, var(--as-t1) 80%, var(--bg-elevated)), color-mix(in srgb, var(--as-t2) 65%, #0f172a));
+      color: #e8eef7; border: 1px solid color-mix(in srgb, var(--as-t1) 22%, var(--border-soft));
+    }
+    .as-card__icon svg { width: 20px; height: 20px; }
+    .as-card__cat { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--as-t1); }
+    .as-card__name { font-size: 14px; font-weight: 800; margin: 0; color: var(--text-primary); line-height: 1.25; }
+    .as-card__desc {
+      font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 10px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .as-card__foot { display: flex; flex-direction: column; gap: 5px; }
+    .as-card__meta { display: flex; gap: 6px; align-items: flex-start; }
+    .as-meta-icon { width: 12px; flex-shrink: 0; margin-top: 4px; color: var(--text-muted); opacity: .8; }
+    .as-meta-icon svg { width: 12px; height: 12px; }
+    .as-cert { font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-soft); color: var(--text-muted); background: transparent; }
+    .as-card__certs, .as-card__tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .as-card:hover { transform: translateY(-2px); }
+
+    .sk-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .cp-tree-group { padding: 10px 14px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+    .cp-tree-item { padding: 8px 14px; font-size: 12px; color: var(--text-secondary); }
+    .cp-tree-item.active { color: var(--accent); background: var(--accent-soft); border-left: 2px solid var(--accent); }
+
+    /* Category accent per section (shared) */
+    .catalog-category-section[data-category-slug="foundational"] { --sk-accent: var(--cat-foundational-accent); }
+    .catalog-category-section[data-category-slug="core"] { --sk-accent: var(--cat-core-accent); }
+    .catalog-category-section[data-category-slug="advanced"] { --sk-accent: var(--cat-advanced-accent); }
+    .catalog-category-section[data-category-slug="ai"] { --sk-accent: var(--cat-ai-accent); }
+
+    /* ═══════════════════════════════════════════════════════════
+       SKIN O — Baseline (production §7.17 reference)
+       ═══════════════════════════════════════════════════════════ */
+    .skin-o .catalog-category-section { border-bottom: 1px solid var(--border-soft); }
+    .skin-o .catalog-category-section:last-child { border-bottom: none; }
+
+    /* ═══════════════════════════════════════════════════════════
+       SKIN A — Whisper · hairline only, lighter typography
+       ═══════════════════════════════════════════════════════════ */
+    .skin-a .catalog-category-section {
+      border-bottom: none;
+      border-top: 1px solid color-mix(in srgb, var(--border-soft) 70%, transparent);
+    }
+    .skin-a .catalog-category-section:first-child { border-top: none; }
+    .skin-a .catalog-category-header { padding: 14px 0 10px; gap: 10px; }
+    .skin-a .catalog-category-title {
+      font-size: 13px; font-weight: 500; letter-spacing: 0.01em;
+      text-transform: none; color: var(--text-muted);
+    }
+    .skin-a .catalog-category-header:hover .catalog-category-title,
+    .skin-a .catalog-category-section:not(.collapsed) .catalog-category-title {
+      color: var(--text-secondary);
+    }
+    .skin-a .catalog-category-icon-svg { opacity: .55; width: 15px; height: 15px; }
+    .skin-a .catalog-category-count {
+      background: transparent; padding: 0; font-weight: 500;
+      font-variant-numeric: tabular-nums; color: var(--text-muted); opacity: .75;
+    }
+    .skin-a .catalog-category-count::before { content: '·'; margin-right: 6px; opacity: .5; }
+    .skin-a .catalog-category-chevron { opacity: .45; }
+    .skin-a .catalog-category-body { padding: 4px 0 22px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       SKIN B — Air · whitespace blocks, no rules
+       ═══════════════════════════════════════════════════════════ */
+    .skin-b .catalog-category-section {
+      border: none; margin-bottom: 8px; padding-bottom: 4px;
+    }
+    .skin-b .catalog-category-header {
+      padding: 6px 0 8px; gap: 8px;
+    }
+    .skin-b .catalog-category-title {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .skin-b .catalog-category-section:not(.collapsed) .catalog-category-title { color: var(--text-secondary); }
+    .skin-b .catalog-category-icon-svg { display: none; }
+    .skin-b .catalog-category-count {
+      background: transparent; border: none; padding: 0 0 0 4px;
+      font-size: 10px; font-weight: 600; color: var(--text-muted); opacity: .6;
+    }
+    .skin-b .catalog-category-chevron { width: 8px; height: 8px; opacity: .35; }
+    .skin-b .catalog-category-chevron::before { width: 5px; height: 5px; border-width: 1.5px; }
+    .skin-b .catalog-category-body { padding: 0 0 28px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       SKIN C — Thread · faint left accent, no horizontal rules
+       ═══════════════════════════════════════════════════════════ */
+    .skin-c .catalog-category-section {
+      border: none; margin-bottom: 6px;
+      border-left: 2px solid color-mix(in srgb, var(--sk-accent) 28%, transparent);
+      padding-left: 14px; margin-left: 2px;
+    }
+    .skin-c .catalog-category-section:not(.collapsed) {
+      border-left-color: color-mix(in srgb, var(--sk-accent) 55%, transparent);
+    }
+    .skin-c .catalog-category-header { padding: 10px 0 8px; gap: 9px; }
+    .skin-c .catalog-category-title {
+      font-size: 13px; font-weight: 600; text-transform: none;
+      letter-spacing: -0.01em; color: var(--text-secondary);
+    }
+    .skin-c .catalog-category-icon-svg { color: var(--sk-accent); opacity: .65; }
+    .skin-c .catalog-category-count {
+      background: transparent; padding: 0;
+      font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums;
+    }
+    .skin-c .catalog-category-body { padding: 2px 0 20px 0; }
+
+    /* ═══════════════════════════════════════════════════════════
+       SKIN D — Lumen · open section gets whisper bg wash
+       ═══════════════════════════════════════════════════════════ */
+    .skin-d .catalog-category-section { border: none; margin-bottom: 10px; border-radius: var(--radius-md); }
+    .skin-d .catalog-category-section:not(.collapsed) {
+      background: color-mix(in srgb, var(--bg-card-soft) 45%, transparent);
+    }
+    [data-theme="light"] .skin-d .catalog-category-section:not(.collapsed) {
+      background: color-mix(in srgb, var(--bg-card-soft) 65%, #fff);
+    }
+    .skin-d .catalog-category-header {
+      padding: 12px 14px 10px; gap: 10px; border-radius: var(--radius-md);
+    }
+    .skin-d .catalog-category-section:not(.collapsed) .catalog-category-header {
+      border-bottom: 1px solid color-mix(in srgb, var(--border-soft) 50%, transparent);
+    }
+    .skin-d .catalog-category-title {
+      font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: 0;
+      color: var(--text-secondary);
+    }
+    .skin-d .catalog-category-count {
+      background: rgba(255,255,255,.04); border: 1px solid color-mix(in srgb, var(--border-soft) 80%, transparent);
+      font-weight: 600; font-size: 10px; color: var(--text-muted); padding: 1px 7px;
+    }
+    [data-theme="light"] .skin-d .catalog-category-count { background: #fff; }
+    .skin-d .catalog-category-body { padding: 14px 14px 18px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       SKIN E — Silk · dotted header rule, quiet type
+       ═══════════════════════════════════════════════════════════ */
+    .skin-e .catalog-category-section { border: none; margin-bottom: 4px; }
+    .skin-e .catalog-category-header {
+      padding: 10px 0 9px; gap: 9px;
+      border-bottom: 1px dotted color-mix(in srgb, var(--border-soft) 90%, transparent);
+    }
+    .skin-e .catalog-category-section.collapsed .catalog-category-header {
+      border-bottom-style: solid; border-bottom-color: color-mix(in srgb, var(--border-soft) 35%, transparent);
+    }
+    .skin-e .catalog-category-title {
+      font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0;
+      color: var(--text-secondary);
+    }
+    .skin-e .catalog-category-icon-svg { opacity: .55; width: 14px; height: 14px; }
+    .skin-e .catalog-category-count {
+      background: none; padding: 0; font-size: 11px; font-weight: 500;
+      color: var(--text-muted); font-variant-numeric: tabular-nums;
+    }
+    .skin-e .catalog-category-chevron { opacity: .35; }
+    .skin-e .catalog-category-body { padding: 12px 0 22px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       SKIN F — Feather · smallest header, cards breathe
+       ═══════════════════════════════════════════════════════════ */
+    .skin-f .catalog-category-section {
+      border-bottom: 1px solid color-mix(in srgb, var(--border-soft) 40%, transparent);
+    }
+    .skin-f .catalog-category-section:last-child { border-bottom: none; }
+    .skin-f .catalog-category-header { padding: 8px 0 6px; gap: 7px; }
+    .skin-f .catalog-category-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .skin-f .catalog-category-section:not(.collapsed) .catalog-category-title { color: var(--sk-accent); }
+    .skin-f .catalog-category-icon-svg { width: 13px; height: 13px; opacity: .5; }
+    .skin-f .catalog-category-section:not(.collapsed) .catalog-category-icon-svg {
+      opacity: .85; color: var(--sk-accent);
+    }
+    .skin-f .catalog-category-count {
+      font-size: 10px; padding: 0 6px; min-width: 20px; text-align: center;
+      background: transparent; border: 1px solid color-mix(in srgb, var(--border-soft) 65%, transparent);
+      color: var(--text-muted); font-weight: 600;
+    }
+    .skin-f .catalog-category-body { padding: 10px 0 26px; }
+  </style>
+</head>
+<body>
+  <header class="sk-chrome">
+    <div class="sk-chrome__row">
+      <h1>Category Section Skins — clean &amp; light</h1>
+      <p>Same Editorial Stack layout · collapsible sections · no new UI. Visual treatment only.</p>
+      <div class="sk-tabs" id="skin-tabs">
+        <button type="button" class="sk-tab active" data-skin="o">0 · Baseline</button>
+        <button type="button" class="sk-tab" data-skin="a">A · Whisper</button>
+        <button type="button" class="sk-tab" data-skin="b">B · Air</button>
+        <button type="button" class="sk-tab" data-skin="c">C · Thread</button>
+        <button type="button" class="sk-tab" data-skin="d">D · Lumen</button>
+        <button type="button" class="sk-tab" data-skin="e">E · Silk</button>
+        <button type="button" class="sk-tab" data-skin="f">F · Feather</button>
+      </div>
+      <button type="button" class="sk-btn" id="theme-toggle">Light theme</button>
+      <a class="sk-link" href="catalog-skill-card-aurora-slate-mockup.html">Cards →</a>
+    </div>
+  </header>
+
+  <p class="sk-banner" id="sk-banner">
+    <strong>Baseline (production):</strong> Uppercase title, soft count pill, border-between sections — reference only.
+  </p>
+  <p class="sk-note">Page layout, tree, toolbar, tabs, and collapse behavior are identical across all skins.</p>
+
+  <div id="page-root"></div>
+
+  <script>
+    const CAT_ICONS = {
+      foundational: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-7"/><path d="M9 8c0-2 1.5-3 3-3s3 1 3 3-1.5 3-3 3-3-1-3-3Z"/><path d="M6 12c-1.5 1-2 3-2 4h16c0-1-.5-3-2-4"/></svg>',
+      core: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 15 9l7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>',
+      advanced: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="12" rx="9" ry="4"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(120 12 12)"/></svg>',
+      ai: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/><path d="M5 19l1 2M19 19l-1 2"/></svg>',
+    };
+    const SKILL_ICONS = {
+      switch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01"/></svg>',
+      vpn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+      route: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M8.5 16.5 15.5 8.5"/></svg>',
+      spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg>',
+    };
+    const certSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="5"/><path d="M8.56 14.23 5.45 22l3.83-1.15 2.17 3.62 3.11-7.73"/><polyline points="10 9 11 11 14 8"/></svg>';
+    const tagSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"/></svg>';
+
+    const CATEGORIES = [
+      { slug: 'foundational', name: 'Foundational', collapsed: true, skills: [
+        { cat: 'foundational', catLabel: 'Foundational', icon: 'switch', name: 'Layer 2 Switching Fundamentals', desc: 'MAC learning, flooding, and broadcast domains.', certs: ['CCNA'], tags: ['l2'] },
+        { cat: 'foundational', catLabel: 'Foundational', icon: 'switch', name: 'VLANs, Trunking & VTP', desc: '802.1Q, native VLAN pitfalls, and VTP modes.', certs: ['CCNA'], tags: ['vlan'] },
+      ]},
+      { slug: 'core', name: 'Core', collapsed: false, skills: [
+        { cat: 'core', catLabel: 'Core', icon: 'switch', name: 'Catalyst 9000 IOS-XE Operations', desc: 'ISSU, stack management, licensing, show-tech.', certs: ['CCNP ENCOR'], tags: ['ios-xe'] },
+        { cat: 'core', catLabel: 'Core', icon: 'vpn', name: 'AnyConnect Remote-Access VPN', desc: 'Profiles, DAP, split tunneling, and posture.', certs: ['CCNP Security'], tags: ['vpn'] },
+      ]},
+      { slug: 'advanced', name: 'Advanced', collapsed: true, skills: [
+        { cat: 'advanced', catLabel: 'Advanced', icon: 'route', name: 'VXLAN EVPN Campus Fabric', desc: 'Overlay control-plane and BUM analysis.', certs: ['CCIE EI'], tags: ['vxlan'] },
+        { cat: 'advanced', catLabel: 'Advanced', icon: 'route', name: 'EPC, ELAM & FED Capture', desc: 'Forwarding-plane debug and ASIC capture.', certs: ['CCIE EI'], tags: ['epc'] },
+      ]},
+      { slug: 'ai', name: 'AI & Future Skills', collapsed: true, skills: [
+        { cat: 'ai', catLabel: 'AI & Future', icon: 'spark', name: 'LLM-Assisted Log Triage', desc: 'Structured prompts for faster log analysis.', certs: [], tags: ['ai-assisted'] },
+        { cat: 'ai', catLabel: 'AI & Future', icon: 'spark', name: 'Python & pyATS Automation', desc: 'Repeatable testbed automation for regression.', certs: ['DevNet Pro'], tags: ['python'] },
+      ]},
+    ];
+
+    const BANNERS = {
+      o: '<strong>Baseline (production):</strong> Uppercase title, soft count pill, border-between sections — reference only.',
+      a: '<strong>A · Whisper:</strong> Hairline dividers only, sentence-case titles (500 weight), ghost count with middot — lightest typography.',
+      b: '<strong>B · Air:</strong> No borders or icons — pure whitespace between tiers. Tiny chevron, uppercase micro-label.',
+      c: '<strong>C · Thread:</strong> Faint left accent in category color, no horizontal rules. Title case, transparent count.',
+      d: '<strong>D · Lumen:</strong> Expanded section gets a barely-there background wash + inner divider — collapsed stays flat.',
+      e: '<strong>E · Silk:</strong> Dotted rule under header row, sentence-case title, plain count — editorial and light.',
+      f: '<strong>F · Feather:</strong> Compact uppercase micro-header; open section title tints to category accent; outline count chip.',
+    };
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function cardHtml(s) {
+      const foot = [];
+      if (s.certs.length) foot.push(`<div class="as-card__meta"><span class="as-meta-icon">${certSvg}</span><div class="as-card__certs">${s.certs.map(c => `<span class="as-cert">${esc(c)}</span>`).join('')}</div></div>`);
+      if (s.tags.length) foot.push(`<div class="as-card__meta"><span class="as-meta-icon">${tagSvg}</span><div class="as-card__tags">${s.tags.map(t => `<span class="triage-chip triage-feedback chip-sm">${esc(t)}</span>`).join('')}</div></div>`);
+      return `<article class="as-card" data-cat="${s.cat}"><div class="as-card__inner"><div class="as-card__glow"></div>
+        <div class="as-card__head"><div class="as-card__icon">${SKILL_ICONS[s.icon]}</div>
+        <div><div class="as-card__cat">${esc(s.catLabel)}</div><h4 class="as-card__name">${esc(s.name)}</h4></div></div>
+        <p class="as-card__desc">${esc(s.desc)}</p>${foot.length ? `<div class="as-card__foot">${foot.join('')}</div>` : ''}</div></article>`;
+    }
+
+    function sectionsHtml() {
+      return CATEGORIES.map(cat => {
+        const c = cat.collapsed;
+        return `<section class="catalog-category-section${c ? ' collapsed' : ''}" data-category-slug="${cat.slug}">
+          <button type="button" class="catalog-category-header" aria-expanded="${!c}">
+            <span class="catalog-category-chevron" aria-hidden="true"></span>
+            <span class="mp-icon catalog-category-icon-svg">${CAT_ICONS[cat.slug]}</span>
+            <h3 class="catalog-category-title">${esc(cat.name)}</h3>
+            <span class="catalog-category-count">${cat.skills.length}</span>
+          </button>
+          <div class="catalog-category-body"><div class="sk-card-grid">${cat.skills.map(cardHtml).join('')}</div></div>
+        </section>`;
+      }).join('');
+    }
+
+    document.getElementById('page-root').innerHTML = `
+      <div class="cat-wrapper">
+        <div class="cat-hero mp-header">
+          <div class="mp-header-text">
+            <h1 class="mp-title">Skill <span class="mp-title-gradient">Catalog</span></h1>
+            <p class="mp-subtitle">Browse, search and manage the skill catalog</p>
+          </div>
+          <div class="stats-row">
+            <div class="stat-block"><div class="stat-block-value">70</div><div class="stat-block-label">Skills</div></div>
+            <div class="stat-block"><div class="stat-block-value">84</div><div class="stat-block-label">Teams</div></div>
+            <div class="stat-block"><div class="stat-block-value">27</div><div class="stat-block-label">Certifications</div></div>
+          </div>
+        </div>
+        <div class="cat-tabs catalog-tab-bar">
+          <button type="button" class="catalog-tab active">Organization</button>
+          <button type="button" class="catalog-tab">Certification</button>
+          <button type="button" class="catalog-tab">Non-Technical</button>
+        </div>
+        <div class="cat-toolbar">
+          <div class="cat-toolbar-left">
+            <div class="cat-shift-filters">
+              <span class="cat-shift-filters__label">Shifts</span>
+              <div class="cat-shift-filters__chips">
+                <button type="button" class="cat-shift-btn active">Shift 1</button>
+                <button type="button" class="cat-shift-btn active">Shift 2</button>
+                <button type="button" class="cat-shift-btn">Shift 3</button>
+              </div>
+            </div>
+            <input type="text" class="search-input" placeholder="Filter by tag..." style="min-width:160px">
+          </div>
+          <button type="button" class="cat-sort-btn">Sort · Name A → Z</button>
+        </div>
+        <div class="cat-content">
+          <div class="cat-tree-panel">
+            <div class="cp-tree-group">Enterprise Networking</div>
+            <div class="cp-tree-item active">TAC-ENT-LANSW-SHIFT2</div>
+            <div class="cp-tree-item">TAC-ENT-ROUT-SHIFT1</div>
+          </div>
+          <div class="cat-skills-panel">
+            <div class="catalog-category-sections skin-o" id="sections-root">${sectionsHtml()}</div>
+          </div>
+        </div>
+      </div>`;
+
+    const root = document.getElementById('sections-root');
+    root.querySelectorAll('.catalog-category-header').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sec = btn.closest('.catalog-category-section');
+        const collapsed = sec.classList.toggle('collapsed');
+        btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      });
+    });
+
+    document.querySelectorAll('.sk-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.sk-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        root.className = 'catalog-category-sections skin-' + tab.dataset.skin;
+        document.getElementById('sk-banner').innerHTML = BANNERS[tab.dataset.skin];
+      });
+    });
+
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      document.getElementById('theme-toggle').textContent = next === 'light' ? 'Dark theme' : 'Light theme';
+    });
+  </script>
+</body>
+</html>

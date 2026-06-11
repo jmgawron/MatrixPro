@@ -93,6 +93,8 @@ class SkillTeam(Base):
 
     skill_id = Column(Integer, ForeignKey("skills.id"), primary_key=True)
     team_id = Column(Integer, ForeignKey("teams.id"), primary_key=True)
+    # owner | consumer — extensible for contributor, reviewer (string slug, not enum)
+    role = Column(String(32), nullable=False, default="owner", server_default="owner")
 
     skill = relationship("Skill", back_populates="skill_teams")
     team = relationship("Team", back_populates="skill_teams")

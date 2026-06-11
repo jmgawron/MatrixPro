@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPro — Catalog Ownership UI Mockups</title>
+  <link rel="stylesheet" href="../../frontend/css/style.css?v=mockup-ownership">
+  <style>
+    body.mockup-page { margin: 0; min-height: 100vh; background: var(--bg-page); }
+
+    .mockup-chrome {
+      position: sticky; top: 0; z-index: 400;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 12px 20px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+    }
+    .mockup-chrome__title { font-size: 15px; font-weight: 700; margin: 0; }
+    .mockup-chrome__sub { font-size: 12px; color: var(--text-muted); margin: 0; flex: 1; min-width: 220px; line-height: 1.45; }
+    .mockup-tabs, .mockup-role-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .mockup-tab {
+      border: 1px solid var(--border-soft); background: var(--bg-card-soft);
+      color: var(--text-secondary); font-size: 11px; font-weight: 600;
+      padding: 6px 12px; border-radius: 999px; cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .mockup-tab:hover { color: var(--text-primary); border-color: var(--border-strong); }
+    .mockup-tab.active {
+      background: var(--accent-soft, rgba(59,130,246,.12));
+      border-color: var(--accent); color: var(--accent);
+    }
+    .mockup-theme-btn {
+      border: 1px solid var(--border-soft); background: var(--bg-card);
+      color: var(--text-secondary); font-size: 12px; font-weight: 600;
+      padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer;
+    }
+    .mockup-panel { display: none; padding: 24px; max-width: 1400px; margin: 0 auto; }
+    .mockup-panel.active { display: block; }
+    .mockup-hint {
+      font-size: 12px; color: var(--text-muted); line-height: 1.55;
+      max-width: 720px; margin: 0 0 20px; padding: 12px 14px;
+      background: var(--bg-card-soft); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md); border-left: 3px solid var(--accent);
+    }
+
+    /* ── Proposed ownership chip tokens ── */
+    .triage-owner {
+      background: rgba(59, 130, 246, 0.12);
+      color: #3b82f6;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+    }
+    [data-theme="light"] .triage-owner {
+      background: rgba(59, 130, 246, 0.1);
+      color: #2563eb;
+      border-color: rgba(37, 99, 235, 0.3);
+    }
+    .triage-consumer {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px dashed rgba(156, 163, 175, 0.5);
+    }
+    [data-theme="light"] .triage-consumer {
+      border-color: rgba(107, 114, 128, 0.45);
+      color: #4b5563;
+    }
+    .ownership-legend {
+      display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+      padding: 10px 14px; margin-bottom: 16px;
+      background: var(--bg-card-soft); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md); font-size: 11px; color: var(--text-muted);
+    }
+    .ownership-legend__item { display: flex; align-items: center; gap: 6px; }
+    .ownership-legend__swatch { width: 14px; height: 14px; border-radius: 4px; }
+
+    /* ── Mock catalog grid ── */
+    .mock-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 14px;
+    }
+    .mock-tool-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-sm);
+    }
+    .mock-tool-card__head {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+      margin-bottom: 10px;
+    }
+    .mock-tool-card__title { font-size: 15px; font-weight: 700; margin: 0; line-height: 1.3; }
+    .mock-tool-card__actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .mock-tool-card__actions .btn-sm { font-size: 11px; padding: 4px 8px; }
+
+    /* ── Mock unified modal ── */
+    .mock-modal-wrap {
+      display: grid; place-items: center;
+      min-height: 520px;
+      padding: 20px;
+      background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0, 174, 239, 0.06), transparent 60%);
+    }
+    .mock-unified {
+      width: min(920px, 96vw);
+      max-height: min(680px, 88vh);
+      display: flex; flex-direction: column;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+    .mock-unified__header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .mock-unified__title-row {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .mock-unified__title { font-size: 18px; font-weight: 700; margin: 0; }
+    .mock-access-badge {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; padding: 3px 8px; border-radius: 999px;
+    }
+    .mock-access-badge--consumer {
+      color: #f59e0b; background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+    .mock-access-badge--view {
+      color: var(--text-muted); background: var(--bg-card-soft);
+      border: 1px solid var(--border-soft);
+    }
+    .mock-meta-empty {
+      font-size: 12px; color: var(--text-muted); font-style: italic;
+    }
+    .catalog-skill-meta__row--owners .catalog-skill-meta__label::after { content: ' · source'; font-weight: 400; opacity: 0.7; }
+    .catalog-skill-meta__row--consumers .catalog-skill-meta__label::after { content: ' · shared'; font-weight: 400; opacity: 0.7; }
+
+    .skill-assoc-section--owners {
+      border-left: 3px solid var(--accent, #3b82f6);
+    }
+    .skill-assoc-section--consumers {
+      border-left: 3px dashed rgba(156, 163, 175, 0.55);
+    }
+    .skill-assoc-section--locked {
+      opacity: 0.72;
+      pointer-events: none;
+      position: relative;
+    }
+    .skill-assoc-section--locked::after {
+      content: 'Owner teams — read only';
+      position: absolute; top: 8px; right: 10px;
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-muted);
+    }
+    .skill-assoc-section--editable-consumer {
+      box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.25);
+      border-left: 3px solid #f59e0b;
+    }
+    .skill-assoc-hint {
+      font-size: 11px; color: var(--text-muted); line-height: 1.45;
+      margin: 0 0 10px;
+    }
+
+    .mock-details-scroll { flex: 1; overflow-y: auto; padding: 16px 20px; min-height: 280px; }
+    .mock-unified__tabs {
+      display: flex; border-bottom: 1px solid var(--border-soft);
+      padding: 0 16px; margin-top: 8px;
+    }
+    .mock-unified__tab {
+      padding: 10px 16px; font-size: 13px; font-weight: 600;
+      color: var(--text-muted); background: none; border: none;
+      border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer;
+    }
+    .mock-unified__tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .mock-unified__tab[disabled] { opacity: 0.45; cursor: not-allowed; }
+    .mock-unified__footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; border-top: 1px solid var(--border-soft);
+      background: var(--bg-card-soft);
+    }
+    .mock-unified__footer-status { font-size: 12px; color: var(--text-muted); }
+
+    .mock-create-banner {
+      padding: 10px 14px; margin-bottom: 14px;
+      background: var(--accent-soft, rgba(59,130,246,.1));
+      border: 1px solid rgba(59,130,246,.25);
+      border-radius: var(--radius-md);
+      font-size: 12px; color: var(--text-secondary); line-height: 1.45;
+    }
+
+    .mock-flow-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;
+    }
+    .mock-flow-card {
+      background: var(--bg-card); border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg); padding: 16px 18px;
+    }
+    .mock-flow-card h3 { margin: 0 0 8px; font-size: 14px; font-weight: 700; }
+    .mock-flow-card p { margin: 0 0 12px; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    /* Role visibility in grid mock */
+    .mock-grid[data-view-role="consumer"] .action-owner-only { display: none !important; }
+    .mock-grid[data-view-role="consumer"] .action-consumer-only { display: inline-flex !important; }
+    .mock-grid[data-view-role="owner"] .action-consumer-only { display: none !important; }
+    .mock-grid[data-view-role="engineer"] .mock-tool-card__actions { display: none !important; }
+    .action-consumer-only { display: none; }
+
+    .mock-unified[data-access="consumer"] .owner-only-field { opacity: 0.55; pointer-events: none; }
+    .mock-unified[data-access="consumer"] .content-tab-btn { opacity: 0.45; pointer-events: none; }
+    .mock-unified[data-access="engineer"] .manager-only { display: none !important; }
+    .mock-unified[data-access="consumer"] .mock-access-badge--consumer { display: inline-flex; }
+    .mock-unified[data-access="engineer"] .mock-access-badge--view { display: inline-flex; }
+    .mock-access-badge { display: none; }
+  </style>
+</head>
+<body class="mockup-page">
+
+  <header class="mockup-chrome">
+    <h1 class="mockup-chrome__title">Catalog Ownership UI</h1>
+    <p class="mockup-chrome__sub">Two-level team associations — owner vs consumer. Review all surfaces before implementation.</p>
+    <div class="mockup-tabs" role="tablist">
+      <button type="button" class="mockup-tab active" data-panel="grid">1 · Grid cards</button>
+      <button type="button" class="mockup-tab" data-panel="meta">2 · Modal meta</button>
+      <button type="button" class="mockup-tab" data-panel="owner-edit">3 · Owner edit</button>
+      <button type="button" class="mockup-tab" data-panel="consumer-edit">4 · Consumer edit</button>
+      <button type="button" class="mockup-tab" data-panel="create">5 · Create skill</button>
+      <button type="button" class="mockup-tab" data-panel="flows">6 · Delete / Duplicate</button>
+      <button type="button" class="mockup-tab" data-panel="browse">7 · Engineer browse</button>
+    </div>
+    <div class="mockup-role-tabs" id="roleTabs">
+      <button type="button" class="mockup-tab active" data-role="owner">Owner mgr</button>
+      <button type="button" class="mockup-tab" data-role="consumer">Consumer mgr</button>
+      <button type="button" class="mockup-tab" data-role="engineer">Engineer</button>
+    </div>
+    <button type="button" class="mockup-theme-btn" id="themeToggle">Light / Dark</button>
+  </header>
+
+  <!-- ═══ PANEL 1: Grid cards ═══ -->
+  <section class="mockup-panel active" id="panel-grid">
+    <p class="mockup-hint"><strong>Grid cards</strong> — Each skill shows two chip rows: <em>Owners</em> (solid accent) define the catalog entry; <em>Consumers</em> (dashed) share visibility. Card actions depend on manager access level.</p>
+    <div class="ownership-legend">
+      <span class="ownership-legend__item"><span class="ownership-legend__swatch triage-owner"></span> Owner team — maintains skill</span>
+      <span class="ownership-legend__item"><span class="ownership-legend__swatch triage-consumer"></span> Consumer team — can assign to plans</span>
+    </div>
+    <div class="mock-grid" id="mockGrid" data-view-role="owner">
+      <article class="mock-tool-card">
+        <div class="mock-tool-card__head">
+          <h2 class="mock-tool-card__title">OSPF Multi-Area Design &amp; Troubleshooting</h2>
+          <div class="mock-tool-card__actions">
+            <button type="button" class="btn btn-secondary btn-sm action-owner-only">Edit</button>
+            <button type="button" class="btn btn-secondary btn-sm action-owner-only">Duplicate</button>
+            <button type="button" class="btn btn-sm action-owner-only" style="color:#ef4444;border-color:rgba(239,68,68,.4)">Delete</button>
+            <button type="button" class="btn btn-secondary btn-sm action-consumer-only">Manage access</button>
+          </div>
+        </div>
+        <div class="tool-card-badges">
+          <span class="catalog-team-row-label">Owners:</span>
+          <span class="triage-chip triage-owner chip-sm">TAC-ENT-ROUT-SHIFT1</span>
+          <span class="triage-chip triage-owner chip-sm">TAC-ENT-ROUT-SHIFT2</span>
+        </div>
+        <div class="tool-card-badges">
+          <span class="catalog-team-row-label">Consumers:</span>
+          <span class="triage-chip triage-consumer chip-sm">TAC-ENT-LANSW-SHIFT2</span>
+          <span class="triage-chip triage-consumer chip-sm">TAC-ENT-WLAN-SHIFT1</span>
+          <span class="triage-chip triage-consumer chip-sm team-chip-overflow" tabindex="0">+1 …</span>
+        </div>
+        <div class="tool-card-badges">
+          <span class="meta-badge meta-badge--cert">CCNP ENCOR</span>
+        </div>
+      </article>
+
+      <article class="mock-tool-card">
+        <div class="mock-tool-card__head">
+          <h2 class="mock-tool-card__title">Layer 2 Switching Fundamentals</h2>
+          <div class="mock-tool-card__actions">
+            <button type="button" class="btn btn-secondary btn-sm action-owner-only">Edit</button>
+            <button type="button" class="btn btn-secondary btn-sm action-owner-only">Duplicate</button>
+            <button type="button" class="btn btn-sm action-owner-only" style="color:#ef4444">Delete</button>
+            <button type="button" class="btn btn-secondary btn-sm action-consumer-only">Manage access</button>
+          </div>
+        </div>
+        <div class="tool-card-badges">
+          <span class="catalog-team-row-label">Owners:</span>
+          <span class="triage-chip triage-owner chip-sm">TAC-ENT-LANSW-SHIFT1</span>
+          <span class="triage-chip triage-owner chip-sm">TAC-ENT-LANSW-SHIFT2</span>
+          <span class="triage-chip triage-owner chip-sm">TAC-ENT-LANSW-SHIFT3</span>
+          <span class="triage-chip triage-owner chip-sm">TAC-ENT-LANSW-SHIFT4</span>
+        </div>
+        <div class="tool-card-badges">
+          <span class="catalog-team-row-label">Consumers:</span>
+          <span class="mock-meta-empty" style="font-size:11px;font-style:italic">None</span>
+        </div>
+      </article>
+
+      <article class="mock-tool-card">
+        <div class="mock-tool-card__head">
+          <h2 class="mock-tool-card__title">Customer Communication Essentials</h2>
+          <div class="mock-tool-card__actions">
+            <button type="button" class="btn btn-secondary btn-sm action-owner-only">Edit</button>
+            <button type="button" class="btn btn-secondary btn-sm action-owner-only">Duplicate</button>
+            <button type="button" class="btn btn-sm action-owner-only" style="color:#ef4444">Delete</button>
+            <button type="button" class="btn btn-secondary btn-sm action-consumer-only">Manage access</button>
+          </div>
+        </div>
+        <div class="tool-card-badges">
+          <span class="catalog-team-row-label">Owners:</span>
+          <span class="triage-chip triage-owner chip-sm">TAC-NTECH-GEN-SHIFT1</span>
+          <span class="triage-chip triage-owner chip-sm">TAC-NTECH-GEN-SHIFT2</span>
+          <span class="triage-chip triage-owner chip-sm">TAC-NTECH-GEN-SHIFT3</span>
+          <span class="triage-chip triage-owner chip-sm">TAC-NTECH-GEN-SHIFT4</span>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ═══ PANEL 2: Modal meta ═══ -->
+  <section class="mockup-panel" id="panel-meta">
+    <p class="mockup-hint"><strong>Unified editor header</strong> — Replace single “Teams” row with separate Owner and Consumer meta rows (matches grid card language).</p>
+    <div class="mock-modal-wrap">
+      <div class="mock-unified" data-access="owner">
+        <div class="mock-unified__header">
+          <div class="mock-unified__title-row">
+            <h2 class="mock-unified__title">OSPF Multi-Area Design &amp; Troubleshooting</h2>
+            <span class="mock-access-badge mock-access-badge--consumer">Consumer access</span>
+            <span class="mock-access-badge mock-access-badge--view">View only</span>
+          </div>
+          <div class="catalog-skill-meta" style="margin-top:12px">
+            <div class="catalog-skill-meta__row catalog-skill-meta__row--owners">
+              <span class="catalog-skill-meta__label">Owners</span>
+              <div class="catalog-skill-meta__chips">
+                <span class="triage-chip triage-owner chip-sm">TAC-ENT-ROUT-SHIFT1</span>
+                <span class="triage-chip triage-owner chip-sm">TAC-ENT-ROUT-SHIFT2</span>
+              </div>
+            </div>
+            <div class="catalog-skill-meta__row catalog-skill-meta__row--consumers">
+              <span class="catalog-skill-meta__label">Consumers</span>
+              <div class="catalog-skill-meta__chips">
+                <span class="triage-chip triage-consumer chip-sm">TAC-ENT-LANSW-SHIFT2</span>
+                <span class="triage-chip triage-consumer chip-sm">TAC-ENT-WLAN-SHIFT1</span>
+                <span class="triage-chip triage-consumer chip-sm team-chip-overflow" tabindex="0">+1 more</span>
+              </div>
+            </div>
+            <div class="catalog-skill-meta__row">
+              <span class="catalog-skill-meta__label">Category</span>
+              <div class="catalog-skill-meta__chips">
+                <span class="mp-modal-category-chip"><span class="mp-modal-category-chip__name">Core</span></span>
+                <span class="mp-modal-category-chip"><span class="mp-modal-category-chip__name">Advanced</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mock-unified__footer">
+          <span class="mock-unified__footer-status">Read-only meta — switch to Details tab to edit associations</span>
+          <button type="button" class="btn btn-secondary btn-sm">Close</button>
+        </div>
+      </div>
+    </div>
+    <div class="mock-modal-wrap" style="min-height:200px;margin-top:20px">
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;text-align:center">Empty consumer state</p>
+      <div class="mock-unified" style="max-height:240px">
+        <div class="mock-unified__header">
+          <h2 class="mock-unified__title" style="font-size:16px">Layer 2 Switching Fundamentals</h2>
+          <div class="catalog-skill-meta" style="margin-top:10px">
+            <div class="catalog-skill-meta__row catalog-skill-meta__row--owners">
+              <span class="catalog-skill-meta__label">Owners</span>
+              <div class="catalog-skill-meta__chips">
+                <span class="triage-chip triage-owner chip-sm">TAC-ENT-LANSW-SHIFT2</span>
+              </div>
+            </div>
+            <div class="catalog-skill-meta__row catalog-skill-meta__row--consumers">
+              <span class="catalog-skill-meta__label">Consumers</span>
+              <div class="catalog-skill-meta__chips">
+                <span class="mock-meta-empty">None — assign consumer teams to share catalog visibility</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PANEL 3: Owner edit ═══ -->
+  <section class="mockup-panel" id="panel-owner-edit">
+    <p class="mockup-hint"><strong>Owner manager — Details tab</strong> — Full edit: identity, classification, owner teams (with shift filter), consumer teams, certs. Both association panels editable.</p>
+    <div class="mock-modal-wrap">
+      <div class="mock-unified" data-access="owner">
+        <div class="mock-unified__header">
+          <div class="mock-unified__title-row">
+            <h2 class="mock-unified__title">OSPF Multi-Area Design &amp; Troubleshooting</h2>
+          </div>
+          <div class="mock-unified__tabs">
+            <button type="button" class="mock-unified__tab">Content</button>
+            <button type="button" class="mock-unified__tab active">Details</button>
+          </div>
+        </div>
+        <div class="mock-details-scroll">
+          <div class="skill-edit-section">
+            <div class="skill-edit-section__header"><div class="skill-edit-section__title">Associations</div></div>
+            <div class="skill-edit-row skill-edit-row--assoc">
+              <div class="skill-assoc-section skill-assoc-section--owners">
+                <div class="skill-assoc-section__header">
+                  <div class="skill-assoc-section__label">Owner Teams</div>
+                  <span class="skill-assoc-section__badge">2</span>
+                </div>
+                <p class="skill-assoc-hint">Teams that own and maintain this skill in the catalog. At least one required.</p>
+                <div class="skill-shift-filter" role="group">
+                  <button type="button" class="skill-shift-filter__btn is-active cat-shift-btn active">Shift 1</button>
+                  <button type="button" class="skill-shift-filter__btn is-active cat-shift-btn active">Shift 2</button>
+                  <button type="button" class="skill-shift-filter__btn is-active cat-shift-btn active">Shift 3</button>
+                  <button type="button" class="skill-shift-filter__btn is-active cat-shift-btn active">Shift 4</button>
+                </div>
+                <div class="combobox-multi" style="margin-top:8px">
+                  <div class="combobox-multi__field">
+                    <div class="combobox-multi__chips">
+                      <span class="combobox-multi__chip"><span class="combobox-multi__chip-text">TAC-ENT-ROUT-SHIFT1</span></span>
+                      <span class="combobox-multi__chip"><span class="combobox-multi__chip-text">TAC-ENT-ROUT-SHIFT2</span></span>
+                    </div>
+                    <input type="text" class="combobox-multi__input" placeholder="Search and add teams…" readonly>
+                  </div>
+                </div>
+              </div>
+              <div class="skill-assoc-section skill-assoc-section--consumers">
+                <div class="skill-assoc-section__header">
+                  <div class="skill-assoc-section__label">Consumer Teams</div>
+                  <span class="skill-assoc-section__badge">2</span>
+                </div>
+                <p class="skill-assoc-hint">Teams that can browse and assign this skill. Consumer managers may attach their own team only.</p>
+                <div class="combobox-multi" style="margin-top:8px">
+                  <div class="combobox-multi__field">
+                    <div class="combobox-multi__chips">
+                      <span class="combobox-multi__chip"><span class="combobox-multi__chip-text">TAC-ENT-LANSW-SHIFT2</span></span>
+                      <span class="combobox-multi__chip"><span class="combobox-multi__chip-text">TAC-ENT-WLAN-SHIFT1</span></span>
+                    </div>
+                    <input type="text" class="combobox-multi__input" placeholder="Attach consumer teams…" readonly>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mock-unified__footer">
+          <span class="mock-unified__footer-status">No pending changes</span>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn btn-secondary btn-sm">Discard</button>
+            <button type="button" class="btn btn-primary btn-sm">Save Details</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PANEL 4: Consumer edit ═══ -->
+  <section class="mockup-panel" id="panel-consumer-edit">
+    <p class="mockup-hint"><strong>Consumer manager — Manage access</strong> — Metadata and Content tab locked. Only Consumer Teams panel is editable; Save label becomes “Save consumer access”.</p>
+    <div class="mock-modal-wrap">
+      <div class="mock-unified" data-access="consumer">
+        <div class="mock-unified__header">
+          <div class="mock-unified__title-row">
+            <h2 class="mock-unified__title">OSPF Multi-Area Design &amp; Troubleshooting</h2>
+            <span class="mock-access-badge mock-access-badge--consumer">Consumer access</span>
+          </div>
+          <div class="mock-unified__tabs">
+            <button type="button" class="mock-unified__tab content-tab-btn" disabled title="Owner access required">Content</button>
+            <button type="button" class="mock-unified__tab active">Details</button>
+          </div>
+        </div>
+        <div class="mock-details-scroll">
+          <div class="skill-edit-section owner-only-field">
+            <div class="skill-edit-section__header"><div class="skill-edit-section__title">Identity</div></div>
+            <div class="form-group"><label class="form-label">Name</label><input class="form-input" value="OSPF Multi-Area Design &amp; Troubleshooting" readonly></div>
+          </div>
+          <div class="skill-edit-section">
+            <div class="skill-edit-section__header"><div class="skill-edit-section__title">Associations</div></div>
+            <div class="skill-edit-row skill-edit-row--assoc">
+              <div class="skill-assoc-section skill-assoc-section--owners skill-assoc-section--locked">
+                <div class="skill-assoc-section__header">
+                  <div class="skill-assoc-section__label">Owner Teams</div>
+                  <span class="skill-assoc-section__badge">2</span>
+                </div>
+                <div class="combobox-multi"><div class="combobox-multi__field"><div class="combobox-multi__chips"><span class="combobox-multi__chip"><span class="combobox-multi__chip-text">TAC-ENT-ROUT-SHIFT1</span></span></div></div></div>
+              </div>
+              <div class="skill-assoc-section skill-assoc-section--consumers skill-assoc-section--editable-consumer">
+                <div class="skill-assoc-section__header">
+                  <div class="skill-assoc-section__label">Consumer Teams</div>
+                  <span class="skill-assoc-section__badge">1</span>
+                </div>
+                <p class="skill-assoc-hint">You can attach or detach <strong>your team</strong> (TAC-ENT-LANSW-SHIFT2) as a consumer.</p>
+                <div class="combobox-multi">
+                  <div class="combobox-multi__field">
+                    <div class="combobox-multi__chips">
+                      <span class="combobox-multi__chip"><span class="combobox-multi__chip-text">TAC-ENT-LANSW-SHIFT2</span></span>
+                    </div>
+                    <input type="text" class="combobox-multi__input" placeholder="Attach your team…">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mock-unified__footer">
+          <span class="mock-unified__footer-status" style="color:#f59e0b">Pending consumer access change</span>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn btn-secondary btn-sm">Discard</button>
+            <button type="button" class="btn btn-primary btn-sm">Save consumer access</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PANEL 5: Create skill ═══ -->
+  <section class="mockup-panel" id="panel-create">
+    <p class="mockup-hint"><strong>Create skill</strong> — New catalog skills default to manager’s team as sole owner. Consumer teams assigned after creation.</p>
+    <div class="mock-modal-wrap">
+      <div class="mock-unified">
+        <div class="mock-unified__header">
+          <h2 class="mock-unified__title">New Skill</h2>
+          <div class="mock-unified__tabs">
+            <button type="button" class="mock-unified__tab" disabled>Content</button>
+            <button type="button" class="mock-unified__tab active">Details</button>
+          </div>
+        </div>
+        <div class="mock-details-scroll">
+          <div class="mock-create-banner">
+            <strong>Your team will be the owner.</strong> New skills are created with <em>TAC-ENT-LANSW-SHIFT2</em> as the sole owner team. Add consumer teams below to share catalog visibility with other shifts or areas.
+          </div>
+          <div class="form-group"><label class="form-label">Skill name</label><input class="form-input" placeholder="Enter skill name"></div>
+          <div class="skill-edit-row skill-edit-row--assoc" style="margin-top:16px">
+            <div class="skill-assoc-section skill-assoc-section--owners">
+              <div class="skill-assoc-section__header">
+                <div class="skill-assoc-section__label">Owner Teams</div>
+                <span class="skill-assoc-section__badge">1</span>
+              </div>
+              <div class="combobox-multi"><div class="combobox-multi__field"><div class="combobox-multi__chips"><span class="combobox-multi__chip"><span class="combobox-multi__chip-text">TAC-ENT-LANSW-SHIFT2</span></span></div></div></div>
+            </div>
+            <div class="skill-assoc-section skill-assoc-section--consumers">
+              <div class="skill-assoc-section__header">
+                <div class="skill-assoc-section__label">Consumer Teams</div>
+                <span class="skill-assoc-section__badge">0</span>
+              </div>
+              <p class="skill-assoc-hint">Optional — share with teams that should see this skill but not edit it.</p>
+            </div>
+          </div>
+        </div>
+        <div class="mock-unified__footer">
+          <span class="mock-unified__footer-status">Save details first to add 3E content</span>
+          <button type="button" class="btn btn-primary btn-sm">Save Details</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PANEL 6: Delete / Duplicate ═══ -->
+  <section class="mockup-panel" id="panel-flows">
+    <p class="mockup-hint"><strong>Destructive &amp; duplicate flows</strong> — Copy updates to reflect ownership model (fork-on-delete, no consumer copy on duplicate).</p>
+    <div class="mock-flow-grid">
+      <div class="mock-flow-card cascade-delete-modal" style="max-width:420px">
+        <h3>Delete skill</h3>
+        <p>Typed confirmation — owner managers + admin only.</p>
+        <div class="cascade-delete-modal__warning" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;font-size:13px">
+          <span style="color:#f59e0b">⚠</span>
+          <span>Removes skill from global catalog. Owner and consumer teams lose catalog visibility.</span>
+        </div>
+        <div class="cascade-delete-modal__impact" style="font-size:13px;line-height:1.55;margin-bottom:14px;padding:12px;background:var(--bg-card-soft);border-radius:var(--radius-md)">
+          <p><strong>6</strong> engineers have this skill in their plan.</p>
+          <p>Each receives an independent <strong>personal skill</strong> fork; training logs and progress preserved.</p>
+          <p style="margin:8px 0 0;font-size:11px;color:var(--text-muted)">Owners: 4 teams · Consumers: 2 teams</p>
+        </div>
+        <label style="font-size:12px;display:block;margin-bottom:6px">Type skill name to confirm</label>
+        <input class="form-control" style="width:100%;margin-bottom:12px" placeholder="OSPF Multi-Area…">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button type="button" class="btn btn-secondary btn-sm">Cancel</button>
+          <button type="button" class="btn btn-sm cascade-delete-modal__danger-btn" style="background:#ef4444;color:#fff">Delete permanently</button>
+        </div>
+      </div>
+      <div class="mock-flow-card" style="max-width:420px">
+        <h3>Duplicate skill</h3>
+        <p>One-click POST — optional pre-confirm in v2.</p>
+        <div style="padding:12px;background:var(--bg-card-soft);border-radius:var(--radius-md);font-size:13px;line-height:1.55;margin-bottom:12px">
+          <p><strong>New name:</strong> OSPF Multi-Area… (Duplicated for TAC-ENT-LANSW-SHIFT2)</p>
+          <p style="margin-top:8px;color:var(--text-muted);font-size:12px">Copies metadata, categories, tags, certs, and all 3E content.</p>
+          <p style="margin-top:8px;padding:8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:var(--radius-sm);font-size:12px;color:#f59e0b">
+            Consumer teams are <strong>not</strong> copied — assign separately if needed.
+          </p>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm">Duplicate skill</button>
+        <p style="margin-top:12px;font-size:11px;color:var(--text-muted)">Success toast mirrors warning above.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PANEL 7: Engineer browse ═══ -->
+  <section class="mockup-panel" id="panel-browse">
+    <p class="mockup-hint"><strong>Engineer browse</strong> — Opens modal read-only: split owner/consumer meta visible, no edit actions, Content tab browse-only.</p>
+    <div class="mock-modal-wrap">
+      <div class="mock-unified" data-access="engineer">
+        <div class="mock-unified__header">
+          <div class="mock-unified__title-row">
+            <h2 class="mock-unified__title">Layer 2 Switching Fundamentals</h2>
+            <span class="mock-access-badge mock-access-badge--view">View only</span>
+          </div>
+          <div class="catalog-skill-meta" style="margin-top:10px">
+            <div class="catalog-skill-meta__row catalog-skill-meta__row--owners">
+              <span class="catalog-skill-meta__label">Owners</span>
+              <div class="catalog-skill-meta__chips"><span class="triage-chip triage-owner chip-sm">TAC-ENT-LANSW-SHIFT2</span></div>
+            </div>
+            <div class="catalog-skill-meta__row catalog-skill-meta__row--consumers">
+              <span class="catalog-skill-meta__label">Consumers</span>
+              <div class="catalog-skill-meta__chips"><span class="mock-meta-empty">None</span></div>
+            </div>
+          </div>
+          <div class="mock-unified__tabs">
+            <button type="button" class="mock-unified__tab active">Content</button>
+            <button type="button" class="mock-unified__tab manager-only">Details</button>
+          </div>
+        </div>
+        <div class="mock-details-scroll" style="min-height:200px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">
+          3E content browse — no association editing
+        </div>
+        <div class="mock-unified__footer">
+          <span class="mock-unified__footer-status">Browse catalog learning content.</span>
+          <button type="button" class="btn btn-secondary btn-sm">Close</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const panels = document.querySelectorAll('.mockup-panel');
+    const tabs = document.querySelectorAll('.mockup-tabs .mockup-tab[data-panel]');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        panels.forEach(p => p.classList.remove('active'));
+        document.getElementById('panel-' + tab.dataset.panel)?.classList.add('active');
+      });
+    });
+
+    const roleTabs = document.querySelectorAll('#roleTabs .mockup-tab');
+    const mockGrid = document.getElementById('mockGrid');
+    roleTabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        roleTabs.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (mockGrid) mockGrid.dataset.viewRole = btn.dataset.role;
+      });
+    });
+
+    document.getElementById('themeToggle')?.addEventListener('click', () => {
+      const html = document.documentElement;
+      html.dataset.theme = html.dataset.theme === 'light' ? 'dark' : 'light';
+    });
+  </script>
+</body>
+</html>

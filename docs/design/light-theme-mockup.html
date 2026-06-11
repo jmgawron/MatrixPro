@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MatrixPro — Light Theme Proposal (Current vs Proposed)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#1a1d21; color:#e8eef7; padding:32px;
+  }
+  h1 { font-size:20px; margin-bottom:6px; }
+  .intro { color:#9aa4b2; font-size:13px; margin-bottom:24px; max-width:880px; line-height:1.5; }
+  .compare { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:1100px){ .compare{grid-template-columns:1fr;} }
+  .pane-label { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:8px; }
+  .pane-label.cur { color:#f0a8a8; } .pane-label.prop { color:#9fe3b4; }
+
+  /* ============ shared component layout ============ */
+  .demo {
+    border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,.1);
+    color:var(--text-primary);
+    background:var(--bg-page);
+    background-image: var(--mesh-accent), var(--mesh-indigo);
+    background-repeat:no-repeat;
+  }
+  .nav {
+    display:flex; align-items:center; gap:14px; padding:12px 18px;
+    background:var(--bg-panel); border-bottom:1px solid var(--border-soft);
+  }
+  .brand { display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; }
+  .brand-dot { width:24px; height:24px; border-radius:6px; background:linear-gradient(135deg,#00C6FF,#0072FF); }
+  .nav a { font-size:12.5px; color:var(--text-secondary); text-decoration:none; padding:6px 10px; border-radius:8px; }
+  .nav a.active { color:var(--accent-strong); background:var(--accent-soft); font-weight:600; }
+  .body { padding:20px 18px 24px; }
+  .h2 { font-size:16px; font-weight:700; margin-bottom:2px; }
+  .sub { font-size:12px; color:var(--text-muted); margin-bottom:16px; }
+  .cards { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px; }
+  .card {
+    background:var(--bg-card-gradient); border:1px solid var(--border-soft);
+    border-radius:12px; padding:14px; box-shadow:var(--shadow-sm);
+  }
+  .card .num { font-size:22px; font-weight:800; }
+  .card .lbl { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .card.accent .num { color:var(--accent-strong); }
+  .kanban { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+  .col {
+    background:var(--bg-card-soft); border:1px solid var(--border-soft);
+    border-radius:12px; padding:10px;
+  }
+  .col-h { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:8px; padding-left:4px;}
+  .skill {
+    background:var(--bg-card); border:1px solid var(--border-soft); border-radius:10px;
+    padding:10px 12px; margin-bottom:8px; box-shadow:var(--shadow-sm); font-size:13px; font-weight:600;
+  }
+  .skill .meta { display:flex; gap:6px; margin-top:8px; }
+  .chip { font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px; border:1px solid; }
+  .chip.dev { color:var(--status-developing-fg); background:var(--status-developing-bg); border-color:var(--status-developing-border); }
+  .chip.plan { color:var(--status-planned-fg); background:var(--status-planned-bg); border-color:var(--status-planned-border); }
+  .chip.mast { color:var(--status-mastered-fg); background:var(--status-mastered-bg); border-color:var(--status-mastered-border); }
+  .row { display:flex; gap:10px; align-items:center; }
+  .btn { font-size:12.5px; font-weight:600; padding:8px 16px; border-radius:9px; border:1px solid transparent; cursor:pointer; }
+  .btn.pri { color:#fff; background:linear-gradient(135deg,var(--accent) 0%, var(--accent-strong) 100%); }
+  .btn.sec { color:var(--text-secondary); background:var(--bg-card); border-color:var(--border-strong); }
+  .input {
+    flex:1; font-size:12.5px; padding:8px 12px; border-radius:9px;
+    border:1px solid var(--border-strong); background:var(--bg-input); color:var(--text-muted);
+  }
+
+  /* ============ CURRENT light tokens ============ */
+  .current {
+    --bg-page:#f4f7fc; --bg-panel:#ffffff; --bg-card:#ffffff;
+    --bg-card-soft:#f1f5f9; --bg-input:#ffffff;
+    --text-primary:#0f172a; --text-secondary:#475569; --text-muted:#64748b;
+    --border-strong:rgba(15,23,42,.14); --border-soft:rgba(15,23,42,.08);
+    --accent:#3b82f6; --accent-strong:#2563eb; --accent-soft:rgba(59,130,246,.1);
+    --status-planned-fg:#64748b; --status-planned-bg:rgba(100,116,139,.12); --status-planned-border:rgba(100,116,139,.35);
+    --status-developing-fg:#2563eb; --status-developing-bg:rgba(37,99,235,.1); --status-developing-border:rgba(37,99,235,.35);
+    --status-mastered-fg:#92672a; --status-mastered-bg:rgba(146,103,42,.12); --status-mastered-border:rgba(146,103,42,.32);
+    --shadow-sm:0 2px 6px rgba(15,23,42,.06);
+    --bg-card-gradient:linear-gradient(135deg,#ffffff 0%,#f8fafd 100%);
+    --mesh-accent:radial-gradient(1200px 700px at 85% -5%, rgba(59,130,246,.22), transparent 55%);
+    --mesh-indigo:radial-gradient(900px 500px at 0% 100%, rgba(59,130,246,.08), transparent 60%);
+  }
+
+  /* ============ PROPOSED light tokens (warm off-white) ============ */
+  .proposed {
+    --bg-page:#f8f8f7; --bg-panel:#ffffff; --bg-card:#ffffff;
+    --bg-card-soft:#f4f4f2; --bg-input:#ffffff;
+    --text-primary:#1c1917; --text-secondary:#52514d; --text-muted:#76746e;
+    --border-strong:rgba(41,37,32,.15); --border-soft:rgba(41,37,32,.09);
+    --accent:#3b82f6; --accent-strong:#2563eb; --accent-soft:rgba(59,130,246,.09);
+    --status-planned-fg:#76746e; --status-planned-bg:rgba(118,116,110,.1); --status-planned-border:rgba(118,116,110,.3);
+    --status-developing-fg:#2563eb; --status-developing-bg:rgba(37,99,235,.08); --status-developing-border:rgba(37,99,235,.3);
+    --status-mastered-fg:#92672a; --status-mastered-bg:rgba(146,103,42,.1); --status-mastered-border:rgba(146,103,42,.3);
+    --shadow-sm:0 1px 3px rgba(41,37,32,.08);
+    --bg-card-gradient:linear-gradient(135deg,#ffffff 0%,#fcfcfb 100%);
+    --mesh-accent:radial-gradient(1200px 700px at 85% -5%, rgba(59,130,246,.05), transparent 55%);
+    --mesh-indigo:radial-gradient(900px 500px at 0% 100%, rgba(180,160,120,.05), transparent 60%);
+  }
+
+  .notes { margin-top:28px; max-width:880px; font-size:13px; line-height:1.6; color:#c2cad6; }
+  .notes h2 { font-size:14px; color:#e8eef7; margin:18px 0 6px; }
+  .notes code { background:rgba(255,255,255,.08); padding:1px 6px; border-radius:5px; font-size:12px; }
+</style>
+</head>
+<body>
+
+<h1>MatrixPro — Light Theme Refresh Proposal</h1>
+<p class="intro">
+Left: current light theme — every surface carries a blue tint and a strong blue glow (22% opacity) is washed
+over the page, producing the "bluish" feel. Right: proposed — warm off-white surfaces (paper-like) following
+the 60-30-10 rule, with blue reserved purely for actions, links, and status accents. Brand identity is kept;
+the canvas becomes calm, warm, and professional.
+</p>
+
+<div class="compare">
+  <div>
+    <div class="pane-label cur">Current</div>
+    <div class="demo current">
+      <div class="nav">
+        <span class="brand"><span class="brand-dot"></span>MatrixPro</span>
+        <a class="active" href="#">My Plan</a><a href="#">My Team</a><a href="#">Catalog</a><a href="#">Explorer</a>
+      </div>
+      <div class="body">
+        <div class="h2">My Development Plan</div>
+        <div class="sub">Track your skills through the 3E Framework</div>
+        <div class="cards">
+          <div class="card accent"><div class="num">12</div><div class="lbl">SKILLS IN PLAN</div></div>
+          <div class="card"><div class="num">4</div><div class="lbl">IN DEVELOPMENT</div></div>
+          <div class="card"><div class="num">3</div><div class="lbl">PROFICIENT</div></div>
+        </div>
+        <div class="kanban">
+          <div class="col">
+            <div class="col-h">In Development</div>
+            <div class="skill">BGP Troubleshooting
+              <div class="meta"><span class="chip dev">Developing</span><span class="chip plan">Exposure</span></div>
+            </div>
+            <div class="skill">Python Automation
+              <div class="meta"><span class="chip dev">Developing</span></div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="col-h">Proficiency</div>
+            <div class="skill">OSPF Design
+              <div class="meta"><span class="chip mast">Mastered</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <input class="input" value="Search skills…" readonly>
+          <button class="btn sec">Export CSV</button>
+          <button class="btn pri">+ Add Skill</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="pane-label prop">Proposed</div>
+    <div class="demo proposed">
+      <div class="nav">
+        <span class="brand"><span class="brand-dot"></span>MatrixPro</span>
+        <a class="active" href="#">My Plan</a><a href="#">My Team</a><a href="#">Catalog</a><a href="#">Explorer</a>
+      </div>
+      <div class="body">
+        <div class="h2">My Development Plan</div>
+        <div class="sub">Track your skills through the 3E Framework</div>
+        <div class="cards">
+          <div class="card accent"><div class="num">12</div><div class="lbl">SKILLS IN PLAN</div></div>
+          <div class="card"><div class="num">4</div><div class="lbl">IN DEVELOPMENT</div></div>
+          <div class="card"><div class="num">3</div><div class="lbl">PROFICIENT</div></div>
+        </div>
+        <div class="kanban">
+          <div class="col">
+            <div class="col-h">In Development</div>
+            <div class="skill">BGP Troubleshooting
+              <div class="meta"><span class="chip dev">Developing</span><span class="chip plan">Exposure</span></div>
+            </div>
+            <div class="skill">Python Automation
+              <div class="meta"><span class="chip dev">Developing</span></div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="col-h">Proficiency</div>
+            <div class="skill">OSPF Design
+              <div class="meta"><span class="chip mast">Mastered</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <input class="input" value="Search skills…" readonly>
+          <button class="btn sec">Export CSV</button>
+          <button class="btn pri">+ Add Skill</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h2>What changes (light theme tokens only — dark theme untouched)</h2>
+  <p>
+  Surfaces shift from blue-tinted to warm off-white: <code>--bg-page #f4f7fc → #f8f8f7</code>,
+  <code>--bg-page-overlay #eef3f9 → #f2f2f0</code>, <code>--bg-elevated #f0f5fc → #f3f3f1</code>,
+  <code>--bg-card-soft #f1f5f9 → #f4f4f2</code>. Card gradient ends at warm <code>#fcfcfb</code>,
+  sidebar gradient at <code>#f8f8f7</code>. The background mesh glow drops from 22% blue to 5% (faint brand
+  warmth instead of a blue wash). Text moves from slate (blue-gray) to warm stone gray
+  (<code>#1c1917 / #52514d / #76746e</code>) — same contrast, no blue cast. Shadows get warmer and slightly
+  tighter for a crisp, paper-like look. The blue accent itself is unchanged, so brand and dark theme stay as-is.
+  </p>
+</div>
+
+</body>
+</html>

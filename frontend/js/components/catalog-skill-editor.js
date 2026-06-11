@@ -56,7 +56,7 @@ function categoryIconSpan(slug, size) {
 
 function formSnapshot(data) {
   const normalized = { ...data };
-  ['team_ids', 'certificate_ids', 'category_ids', 'tag_names'].forEach((key) => {
+  ['owner_team_ids', 'consumer_team_ids', 'team_ids', 'certificate_ids', 'category_ids', 'tag_names'].forEach((key) => {
     if (Array.isArray(normalized[key])) {
       normalized[key] = [...normalized[key]].sort((a, b) => a - b);
     }
@@ -76,23 +76,33 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
 
   const { initialTab = 'content' } = options;
   const user = Store.get('user');
-  const canEdit = skill?.id
-    ? (helpers.canEditCatalogSkill?.(skill, user) ?? false)
-    : (user?.role === 'admin' || user?.role === 'manager');
+  let accessLevel = 'none';
+  if (!skill?.id) {
+    accessLevel = user?.role === 'admin' ? 'admin' : (user?.role === 'manager' ? 'owner' : 'none');
+  } else {
+    accessLevel = helpers.getSkillAccessLevel?.(skill, user) ?? 'none';
+  }
+  const canEditFull = accessLevel === 'admin' || accessLevel === 'owner';
+  const canManageConsumer = accessLevel === 'consumer';
+  const canEdit = canEditFull || canManageConsumer || !skill?.id;
+  const canEditContent = canEditFull;
   const isAdmin = user?.role === 'admin';
   const isManager = user?.role === 'manager';
   let isCreateMode = !skill?.id;
 
   let currentSkill = skill ? { ...skill } : null;
-  let activeTab = isCreateMode ? 'details' : (canEdit ? initialTab : 'content');
+  let activeTab = isCreateMode ? 'details' : (canEditContent ? initialTab : (canManageConsumer ? 'details' : 'content'));
   let isMaximized = false;
   let tempItemId = -1;
+
+  const saveBtnLabel = () => (canManageConsumer ? 'Save consumer access' : 'Save Details');
 
   const overlay = createElement('div', { className: 'modal-overlay' });
   const modal = createElement('div', {
     className: 'modal skill-detail-modal sdm-plan-modal catalog-skill-modal catalog-unified-modal',
     role: 'dialog',
     'aria-modal': 'true',
+    'data-access': canManageConsumer ? 'consumer' : (canEdit ? 'owner' : 'view'),
     'aria-label': isCreateMode ? 'Create skill' : `${currentSkill?.name || 'Skill'} — Skill catalog`,
   });
 
@@ -106,6 +116,16 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
   const titleEl = createElement('h1', { className: 'sdm-header__title' });
   titleWrap.appendChild(titleIconWrap);
   titleWrap.appendChild(titleEl);
+  const accessBadgeConsumer = createElement('span', {
+    className: 'catalog-skill-access-badge catalog-skill-access-badge--consumer',
+  });
+  accessBadgeConsumer.textContent = 'Consumer access';
+  const accessBadgeView = createElement('span', {
+    className: 'catalog-skill-access-badge catalog-skill-access-badge--view',
+  });
+  accessBadgeView.textContent = 'View only';
+  titleWrap.appendChild(accessBadgeConsumer);
+  titleWrap.appendChild(accessBadgeView);
 
   const headerActions = createElement('div', { className: 'sdm-header__actions' });
   const maximizeBtn = createElement('button', {
@@ -130,10 +150,6 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
   headerTop.appendChild(headerActions);
   headerBlock.appendChild(headerTop);
 
-  const archivedBadge = createElement('div', { className: 'catalog-skill-archived' });
-  archivedBadge.textContent = 'Archived';
-  archivedBadge.hidden = true;
-
   const descEl = createElement('p', { className: 'sdm-notes' });
   const descToggle = createElement('button', { type: 'button', className: 'sdm-notes-toggle' });
   descToggle.textContent = 'Show more';
@@ -142,7 +158,6 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
 
   const metaPanel = createElement('div', { className: 'catalog-skill-meta' });
 
-  headerBlock.appendChild(archivedBadge);
   headerBlock.appendChild(descEl);
   headerBlock.appendChild(descToggle);
   headerBlock.appendChild(metaPanel);
@@ -171,7 +186,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
   });
   detailsTabBtn.textContent = 'Details';
   if (canEdit) {
-    tabBar.appendChild(contentTabBtn);
+    if (canEditContent) tabBar.appendChild(contentTabBtn);
     tabBar.appendChild(detailsTabBtn);
     body.appendChild(tabBar);
   }
@@ -240,7 +255,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
   });
   const reorderHint = createElement('p', { className: 'catalog-reorder-hint' });
   reorderHint.textContent = 'Drag the grip or use arrows to set item order within each section.';
-  if (canEdit) {
+  if (canEditContent) {
     listFooter.appendChild(reorderHint);
     listFooter.appendChild(addItemBtn);
     listFooter.appendChild(addItemMenu);
@@ -269,6 +284,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
   } else {
     footerActions.appendChild(closeFooterBtn);
   }
+  saveBtn.textContent = saveBtnLabel();
   modal.appendChild(footer);
 
   overlay.appendChild(modal);
@@ -335,8 +351,6 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
       titleIconWrap.style.display = 'none';
     }
 
-    archivedBadge.hidden = !s?.is_archived;
-
     const descText = (s?.description || '').trim();
     if (!descText) {
       descEl.classList.add('sdm-notes--empty');
@@ -354,44 +368,43 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
 
     metaPanel.innerHTML = '';
     const categories = Array.isArray(s?.categories) ? s.categories : [];
-    const teams = Array.isArray(s?.teams) ? s.teams : [];
+    const ownerTeams = Array.isArray(s?.owner_teams) ? s.owner_teams : (Array.isArray(s?.teams) ? s.teams : []);
+    const consumerTeams = Array.isArray(s?.consumer_teams) ? s.consumer_teams : [];
     const certificates = Array.isArray(s?.certificates) ? s.certificates : [];
     const tags = Array.isArray(s?.tags) ? s.tags : [];
 
-    function appendMetaRow(labelText, chipsBuilder) {
+    function appendMetaRow(labelText, chipsBuilder, rowClass = '', alwaysShow = false) {
       const chips = chipsBuilder();
-      if (!chips.length) return;
-      const row = createElement('div', { className: 'catalog-skill-meta__row' });
+      if (!alwaysShow && !chips.length) return;
+      const row = createElement('div', { className: `catalog-skill-meta__row${rowClass ? ` ${rowClass}` : ''}` });
       const label = createElement('span', { className: 'catalog-skill-meta__label' });
       label.textContent = labelText;
       const chipWrap = createElement('div', { className: 'catalog-skill-meta__chips' });
-      chips.forEach(chip => chipWrap.appendChild(chip));
+      if (chips.length) {
+        chips.forEach(chip => chipWrap.appendChild(chip));
+      } else {
+        chipWrap.appendChild(createElement('span', { className: 'catalog-skill-meta__empty' }));
+        chipWrap.lastChild.textContent = labelText === 'Consumers'
+          ? 'None — assign consumer teams to share catalog visibility'
+          : 'None';
+      }
       row.appendChild(label);
       row.appendChild(chipWrap);
       metaPanel.appendChild(row);
     }
 
-    appendMetaRow('Category', () => categories.map(cat => {
-      const chip = createElement('span', { className: 'mp-modal-category-chip' });
-      chip.appendChild(categoryIconSpan(cat.slug, '14px'));
-      const name = createElement('span', { className: 'mp-modal-category-chip__name' });
-      name.textContent = cat.name;
-      chip.appendChild(name);
-      return chip;
-    }));
-
-    appendMetaRow('Teams', () => {
+    function buildTeamMetaChips(teams, chipClass) {
       const VISIBLE = 3;
       const chips = [];
       teams.slice(0, VISIBLE).forEach(team => {
-        const chip = createElement('span', { className: 'triage-chip triage-signal chip-sm' });
+        const chip = createElement('span', { className: `triage-chip triage-${chipClass} chip-sm` });
         chip.textContent = team.name || team;
         chips.push(chip);
       });
       if (teams.length > VISIBLE) {
         const hidden = teams.slice(VISIBLE);
         const overflow = createElement('span', {
-          className: 'triage-chip triage-signal chip-sm team-chip-overflow',
+          className: `triage-chip triage-${chipClass} chip-sm team-chip-overflow`,
           tabindex: '0',
           'aria-label': `${hidden.length} more teams`,
         });
@@ -406,7 +419,19 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
         chips.push(overflow);
       }
       return chips;
-    });
+    }
+
+    appendMetaRow('Category', () => categories.map(cat => {
+      const chip = createElement('span', { className: 'mp-modal-category-chip' });
+      chip.appendChild(categoryIconSpan(cat.slug, '14px'));
+      const name = createElement('span', { className: 'mp-modal-category-chip__name' });
+      name.textContent = cat.name;
+      chip.appendChild(name);
+      return chip;
+    }));
+
+    appendMetaRow('Owners', () => buildTeamMetaChips(ownerTeams, 'owner'), 'catalog-skill-meta__row--owners', true);
+    appendMetaRow('Consumers', () => buildTeamMetaChips(consumerTeams, 'consumer'), 'catalog-skill-meta__row--consumers', true);
 
     appendMetaRow('Certifications', () => certificates.map(cert => {
       const chip = createElement('button', {
@@ -580,15 +605,24 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
     const current = helpers.readSkillForm(detailsFormEl);
     const baseline = JSON.parse(savedFormSnapshot);
     const payload = {};
+    if (canManageConsumer) {
+      const cur = JSON.stringify(current.consumer_team_ids ?? []);
+      const base = JSON.stringify(baseline.consumer_team_ids ?? []);
+      if (cur !== base) payload.consumer_team_ids = current.consumer_team_ids;
+      return Object.keys(payload).length ? payload : null;
+    }
     for (const key of ['name', 'description', 'icon', 'is_non_technical']) {
       const cur = current[key] ?? null;
       const base = baseline[key] ?? null;
       if (cur !== base) payload[key] = cur;
     }
-    for (const key of ['team_ids', 'certificate_ids', 'category_ids', 'tag_names']) {
+    for (const key of ['owner_team_ids', 'consumer_team_ids', 'team_ids', 'certificate_ids', 'category_ids', 'tag_names']) {
       const cur = JSON.stringify(current[key] ?? []);
       const base = JSON.stringify(baseline[key] ?? []);
       if (cur !== base) payload[key] = current[key];
+    }
+    if (payload.owner_team_ids && !payload.team_ids) {
+      payload.team_ids = payload.owner_team_ids;
     }
     return Object.keys(payload).length ? payload : null;
   }
@@ -609,7 +643,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
     modal.classList.toggle('dirty', dirty);
     footer.classList.toggle('sdm-footer--dirty', dirty);
     footerStatus.textContent = dirty
-      ? 'Pending changes — click Save Details to apply'
+      ? (canManageConsumer ? 'Pending consumer access change' : 'Pending changes — click Save Details to apply')
       : (canEdit ? 'No pending changes' : 'Browse catalog learning content.');
     if (canEdit) {
       saveBtn.disabled = false;
@@ -627,9 +661,11 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
     detailsTabBtn.setAttribute('aria-selected', String(activeTab === 'details'));
     contentPanel.classList.toggle('active', activeTab === 'content');
     detailsPanel.classList.toggle('active', activeTab === 'details');
-    contentTabBtn.disabled = isCreateMode;
+    contentTabBtn.disabled = isCreateMode || !canEditContent;
     if (isCreateMode) {
       contentTabBtn.title = 'Save skill details first to add content';
+    } else if (!canEditContent) {
+      contentTabBtn.title = 'Owner access required';
     } else {
       contentTabBtn.removeAttribute('title');
     }
@@ -686,7 +722,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
         isManager,
         user,
         initialIsNonTechnical,
-        formHooks,
+        { ...formHooks, accessLevel },
       );
       detailsScroll.appendChild(detailsFormEl);
       savedFormSnapshot = formSnapshot(helpers.readSkillForm(detailsFormEl));
@@ -704,7 +740,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
   }
 
   function renderAddControls() {
-    if (!canEdit) return;
+    if (!canEditContent) return;
     addItemBtn.hidden = activeTab !== 'content' || isCreateMode || contentLoading;
     reorderHint.hidden = activeTab !== 'content' || isCreateMode || contentLoading;
   }
@@ -818,7 +854,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
             'data-section': secKey,
           });
 
-          if (canEdit) {
+          if (canEditContent) {
             row.draggable = true;
 
             const dragHandle = createElement('span', {
@@ -874,7 +910,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
           });
           row.appendChild(textBtn);
 
-          if (canEdit && items.length > 1) {
+          if (canEditContent && items.length > 1) {
             const reorderBtns = createElement('div', { className: 'catalog-list-item__reorder' });
             const upBtn = createElement('button', {
               type: 'button',
@@ -979,7 +1015,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
   }
 
   function commitItemEditor() {
-    if (!canEdit) return false;
+    if (!canEditContent) return false;
     const draft = readItemEditorForm();
     if (!draft.title) {
       showToast('Title is required', 'warning');
@@ -1138,7 +1174,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
   }
 
   function startItemEditor(mode, levelKey, item) {
-    if (!canEdit) return;
+    if (!canEditContent) return;
     itemEditorMode = mode;
     itemEditorLevel = levelKey;
     itemEditorTargetId = item?.id ?? null;
@@ -1175,7 +1211,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
     const cfg = LEVEL_CONFIG.find(l => l.key === secKey) || LEVEL_CONFIG[0];
     readerMeta.textContent = `${cfg.label} · ${item.type || 'resource'}`;
 
-    if (canEdit) {
+    if (canEditContent) {
       const editBtn = createElement('button', {
         type: 'button',
         className: 'btn btn-secondary btn-sm',
@@ -1324,14 +1360,14 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
 
   async function doSave() {
     if (!canEdit) return;
-    if (itemEditorMode && hasItemEditorDraft()) {
+    if (canEditContent && itemEditorMode && hasItemEditorDraft()) {
       const ok = commitItemEditor();
       if (!ok) return;
     }
 
     const formData = detailsFormEl ? helpers.readSkillForm(detailsFormEl) : null;
     if (formData) {
-      const errors = helpers.validateSkillForm(formData);
+      const errors = helpers.validateSkillForm(formData, accessLevel);
       if (errors.length) {
         showToast(errors[0], 'warning');
         activeTab = 'details';
@@ -1340,7 +1376,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
         return;
       }
 
-      if (currentSkill?.id && formData.is_non_technical !== initialIsNonTechnical) {
+      if (canEditFull && currentSkill?.id && formData.is_non_technical !== initialIsNonTechnical) {
         const affectedCount = reclassifyPreview?.engineers_affected || 0;
         const targetDesc = formData.is_non_technical ? 'the NTECH-GEN shifts' : 'regular teams';
         const msg = `Reclassifying this skill will clear its current team assignments and reassign it to ${targetDesc}. ${affectedCount} engineer(s) currently have this skill in their plan — their plan entries will be preserved as personal artifacts. Continue?`;
@@ -1358,6 +1394,31 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
 
     try {
       let skillId = currentSkill?.id;
+
+      if (canManageConsumer && skillId && formData) {
+        const payload = buildDetailsUpdatePayload();
+        if (payload) {
+          const updated = await api.put(`/api/skills/${skillId}`, payload);
+          currentSkill = { ...currentSkill, ...updated };
+          updateHeader();
+          if (detailsFormEl) {
+            captureFormBaseline();
+            userTouchedDetailsForm = false;
+          }
+          helpers.refreshCatalog();
+          if (currentSkill?.id) {
+            try {
+              const freshSkill = await api.get(`/api/skills/${currentSkill.id}`);
+              currentSkill = freshSkill;
+              updateHeader();
+              await remountDetailsFromSkill();
+            } catch { /* keep current */ }
+          }
+          showToast('Consumer access saved', 'success');
+          updateDirtyUI();
+        }
+        return;
+      }
 
       if (!skillId && formData) {
         const created = await api.post('/api/skills/', formData);
@@ -1435,7 +1496,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
           await remountDetailsFromSkill();
         } catch { /* keep current */ }
       }
-      showToast('Skill details saved', 'success');
+      showToast(canManageConsumer ? 'Consumer access saved' : 'Skill details saved', 'success');
       updateDirtyUI();
     } catch (err) {
       let msg = err?.message || err?.detail || 'Failed to save changes';
@@ -1445,7 +1506,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
       showToast(typeof msg === 'string' ? msg : 'Failed to save changes', 'error');
     } finally {
       saveBtn.disabled = false;
-      saveBtn.textContent = 'Save Details';
+      saveBtn.textContent = saveBtnLabel();
     }
   }
 
@@ -1501,7 +1562,7 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
   contentTabBtn.addEventListener('click', () => switchTab('content'));
   detailsTabBtn.addEventListener('click', () => switchTab('details'));
 
-  if (canEdit) {
+  if (canEditContent) {
     addItemBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const open = addItemMenu.classList.toggle('open');
@@ -1515,7 +1576,9 @@ export function openCatalogSkillEditor(skill, options = {}, helpers) {
       addItemBtn.setAttribute('aria-expanded', 'false');
     }
     document.addEventListener('click', closeAddMenuOnOutside);
+  }
 
+  if (canEdit) {
     saveBtn.addEventListener('click', () => doSave());
     discardBtn.addEventListener('click', async () => {
       if (!isDirty()) return;

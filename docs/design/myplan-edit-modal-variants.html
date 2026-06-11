@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MatrixPro — Edit Skill Modal: 4 Variants</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:#1a1d21; color:#e8eef7; padding:32px 32px 64px; }
+  h1 { font-size:21px; margin-bottom:6px; }
+  .intro { color:#9aa4b2; font-size:13px; margin-bottom:18px; max-width:940px; line-height:1.55; }
+  .v-title { font-size:15px; font-weight:800; margin:34px 0 4px; }
+  .v-title .tag { font-size:11px; font-weight:700; background:#2563eb; color:#fff; border-radius:5px; padding:2px 8px; margin-right:8px; vertical-align:1px; }
+  .v-sub { font-size:12px; color:#9aa4b2; margin-bottom:10px; max-width:920px; line-height:1.5; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:1480px; }
+  @media (max-width:1280px){ .pair{grid-template-columns:1fr;} }
+
+  .scene { border-radius:12px; padding:22px; border:1px solid rgba(255,255,255,.1); display:flex; justify-content:center; }
+  .light { background:#d8d8d6;
+    --txt:#1c1917; --txt2:#52514d; --txt3:#76746e; --card:#fff; --soft:#f4f4f2; --panel:#fff;
+    --bd:rgba(41,37,32,.1); --bd2:rgba(41,37,32,.15); --input:#fff;
+    --acc:#2563eb; --acc-soft:rgba(37,99,235,.08); --acc-bd:rgba(37,99,235,.25);
+    --tier:#2563eb; --tier-soft:rgba(37,99,235,.08); --tier-bd:rgba(37,99,235,.25);
+    --ok:#047857; --shadow:0 24px 64px rgba(41,37,32,.25); }
+  .dark { background:#03060a;
+    --txt:#e8eef7; --txt2:#9fb0c9; --txt3:#6b7f9d; --card:#121824; --soft:#161f2e; --panel:#0d1119;
+    --bd:rgba(255,255,255,.08); --bd2:rgba(255,255,255,.14); --input:#0f1520;
+    --acc:#5cb1ff; --acc-soft:rgba(92,177,255,.12); --acc-bd:rgba(92,177,255,.35);
+    --tier:#5cb1ff; --tier-soft:rgba(92,177,255,.12); --tier-bd:rgba(92,177,255,.35);
+    --ok:#34d399; --shadow:0 24px 64px rgba(0,0,0,.5); }
+
+  /* ───────── shared modal anatomy ───────── */
+  .modal { width:100%; max-width:680px; background:var(--card); color:var(--txt);
+    border:1px solid var(--bd); box-shadow:var(--shadow); overflow:hidden; font-size:13px; }
+  .m-head { display:flex; align-items:flex-start; gap:10px; padding:18px 18px 0; }
+  .m-eyebrow { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--tier); margin-bottom:3px; }
+  .m-title { font-size:19px; font-weight:800; letter-spacing:-.01em; flex:1; min-width:0; }
+  .m-restore { font-size:11px; font-weight:600; color:var(--txt2); border:1px solid var(--bd2); background:transparent;
+    border-radius:999px; padding:5px 12px; white-space:nowrap; }
+  .m-win { display:flex; gap:4px; }
+  .m-winbtn { width:24px; height:24px; border-radius:7px; display:flex; align-items:center; justify-content:center;
+    color:var(--txt3); font-size:11px; background:transparent; border:none; }
+  .m-winbtn:hover { background:var(--soft); }
+  .m-notes { padding:6px 18px 0; font-size:12.5px; color:var(--txt2); font-style:italic; }
+  .m-cats { display:flex; gap:6px; padding:10px 18px 0; }
+  .m-chip { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--tier);
+    background:var(--tier-soft); border:1px solid var(--tier-bd); border-radius:999px; padding:2px 9px; }
+  .m-controls { display:flex; gap:14px; align-items:flex-end; padding:14px 18px; }
+  .m-ctl { flex:1; min-width:0; }
+  .m-ctl label { display:block; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:var(--txt3); margin-bottom:4px; }
+  .m-sel { width:100%; font-size:12.5px; color:var(--txt); background:var(--input); border:1px solid var(--bd2);
+    border-radius:9px; padding:6px 9px; appearance:none;
+    background-image:linear-gradient(45deg, transparent 50%, var(--txt3) 50%), linear-gradient(135deg, var(--txt3) 50%, transparent 50%);
+    background-position:calc(100% - 14px) 55%, calc(100% - 9px) 55%; background-size:5px 5px; background-repeat:no-repeat; }
+  .m-prog { flex:1.2; }
+  .m-prog .bar { height:6px; border-radius:99px; background:var(--soft); overflow:hidden; }
+  .m-prog .bar i { display:block; height:100%; width:64%; background:var(--tier); border-radius:99px; }
+  .m-prog .pt { font-size:10.5px; color:var(--txt3); margin-top:4px; }
+  .m-main { display:grid; grid-template-columns:200px 1fr; border-top:1px solid var(--bd); min-height:170px; }
+  .m-list { border-right:1px solid var(--bd); padding:10px 8px; }
+  .m-item { display:flex; align-items:center; gap:7px; padding:7px 9px; border-radius:8px; font-size:12px; color:var(--txt2); }
+  .m-item .dot { width:7px; height:7px; border-radius:99px; border:1.5px solid var(--txt3); flex-shrink:0; }
+  .m-item.done .dot { background:var(--ok); border-color:var(--ok); }
+  .m-item.sel { background:var(--acc-soft); color:var(--acc); font-weight:600; }
+  .m-item.sel .dot { border-color:var(--acc); }
+  .m-reader { padding:12px 16px; min-width:0; }
+  .m-rtools { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .m-complete { font-size:11px; font-weight:700; color:var(--ok); border:1px solid color-mix(in srgb, var(--ok) 35%, transparent);
+    background:color-mix(in srgb, var(--ok) 9%, transparent); border-radius:999px; padding:4px 12px; }
+  .m-rmeta { font-size:10.5px; color:var(--txt3); margin-left:auto; }
+  .m-rbody { font-size:12.5px; color:var(--txt2); line-height:1.55; }
+  .m-log { display:flex; align-items:center; gap:8px; border-top:1px solid var(--bd); padding:10px 18px; font-size:12px; color:var(--txt2); }
+  .m-log .cnt { font-size:10px; font-weight:700; background:var(--soft); border-radius:99px; padding:2px 8px; color:var(--txt3); }
+  .m-log .chev { margin-left:auto; color:var(--txt3); }
+  .m-foot { display:flex; align-items:center; gap:10px; border-top:1px solid var(--bd); padding:12px 18px; }
+  .m-fstat { font-size:11px; color:var(--txt3); flex:1; display:flex; align-items:center; gap:6px; }
+  .m-fstat::before { content:''; width:7px; height:7px; border-radius:99px; background:var(--txt3); opacity:.5; }
+  .m-btn { font-size:12.5px; font-weight:600; border-radius:999px; padding:8px 18px; border:1px solid var(--bd2); color:var(--txt2); background:transparent; }
+  .m-btn.pri { color:#fff; border:none; background:linear-gradient(135deg, var(--acc), #2563eb); }
+  .dark .m-btn.pri { background:linear-gradient(135deg, #5cb1ff, #2563eb); }
+
+  /* ───────── V1 Editorial ───────── */
+  .v1.modal { border-radius:16px; }
+  .v1 .m-controls { border-top:1px solid var(--bd); margin-top:14px; }
+  .v1 .m-ctl + .m-ctl { border-left:1px solid var(--bd); padding-left:14px; }
+
+  /* ───────── V2 Split rail ───────── */
+  .v2.modal { border-radius:16px; }
+  .v2 .m-controls { background:var(--soft); border-top:1px solid var(--bd); margin-top:14px; }
+  .v2 .m-list { background:var(--soft); }
+  .v2 .m-sel { background:var(--card); }
+  .v2 .m-log { background:var(--soft); }
+
+  /* ───────── V3 Tier band ───────── */
+  .v3.modal { border-radius:18px; }
+  .v3 .m-band { background:linear-gradient(180deg, var(--tier-soft), transparent); padding-bottom:4px; }
+  .v3 .m-controls { margin:10px 14px 14px; padding:12px 14px; background:var(--card); border:1px solid var(--bd);
+    border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+  .v3 .m-main { border-top:none; margin-top:-2px; }
+
+  /* ───────── V4 Minimal pro ───────── */
+  .v4.modal { border-radius:12px; }
+  .v4 .m-title { font-size:17px; }
+  .v4 .m-progline { height:2px; background:var(--soft); margin-top:14px; }
+  .v4 .m-progline i { display:block; height:100%; width:64%; background:var(--tier); }
+  .v4 .m-controls { padding:10px 18px; }
+  .v4 .m-ctl label { display:inline; margin-right:6px; }
+  .v4 .m-ctl { display:flex; align-items:center; }
+  .v4 .m-sel { border:none; background-color:var(--soft); border-radius:7px; }
+  .v4 .m-restore { border:none; background:var(--soft); }
+</style>
+</head>
+<body>
+
+<h1>Edit Skill Modal — 4 Variants (light + dark, all functionality kept)</h1>
+<p class="intro">
+Every variant keeps the complete anatomy and behavior: title, Restore-from-Catalog, maximize/close, editable notes,
+category chips, the three selects (Status / Focus area / Proficiency), content progress, the 3E item list + reader with
+"Mark complete", the collapsible Training Log, and the Discard / Save footer with pending-state text. Differences are purely
+visual. Example skill shown with the Core (blue) tier; chips and progress pick up each skill's tier color automatically.
+</p>
+
+<div class="v-title"><span class="tag">V1</span>Editorial — hairline structure</div>
+<p class="v-sub">Tier eyebrow over the title (same language as the cards), controls in one hairline-divided row with eyebrow micro-labels, pill buttons. Flat, calm, closest to the new page chrome.</p>
+<div class="pair">
+  <div class="scene light"><div class="modal v1" data-variant="v1"></div></div>
+  <div class="scene dark"><div class="modal v1" data-variant="v1"></div></div>
+</div>
+
+<div class="v-title"><span class="tag">V2</span>Split rail — two-tone workspace</div>
+<p class="v-sub">Controls bar and the 3E list sit on a recessed soft surface, the reader stays on white/dark card — the same sidebar-vs-content split as the My Plan panel. Strongest sense of "workspace".</p>
+<div class="pair">
+  <div class="scene light"><div class="modal v2" data-variant="v2"></div></div>
+  <div class="scene dark"><div class="modal v2" data-variant="v2"></div></div>
+</div>
+
+<div class="v-title"><span class="tag">V3</span>Tier band — colored identity</div>
+<p class="v-sub">The header sits on a soft tier-tinted band that fades out; the controls float as a raised card on its edge. Most visually distinctive; the tier identity is unmistakable.</p>
+<div class="pair">
+  <div class="scene light"><div class="modal v3" data-variant="v3"></div></div>
+  <div class="scene dark"><div class="modal v3" data-variant="v3"></div></div>
+</div>
+
+<div class="v-title"><span class="tag">V4</span>Minimal pro — dense & quiet</div>
+<p class="v-sub">Tightest layout: a 2px tier progress line under the header replaces the bar, selects become borderless filled fields with inline labels, ghost buttons. Maximum content, minimum chrome.</p>
+<div class="pair">
+  <div class="scene light"><div class="modal v4" data-variant="v4"></div></div>
+  <div class="scene dark"><div class="modal v4" data-variant="v4"></div></div>
+</div>
+
+<template id="tpl">
+  <div class="m-band">
+    <div class="m-head">
+      <div style="flex:1;min-width:0">
+        <div class="m-eyebrow">Core</div>
+        <div class="m-title">BGP Troubleshooting</div>
+      </div>
+      <button class="m-restore">Restore from Catalog</button>
+      <div class="m-win"><button class="m-winbtn">▢</button><button class="m-winbtn">✕</button></div>
+    </div>
+    <p class="m-notes">"Focus on route-reflector scenarios; lab recreate for case 6912842." ✎</p>
+    <div class="m-cats"><span class="m-chip">Core</span><span class="m-chip" style="--tier:#0e7490;--tier-soft:rgba(8,145,178,.09);--tier-bd:rgba(8,145,178,.28)">AI &amp; Future</span></div>
+    <div class="m-progline"><i></i></div>
+    <div class="m-controls">
+      <div class="m-ctl"><label>Status</label><select class="m-sel"><option>Developing</option></select></div>
+      <div class="m-ctl"><label>Focus area</label><select class="m-sel"><option>Exposure</option></select></div>
+      <div class="m-ctl"><label>Proficiency</label><select class="m-sel"><option>3 — Intermediate</option></select></div>
+      <div class="m-ctl m-prog"><label>Progress</label><div class="bar"><i></i></div><div class="pt">9 of 14 items · 64%</div></div>
+    </div>
+  </div>
+  <div class="m-main">
+    <div class="m-list">
+      <div class="m-item done"><span class="dot"></span>BGP fundamentals course</div>
+      <div class="m-item sel"><span class="dot"></span>Route-reflector lab</div>
+      <div class="m-item"><span class="dot"></span>Shadow TAC case</div>
+      <div class="m-item"><span class="dot"></span>Config review session</div>
+    </div>
+    <div class="m-reader">
+      <div class="m-rtools"><button class="m-complete">✓ Mark complete</button><span class="m-rmeta">Exposure · added by catalog</span></div>
+      <div class="m-rbody">Build the dual route-reflector topology in the lab, break the session establishment four different
+        ways and document recovery steps for each failure mode…</div>
+    </div>
+  </div>
+  <div class="m-log">Training Log <span class="cnt">4 entries</span><span class="chev">⌄</span></div>
+  <div class="m-foot">
+    <span class="m-fstat">No pending changes</span>
+    <button class="m-btn">Discard</button>
+    <button class="m-btn pri">Save Details</button>
+  </div>
+</template>
+
+<script>
+  const tpl = document.getElementById('tpl');
+  document.querySelectorAll('.modal').forEach(m => {
+    m.appendChild(tpl.content.cloneNode(true));
+    const v = m.dataset.variant;
+    if (v !== 'v4') { const pl = m.querySelector('.m-progline'); if (pl) pl.remove(); }
+    if (v === 'v4') { const pr = m.querySelector('.m-prog'); if (pr) pr.remove(); }
+    if (v !== 'v3') { /* band is a plain wrapper outside V3 */ }
+  });
+</script>
+
+</body>
+</html>

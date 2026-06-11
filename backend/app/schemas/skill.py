@@ -85,6 +85,8 @@ class SkillCreate(BaseModel):
     description: str | None = None
     icon: str | None = None
     team_ids: list[int] = []
+    owner_team_ids: list[int] | None = None
+    consumer_team_ids: list[int] = []
     tag_names: list[str] = []
     certificate_ids: list[int] = []
     category_ids: list[int] = []
@@ -95,8 +97,9 @@ class SkillUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     icon: str | None = None
-    is_archived: bool | None = None
     team_ids: list[int] | None = None
+    owner_team_ids: list[int] | None = None
+    consumer_team_ids: list[int] | None = None
     tag_names: list[str] | None = None
     certificate_ids: list[int] | None = None
     category_ids: list[int] | None = None
@@ -118,15 +121,23 @@ class SkillResponse(BaseModel):
     icon: str | None = None
     is_archived: bool
     is_orphaned: bool = False
+    is_custom: bool = False
     catalog_version: int
     created_at: datetime
     updated_at: datetime | None = None
     tags: list[TagResponse] = []
     teams: list[TeamInfo] = []
+    owner_teams: list[TeamInfo] = []
+    consumer_teams: list[TeamInfo] = []
     certificates: list[CertificateInfo] = []
     categories: list[CategoryInfo] = []
+    duplicate_warnings: list[str] = []
 
     model_config = {"from_attributes": True}
+
+
+class DuplicateWarningResponse(BaseModel):
+    warnings: list[str] = []
 
 
 class ExplorerContentMatch(BaseModel):

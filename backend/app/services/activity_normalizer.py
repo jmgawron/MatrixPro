@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from app.models.audit import AuditLog
 from app.models.plan import DevelopmentPlan, PlanSkill, PlanSkillTrainingLog
 from app.models.skill import Skill, SkillCategoryAssignment
-from app.services.report_aggregator import _category_slug
 from sqlalchemy.orm import selectinload
 
 ACTIVITY_LABELS = {
